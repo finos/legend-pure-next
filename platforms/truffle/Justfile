@@ -164,7 +164,7 @@ test-java: (_mvn "with-tests")
 # remain visible.
 
 # Every specification run of the Truffle host (self-host excluded: see `spec-compiler-selfhost`).
-spec: spec-compiler spec-functions spec-pct spec-grammar spec-pdb spec-pdb-golden spec-printer-compiled spec-printer-protocol spec-functions-inmemory spec-pct-inmemory spec-diagram-pdb
+spec: spec-compiler spec-functions spec-pct spec-grammar spec-pdb spec-pdb-golden spec-printer-compiled spec-printer-protocol spec-functions-inmemory spec-pct-inmemory spec-diagram-pdb spec-tds-pdb
 
 # Needs core-tests.pdb (runTests itself is <<test.TestDependency>> and is classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
@@ -193,6 +193,16 @@ spec-compiler:
         --pdb {{shared_out}}/compiler-tests.pdb \
         --function "platform::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{test_results}}/spec/compiler/pure@cli-truffle.json" {{err_filter}}
+    @{{substep}} 'runTests over platform::pure::compiler::test (the compiler test package: extension seam, islands)'
+    mkdir -p {{test_results}}/spec/compiler-unit
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::compiler::test" "{{test_results}}/spec/compiler-unit/pure@cli-truffle.json" {{err_filter}}
 
 # Needs core-tests.pdb and compiler-tests.pdb for the same reason as spec-functions.
 # Standalone Pure PCT tests over platform::pure::functions (assumes `just build` was run).
@@ -346,6 +356,31 @@ spec-diagram-pdb: _depCheck_pdbs
         --pdb {{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/$f.pdb \
         --function "platform::extensions::pure::diagram::tests::readBack_String_1__String_1__String_1_" \
         --args "{{repo_root}}/pure/extensions/diagram/tests/compiler/diagram/$f.pure" "m::D" {{err_filter}} || exit 1; \
+    done
+
+# The TDS island's PDB form: each success fixture under pure/extensions/pure/tds/tests/compiler writes the archive in
+# tests/compiler-pdb-serialization, table by table (a TDS value is an ExtensionValueDef holding a TDSDef
+# blob); then Truffle's OWN decoder reads each golden back and finds the TDS its fixture's ###CompiledGraph
+# shows. Regenerate the goldens with `just extensions::pure::tds::regen-pdb-goldens`.
+spec-tds-pdb: _depCheck_pdbs
+    @{{header}} 'spec-tds-pdb'
+    mkdir -p {{test_results}}/spec/tds/pdb
+    {{pure_truffle}} execute \
+        --root {{repo_root}} \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{repo_root}}/pure/extensions/pure/tds/build/tds-tests.pdb \
+        --function "platform::extensions::pure::tds::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/pure/tds/tests/compiler" "{{repo_root}}/pure/extensions/pure/tds/tests/compiler-pdb-serialization" "{{shared_out}}/specification/m3.fbs" "{{repo_root}}/pure/extensions/pure/tds/generated/tds.fbs" "{{test_results}}/spec/tds/pdb/pure@cli-truffle.json" {{err_filter}}
+    for c in typedHeader:test::tds::typedHeader__Any_MANY_ inferredColumns:test::tds::inferredColumns__Any_MANY_ mixedInference:test::tds::mixedInference__Any_MANY_ quotedNamesAndCells:test::tds::quotedNamesAndCells__Any_MANY_ enumeration:test::tds::enumeration__Any_MANY_ quotedValues:test::tds::quotedValues__Any_MANY_ manyMultiplicity:test::tds::manyMultiplicity__Any_MANY_ primitiveExtension:test::tds::primitiveExtension__Any_MANY_; do \
+    {{pure_truffle}} execute \
+        --root {{repo_root}} \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{repo_root}}/pure/extensions/pure/tds/build/tds-tests.pdb \
+        --pdb {{repo_root}}/pure/extensions/pure/tds/tests/compiler-pdb-serialization/tds/${c%%:*}.pdb \
+        --function "platform::extensions::pure::tds::tests::readBack_String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/pure/tds/tests/compiler/tds/${c%%:*}.pure" "${c#*:}" {{err_filter}} || exit 1; \
     done
 
 spec-compiler-selfhost: _depCheck_pdbs

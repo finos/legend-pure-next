@@ -32,5 +32,6 @@
 
     <modules>
         <module>legend-pure-next-platform-java-extensions-diagram</module>
+        <module>legend-pure-next-platform-java-extensions-tds</module>
     </modules>
 </project>

@@ -42,5 +42,10 @@
             <artifactId>legend-pure-next-platform-truffle-extensions-diagram</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-platform-truffle-extensions-tds</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

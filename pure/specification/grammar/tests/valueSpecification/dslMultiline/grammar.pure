@@ -1,0 +1,7 @@
+###Pure
+function protocol::dslMultiline(): Any[*]
+{
+  #TDS{
+    a, b
+  }#
+}

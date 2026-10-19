@@ -190,6 +190,40 @@ function platform::pure::compiler::pdb::writerHelper::createByteVector(b:platfor
    $b2->platform::pure::compiler::pdb::fbb::endVector($bytes->size());
 }
 
+// A `[ubyte]` field holding `bytes` as they are (one front-most-first prepend, as createString does).
+function platform::pure::compiler::pdb::writerHelper::createBinaryVector(b:platform::pure::compiler::pdb::fbb::Builder[1], bytes:Binary[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let len = $bytes->platform::pure::functions::binary::binarySize();
+   $b->platform::pure::compiler::pdb::fbb::startVector(1, $len, 1)
+     ->platform::pure::compiler::pdb::fbb::prepend($bytes)
+     ->platform::pure::compiler::pdb::fbb::endVector($len);
+}
+
+// An ExtensionValueDef: a language extension's value, `blob` a finished FlatBuffer rooted at its table `kind`.
+function platform::pure::compiler::pdb::writerHelper::writeExtensionValueDef(b:platform::pure::compiler::pdb::fbb::Builder[1], kind:String[1], blob:Binary[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let k = $b->platform::pure::compiler::pdb::fbb::createString($kind);
+   let v = $k.builder->platform::pure::compiler::pdb::writerHelper::createBinaryVector($blob);
+   $v.builder->platform::pure::compiler::pdb::fbb::startObject(2)
+     ->platform::pure::compiler::pdb::fbb::addFieldOffset(0, $k.offset)
+     ->platform::pure::compiler::pdb::fbb::addFieldOffset(1, $v.offset)
+     ->platform::pure::compiler::pdb::fbb::endObject();
+}
+
+// A language extension's value specification, which no m3 union arm holds: the `<Class>_pdbValueBlob` its
+// extension generated beside the class (pdb/writer/generator emitValueBlobs) writes it as a finished
+// FlatBuffer of the extension's own table, held by an ExtensionValueDef. No such writer: an error naming
+// the class — the expression is never left out of the archive.
+function platform::pure::compiler::pdb::writerHelper::writeExtensionValue(b:platform::pure::compiler::pdb::fbb::Builder[1], v:Any[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let cls = $v->type()->cast(@platform::pure::metamodel::type::Class<Any>);
+   let writerName = $cls.name->toOne() + '_pdbValueBlob_Any_1__Binary_1_';
+   let writer = $cls.package->toOne().children->filter(c | $c.name == $writerName)->head();
+   assert($writer->isNotEmpty(), | 'PDB writer: no serializer for the value of class \'' + $cls->elementToPath() + '\'');
+   let blob = $writer->toOne()->cast(@platform::pure::metamodel::function::Function<{Any[1]->Binary[1]}>)->eval($v);
+   platform::pure::compiler::pdb::writerHelper::writeExtensionValueDef($b, $cls.name->toOne() + 'Def', $blob);
+}
+
 // fbs `string` field value -> wire string (reference: enum values via _name(),
 // everything else via toString()/String.valueOf).
 function platform::pure::compiler::pdb::writerHelper::asFbsString(v:Any[1]):String[1]

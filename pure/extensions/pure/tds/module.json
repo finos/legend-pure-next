@@ -1,0 +1,6 @@
+{
+  "name": "tds",
+  "packagePattern": "(platform::extensions::pure::tds)(::.*)?",
+  "dependencies": ["core", "compiler"],
+  "testDependencies": ["core-tests", "compiler-tests"]
+}

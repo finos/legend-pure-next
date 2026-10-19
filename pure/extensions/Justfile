@@ -34,6 +34,7 @@ set quiet := true
 set shell := ["bash", "-c"]
 
 mod diagram "diagram/Justfile"
+mod pure "pure/Justfile"
 
 header := "h(){ s=\"[extensions::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
 
@@ -41,16 +42,16 @@ header := "h(){ s=\"[extensions::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); p
 default: build
 
 # Build every extension's pdb.
-build: diagram::build
+build: diagram::build pure::build
 
 # Build every extension, tests split into their own pdb.
-build-tests: diagram::build-tests
+build-tests: diagram::build-tests pure::build-tests
 
 # Alias of `build` for symmetry with the other orchestrators.
 build-all: build
 
 # Run every extension's Pure tests.
-test-all: diagram::test-all
+test-all: diagram::test-all pure::test-all
 
 # Remove every extension's build output.
-clean: diagram::clean
+clean: diagram::clean pure::clean

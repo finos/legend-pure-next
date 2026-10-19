@@ -1,0 +1,16 @@
+# FlatBuffer field-ID registry — keeps wire format stable across builds.
+# Auto-maintained by RdfFbsSchemaGenerator. Append-only.
+# Format: TableName.field_name=ID
+
+EchoLiteralDef.classifier_generic_type=1
+EchoLiteralDef.source_information=2
+EchoLiteralDef.multiplicity=4
+EchoLiteralDef.generic_type=6
+EchoLiteralDef.text=7
+
+RefLiteralDef.classifier_generic_type=1
+RefLiteralDef.source_information=2
+RefLiteralDef.multiplicity=4
+RefLiteralDef.generic_type=6
+RefLiteralDef.target=7
+

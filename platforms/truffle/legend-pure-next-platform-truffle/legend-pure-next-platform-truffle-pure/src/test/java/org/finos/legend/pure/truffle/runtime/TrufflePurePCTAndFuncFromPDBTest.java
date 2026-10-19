@@ -154,6 +154,16 @@ class TrufflePurePCTAndFuncFromPDBTest
         polyglotCtx.initialize(PureLanguage.ID);
         polyglotCtx.enter();
         context = PureLanguage.get(null);
+        // ...and hands the context its languages' compiler passes, as PureRuntime.build() does, so a
+        // compileSource in a test compiles with them (the test language's island handlers among them).
+        context.setCompilerExtensions(() -> new org.finos.legend.pure.truffle.execution.types.ObjectSequence(
+                org.finos.legend.pure.truffle.grammar.PureLanguage.all()
+                        .collect(org.finos.legend.pure.truffle.grammar.Language::compilerExtension)
+                        .select(java.util.Objects::nonNull)
+                        .collect(resolver::getElement)
+                        .select(java.util.Objects::nonNull)
+                        .collect(e -> context.executeFunction(e, new Object[0]))
+                        .toArray()));
 
         // Keep bootstrap PDB modules for element path discovery
         coreModule = new org.finos.legend.pure.m3.module.pdbModule.PdbModule(corePdb, org.finos.legend.pure.m3.module.pdbModule.PdbModule.Mode.EXECUTION);

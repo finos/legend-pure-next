@@ -41,6 +41,13 @@ function platform::pure::compiler::resolution::valueSpecification::valueSpecific
             resolveAtomicValue($av, $scope, $deepCtx),
         gm:GenericTypeAndMultiplicityHolder[1] |
             resolveGenericTypeAndMultiplicityHolder($gm, $deepCtx),
+        // A language extension's value (an island compiled to its own class): its handler resolves it, or
+        // it is kept as it is — never dropped (a caller that gets no value loses the expression).
+        v:ValueSpecification[1] |
+            let h = platform::pure::compiler::extension::islandHandlerOwning($deepCtx, $v);
+            if($h->isEmpty() || $h.resolve->isEmpty(),
+               | ^CompilerResult<ValueSpecification>(value = $v, context = $deepCtx),
+               | $h.resolve->toOne()->eval($v, $deepCtx));,
         a:Any[1] | ^CompilerResult<ValueSpecification>(context = $deepCtx)
     ]);
     // Restore debug space on returned context so sibling calls in folds stay at the right level

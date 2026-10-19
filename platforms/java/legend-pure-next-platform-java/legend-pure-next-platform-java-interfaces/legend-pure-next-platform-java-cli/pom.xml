@@ -45,5 +45,10 @@
             <artifactId>legend-pure-next-platform-java-extensions-diagram</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-platform-java-extensions-tds</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

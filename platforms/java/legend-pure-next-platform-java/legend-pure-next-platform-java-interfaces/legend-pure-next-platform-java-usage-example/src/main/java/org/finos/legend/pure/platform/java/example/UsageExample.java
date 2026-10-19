@@ -19,6 +19,7 @@ import org.finos.legend.pure.platform.java.compiler.module.CompilationResult;
 import org.finos.legend.pure.platform.java.compiler.module.ModuleRegistry;
 import org.finos.legend.pure.platform.java.compiler.module.inMemoryModule.InMemoryModule;
 import org.finos.legend.pure.platform.java.extensions.diagram.DiagramLanguage;
+import org.finos.legend.pure.platform.java.extensions.tds.TdsLanguage;
 import org.finos.legend.pure.platform.java.runtime.PureRuntime;
 
 import java.nio.file.Files;
@@ -80,7 +81,7 @@ public final class UsageExample
         // 2. The runtime, which brings the rest.
         PureRuntime runtime = PureRuntime.builder()
                 .withRegistry(registry)
-                .withLanguages(DiagramLanguage.all())   // ###Pure is always there; name the extensions
+                .withLanguages(DiagramLanguage.all().newWithAll(TdsLanguage.all()))   // ###Pure is always there; name the extensions
                 .withModuleRoot(repoRoot())
                 .build();
         try

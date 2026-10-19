@@ -1,0 +1,44 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+Enum m::Color
+{
+   Red,
+   Green
+}
+
+function test::tds::enumeration(): Any[*]
+{
+  #TDS{
+    color:m::Color[1], n
+    Red, 1
+    Green, 2
+  }#;
+}
+
+###CompiledGraph
+enumeration m::Color extends Enum  ~Enumeration<m::Color>  @15:1-19:1
+property Red  ~Property<Enumeration<m::Color>, m::Color|1>  = ^m::Color(name='Red')  ~lambda:#LambdaFunction<#{->m::Color[1]}#>#  @17:4-17:6
+property Green  ~Property<Enumeration<m::Color>, m::Color|1>  = ^m::Color(name='Green')  ~lambda:#LambdaFunction<#{->m::Color[1]}#>#  @18:4-18:8
+
+function test::tds::enumeration__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+TDS :platform::extensions::pure::tds::metamodel::TDS<(color:m::Color[1], n:@Integer@[0..1])>[1]  ~platform::extensions::pure::tds::metamodel::TDS<@Any@>  @23:3-27:4
+| Red, 1
+| Green, 2
+
+###ReverseIndex
+m::Color:
+  test::tds::enumeration__Any_MANY_
+platform::extensions::pure::tds::metamodel::TDS:
+  test::tds::enumeration__Any_MANY_

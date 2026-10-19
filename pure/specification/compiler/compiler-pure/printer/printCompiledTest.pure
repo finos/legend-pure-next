@@ -38,16 +38,22 @@ import platform::pure::ui::progress::*;
 
 function <<test.TestDependency>> platform::pure::compiler::test::printer::runCompiledPrinterCorpus(testDir:String[1]):String[1]
 {
-    platform::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, []);
+    platform::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, [], platform::pure::compiler::test::islandTestExtension());
 }
 
 // Same, also writing the run's test report to `reportPath` (read by tools/test-dashboard).
 function <<test.TestDependency>> platform::pure::compiler::test::printer::runCompiledPrinterCorpus(testDir:String[1], reportPath:String[1]):String[1]
 {
-    platform::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, $reportPath);
+    platform::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, $reportPath, platform::pure::compiler::test::islandTestExtension());
 }
 
-function <<test.TestDependency>> platform::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport(testDir:String[1], reportPath:String[0..1]):String[1]
+// Same, compiling with `extensions` — an extension's own corpus (its islands print back through its handlers).
+function <<test.TestDependency>> platform::pure::compiler::test::printer::runCompiledPrinterCorpus(testDir:String[1], reportPath:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):String[1]
+{
+    platform::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, $reportPath, $extensions);
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport(testDir:String[1], reportPath:String[0..1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):String[1]
 {
     let start = platform::pure::functions::date::currentTimeMillis();
     let files = directoryTree($testDir)->filter(f | $f->endsWith('.pure') && !$f->contains('_E_') && !$f->contains('_noRoundtrip') && !readFile($f)->contains('###' + 'Error'));
@@ -58,7 +64,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::runCom
     // one VISUAL line — so a wrapped path leaves the cursor on the wrong
     // line and the bar leaks downward for every subsequent tick.
     let prefixLen = $testDir->length() + 1;
-    let cases = range(0, $total)->map(i | platform::pure::compiler::test::printer::compiledPrinterCase($files->at($i), $prefixLen, $i + 1, $total));
+    let cases = range(0, $total)->map(i | platform::pure::compiler::test::printer::compiledPrinterCase($files->at($i), $prefixLen, $i + 1, $total, $extensions));
     finishProgress();
     let mismatches = $cases->filter(c | $c.error->isNotEmpty());
 
@@ -76,12 +82,12 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::runCom
 // One corpus file's check as a report case: the id is the corpus path without `.pure`. Each check is
 // wrapped in withSilencedPrint so any stray output from compile() (already silenced via the 3-arg
 // overload but defence in depth) doesn't tear the progress bar's ANSI cursor invariants.
-function <<test.TestDependency>> platform::pure::compiler::test::printer::compiledPrinterCase(file:String[1], prefixLen:Integer[1], index:Integer[1], total:Integer[1]):platform::pure::test::report::TestCaseReport[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::compiledPrinterCase(file:String[1], prefixLen:Integer[1], index:Integer[1], total:Integer[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):platform::pure::test::report::TestCaseReport[1]
 {
     let rel = if ($file->length() > $prefixLen, | $file->substring($prefixLen, $file->length()), | $file);
     tickProgress($index, $total, $rel);
     let started = platform::pure::functions::date::currentTimeMillis();
-    let result = withSilencedPrint(| platform::pure::compiler::test::printer::checkCompiledPrinterFile($file));
+    let result = withSilencedPrint(| platform::pure::compiler::test::printer::checkCompiledPrinterFile($file, $extensions));
     ^platform::pure::test::report::TestCaseReport(
         id = if ($rel->endsWith('.pure'), | $rel->substring(0, $rel->length() - 5), | $rel),
         durationMs = platform::pure::functions::date::currentTimeMillis() - $started,
@@ -98,9 +104,9 @@ Class <<test.TestDependency>> platform::pure::compiler::test::printer::CompiledP
     failure: String[0..1];
 }
 
-function <<test.TestDependency>> platform::pure::compiler::test::printer::checkCompiledPrinterFile(path:String[1]):platform::pure::compiler::test::printer::CompiledPrinterCheckResult[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::checkCompiledPrinterFile(path:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):platform::pure::compiler::test::printer::CompiledPrinterCheckResult[1]
 {
-    let res = tryEval(| renderCompiledFile($path));
+    let res = tryEval(| renderCompiledFile($path, $extensions));
     if ($res.failure->isNotEmpty(),
         | ^platform::pure::compiler::test::printer::CompiledPrinterCheckResult(path = $path, failure = 'compile/print threw: ' + $res.failure->toOne().message),
         | let printed = $res.value->toOne();
@@ -119,11 +125,21 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::checkC
 // against the source.
 function <<test.TestDependency>> platform::pure::compiler::test::printer::renderCompiledFile(path:String[1]):String[1]
 {
+    platform::pure::compiler::test::printer::renderCompiledFile($path, platform::pure::compiler::test::islandTestExtension());
+}
+
+// With `extensions` — the specification's runners compile with the test package's island handlers; an
+// extension's corpus with its own. Their values print back as the islands they came from.
+function <<test.TestDependency>> platform::pure::compiler::test::printer::renderCompiledFile(path:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):String[1]
+{
     let source = readFile($path);
     let parsed = platform::pure::functions::meta::parse($path, $source);
-    let result = platform::pure::compiler::compile($parsed, false, true);
+    let islands = $extensions;
+    let result = platform::pure::compiler::compile($parsed, $islands, false, true);
     assert($result.errors->isEmpty(), | 'compile failed: ' + $result.errors->joinStrings('; '));
-    printCompiledElements($result.elements, platform::pure::functions::printer::compiled::PrintMode.ManageImports);
+    printCompiledElements($result.elements, platform::pure::functions::printer::compiled::PrintMode.ManageImports,
+       $islands.islands->filter(h | $h.owns->isNotEmpty() && $h.print->isNotEmpty())
+          ->map(h | {v: platform::pure::metamodel::valuespecification::ValueSpecification[1] | if($h.owns->toOne()->eval($v), | $h.print->toOne()->eval($v), | [])}));
 }
 
 // Compiler test files have three sections: `###Pure` (source input),

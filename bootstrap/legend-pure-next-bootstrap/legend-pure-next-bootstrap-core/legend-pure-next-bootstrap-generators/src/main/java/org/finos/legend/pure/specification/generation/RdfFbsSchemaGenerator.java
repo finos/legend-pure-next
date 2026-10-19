@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,6 +40,10 @@ import static org.finos.legend.pure.specification.generation.model.ModelUtils.*;
  */
 public class RdfFbsSchemaGenerator
 {
+    /** The taxonomies whose union ends with ExtensionValueDef (see the Pure mirror, fbsgen holdsExtensionValues). */
+    private static final org.eclipse.collections.api.set.ImmutableSet<String> EXTENSION_VALUE_UNIONS =
+            org.eclipse.collections.api.factory.Sets.immutable.with("ValueSpecification", "Any");
+
     private final M3Model m3Model;
 
     public RdfFbsSchemaGenerator(String ttlPath)
@@ -103,6 +108,13 @@ public class RdfFbsSchemaGenerator
         // Ancestor reference table for cycle back-references
         sb.append("table AncestorRef {\n");
         appendField(sb, registry, "AncestorRef", "depth", "int");
+        sb.append("}\n\n");
+
+        // A language extension's value specification (an expression island compiled by its extension): a
+        // finished FlatBuffer whose root is the extension's own table `kind`, declared in its schema fragment.
+        sb.append("table ExtensionValueDef {\n");
+        appendField(sb, registry, "ExtensionValueDef", "kind", "string");
+        appendField(sb, registry, "ExtensionValueDef", "blob", "[ubyte]");
         sb.append("}\n\n");
 
         // Generate union types for pointer properties with nonPointerSubtypes.
@@ -187,6 +199,12 @@ public class RdfFbsSchemaGenerator
                     // Include AncestorRef for cycle back-references
                     if (subtypes.notEmpty() || !isAbstract(classInfo)) { sb.append(", "); }
                     sb.append("AncestorRef");
+                    // Where a language extension's value specification can stand (an expression, or a value an
+                    // AtomicValue holds): APPENDED after AncestorRef, so no discriminant an archive uses moves.
+                    if (EXTENSION_VALUE_UNIONS.contains(classInfo.name))
+                    {
+                        sb.append(", ExtensionValueDef");
+                    }
                     sb.append(" }\n\n");
                 }
             }

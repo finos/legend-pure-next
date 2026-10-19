@@ -190,6 +190,8 @@ public final class PureRuntime
 
         // Get the PureContext created by the language
         this.context = PureLanguage.get(null);
+        // compileSource compiles with this runtime's languages, as a build does.
+        this.context.setCompilerExtensions(this::compilerExtensions);
 
         // Build the TrufflePureParser. The entire parse pipeline (top-level
         // dispatch + every section parser) runs through the Pure interpreter

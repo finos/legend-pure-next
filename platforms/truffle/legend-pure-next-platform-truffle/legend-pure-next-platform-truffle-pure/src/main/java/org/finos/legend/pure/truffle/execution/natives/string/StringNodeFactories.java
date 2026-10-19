@@ -108,6 +108,9 @@ public final class StringNodeFactories
         registry.register("reverseString_String_1__String_1_",
                 (args, gt, mul, fe) -> new ReverseStringNode(args[0]));
 
+        registry.register("inferType_String_MANY__Type_1_",
+                (args, gt, mul, fe) -> new InferTypeNode(args[0]));
+
         registry.register("parseInteger_String_1__Integer_1_",
                 (args, gt, mul, fe) -> new ParseIntegerNode(args[0]));
 

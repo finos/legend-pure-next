@@ -58,6 +58,7 @@ public final class SpecTestRuntime
                 new TestFileLanguageExtension(),
                 new ReverseIndexLanguageExtension(),
                 new ErrorLanguageExtension(),
+                new IslandTestLanguageExtension(),
                 new PureLanguageExtension());
         this.parser = PureParser.builder().withExtensions(Lists.mutable.withAll(this.extensions)).build();
         try

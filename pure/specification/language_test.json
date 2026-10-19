@@ -8,6 +8,8 @@
   ],
   "module": "compiler-tests",
   "pure": {
-    "sectionParsers": "platform::pure::compiler::test::testSectionParsers__Pair_MANY_"
-  }
+    "sectionParsers": "platform::pure::compiler::test::testSectionParsers__Pair_MANY_",
+    "compilerExtension": "platform::pure::compiler::test::islandTestExtension__CompilerExtension_1_"
+  },
+  "fbs": "shared/specification/islandTest.fbs"
 }

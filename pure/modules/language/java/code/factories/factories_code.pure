@@ -149,6 +149,12 @@ function platform::extensions::language::java::factory::j_if(testsAndThens:List<
    $testsAndThens.values->reverse()->fold({tt, a| j_if($tt.first, $tt.second, $a)}, $else)->toOne();
 }
 
+// `switch (expression) { case label: body … default: body }`, one case per pair.
+function platform::extensions::language::java::factory::j_switch(expression:Code[1], cases:Pair<Code,Code>[*], default:Code[0..1]):Code[1]
+{
+   ^Switch(expression=$expression, cases=$cases->map(c| ^SwitchCase(label=$c.first, body=$c.second)), default=$default, type=javaVoid());
+}
+
 function platform::extensions::language::java::factory::j_for(init:Code[0..1], test:Code[0..1], update:Code[0..1], body:Code[1..*]):Code[1]
 {
    let canonicalBody = $body->match([

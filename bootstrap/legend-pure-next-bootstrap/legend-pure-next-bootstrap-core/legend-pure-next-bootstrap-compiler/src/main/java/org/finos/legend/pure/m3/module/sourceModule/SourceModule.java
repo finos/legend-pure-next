@@ -296,7 +296,9 @@ public class SourceModule implements Module
         long parsingDurationNanos = System.nanoTime() - parseStart;
 
         // Compile
-        this.compilationContext = new CompilationContext(ListAdapter.adapt(this.extensions).collect(CompilerExtension::buildCompilerContextExtension).select(Objects::nonNull));
+        this.compilationContext = new CompilationContext(
+                ListAdapter.adapt(this.extensions).collect(CompilerExtension::buildCompilerContextExtension).select(Objects::nonNull),
+                ListAdapter.adapt(this.extensions).flatCollect(CompilerExtension::islandHandlers));
         this.state = new TopLevelCompiler(compiler.root(), extensions);
         this.state.compile(this, files, packagePattern, new ScopedMetadataAccess(this, registry), compilationContext);
         validateNonDuplicateElements(this.state);

@@ -1,0 +1,359 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// `#TDS{…}#`: a table written inline. Its first line is a column specification, compiled exactly as a
+// written `~[…]` is (M3 parses it; its types resolve in the enclosing context, imports included); the rest
+// is CSV (csv.pure). A column without a type gets the one its cells have (inferType); a column's
+// multiplicity defaults to [0..1]. Cells are checked against their column at compile time, and every
+// error is reported where it is, inside the island.
+
+import platform::pure::compiler::*;
+import platform::pure::compiler::extension::*;
+import platform::pure::compiler::structural::valueSpecificationCompiler::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::extensions::pure::tds::compiler::*;
+import platform::extensions::pure::tds::metamodel::*;
+
+function platform::extensions::pure::tds::compiler::tdsExtension(): CompilerExtension[1]
+{
+   ^CompilerExtension(
+      name    = 'tds',
+      handles = e: platform::pure::protocol::grammar::PackageableElement[1] | false,
+      islands = ^IslandHandler(
+         name    = 'tds',
+         claims  = t: String[1] | $t->startsWith('TDS{') && $t->endsWith('}'),
+         compile = {i: platform::pure::protocol::grammar::valuespecification::Island[1], ctx: CompilerContext[1], scope: VariableExpression[*] |
+                      platform::extensions::pure::tds::compiler::compileTds($i, $ctx)},
+         owns    = v: ValueSpecification[1] | $v->instanceOf(TDS),
+         print   = v: ValueSpecification[1] | platform::extensions::pure::tds::compiler::printTds($v->cast(@TDS<Any>))));
+}
+
+// The parsed header: each column name (unquoted) and where it is in the file, and the columns written
+// with a type or a multiplicity — or why it is not a column specification.
+Class platform::extensions::pure::tds::compiler::TdsHeader
+{
+   names    : String[*];
+   at       : platform::pure::protocol::grammar::SourceInformation[*];
+   declared : platform::pure::protocol::grammar::relation::Column[*];
+   error    : String[0..1];
+}
+
+function platform::extensions::pure::tds::compiler::compileTds(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], ctx: CompilerContext[1]): ValueCompileResult[1]
+{
+   let inner = $island.text->substring('TDS{'->length(), $island.text->length() - 1)->replace('\r\n', '\n');
+   let lines = numberedLines($inner, 1, 'TDS{'->length() + 1);
+   let header = $lines->filter(l | $l.text->trim() != '')->head();
+   if($header->isEmpty(),
+      | islandError('The TDS has no header', $island, $ctx),
+      | platform::extensions::pure::tds::compiler::compileTable($island, $header->toOne(), $lines->filter(l | $l.line > $header->toOne().line), $ctx));
+}
+
+function platform::extensions::pure::tds::compiler::compileTable(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], header: CsvLine[1], body: CsvLine[*], ctx: CompilerContext[1]): ValueCompileResult[1]
+{
+   let parsed = platform::extensions::pure::tds::compiler::parseHeader($island, $header);
+   let rows = rows($body);
+   let width = $parsed.names->size();
+   let wrong = $rows->filter(r | $r.cells->size() != $width);
+   if([pair(| $parsed.error->isNotEmpty(),
+            | islandErrorAt($parsed.error->toOne(), platform::extensions::pure::tds::compiler::headerAt($island, $header), $ctx)),
+       pair(| $wrong->isNotEmpty(),
+            | platform::extensions::pure::tds::compiler::failWith($wrong->map(r |
+                 platform::extensions::pure::tds::compiler::located('Row ' + $r.number->toString() + ' of the TDS has ' + platform::extensions::pure::tds::compiler::count($r.cells->size(), 'cell') + ', the header has ' + platform::extensions::pure::tds::compiler::count($width, 'column'),
+                    islandSourceInformation($island, $r.line, $r.cells->at(0).column, $r.line, $r.cells->last()->toOne().endColumn), $ctx)), $ctx))],
+      | platform::extensions::pure::tds::compiler::compileColumns($island, $parsed, $rows, $body, $ctx));
+}
+
+// The relation type, compiled as one TDS<(…)> in the island's context, then every cell checked against it.
+function platform::extensions::pure::tds::compiler::compileColumns(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], parsed: TdsHeader[1], rows: CsvRow[*], body: CsvLine[*], ctx: CompilerContext[1]): ValueCompileResult[1]
+{
+   let columns = range($parsed.names->size())->map(i | platform::extensions::pure::tds::compiler::protocolColumn($parsed, $i, $rows));
+   let typed = ^platform::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+                  type          = ^platform::pure::protocol::grammar::type::Type_Pointer(value = 'platform::extensions::pure::tds::metamodel::TDS'),
+                  typeArguments = ^platform::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+                                     type = ^platform::pure::protocol::grammar::relation::RelationType(columns = $columns)))
+               ->platform::pure::compiler::structural::genericTypeCompiler::compileGenericType($ctx, '', []);
+   if($typed.value->isEmpty() || ($typed.context.errors->size() > $ctx.errors->size()),
+      | ^ValueCompileResult(values = [], openVariables = [], context = $typed.context),
+      | platform::extensions::pure::tds::compiler::checkCells($island, $parsed, $rows, $body, $typed.value->toOne(), $typed.context));
+}
+
+// Column `i` as written, with its type inferred from its cells when it has none, and [0..1] when it has
+// no multiplicity.
+function platform::extensions::pure::tds::compiler::protocolColumn(parsed: TdsHeader[1], i: Integer[1], rows: CsvRow[*]): platform::pure::protocol::grammar::relation::Column[1]
+{
+   let name = $parsed.names->at($i);
+   let declared = $parsed.declared->filter(c | platform::extensions::pure::tds::compiler::unquote($c.name) == $name)->head();
+   let inferred = platform::extensions::pure::tds::compiler::inferColumnType($rows->map(r | $r.cells->at($i).value));
+   ^platform::pure::protocol::grammar::relation::Column(
+      name         = $name,
+      nameWildCard = false,
+      genericType  = if($declared.genericType->isEmpty(),
+                        | ^platform::pure::protocol::grammar::type::generics::UserDefinedGenericType(type = ^platform::pure::protocol::grammar::type::Type_Pointer(value = $inferred)),
+                        | $declared.genericType->toOne()),
+      multiplicity = if($declared.multiplicity->isEmpty(),
+                        | ^platform::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+                             lowerBound = ^platform::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 0),
+                             upperBound = ^platform::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 1)),
+                        | $declared.multiplicity->toOne()));
+}
+
+// The type a column's cells have (inferType), unless a cell does not hold it as written — a quoted `""`,
+// `"null"` or `" 7 "` is text inferType reads past — and then String.
+function platform::extensions::pure::tds::compiler::inferColumnType(values: String[*]): String[1]
+{
+   let inferred = platform::pure::functions::string::inferType($values)->cast(@platform::pure::metamodel::PackageableElement)->elementToPath();
+   let kind = platform::extensions::pure::tds::compiler::primitiveKind(platform::extensions::pure::tds::compiler::typeName($inferred));
+   if($values->forAll(v | platform::extensions::pure::tds::compiler::fits($kind, $v, [])),
+      | $inferred,
+      | 'platform::pure::metamodel::type::primitives::String');
+}
+
+function platform::extensions::pure::tds::compiler::checkCells(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], parsed: TdsHeader[1], rows: CsvRow[*], body: CsvLine[*],
+   genericType: platform::pure::metamodel::type::generics::GenericType[1], ctx: CompilerContext[1]): ValueCompileResult[1]
+{
+   let columns = platform::extensions::pure::tds::compiler::columnsOf($genericType);
+   let errors = range($columns->size())->map(i | platform::extensions::pure::tds::compiler::columnErrors($island, $parsed.at->at($i), $rows, $columns->at($i), $i, $ctx));
+   if($errors->isNotEmpty(),
+      | platform::extensions::pure::tds::compiler::failWith($errors, $ctx),
+      | ^ValueCompileResult(
+           values        = ^TDS<Any>(
+                              csv               = $parsed.names->joinStrings(', ') + '\n' + $body.text->joinStrings('\n'),
+                              genericType       = $genericType,
+                              multiplicity      = platform::pure::metamodel::multiplicity::PureOne,
+                              sourceInformation = platform::pure::compiler::structural::sourceInformationCompiler::compileSourceInformation($island.p_sourceInformation, $ctx)),
+           openVariables = [],
+           context       = $ctx));
+}
+
+// A column whose type a cell cannot hold, or each cell that does not fit its column.
+function platform::extensions::pure::tds::compiler::columnErrors(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], nameAt: platform::pure::protocol::grammar::SourceInformation[1],
+   rows: CsvRow[*], column: platform::pure::metamodel::relation::Column<Nil, Any|*>[1], i: Integer[1], ctx: CompilerContext[1]): String[*]
+{
+   let path = platform::extensions::pure::tds::compiler::typePath($column.genericType);
+   let kind = platform::extensions::pure::tds::compiler::cellKind($path, $ctx);
+   let multiplicity = platform::pure::compiler::helper::multiplicity::printMultiplicity($column.multiplicity);
+   let required = platform::pure::compiler::helper::multiplicity::multiplicityLowerBound($column.multiplicity) > 0;
+   let enumValues = platform::extensions::pure::tds::compiler::enumValues($path, $ctx);
+   if($kind == '',
+      | platform::extensions::pure::tds::compiler::located('The type \'' + platform::extensions::pure::tds::compiler::typeName($path) + '\' of column \'' + $column.name + '\' is not supported in a TDS', $nameAt, $ctx),
+      | $rows->map(r | platform::extensions::pure::tds::compiler::cellError($island, $r, $r.cells->at($i), $column.name, $kind, $path, $multiplicity, $required, $enumValues, $ctx)));
+}
+
+function platform::extensions::pure::tds::compiler::cellError(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], row: CsvRow[1], cell: CsvCell[1], name: String[1],
+   kind: String[1], path: String[1], multiplicity: String[1], required: Boolean[1], enumValues: String[*], ctx: CompilerContext[1]): String[*]
+{
+   let at = islandSourceInformation($island, $row.line, $cell.column, $row.line, $cell.endColumn);
+   if([pair(| $cell.value->isEmpty() && $required,
+            | platform::extensions::pure::tds::compiler::located('Column \'' + $name + '\' is ' + $multiplicity + ' but row ' + $row.number->toString() + ' has no value', $at, $ctx)),
+       pair(| $cell.value->isEmpty(), | []),
+       pair(| !platform::extensions::pure::tds::compiler::fits($kind, $cell.value->toOne(), $enumValues),
+            | platform::extensions::pure::tds::compiler::located('The value \'' + $cell.text + '\' of column \'' + $name + '\' cannot be ' + platform::extensions::pure::tds::compiler::withArticle(platform::extensions::pure::tds::compiler::typeName($path)), $at, $ctx))],
+      | []);
+}
+
+// Which cells a type accepts: by its primitive family — a user-defined primitive (`Primitive m::Code extends
+// String`) by the one it extends —, or as an enumeration's value names; '' for a type no cell can hold.
+function platform::extensions::pure::tds::compiler::cellKind(path: String[1], ctx: CompilerContext[1]): String[1]
+{
+   let builtIn = $path->startsWith('platform::pure::metamodel::type::primitives::');
+   let element = if($builtIn, | [], | $ctx->pathToElementInContext($path));
+   if([pair(| $builtIn,
+            | platform::extensions::pure::tds::compiler::primitiveKind(platform::extensions::pure::tds::compiler::typeName($path))),
+       pair(| $element->filter(e | $e->instanceOf(platform::pure::metamodel::type::Enumeration))->isNotEmpty(), | 'Enum'),
+       pair(| $element->filter(e | $e->instanceOf(platform::pure::metamodel::type::PrimitiveType))->isNotEmpty(),
+            | platform::extensions::pure::tds::compiler::extendedKind($element->toOne()->cast(@platform::pure::metamodel::type::PrimitiveType), $ctx))],
+      | '');
+}
+
+// The kind of the primitive a user-defined primitive extends.
+function platform::extensions::pure::tds::compiler::extendedKind(type: platform::pure::metamodel::type::PrimitiveType[1], ctx: CompilerContext[1]): String[1]
+{
+   let general = $type.generalizations.general->head();
+   if($general->isEmpty(), | '', | platform::extensions::pure::tds::compiler::cellKind(platform::extensions::pure::tds::compiler::typePath($general->toOne()), $ctx));
+}
+
+// A primitive by the cells it accepts: Float, Decimal and Number take any number.
+function platform::extensions::pure::tds::compiler::primitiveKind(name: String[1]): String[1]
+{
+   if([pair(| ['Float', 'Decimal', 'Number']->contains($name), | 'Number'),
+       pair(| ['String', 'Integer', 'Boolean', 'Date', 'DateTime', 'StrictDate']->contains($name), | $name)],
+      | '');
+}
+
+// An enumeration's value names, when they are known while compiling (empty: any value is accepted).
+function platform::extensions::pure::tds::compiler::enumValues(path: String[1], ctx: CompilerContext[1]): String[*]
+{
+   let element = $ctx->pathToElementInContext($path);
+   if($element->isNotEmpty() && $element->toOne()->instanceOf(platform::pure::metamodel::type::Enumeration),
+      | $element->toOne()->cast(@platform::pure::metamodel::type::Enumeration<Any>).properties.name,
+      | []);
+}
+
+function platform::extensions::pure::tds::compiler::fits(kind: String[1], value: String[1], enumValues: String[*]): Boolean[1]
+{
+   let dateTime = '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?(Z|[+-][0-9]{2}:?[0-9]{2})?';
+   if([pair(| $kind == 'String', | true),
+       pair(| $kind == 'Integer', | $value->matches('[+-]?[0-9]+')),
+       pair(| $kind == 'Number', | $value->matches('[+-]?([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][+-]?[0-9]+)?')),
+       pair(| $kind == 'Boolean', | ['true', 'false']->contains($value->toLower())),
+       pair(| $kind == 'StrictDate', | $value->matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')),
+       pair(| $kind == 'DateTime', | $value->matches($dateTime)),
+       pair(| $kind == 'Date', | $value->matches('[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?') || $value->matches($dateTime))],
+      | $enumValues->isEmpty() || $enumValues->contains($value));
+}
+
+// The parsed header — parsed as `~[<header>]` by M3 itself, in a function placed so that every position
+// M3 reports is the header's own in the file (the lines before it are blank, its column padded).
+function platform::extensions::pure::tds::compiler::parseHeader(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], header: CsvLine[1]): TdsHeader[1]
+{
+   let at = platform::extensions::pure::tds::compiler::headerAt($island, $header);
+   let line = if($at->isEmpty() || ($at.startLine->toOne() < 2), | 2, | $at.startLine->toOne());
+   let column = if($at->isEmpty(), | 1, | $at.startColumn->toOne());
+   let sourceId = if($at.sourceId->isEmpty(), | 'tds', | $at.sourceId->toOne());
+   let source = repeatString('\n', $line - 2) + 'function tds::header():Any[*]{~[\n' + repeatString(' ', $column - 1) + $header.text->trim() + '\n]}';
+   let parsed = platform::pure::functions::lang::tryEval(| platform::pure::functions::meta::parse($sourceId, $source));
+   if($parsed.failure->isNotEmpty(),
+      | ^TdsHeader(error = 'The TDS header is not a column specification: ' + platform::extensions::pure::tds::compiler::parserReason($parsed.failure.message->toOne())),
+      | platform::extensions::pure::tds::compiler::headerOf($parsed.value->toOne()));
+}
+
+function platform::extensions::pure::tds::compiler::headerOf(file: platform::pure::protocol::PureFile[1]): TdsHeader[1]
+{
+   let spec = $file.sections.elements->cast(@platform::pure::protocol::grammar::function::UserDefinedFunction)->toOne().expressionSequence->toOne()
+                 ->cast(@platform::pure::protocol::grammar::valuespecification::FunctionInvocation);
+   if($spec.functionName != 'colSpecArray',
+      | ^TdsHeader(error = 'A TDS column cannot be computed: its header is a list of columns, with no lambda'),
+      | platform::extensions::pure::tds::compiler::columnsHeader($spec));
+}
+
+// `~[a, b:T[m], …]`: the names (an AtomicValue each) and the columns written with a type or a multiplicity.
+function platform::extensions::pure::tds::compiler::columnsHeader(spec: platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): TdsHeader[1]
+{
+   let names = $spec.parametersValues->at(0)->cast(@platform::pure::protocol::grammar::valuespecification::Collection).values
+                 ->cast(@platform::pure::protocol::grammar::valuespecification::AtomicValue);
+   let holder = $spec.parametersValues->at(1);
+   ^TdsHeader(
+      names    = $names->map(n | platform::extensions::pure::tds::compiler::unquote($n.value->cast(@String))),
+      at       = $names.p_sourceInformation,
+      declared = if($holder->instanceOf(platform::pure::protocol::grammar::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder),
+                    | $holder.genericType->cast(@platform::pure::protocol::grammar::type::generics::UserDefinedGenericType)->toOne().type
+                         ->cast(@platform::pure::protocol::grammar::relation::RelationType).columns,
+                    | []));
+}
+
+// What the parser says is wrong, without where (the error is placed at the header): the text after the
+// host's `line <l>:<c>` and its optional ` - ` (`Parse error in <source> at line 20:5 - extraneous input…` on
+// the JVM hosts, `Parse error:\n  line 2:5 extraneous input…` on JavaScript).
+function platform::extensions::pure::tds::compiler::parserReason(message: String[1]): String[1]
+{
+   let at = $message->lastIndexOf('line ');
+   let rest = if($at < 0, | $message, | $message->substring($at + 'line '->length(), $message->length()));
+   let reason = if($at < 0, | $rest, | $rest->substring($rest->indexOf(' ') + 1, $rest->length()));
+   if($reason->startsWith('- '), | $reason->substring(2, $reason->length()), | $reason)->trim();
+}
+
+// `1 cell`, `3 cells`.
+function platform::extensions::pure::tds::compiler::count(n: Integer[1], noun: String[1]): String[1]
+{
+   $n->toString() + ' ' + $noun + if($n == 1, | '', | 's');
+}
+
+// `a Float`, `an Integer`.
+function platform::extensions::pure::tds::compiler::withArticle(name: String[1]): String[1]
+{
+   if(['A', 'E', 'I', 'O', 'U']->contains($name->substring(0, 1)->toUpper()), | 'an ', | 'a ') + $name;
+}
+
+// Where the header is: from its first character to its last.
+function platform::extensions::pure::tds::compiler::headerAt(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], header: CsvLine[1]): platform::pure::protocol::grammar::SourceInformation[0..1]
+{
+   let lead = $header.text->length() - $header.text->ltrim()->length();
+   let start = $header.firstColumn + $lead;
+   islandSourceInformation($island, $header.line, $start, $header.line, $start + $header.text->trim()->length() - 1);
+}
+
+function platform::extensions::pure::tds::compiler::unquote(name: String[1]): String[1]
+{
+   if($name->startsWith('\'') && $name->endsWith('\'') && ($name->length() > 1), | $name->substring(1, $name->length() - 1), | $name);
+}
+
+// `message` at `at`, worded as the compiler words its errors.
+function platform::extensions::pure::tds::compiler::located(message: String[1], at: platform::pure::protocol::grammar::SourceInformation[0..1], ctx: CompilerContext[1]): String[1]
+{
+   $message + platform::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo(
+      platform::pure::compiler::structural::sourceInformationCompiler::compileSourceInformation($at, $ctx), $ctx);
+}
+
+// Nothing in place of the island, and every error in `errors`.
+function platform::extensions::pure::tds::compiler::failWith(errors: String[*], ctx: CompilerContext[1]): ValueCompileResult[1]
+{
+   ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors = $ctx.errors->concatenate($errors)));
+}
+
+// The columns of a TDS<(…)>.
+function platform::extensions::pure::tds::compiler::columnsOf(genericType: platform::pure::metamodel::type::generics::GenericType[1]): platform::pure::metamodel::relation::Column<Nil, Any|*>[*]
+{
+   $genericType->cast(@platform::pure::metamodel::type::generics::GenericTypeValue).typeArguments->at(0)
+      ->cast(@platform::pure::metamodel::type::generics::GenericTypeValue).type
+      ->cast(@platform::pure::metamodel::relation::RelationType<Any>).columns->cast(@platform::pure::metamodel::relation::Column<Nil, Any|*>);
+}
+
+// The path of a column type: the pointer path while compiling, the element path once loaded.
+function platform::extensions::pure::tds::compiler::typePath(genericType: platform::pure::metamodel::type::generics::GenericType[1]): String[1]
+{
+   let type = $genericType->cast(@platform::pure::metamodel::type::generics::GenericTypeValue).type;
+   if($type->instanceOf(platform::pure::metamodel::pointer::TempCompilerPointer),
+      | $type->cast(@platform::pure::metamodel::pointer::TempCompilerPointer).path,
+      | $type->cast(@platform::pure::metamodel::PackageableElement)->elementToPath());
+}
+
+// A type as a TDS header writes it: a primitive by its name, anything else by its path.
+function platform::extensions::pure::tds::compiler::typeName(path: String[1]): String[1]
+{
+   $path->replace('platform::pure::metamodel::type::primitives::', '');
+}
+
+// The TDS as source: its header printed from its relation type (a column whose type is the one its cells
+// would get, and whose multiplicity is the default [0..1], is printed bare), indented as its first row,
+// then its rows as written.
+function platform::extensions::pure::tds::compiler::printTds(tds: TDS<Any>[1]): String[1]
+{
+   let at = $tds.csv->indexOf('\n');
+   let body = if($at < 0, | '', | $tds.csv->substring($at + 1, $tds.csv->length()));
+   let rows = rows(numberedLines($body, 1, 1));
+   let first = lines($body)->filter(l | $l->trim() != '')->head();
+   let indent = if($first->isEmpty(), | '', | $first->toOne()->substring(0, $first->toOne()->length() - $first->toOne()->ltrim()->length()));
+   let columns = platform::extensions::pure::tds::compiler::columnsOf($tds.genericType);
+   let header = range($columns->size())->map(i | platform::extensions::pure::tds::compiler::printColumn($columns->at($i), $rows->map(r | $r.cells->at($i).value)))->joinStrings(', ');
+   '#TDS{\n' + $indent + $header + '\n' + $body + '}#';
+}
+
+function platform::extensions::pure::tds::compiler::printColumn(column: platform::pure::metamodel::relation::Column<Nil, Any|*>[1], values: String[*]): String[1]
+{
+   let path = platform::extensions::pure::tds::compiler::typePath($column.genericType);
+   let multiplicity = platform::pure::compiler::helper::multiplicity::printMultiplicity($column.multiplicity);
+   let inferred = platform::extensions::pure::tds::compiler::inferColumnType($values);
+   let name = if($column.name->matches('[A-Za-z_][A-Za-z0-9_]*'), | $column.name, | '\'' + $column.name + '\'');
+   $name + if(($path == $inferred) && ($multiplicity == '[0..1]'),
+              | '',
+              | ':' + platform::extensions::pure::tds::compiler::typeName($path) + if($multiplicity == '[0..1]', | '', | $multiplicity));
+}

@@ -1,0 +1,10 @@
+# FlatBuffer field-ID registry — keeps wire format stable across builds.
+# Auto-maintained by RdfFbsSchemaGenerator. Append-only.
+# Format: TableName.field_name=ID
+
+TDSDef.classifier_generic_type=1
+TDSDef.source_information=2
+TDSDef.multiplicity=4
+TDSDef.generic_type=6
+TDSDef.csv=7
+

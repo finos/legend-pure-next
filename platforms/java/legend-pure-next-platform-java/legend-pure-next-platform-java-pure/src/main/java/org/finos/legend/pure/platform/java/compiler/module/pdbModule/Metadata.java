@@ -148,11 +148,12 @@ public final class Metadata
         {
             return null;
         }
+        // Each argument as `^A(...)` would be classified: the canonical GenericType element when the metadata
+        // has one (`^TDS<Any>` carries GenericType_..._Any, as the compiler gives Truffle), else a fresh one.
         List<Object> arguments = new java.util.ArrayList<>(typeArguments.size());
         for (Object typeArgument : typeArguments)
         {
-            Object argument = installed.element((String) typeArgument);
-            arguments.add(userDefinedGenericType(installed)._type(argument));
+            arguments.add(classifier((String) typeArgument));
         }
         return userDefinedGenericType(installed)
                 ._type(element)

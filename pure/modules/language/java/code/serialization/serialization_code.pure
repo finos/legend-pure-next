@@ -65,6 +65,10 @@ function <<access.private>> platform::extensions::language::java::serialization:
       c:ExpressionStatement[1]      | $sfer->doCode($c.expression)->semicolon()->newLine(),
       c:LocalVariableDeclaration[1] | $sfer->doModifiers($c.modifiers)->doType($c.type)->space()->addWord($c.variableName)->ifNotEmpty($c.initializer, {s, i| $s->addText('=')->space()->doCode($i)})->when(!$sfer.inForHead, {s|$s->semicolon()}),
       c:If[1]                       | $sfer->addWord('if')->addText('(')->doCode($c.test)->addText(')')->doCode($c.then)->ifNotEmpty($c.else, {s, else| $s->addWord('else')->doCode($else->toOne())}),
+      c:Switch[1]                   | $sfer->addWord('switch')->addText('(')->doCode($c.expression)->addText(')')->newLine()->openBrace()
+                                          ->forEach($c.cases, {s, k| $s->addWord('case')->doCode($k.label)->addText(':')->space()->doCode($k.body)->newLine()})
+                                          ->ifNotEmpty($c.default, {s, d| $s->addText('default:')->space()->doCode($d->toOne())->newLine()})
+                                          ->closeBrace(),
       c:For[1]                      | $sfer->addWord('for')->addText('(')->startForHead()->doCode($c.init)->semicolon()->space()->doCode($c.test)->semicolon()->space()->doCode($c.update)->endForHead()->addText(')')->newLine()->doCode($c.body),
       c:ForEach[1]                  | $sfer->addWord('for')->addText('(')->startParameters()->doParameter($c.parameter)->endParameters()->addText(': ')->doCode($c.collection)->addText(')')->newLine()->doCode($c.body),
       c:While[1]                    | $sfer->addWord('while')->addText('(')->doCode($c.test)->addText(')')->newLine()->doCode($c.then),

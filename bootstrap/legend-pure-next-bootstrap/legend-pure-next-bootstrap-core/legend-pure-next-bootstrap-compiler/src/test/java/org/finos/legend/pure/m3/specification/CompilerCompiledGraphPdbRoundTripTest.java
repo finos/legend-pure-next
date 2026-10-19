@@ -99,7 +99,11 @@ public class CompilerCompiledGraphPdbRoundTripTest
                                 String testName = relative.endsWith(".pure")
                                         ? relative.substring(0, relative.length() - 5)
                                         : relative;
-                                tests.add(Arguments.of(testName, p.toString()));
+                                // Island values: see CompilerCompiledGraphTest.ISLAND_VALUE_FIXTURES.
+                                if (!testName.startsWith(CompilerCompiledGraphTest.ISLAND_VALUE_FIXTURES))
+                                {
+                                    tests.add(Arguments.of(testName, p.toString()));
+                                }
                             }
                         }
                         catch (IOException e)

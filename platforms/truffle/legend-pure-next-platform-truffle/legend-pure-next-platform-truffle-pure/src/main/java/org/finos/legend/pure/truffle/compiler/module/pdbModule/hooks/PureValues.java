@@ -69,6 +69,62 @@ public class PureValues
         return l.isEmpty() ? null : l.get(0);
     }
 
+    /**
+     * Pure's toOne on a value the translator knows is many-valued: a CHECK, as on every backend —
+     * {@code []->toOne()} and {@code [1,2]->toOne()} fail rather than yield nothing or the first element.
+     * The translator calls it as {@code PureValues.toOne} on whichever host's PureValues it targets.
+     */
+    public static Object toOne(Object v)
+    {
+        if (!(v instanceof java.util.List))
+        {
+            return v;
+        }
+        java.util.List<?> l = (java.util.List<?>) v;
+        if (l.size() != 1)
+        {
+            throw new RuntimeException("toOne expected exactly 1 element, got " + l.size());
+        }
+        return l.get(0);
+    }
+
+    /**
+     * {@code cast(value, @T)}: every value must be a {@code type}, else {@code Cast exception: <its type> cannot be
+     * cast to <name>}, its type named as Pure names it — as the Java platform's runtime library does.
+     */
+    public static Object checkedCast(Object value, Class<?> type, String name)
+    {
+        for (Object v : list(value))
+        {
+            if (v != null && !type.isInstance(v))
+            {
+                throw new RuntimeException("Cast exception: " + pureTypeName(v) + " cannot be cast to " + name);
+            }
+        }
+        return value;
+    }
+
+    private static String pureTypeName(Object v)
+    {
+        if (v instanceof Long)
+        {
+            return "Integer";
+        }
+        if (v instanceof Double)
+        {
+            return "Float";
+        }
+        if (v instanceof java.math.BigDecimal)
+        {
+            return "Decimal";
+        }
+        if (v.getClass().getSimpleName().equals("PureDate"))
+        {
+            return v.toString().contains("T") ? "DateTime" : v.toString().length() >= 10 ? "StrictDate" : "Date";
+        }
+        return v.getClass().getSimpleName();
+    }
+
     public static boolean same(Object a, Object b)
     {
         Object x = norm(a), y = norm(b);

@@ -45,12 +45,16 @@ import platform::pure::ui::progress::*;
 
 function <<test.TestDependency>> platform::pure::compiler::test::pdb::runPdbGoldenTests(testDir:String[1], goldenDir:String[1], schemaPath:String[1], reportPath:String[1]):String[1]
 {
-    platform::pure::compiler::test::pdb::runPdbGoldenTests($testDir, $goldenDir, $schemaPath, $reportPath, []);
+    // With the test package's island handlers, as the compiled-graph runner: valueSpecification/island has a golden too.
+    // Their values are written with the test package's schema fragment, staged beside m3.fbs (islandTest.fbs).
+    let dir = $schemaPath->substring(0, $schemaPath->lastIndexOf('/'));
+    let fragment = directoryTree($dir)->filter(f | $f->endsWith('/islandTest.fbs'));
+    platform::pure::compiler::test::pdb::runPdbGoldenTests($testDir, $goldenDir, $schemaPath->concatenate($fragment), $reportPath, platform::pure::compiler::test::islandTestExtension());
 }
 
 // With a language extension's compiler passes (which also write its elements): its fixtures compile and
 // archive like any other. The schema files are read as ONE text — m3's, then the extension's fragment,
-// which refers to m3's tables. No extensions is exactly the call above.
+// which refers to m3's tables. The call above passes the test package's island handlers.
 function <<test.TestDependency>> platform::pure::compiler::test::pdb::runPdbGoldenTests(testDir:String[1], goldenDir:String[1], schemaPaths:String[*], reportPath:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):String[1]
 {
     let schema = platform::pure::compiler::pdb::schema::parseFbs($schemaPaths->map(p | readFile($p))->joinStrings('\n'));
@@ -91,6 +95,15 @@ function <<test.TestDependency>> platform::pure::compiler::test::pdb::assertMatc
     let written = platform::pure::compiler::test::pdb::writeFixture($content, $sourceId, $extensions);
     let findings = platform::pure::compiler::test::pdb::diffArchives($schema, $written, $golden);
     assert($findings->isEmpty(), | $findings->size()->toString() + ' difference(s) from the golden, first: ' + $findings->at(0));
+}
+
+// The archive a fixture compiles to, as hex, with the specification's island handlers — how the island
+// goldens (valueSpecification/island) are written: by the Pure writer, as the diagram's are, since the
+// Java compiler cannot build the test package's island values (`just bootstrap::regen-island-goldens`).
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::goldenHexOf(testDir:String[1], name:String[1]):String[1]
+{
+    platform::pure::compiler::test::pdb::writeFixture(readFile($testDir + '/' + $name + '.pure'), $name, platform::pure::compiler::test::islandTestExtension())
+       ->platform::pure::functions::binary::binaryToHex();
 }
 
 // The archive a fixture compiles to — what its golden holds. The writer asks the given extensions
@@ -198,8 +211,14 @@ function <<test.TestDependency>> platform::pure::compiler::test::pdb::sameBytes(
 
 function <<test.TestDependency>> platform::pure::compiler::test::pdb::compareNode(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], a:platform::pure::compiler::pdb::reader::FbsNode[1], b:platform::pure::compiler::pdb::reader::FbsNode[1], path:String[1]):String[*]
 {
-    if($a.type != $b.type,
-        | [$path + ': a ' + $a.type + ' in the Pure archive, a ' + $b.type + ' in the golden'],
+    if([pair(| $a.type != $b.type,
+             | [$path + ': a ' + $a.type + ' in the Pure archive, a ' + $b.type + ' in the golden']),
+        // A language extension's value: its blobs compare as the tables they hold (the schema includes the
+        // extension's fragment), which says WHERE they differ rather than that two byte runs do.
+        pair(| $a.type == 'ExtensionValueDef',
+             | platform::pure::compiler::test::pdb::compareNode($schema,
+                  platform::pure::compiler::pdb::reader::decodeExtensionValue($schema, $a),
+                  platform::pure::compiler::pdb::reader::decodeExtensionValue($schema, $b), $path))],
         | platform::pure::compiler::pdb::schema::table($schema, $a.type)->toOne().fields
             ->map(f | platform::pure::compiler::test::pdb::compareField($schema, $a, $b, $f, $path + '.' + $f.name)));
 }
@@ -216,7 +235,15 @@ function <<test.TestDependency>> platform::pure::compiler::test::pdb::compareFie
                   platform::pure::compiler::pdb::reader::readField($schema, $b, $field.name)->head(), $path)),
         pair(| $inPure != $inGolden,
              | [$path + ': ' + if($inPure, | 'present', | 'absent') + ' in the Pure archive, ' + if($inGolden, | 'present', | 'absent') + ' in the golden']),
-        pair(| !$inPure, | []->cast(@String))],
+        pair(| !$inPure, | []->cast(@String)),
+        // A byte vector compares by content (`==` on Binary is identity on every platform), decided by the
+        // field's declared type rather than by asking the value what it is.
+        pair(| $field.type == 'ubyte',
+             | if(platform::pure::compiler::test::pdb::sameBytes(
+                     platform::pure::compiler::pdb::reader::readField($schema, $a, $field.name)->cast(@Binary)->toOne(),
+                     platform::pure::compiler::pdb::reader::readField($schema, $b, $field.name)->cast(@Binary)->toOne()),
+                  | []->cast(@String),
+                  | [$path + ': different bytes in the Pure archive and the golden']))],
        | platform::pure::compiler::test::pdb::compareVector($schema,
             platform::pure::compiler::pdb::reader::readField($schema, $a, $field.name),
             platform::pure::compiler::pdb::reader::readField($schema, $b, $field.name), $field.name, $path));

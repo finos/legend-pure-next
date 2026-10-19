@@ -39,12 +39,19 @@ class LanguageSchemaTest
         return new Language(name, name, Lists.immutable.empty(), null, null, null, fbs, null);
     }
 
+    /** ###Pure alone — PureLanguage.all() also holds the test language, whose fragment (its island values) follows m3's. */
+    private static org.eclipse.collections.api.list.ImmutableList<Language> pure()
+    {
+        return PureLanguage.all().select(l -> "Pure".equals(l.name()));
+    }
+
     @Test
     void thePureManifestCarriesM3sSchema() throws Exception
     {
-        assertEquals(Files.readString(repoRoot().resolve("shared/specification/m3.fbs")),
-                Language.schemaText(PureLanguage.all(), null),
-                "###Pure's `fbs` is m3.fbs, and the test sections add none");
+        String m3 = Files.readString(repoRoot().resolve("shared/specification/m3.fbs"));
+        assertEquals(m3, Language.schemaText(pure(), null), "###Pure's `fbs` is m3.fbs");
+        String all = Language.schemaText(PureLanguage.all(), null);
+        assertTrue(all.startsWith(m3) && all.contains("table EchoLiteralDef"), "the test sections add their island values' fragment after m3");
     }
 
     @Test
@@ -57,8 +64,8 @@ class LanguageSchemaTest
     @Test
     void extensionsFollowTheAlwaysActiveLanguages() throws Exception
     {
-        String text = Language.schemaText(Lists.immutable.of(extension("x", "table XDef {}")).newWithAll(PureLanguage.all()), null);
-        assertTrue(text.startsWith(PureLanguage.all().get(0).fbsText()), "m3 first even when listed last");
+        String text = Language.schemaText(Lists.immutable.of(extension("x", "table XDef {}")).newWithAll(pure()), null);
+        assertTrue(text.startsWith(pure().get(0).fbsText()), "m3 first even when listed last");
         assertTrue(text.endsWith("\ntable XDef {}"), text.substring(Math.max(0, text.length() - 40)));
     }
 
@@ -67,7 +74,7 @@ class LanguageSchemaTest
     {
         Path override = Files.writeString(dir.resolve("other.fbs"), "table ADef {}");
         assertEquals("table ADef {}\ntable XDef {}",
-                Language.schemaText(PureLanguage.all().newWith(extension("x", "table XDef {}")), override));
+                Language.schemaText(pure().newWith(extension("x", "table XDef {}")), override));
     }
 
     @Test

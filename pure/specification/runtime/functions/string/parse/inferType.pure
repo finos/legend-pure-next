@@ -1,0 +1,49 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::test::pct::*;
+
+// The type the cells of a CSV column have — how a TDS literal types a column whose header gives none. Legend
+// Engine's rules (deephaven-csv's default parsers): a cell that is empty or `null` (after trimming) tells
+// nothing; any other cell is, first that fits, Boolean (`true` / `false`, any case), Integer (an optional
+// sign and digits, within 64 bits), Float (a decimal number, or one with an exponent), Date (an ISO-8601
+// date-time with a time AND a zone), else String. The column: all its cells the same → that; Integer and
+// Float only → Float; any other mix → String; no cell telling anything → String.
+native function <<PCT.function>> platform::pure::functions::string::inferType(values:String[*]):platform::pure::metamodel::type::Type[1];
+
+function <<PCT.test>> platform::pure::functions::string::tests::inferType::testInferTypeOfEachKind<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(Boolean, $f->eval(|inferType(['true', 'FALSE'])));
+    assertEquals(Integer, $f->eval(|inferType(['1', '-17', '+3'])));
+    assertEquals(Float, $f->eval(|inferType(['1.5', '2e3', '-.5'])));
+    assertEquals(Date, $f->eval(|inferType(['2021-11-07T09:00:00Z', '2021-11-07T09:00:00+01:30', '2021-11-07T09:00:00.123+0000'])));
+    assertEquals(String, $f->eval(|inferType(['a', 'b'])));
+}
+
+function <<PCT.test>> platform::pure::functions::string::tests::inferType::testInferTypeCombinesTheCells<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(Float, $f->eval(|inferType(['1', '2.5'])));
+    assertEquals(String, $f->eval(|inferType(['1', 'true'])));
+    assertEquals(String, $f->eval(|inferType(['2020-01-01'])));
+    assertEquals(Integer, $f->eval(|inferType(['', 'null', ' 7 '])));
+    assertEquals(String, $f->eval(|inferType(['', 'null'])));
+    assertEquals(String, $f->eval(|inferType([])));
+}
+
+function <<PCT.test>> platform::pure::functions::string::tests::inferType::testInferTypeIntegerWithin64Bits<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(Integer, $f->eval(|inferType('9223372036854775807')));
+    assertEquals(Integer, $f->eval(|inferType('-9223372036854775808')));
+    assertEquals(Float, $f->eval(|inferType('9223372036854775808')));
+}

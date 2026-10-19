@@ -16,6 +16,8 @@
 package org.finos.legend.pure.m3.module.sourceModule.topLevel;
 
 import platform.pure.metamodel.PackageableElement;
+import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.list.ListIterable;
 import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -74,4 +76,12 @@ public interface CompilerExtension
      *         extension does not handle the given element type
      */
     PackageableElement thirdPass(IndexEntry entry, MetadataAccess model, CompilationContext context);
+
+    /**
+     * The expression islands ({@code #…#}) this extension compiles. None by default.
+     */
+    default ListIterable<IslandHandler> islandHandlers()
+    {
+        return Lists.immutable.empty();
+    }
 }

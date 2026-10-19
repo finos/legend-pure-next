@@ -53,6 +53,7 @@ public class TruffleCompileToPdbTest
     private static PureRuntime runtime;
     private static ModuleRegistry resolver;
     private static Object compileFn;
+    private static Object islandTestExtension;
     private static Object manageFileSectionsFn;
     private static org.finos.legend.pure.truffle.grammar.TrufflePureParser pureParser;
 
@@ -91,14 +92,18 @@ public class TruffleCompileToPdbTest
         Path buildDir = locateBuildDir();
         PdbModule coreLoader = new PdbModule(buildDir.resolve("core.pdb"));
         PdbModule compilerLoader = new PdbModule(buildDir.resolve("compiler.pdb"));
+        // compiler-tests.pdb: the specification's island handlers (islandTestExtension) every runner compiles with.
+        PdbModule compilerTestsLoader = new PdbModule(buildDir.resolve("compiler-tests.pdb"));
         PdbModule parserMappingsLoader = new PdbModule(buildDir.resolve("parser-mappings.pdb"));
         ModuleRegistry registry = new ModuleRegistry();
         registry.register(coreLoader);
         registry.register(compilerLoader);
+        registry.register(compilerTestsLoader);
         registry.register(parserMappingsLoader);
         resolver = registry;
         coreLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
+        compilerTestsLoader.setResolver(resolver);
         parserMappingsLoader.setResolver(resolver);
 
         // Section parsers (CompiledGraph / CompilerStats / TestFile /
@@ -113,11 +118,13 @@ public class TruffleCompileToPdbTest
         // Decoding needs the languages' schema, which build() installs: preload after it.
         coreLoader.preloadAll();
         compilerLoader.preloadAll();
+        compilerTestsLoader.preloadAll();
         parserMappingsLoader.preloadAll();
 
-        // 3-arg silent variant — tests pull errors/stats structurally off the
-        // result; the live progress bar + stats summary would flood surefire output.
-        compileFn = resolver.getElement("platform::pure::compiler::compile_PureFile_MANY__Boolean_1__Boolean_1__CompilationResult_1_");
+        // Silent variant — tests pull errors/stats structurally off the result; the live progress bar +
+        // stats summary would flood surefire output. With the specification's island handlers, as every
+        // runner of pure/specification/compiler/tests compiles (valueSpecification/island needs them).
+        compileFn = resolver.getElement("platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__Boolean_1__CompilationResult_1_");
         if (compileFn == null
                 || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(compileFn,
                 "platform::pure::metamodel::function::FunctionDefinition", resolver))
@@ -133,6 +140,8 @@ public class TruffleCompileToPdbTest
             throw new RuntimeException("manageFileSections FunctionDefinition not resolvable: "
                     + (manageFileSectionsFn == null ? "null" : manageFileSectionsFn.getClass().getName()));
         }
+
+        islandTestExtension = runtime.execute(resolver.getElement("platform::pure::compiler::test::islandTestExtension__CompilerExtension_1_"));
 
         // Reuse the runtime's configured PureParser instance — same one the
         // native `parse` uses, so this test path matches TruffleTestCompilerPure exactly.
@@ -250,7 +259,7 @@ public class TruffleCompileToPdbTest
                 // chunk). Single-file specs collapse to a 1-element list.
                 Object files = runtime.execute(manageFileSectionsFn, truffleFile);
                 // debug=false, silent=true
-                result = runtime.execute(compileFn, files, false, true);
+                result = runtime.execute(compileFn, files, islandTestExtension, false, true);
             }
             catch (Exception e)
             {

@@ -173,6 +173,9 @@ EnumerationDef.name=6
 EnumerationDef.package=7
 EnumerationDef.generalizations=8
 
+ExtensionValueDef.kind=0
+ExtensionValueDef.blob=1
+
 FloatValueDef.val=0
 
 FunctionInvocationDef.classifier_generic_type=1

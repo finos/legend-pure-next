@@ -134,9 +134,9 @@ function <<access.private>> platform::extensions::language::java::translation::j
     'volatile','while']
 }
 
-// The Java package of the platform's generated runtime classes (PureMap,
-// PureMatch, Variant, PureDate, PureFormat, PureBytes): JDK-only classes every
-// translated program calls, generated once by {@link generateRuntimeClasses}.
+// The Java package of the platform's runtime classes (PureValues, PureMap, PureMatch, Variant, PureDate,
+// PureFormat, PureBytes, PureOut): the handwritten library every translated program calls, in the Java
+// platform's own sources (platforms/java/…/runtime).
 // The default host: the Java platform. A generator targeting another host
 // passes its own root to defaultConventions.
 function platform::extensions::language::java::translation::defaultPlatformPackage(): String[1]
@@ -179,129 +179,6 @@ function platform::extensions::language::java::translation::platformClass(conv: 
 function platform::extensions::language::java::translation::pdbClass(conv: Conventions[1], simpleName: String[1]): String[1]
 {
    $conv.pdbPackage + '.' + $simpleName
-}
-
-// Value normalisation as the Pure language sees values: `null` is `[]`, and a
-// one-element list is its element. Inlined everywhere before, one class now.
-// stdout for `print`, and the nesting counter `withSilencedPrint` uses.
-//
-// `print`'s contract (print.pure) is that it WRITES the value and returns the
-// formatted string; this platform used to do only the second half, so every
-// print was silently dropped — no progress bar, no runner output, only the value
-// Execute.main echoes at the end. flush() matters: System.out only auto-flushes
-// on a newline, and the progress display writes a bar with none, so without it
-// the bar would not appear until some later line forced it out.
-function <<access.private>> platform::extensions::language::java::translation::pureOutHelperClass(conv: Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
-{
-   javaClass(['public'], $conv->platform::extensions::language::java::translation::runtimeClass('PureOut'))
-      ->addField(javaField(['private', 'static'], javaInt(), 'silence'))
-      ->addMethod(javaMethod(['public', 'static'], javaString(), 'write', [j_parameter(javaString(), 's')],
-           'if (silence == 0) { System.out.print(s); System.out.flush(); }\n'
-         + 'return s;'))
-      ->addMethod(javaMethod(['public', 'static'], javaObject(), 'silenced', [j_parameter(javaClass('java.util.function.Supplier'), 'body')],
-           // Counted, so an inner silence cannot un-silence an outer one, and the
-           // count is restored even when the body throws — a failing test must not
-           // mute the runner that reports it.
-           'silence++;\n'
-         + 'try { return body.get(); }\n'
-         + 'finally { silence--; }'));
-}
-
-function <<access.private>> platform::extensions::language::java::translation::pureValuesHelperClass(conv: Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
-{
-   javaClass(['public'], $conv->platform::extensions::language::java::translation::runtimeClass('PureValues'))
-      ->addMethod(javaMethod(['public', 'static'], javaObject(), 'norm', [j_parameter(javaObject(), 'v')],
-           'if (v == null) { return java.util.Collections.emptyList(); }\n'
-         + 'return v instanceof java.util.List && ((java.util.List<?>) v).size() == 1 ? ((java.util.List<?>) v).get(0) : v;'))
-      ->addMethod(javaMethod(['public', 'static'], javaBoolean(), 'equal', [j_parameter(javaObject(), 'a'), j_parameter(javaObject(), 'b')],
-           'Object x = atomicValue(norm(a)), y = atomicValue(norm(b));\n'
-         // Pure has one zero: Double.equals tells -0.0 from 0.0, and `%-000.000`
-         // parses to a negative zero that must still equal the literal 0.0.
-         + 'if (x instanceof Double && y instanceof Double && ((Double) x) == 0.0 && ((Double) y) == 0.0) { return true; }\n'
-         // A function reference and the element it names are one Pure element.
-         + 'if (same(x, y)) { return true; }\n'
-         // A Binary is a host byte[], whose natural equals() is identity. Pure
-         // equality on a primitive is by VALUE, so compare contents.
-         + 'if (x instanceof byte[] && y instanceof byte[]) { return java.util.Arrays.equals((byte[]) x, (byte[]) y); }\n'
-         + 'return java.util.Objects.equals(x, y);'))
-      // An AtomicValue compares as the value it WRAPS: a ValueSpecification
-      // lifted out of an expressionSequence equals the literal it holds. Both
-      // other hosts with this object model compare that way (Truffle's
-      // EqualNode.normalizeForEquals, the JS runtime's __unwrapAtomicValue), so
-      // equality is the ONE place that looks through the wrapper — a property
-      // read hands back the AtomicValue itself on every host, and nothing else
-      // may unwrap it. A loop, not one step: an AtomicValue can wrap another.
-      // A wrapper holding [] is not its absent value, so it stays itself.
-      ->addMethod(javaMethod(['public', 'static'], javaObject(), 'atomicValue', [j_parameter(javaObject(), 'v')],
-           'Object x = v;\n'
-         + 'while (x instanceof org.finos.legend.pure.m3.platform.pure.metamodel.valuespecification.AtomicValue) {\n'
-         + '    Object inner = one(((org.finos.legend.pure.m3.platform.pure.metamodel.valuespecification.AtomicValue) x).value());\n'
-         + '    if (inner == null) { return x; }\n'
-         + '    x = inner;\n'
-         + '}\n'
-         + 'return x;'))
-      ->addMethod(javaMethod(['public', 'static'], javaClass('java.util.Map'), 'captures', [j_parameter(javaList(), 'namesAndValues')],
-           'java.util.LinkedHashMap<Object, Object> captures = new java.util.LinkedHashMap<>();\n'
-         + 'for (int i = 0; i + 1 < namesAndValues.size(); i += 2) {\n'
-         + '    captures.put(namesAndValues.get(i), new org.finos.legend.pure.m3.platform.pure.functions.collection.ListImpl()._values(list(namesAndValues.get(i + 1))));\n'
-         + '}\n'
-         + 'return captures;'))
-      ->addMethod(javaMethod(['public', 'static'], javaList(), 'list', [j_parameter(javaObject(), 'v')],
-           'if (v == null) { return java.util.Collections.emptyList(); }\n'
-         + 'return v instanceof java.util.List ? (java.util.List) v : java.util.Collections.singletonList(v);'))
-      ->addMethod(javaMethod(['public', 'static'], javaObject(), 'one', [j_parameter(javaObject(), 'v')],
-           'if (!(v instanceof java.util.List)) { return v; }\n'
-         + 'java.util.List<?> l = (java.util.List<?>) v;\n'
-         + 'return l.isEmpty() ? null : l.get(0);'))
-      // `toOne`, which is `one` with Pure's contract enforced: NOT exactly one
-      // value is an error, not a silent first-element read. Same message and
-      // exception as bootstrap's CollectionNatives, Truffle's ToOneNode and the
-      // JS runtime, so the text is identical on all four backends.
-      ->addMethod(javaMethod(['public', 'static'], javaObject(), 'toOne', [j_parameter(javaObject(), 'v')],
-           'if (!(v instanceof java.util.List)) { return v; }\n'
-         + 'java.util.List<?> l = (java.util.List<?>) v;\n'
-         + 'if (l.size() != 1) { throw new RuntimeException("toOne expected exactly 1 element, got " + l.size()); }\n'
-         + 'return l.get(0);'))
-      ->addMethod(javaMethod(['public', 'static'], javaBoolean(), 'same', [j_parameter(javaObject(), 'a'), j_parameter(javaObject(), 'b')],
-           'Object x = norm(a), y = norm(b);\n'
-         // A function reference is the element it names.
-         + 'Object ea = ' + $conv->pdbClass('PureLambda') + '.elementOf(x);\n'
-         + 'Object eb = ' + $conv->pdbClass('PureLambda') + '.elementOf(y);\n'
-         + 'return (ea == null ? x : ea) == (eb == null ? y : eb);'))
-      // Java has no unary minus for Number: `-n` where n is a function
-      // parameter typed Number (Pure's minus accepts any). Each kind keeps its
-      // own, so negating an Integer is an Integer.
-      ->addMethod(javaMethod(['public', 'static'], javaObject(), 'negate', [j_parameter(javaObject(), 'v')],
-           'if (v instanceof Long) { return -((Long) v); }\n'
-         + 'if (v instanceof Double) { return -((Double) v); }\n'
-         + 'if (v instanceof java.math.BigDecimal) { return ((java.math.BigDecimal) v).negate(); }\n'
-         + 'if (v instanceof Number) { return -((Number) v).doubleValue(); }\n'
-         + 'throw new RuntimeException("Cannot negate " + (v == null ? "[]" : v.getClass().getName()));'));
-}
-
-// The runtime classes as `//// FILE <path>` blocks, for the Java platform to compile.
-function <<test.TestDependency>> platform::extensions::language::java::translation::generateRuntimeClasses(): String[1]
-{
-   platform::extensions::language::java::translation::generateRuntimeClassesFor(defaultPlatformPackage());
-}
-
-// The same runtime support classes, emitted under a NAMED host's package — see
-// translatePackagesToJavaFor.
-function <<test.TestDependency>> platform::extensions::language::java::translation::generateRuntimeClassesFor(platformPackage: String[1]): String[1]
-{
-   let conv = conventionsFor($platformPackage + '.runtime', $platformPackage);
-   [
-      pair('PureValues', $conv->pureValuesHelperClass()),
-      pair('PureMap',    $conv->pureMapHelperClass()),
-      pair('PureMatch',  $conv->pureMatchHelperClass()),
-      pair('Variant',    $conv->pureVariantHelperClass()),
-      pair('PureDate',   $conv->pureDateHelperClass()),
-      pair('PureFormat', $conv->pureFormatHelperClass()),
-      pair('PureBytes',  $conv->pureBytesHelperClass()),
-      pair('PureOut',    $conv->pureOutHelperClass())
-   ]->map(p | '//// FILE ' + $conv->platform::extensions::language::java::translation::runtimeClass($p.first)->replace('.', '/') + '.java\n' + $p.second->platform::extensions::language::java::serialization::classToStringWithPositions())
-    ->joinStrings('\n')
-    ->platform::extensions::language::java::translation::withPositionTable();
 }
 
 function platform::extensions::language::java::translation::defaultConventions(basePackageName: String[1]): Conventions[1]
@@ -389,6 +266,7 @@ function platform::extensions::language::java::translation::conventionsFor(baseP
          pair('length',           lengthCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('parseFloat',       parseFloatCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('parseInteger',     parseIntegerCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('inferType',        inferTypeCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('parseDate',        parseDateCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('startsWith',       startsWithCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('endsWith',         endsWithCoder_FunctionExpression_1__Conventions_1__Code_1_),
@@ -739,57 +617,10 @@ function <<access.private>> platform::extensions::language::java::translation::e
    );
 }
 
-// `String.valueOf(x)` — works for any primitive overload and renders `null`
-// for null references (matches Pure's `toString` over scalar values). Use the
-// 4-arg j_invoke form with explicit return type: String's apiKnowledge table
-// doesn't list `valueOf`, so the 3-arg form's auto-lookup fails.
-// The comparison assertEquals / assertNotEquals make, as Java source.
-function <<access.private>> platform::extensions::language::java::translation::equalCall(conv: Conventions[1]): String[1]
-{
-   $conv->platform::extensions::language::java::translation::runtimeClass('PureValues') + '.equal(pureAsV[0], pureAsV[1])'
-}
-
 function <<access.private>> platform::extensions::language::java::translation::toStringCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'toStringCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0)),
-      javaObject(),
-      javaString(),
-      [j_code(pureFloatStringJava('pureIifeIn')
-         + 'if (pureIifeIn instanceof java.util.Map.Entry) { return "<" + ((java.util.Map.Entry<?, ?>) pureIifeIn).getKey() + ", " + ((java.util.Map.Entry<?, ?>) pureIifeIn).getValue() + ">"; } '
-         + elementNameStringJava($conv, 'pureIifeIn')
-         + 'return String.valueOf(pureIifeIn);', javaVoid())]);
-}
-
-// A packageable element prints as its name: `STR_Person->toString()` is
-// 'STR_Person', not the debug form an object prints. The package tells an
-// element apart from an instance that merely has a `name` property.
-function <<access.private>> platform::extensions::language::java::translation::elementNameStringJava(conv: Conventions[1], var: String[1]): String[1]
-{
-   if (!$conv.metadataElements,
-      | '',
-      | let lazy = 'org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject';
-        'if (' + $var + ' instanceof ' + $lazy + ' && !((' + $lazy + ') ' + $var + ').__values("package").isEmpty() '
-           + '&& !((' + $lazy + ') ' + $var + ').__values("name").isEmpty()) '
-           + '{ return String.valueOf(((' + $lazy + ') ' + $var + ').__values("name").get(0)); } ';
-   );
-}
-
-// Java statements that return the variable `var` printed the way Pure prints a
-// Float, when it is a Double; anything else falls through. Matches the JS
-// runtime's __floatStr: an integral value keeps one fractional digit
-// (134210000.0), an exponent form is expanded to plain notation
-// (0.000000013421, never 1.3421E-8), and NaN / Infinity print as-is
-// (BigDecimal would throw on them).
-function <<access.private>> platform::extensions::language::java::translation::pureFloatStringJava(var: String[1]): String[1]
-{
-   'if (' + $var + ' instanceof java.math.BigDecimal) { return ((java.math.BigDecimal) ' + $var + ').toPlainString(); } ' +
-   'if (' + $var + ' instanceof Double) { '
-      + 'double pureFloatD = (Double) ' + $var + '; '
-      + 'if (Double.isNaN(pureFloatD) || Double.isInfinite(pureFloatD)) { return Double.toString(pureFloatD); } '
-      + 'String pureFloatS = new java.math.BigDecimal(Double.toString(pureFloatD)).stripTrailingZeros().toPlainString(); '
-      + 'return pureFloatS.contains(".") ? pureFloatS : pureFloatS + ".0"; } ';
+   $conv->runtimeCall('PureStrings', 'toString', [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaString());
 }
 
 // Type-aware comparison dispatch — Pure's lessThan/greaterThan accept any
@@ -911,7 +742,7 @@ function <<access.private>> platform::extensions::language::java::translation::r
    let bd = javaClass('java.math.BigDecimal');
    j_invoke($bd, 'valueOf', [$v->j_cast(javaDouble())], $bd)
       ->j_invoke('setScale', [$s->j_cast(javaInt()),
-                              j_code('java.math.RoundingMode.HALF_UP', javaClass('java.math.RoundingMode'))],
+                              j_field(javaClass('java.math.RoundingMode'), 'HALF_UP', javaClass('java.math.RoundingMode'))],
                   $bd)
       ->j_invoke('doubleValue', [], javaDouble());
 }
@@ -947,13 +778,10 @@ function <<access.private>> platform::extensions::language::java::translation::t
 // evaluated only then.
 function <<access.private>> platform::extensions::language::java::translation::toOneWithMessage(conv: Conventions[1], fe: FunctionExpression[1]): Code[1]
 {
-   let values  = $conv->translateAsList($fe.parametersValues->at(0));
-   let message = $conv->translateExpression($fe.parametersValues->at(1));
-   valueIife($values->toObjectCode(), javaObject(), javaObject(), [
-      j_code('java.util.List<?> pureOneL = (java.util.List<?>) pureIifeIn;', javaVoid()),
-      j_if(j_code('pureOneL.size() != 1', javaBoolean()), j_throw(j_new(javaClass('java.lang.RuntimeException'), [j_invoke(javaString(), 'valueOf', [$message->toObjectCode()], javaString())]))),
-      j_code('return pureOneL.get(0);', javaVoid())
-   ])->j_castWithoutChecks($conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed());
+   $conv->runtimeCall('PureCollections', 'toOne',
+      [$conv->translateAsList($fe.parametersValues->at(0)),
+       j_lambda([], $conv->translateExpression($fe.parametersValues->at(1))->toObjectCode())->j_castWithoutChecks(javaSupplier(javaObject()))], javaObject())
+      ->j_castWithoutChecks($conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed());
 }
 
 function <<access.private>> platform::extensions::language::java::translation::toOneValue(conv: Conventions[1], fe: FunctionExpression[1]): Code[1]
@@ -1051,13 +879,8 @@ function <<access.private>> platform::extensions::language::java::translation::m
                   $fnArg->instanceOf(platform::pure::metamodel::valuespecification::VariableExpression));
    // Pure's map concatenates the results: a to-many result is flattened and an
    // empty one (null) dropped.
-   let mapped = $coll->j_invoke('stream', [], javaStream(javaObject()))
-        ->j_invoke('map',    [$f], javaStream(javaObject()))
-        ->j_invoke('flatMap', [j_code('pureFlatV -> pureFlatV instanceof java.util.List ? ((java.util.List<?>) pureFlatV).stream() : java.util.stream.Stream.ofNullable(pureFlatV)', javaObject())], javaStream(javaObject()))
-        ->j_invoke('toList', [], javaList(javaObject()))
-        // Raw: the typed lambda makes it a List<String>, not a List<Object>.
-        ->j_castWithoutChecks(javaList());
-   // The stream always produces a List, but map's OWN multiplicity decides how
+   let mapped = $conv->runtimeCall('PureCollections', 'map', [$coll, $f], javaList());
+   // PureCollections.map always produces a List, but map's OWN multiplicity decides how
    // the result is represented: `$x->map(f)` where both are [0..1] is [0..1], a
    // single value, so the declared type is the element type and the List has to
    // be unwrapped. Without this the body returned a List from a method declared
@@ -1316,46 +1139,13 @@ function <<access.private>> platform::extensions::language::java::translation::f
    j_invoke(javaClass($conv->platform::extensions::language::java::translation::runtimeClass('PureFormat')), 'format', [$fmt, $args], javaString());
 }
 
-// `print(x)` — Pure returns the formatted-string representation of x AND
-// writes it to stdout. We emit only the return path (`String.valueOf(x)`)
-// — the stdout side-effect is dropped because expression-position println
-// would require wrapping in a Supplier closure. PCT assertions check the
-// return value, not what reached stdout, so the round-trip still validates
-// semantics for the cases we care about.
+// `print(x)` — Pure writes the formatted representation of x to stdout and returns it.
 function <<access.private>> platform::extensions::language::java::translation::printCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    let n = $fe.parametersValues->size();
    assert($n == 1 || $n == 2, | 'printCoder expects 1 or 2 arguments, got ' + $n->toString());
-   // Pure: print(value) and print(value, maxChars). Both return a String; the
-   // max-chars argument is ignored. The format follows the JS runtime's
-   // __pureFormat: a collection prints one element per line (empty prints
-   // nothing), a String prints bare at the top level and quoted when nested, a
-   // Float as {@link pureFloatStringJava}, and an instance of a generated
-   // helper class as its class name followed by one indented
-   // `property: value` line per non-empty property. The recursive formatter is
-   // a local class inside the IIFE, so no helper class has to be emitted.
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0)),
-      javaObject(),
-      javaString(),
-      [j_code('class PureFmt { static String f(Object v, int d) { '
-         + 'if (v == null) { return ""; } '
-         + 'if (v instanceof java.util.List) { java.util.List<String> parts = new java.util.ArrayList<>(); '
-         + 'for (Object e : (java.util.List) v) { parts.add(f(e, d)); } '
-         + 'return String.join(String.valueOf((char) 10), parts); } '
-         + 'if (v instanceof String) { return d == 0 ? (String) v : String.valueOf((char) 39) + v + String.valueOf((char) 39); } '
-         + pureFloatStringJava('v')
-         + 'if (v instanceof Enum) { return ((Enum<?>) v).name(); } '
-         + 'if (v instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) { org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject lo = (org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v; '
-         + 'String path = lo._purePath(); StringBuilder sb = new StringBuilder(path.substring(path.lastIndexOf(58) + 1)); '
-         + 'for (String pn : lo._propertyNames()) { '
-         + 'if (pn.equals("classifierGenericType") || pn.equals("elementOverride")) { continue; } '
-         + 'java.util.List<Object> fvs = lo.__values(pn); if (fvs.isEmpty()) { continue; } '
-         + 'Object fv = fvs.size() == 1 ? fvs.get(0) : fvs; '
-         + 'sb.append((char) 10).append("  ".repeat(d + 1)).append(pn).append(": ").append(f(fv, d + 1)); } '
-         + 'return sb.toString(); } '
-         + 'return String.valueOf(v); } } '
-         + 'return ' + $conv->platform::extensions::language::java::translation::runtimeClass('PureOut') + '.write(PureFmt.f(pureIifeIn, 0));', javaVoid())]);
+   // print(value) and print(value, maxChars): written and returned (PureStrings.print); maxChars is ignored.
+   $conv->runtimeCall('PureStrings', 'print', [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaString());
 }
 
 // `coll->sort()` — natural-order sort. Stream.sorted() on natural order
@@ -1371,16 +1161,8 @@ function <<access.private>> platform::extensions::language::java::translation::s
    // (a mixed literal infers List<Number & Comparable<...>>, not List<Number>).
    let stream = $conv->translateAsList($fe.parametersValues->at(0))
                   ->j_invoke('stream', [], javaStream(javaObject()));
-   // Natural order compares mixed numbers by value: Pure sorts [342, 5.0, -2.0]
-   // numerically, where Long.compareTo(Double) would throw ClassCastException.
-   // Other values of different classes order by class name first, as on the
-   // Truffle runtime (['aaa', 2] sorts without failing).
-   let naturalOrder = j_code('(java.util.Comparator) (var pureCmpA, var pureCmpB) -> '
-      + '(pureCmpA instanceof Number && pureCmpB instanceof Number && !(pureCmpA instanceof Long && pureCmpB instanceof Long)) '
-      + '? Double.compare(((Number) pureCmpA).doubleValue(), ((Number) pureCmpB).doubleValue()) '
-      + ': pureCmpA.getClass() != pureCmpB.getClass() && !(pureCmpA instanceof Number && pureCmpB instanceof Number) '
-      + '? pureCmpA.getClass().getName().compareTo(pureCmpB.getClass().getName()) '
-      + ': ((Comparable) pureCmpA).compareTo(pureCmpB)', javaClass('java.util.Comparator'));
+   // Natural order compares mixed numbers by value (see PureCollections.naturalOrder).
+   let naturalOrder = $conv->runtimeCall('PureCollections', 'naturalOrder', [], javaClass('java.util.Comparator'));
    let sorted = if ($n == 1,
       | $stream->j_invoke('sorted', [$naturalOrder], javaStream(javaObject())),
       | $conv->sortStreamWithArgs($stream, $fe.parametersValues)
@@ -1509,8 +1291,7 @@ function <<access.private>> platform::extensions::language::java::translation::c
    let isEmptyList  = $code->instanceOf(platform::extensions::language::java::metamodel::StaticMethodCall)
                       && $code->cast(@platform::extensions::language::java::metamodel::StaticMethodCall).methodName == 'emptyList';
    if ($many && $isList, | $code->j_castWithoutChecks(javaList()),
-   |if ($many,           | valueIife($code->toObjectCode(), javaObject(), javaList(), [
-                              j_code('return pureIifeIn instanceof java.util.List ? (java.util.List) pureIifeIn : java.util.stream.Stream.ofNullable(pureIifeIn).toList();', javaVoid())]),
+   |if ($many,           | $conv->runtimeCall('PureValues', 'list', [$code->toObjectCode()], javaList()),
    |if ($isEmptyList,    | j_null(),
    |if ($isList,         | $code->singleValueOf($conv)->j_castWithoutChecks($type),
    |if ($code.type->platform::extensions::language::java::metamodel::isJavaPrimitive(), | $code,
@@ -1677,11 +1458,7 @@ function <<access.private>> platform::extensions::language::java::translation::l
 function <<access.private>> platform::extensions::language::java::translation::tailCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'tailCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateAsList($fe.parametersValues->at(0)),
-      javaList(),
-      javaList(),
-      [j_return(j_code('pureIifeIn.isEmpty() ? new java.util.ArrayList() : new java.util.ArrayList(pureIifeIn.subList(1, pureIifeIn.size()))', javaList()))]);
+   $conv->runtimeCall('PureCollections', 'tail', [$conv->translateAsList($fe.parametersValues->at(0))], javaList());
 }
 
 // `init(coll)` — everything except the last element. Same SubList→ArrayList
@@ -1689,11 +1466,7 @@ function <<access.private>> platform::extensions::language::java::translation::t
 function <<access.private>> platform::extensions::language::java::translation::initCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'initCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateAsList($fe.parametersValues->at(0)),
-      javaList(),
-      javaList(),
-      [j_return(j_code('pureIifeIn.isEmpty() ? new java.util.ArrayList() : new java.util.ArrayList(pureIifeIn.subList(0, pureIifeIn.size() - 1))', javaList()))]);
+   $conv->runtimeCall('PureCollections', 'init', [$conv->translateAsList($fe.parametersValues->at(0))], javaList());
 }
 
 // `reverse(coll)` — Pure: returns a fresh reversed list. {@code Collections.reverse}
@@ -1738,6 +1511,18 @@ function <<access.private>> platform::extensions::language::java::translation::p
    assert($fe.parametersValues->size() == 1, | 'parseIntegerCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
    let s = $conv->translateExpression($fe.parametersValues->at(0));
    j_invoke(javaClass('java.lang.Long'), 'parseLong', [$s->j_cast(javaString())], javaLong());
+}
+
+// `inferType(cells)` — the type a CSV column's cells have: the host's handwritten execution.InferType applies
+// the rules (see inferType.pure) and the type is the metadata element at that path. A type is metadata, so
+// this is a metadata-mode function only.
+function <<access.private>> platform::extensions::language::java::translation::inferTypeCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'inferTypeCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   assert($conv.metadataElements, | 'inferType needs the platform metadata: it returns a Type element');
+   let path = j_invoke(javaClass($conv->platformClass('execution.InferType')), 'path',
+                       [$conv->translateAsList($fe.parametersValues->at(0))->toObjectCode()], javaString());
+   j_invoke(javaClass($conv->pdbClass('Metadata')), 'element', [$path], javaObject());
 }
 
 // `parseDate(str)` — the string as a PureDate: normalized (zero-padded, time
@@ -2114,19 +1899,7 @@ function <<access.private>> platform::extensions::language::java::translation::c
 function <<access.private>> platform::extensions::language::java::translation::firstNonEmptyCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'firstNonEmptyCoder expects exactly 1 argument');
-   let thunksCode = $conv->translateFirstNonEmptyThunks($fe.parametersValues->at(0));
-   let rawList = javaList();
-   let body = j_block([
-      j_declare(javaList(), 'thunks', $thunksCode),
-      j_code('for (Object t : thunks) {\n'
-         + '   Object r = ((java.util.function.Supplier<?>) t).get();\n'
-         + '   if (r == null) continue;\n'
-         + '   if (r instanceof java.util.Collection && ((java.util.Collection<?>) r).isEmpty()) continue;\n'
-         + '   return r instanceof java.util.List ? (java.util.List) r : java.util.Collections.singletonList(r);\n'
-         + '}\n'
-         + 'return java.util.Collections.emptyList();', javaVoid())
-   ]);
-   j_lambda([], $body)->j_castWithoutChecks(javaSupplier($rawList))->j_invoke('get', [], $rawList);
+   $conv->runtimeCall('PureCollections', 'firstNonEmpty', [$conv->translateFirstNonEmptyThunks($fe.parametersValues->at(0))], javaList());
 }
 
 // When the arg is a literal {@code [| ..., | ..., ...]} Collection of 0-arg
@@ -2159,18 +1932,9 @@ function <<access.private>> platform::extensions::language::java::translation::t
 function <<access.private>> platform::extensions::language::java::translation::sliceCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 3, | 'sliceCoder expects exactly 3 arguments');
-   // Bounds are clamped to the collection, as in Pure: slice past the end or
-   // before the start yields what overlaps, possibly nothing.
-   let coll  = $conv->translateAsList($fe.parametersValues->at(0))->toObjectCode();
-   // No (Object) cast on the bounds: `(Object) -1L` parses as a subtraction.
-   let start = $conv->translateExpression($fe.parametersValues->at(1));
-   let end   = $conv->translateExpression($fe.parametersValues->at(2));
-   valueIife(j_invoke(javaArrays(), 'asList', [$coll, $start, $end], javaList()), javaList(), javaList(), [
-      j_code('java.util.List<?> pureSlL = (java.util.List<?>) pureIifeIn.get(0); '
-           + 'int pureSlS = (int) Math.min(Math.max(0L, ((Number) pureIifeIn.get(1)).longValue()), pureSlL.size()); '
-           + 'int pureSlE = (int) Math.min(Math.max(pureSlS, ((Number) pureIifeIn.get(2)).longValue()), pureSlL.size()); '
-           + 'return new java.util.ArrayList<Object>(pureSlL.subList(pureSlS, pureSlE));', javaVoid())
-   ]);
+   // Bounds are clamped to the collection, as in Pure: slice past the end or before the start yields what
+   // overlaps, possibly nothing.
+   $conv->runtimeCall('PureCollections', 'slice', [$conv->translateAsList($fe.parametersValues->at(0)), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong()), $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaLong())], javaList());
 }
 
 // `find(coll, predicate)` — first element matching the predicate, or empty.
@@ -2249,6 +2013,13 @@ function <<access.private>> platform::extensions::language::java::translation::v
       ->j_invoke('apply', [$arg], $resultType);
 }
 
+// A call to a class of the runtime library (platforms/java/…/runtime): PureValues, PureCollections,
+// PureBinary, PureStrings, … — the Java a coder needs beyond one expression lives there, as Java.
+function <<access.private>> platform::extensions::language::java::translation::runtimeCall(conv: Conventions[1], className: String[1], method: String[1], args: Code[*], returnType: platform::extensions::language::java::metamodel::Type[1]): Code[1]
+{
+   j_invoke(javaClass($conv->platform::extensions::language::java::translation::runtimeClass($className)), $method, $args, $returnType);
+}
+
 // `vs` as a raw java.util.List, whatever it is at runtime. A plain cast is
 // wrong twice over: Pure lifts a single value into a collection argument
 // (`'a'->head()` would emit `((List) "a")`), and an empty collection can arrive
@@ -2257,81 +2028,45 @@ function <<access.private>> platform::extensions::language::java::translation::v
 // unresolved multiplicity parameter (`T[m]` in a generic helper) still works.
 function <<access.private>> platform::extensions::language::java::translation::translateAsList(conv: Conventions[1], vs: ValueSpecification[1]): Code[1]
 {
-   valueIife(
-      // toObjectCode: a lambda has no type of its own to pass as an Object.
-      $conv->translateExpression($vs)->toObjectCode(),
-      javaObject(),
-      javaList(),
-      [j_return(j_code('pureIifeIn instanceof java.util.List ? (java.util.List) pureIifeIn : java.util.stream.Stream.ofNullable(pureIifeIn).toList()', javaList()))]);
+   // toObjectCode: a lambda has no type of its own to pass as an Object.
+   $conv->runtimeCall('PureValues', 'list', [$conv->translateExpression($vs)->toObjectCode()], javaList());
 }
 
 // `stringToUtf8Bytes(s)` — the UTF-8 bytes of a string, as a Binary.
 function <<access.private>> platform::extensions::language::java::translation::stringToUtf8BytesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'stringToUtf8BytesCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()),
-      javaString(),
-      javaArray(javaByte()),
-      [j_return(j_code('pureIifeIn.getBytes(java.nio.charset.StandardCharsets.UTF_8)', javaArray(javaByte())))]);
+   $conv->runtimeCall('PureBinary', 'utf8Bytes', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString())], javaArray(javaByte()));
 }
 
 // `binarySize(b)` — the number of bytes in a Binary, O(1).
 function <<access.private>> platform::extensions::language::java::translation::binarySizeCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'binarySizeCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte())),
-      javaArray(javaByte()),
-      javaLong(),
-      [j_return(j_code('(long) pureIifeIn.length', javaLong()))]);
+   $conv->runtimeCall('PureBinary', 'size', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte()))], javaLong());
 }
 
 // `binaryAt(b, i)` — the byte at a zero-based index, O(1). A Byte IS an
 // Integer, so this yields a long that feeds arithmetic directly; unsigned, so
-// 0x8B is 139 rather than the JVM's signed -117. Both arguments travel as one
-// List so each is still evaluated exactly once.
+// 0x8B is 139 rather than the JVM's signed -117.
 function <<access.private>> platform::extensions::language::java::translation::binaryAtCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'binaryAtCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
-   let bin = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte()));
-   let idx = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong());
-   valueIife(
-      j_invoke(javaClass('java.util.List'), 'of', [$bin, $idx], javaList()),
-      javaList(),
-      javaLong(),
-      [
-         j_code('byte[] pureBinB = (byte[]) pureIifeIn.get(0); long pureBinI = ((Number) pureIifeIn.get(1)).longValue(); if (pureBinI < 0 || pureBinI >= pureBinB.length) { throw new IllegalArgumentException("binaryAt index " + pureBinI + " out of bounds for a Binary of " + pureBinB.length + " byte(s)"); }', javaVoid()),
-         j_return(j_code('(long) (pureBinB[(int) pureBinI] & 0xFF)', javaLong()))
-      ]);
+   $conv->runtimeCall('PureBinary', 'at', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte())), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong())], javaLong());
 }
 
 // `utf8BytesToString(bytes)` — inverse of stringToUtf8Bytes.
 function <<access.private>> platform::extensions::language::java::translation::utf8BytesToStringCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'utf8BytesToStringCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte())),
-      javaArray(javaByte()),
-      javaString(),
-      [j_return(j_code('new String(pureIifeIn, java.nio.charset.StandardCharsets.UTF_8)', javaString()))]);
+   $conv->runtimeCall('PureBinary', 'utf8String', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte()))], javaString());
 }
 
 // `intToLeBytes(value, width)` — `width` little-endian two's-complement bytes.
-// Both arguments travel as one List so each is still evaluated exactly once.
 function <<access.private>> platform::extensions::language::java::translation::intToLeBytesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'intToLeBytesCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
-   let value = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaLong());
-   let width = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong());
-   valueIife(
-      j_invoke(javaClass('java.util.List'), 'of', [$value, $width], javaList()),
-      javaList(),
-      javaArray(javaByte()),
-      [
-         j_code('long pureBinVal = ((Number) pureIifeIn.get(0)).longValue(); int pureBinWidth = (int) ((Number) pureIifeIn.get(1)).longValue(); byte[] pureBinOut = new byte[pureBinWidth]; for (int pureBinI = 0; pureBinI < pureBinWidth; pureBinI++) { pureBinOut[pureBinI] = (byte) ((pureBinVal >> (8 * pureBinI)) & 0xFF); }', javaVoid()),
-         j_return(j_variable(javaArray(javaByte()), 'pureBinOut'))
-      ]);
+   $conv->runtimeCall('PureBinary', 'intToLeBytes', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaLong()), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong())], javaArray(javaByte()));
 }
 
 // `floatToLeBytes(value)` — the 8 IEEE-754 bytes, little-endian: exactly what
@@ -2340,14 +2075,7 @@ function <<access.private>> platform::extensions::language::java::translation::i
 function <<access.private>> platform::extensions::language::java::translation::floatToLeBytesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'floatToLeBytesCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaDouble()),
-      javaDoubleBoxed(),
-      javaArray(javaByte()),
-      [
-         j_code('long pureBinBits = Double.doubleToLongBits(pureIifeIn); byte[] pureBinOut = new byte[8]; for (int pureBinI = 0; pureBinI < 8; pureBinI++) { pureBinOut[pureBinI] = (byte) ((pureBinBits >>> (8 * pureBinI)) & 0xFF); }', javaVoid()),
-         j_return(j_variable(javaArray(javaByte()), 'pureBinOut'))
-      ]);
+   $conv->runtimeCall('PureBinary', 'floatToLeBytes', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaDouble())], javaArray(javaByte()));
 }
 
 // `leBytesToFloat(bytes)` — inverse of floatToLeBytes; reassembles the 8
@@ -2355,35 +2083,15 @@ function <<access.private>> platform::extensions::language::java::translation::f
 function <<access.private>> platform::extensions::language::java::translation::leBytesToFloatCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'leBytesToFloatCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte())),
-      javaArray(javaByte()),
-      javaDoubleBoxed(),
-      [
-         j_code('long pureBinBits = 0L; for (int pureBinI = 0; pureBinI < pureIifeIn.length && pureBinI < 8; pureBinI++) { pureBinBits |= (pureIifeIn[pureBinI] & 0xFFL) << (8 * pureBinI); }', javaVoid()),
-         j_return(j_code('Double.longBitsToDouble(pureBinBits)', javaDouble()))
-      ])->j_cast(javaDouble());
+   $conv->runtimeCall('PureBinary', 'leBytesToFloat', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte()))], javaDouble());
 }
 
 // `binaryLeUInt(b, pos, width)` / `binaryLeInt(...)` — the PDB reader's
-// innermost loop, so this emits a plain loop rather than a Pure fold.
+// innermost loop, a plain loop in PureBinary rather than a Pure fold.
 function <<access.private>> platform::extensions::language::java::translation::binaryLeCoder(fe: FunctionExpression[1], conv: Conventions[1], signed: Boolean[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 3, | 'binaryLeCoder expects exactly 3 arguments, got ' + $fe.parametersValues->size()->toString());
-   let bin   = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte()));
-   let pos   = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong());
-   let width = $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaLong());
-   let top = if($signed, | 'long pureAcc = pureBinB[pureP + pureW - 1];', | 'long pureAcc = 0; int pureStart = pureW - 1;');
-   valueIife(
-      j_invoke(javaClass('java.util.List'), 'of', [$bin, $pos, $width], javaList()),
-      javaList(),
-      javaLong(),
-      [
-         j_code('byte[] pureBinB = (byte[]) pureIifeIn.get(0); int pureP = (int) ((Number) pureIifeIn.get(1)).longValue(); int pureW = (int) ((Number) pureIifeIn.get(2)).longValue(); if (pureW == 0) { return 0L; } '
-              + $top
-              + ' for (int pureI = pureW - ' + if($signed, |'2', |'1') + '; pureI >= 0; pureI--) { pureAcc = (pureAcc * 256) + (pureBinB[pureP + pureI] & 0xFF); }', javaVoid()),
-         j_return(j_variable(javaLong(), 'pureAcc'))
-      ]);
+   $conv->runtimeCall('PureBinary', if($signed, | 'leInt', | 'leUInt'), [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte())), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong()), $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaLong())], javaLong());
 }
 
 function <<access.private>> platform::extensions::language::java::translation::binaryLeUIntCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
@@ -2400,56 +2108,28 @@ function <<access.private>> platform::extensions::language::java::translation::b
 function <<access.private>> platform::extensions::language::java::translation::binaryUtf8Coder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 3, | 'binaryUtf8Coder expects exactly 3 arguments, got ' + $fe.parametersValues->size()->toString());
-   j_new(javaString(),
-      [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte())),
-       $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong())->j_cast(javaInt()),
-       $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaLong())->j_cast(javaInt()),
-       j_code('java.nio.charset.StandardCharsets.UTF_8', javaClass('java.nio.charset.Charset'))]);
+   $conv->runtimeCall('PureBinary', 'utf8String', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte())), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong()), $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaLong())], javaString());
 }
 
 // `binarySlice(b, from, toExclusive)` — half-open range as a new Binary.
 function <<access.private>> platform::extensions::language::java::translation::binarySliceCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 3, | 'binarySliceCoder expects exactly 3 arguments, got ' + $fe.parametersValues->size()->toString());
-   let bin  = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte()));
-   let from = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong());
-   let to   = $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaLong());
-   valueIife(
-      j_invoke(javaClass('java.util.List'), 'of', [$bin, $from, $to], javaList()),
-      javaList(),
-      javaArray(javaByte()),
-      [
-         j_code('byte[] pureBinB = (byte[]) pureIifeIn.get(0); long pureBinF = ((Number) pureIifeIn.get(1)).longValue(); long pureBinT = ((Number) pureIifeIn.get(2)).longValue(); if (pureBinF < 0 || pureBinT > pureBinB.length || pureBinF > pureBinT) { throw new IllegalArgumentException("binarySlice [" + pureBinF + ", " + pureBinT + ") out of bounds for a Binary of " + pureBinB.length + " byte(s)"); }', javaVoid()),
-         j_return(j_code('java.util.Arrays.copyOfRange(pureBinB, (int) pureBinF, (int) pureBinT)', javaArray(javaByte())))
-      ]);
+   $conv->runtimeCall('PureBinary', 'slice', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte())), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong()), $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaLong())], javaArray(javaByte()));
 }
 
 // `binaryConcat(parts)` — one pass, one allocation.
 function <<access.private>> platform::extensions::language::java::translation::binaryConcatCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'binaryConcatCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateAsList($fe.parametersValues->at(0)),
-      javaList(),
-      javaArray(javaByte()),
-      [
-         j_code('int pureBinTotal = 0; for (Object pureBinP : pureIifeIn) { pureBinTotal += ((byte[]) pureBinP).length; } byte[] pureBinOut = new byte[pureBinTotal]; int pureBinAt = 0; for (Object pureBinP : pureIifeIn) { byte[] pureBinPart = (byte[]) pureBinP; System.arraycopy(pureBinPart, 0, pureBinOut, pureBinAt, pureBinPart.length); pureBinAt += pureBinPart.length; }', javaVoid()),
-         j_return(j_variable(javaArray(javaByte()), 'pureBinOut'))
-      ]);
+   $conv->runtimeCall('PureBinary', 'concat', [$conv->translateAsList($fe.parametersValues->at(0))], javaArray(javaByte()));
 }
 
 // `binaryZeros(n)` — padding, one allocation.
 function <<access.private>> platform::extensions::language::java::translation::binaryZerosCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'binaryZerosCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaLong()),
-      javaLongBoxed(),
-      javaArray(javaByte()),
-      [
-         j_code('if (pureIifeIn < 0) { throw new IllegalArgumentException("binaryZeros expects a non-negative count, got " + pureIifeIn); }', javaVoid()),
-         j_return(j_code('new byte[(int) (long) pureIifeIn]', javaArray(javaByte())))
-      ]);
+   $conv->runtimeCall('PureBinary', 'zeros', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaLong())], javaArray(javaByte()));
 }
 
 // `binaryEquals(a, b)` — content equality; a byte[]'s own equals is identity.
@@ -2466,11 +2146,7 @@ function <<access.private>> platform::extensions::language::java::translation::b
 function <<access.private>> platform::extensions::language::java::translation::binaryToHexCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'binaryToHexCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte())),
-      javaArray(javaByte()),
-      javaString(),
-      [j_return(j_code('java.util.HexFormat.of().withUpperCase().formatHex(pureIifeIn)', javaString()))]);
+   $conv->runtimeCall('PureBinary', 'toHex', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte()))], javaString());
 }
 
 // `enumValues(E)` — the generated Java enum's constants, in declaration order.
@@ -2488,30 +2164,11 @@ function <<access.private>> platform::extensions::language::java::translation::e
 }
 
 // `tryEval(|expr)` — evaluate the thunk and capture either its value or the
-// failure, as a TryResult. TryResult and its Error are emitted as helper
-// classes (see {@link tryEvalClassRefs}) and come back to Pure as real objects
-// through CompileAndExecuteNode. The generated `Error` shadows java.lang.Error
-// in this package, hence `catch (Throwable ...)`.
+// failure, as a TryResult (PureTry.tryEval).
 function <<access.private>> platform::extensions::language::java::translation::tryEvalCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'tryEvalCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   let supplier = javaClass('java.util.function.Supplier');
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0))->j_castWithoutChecks($supplier),
-      $supplier,
-      javaClass('org.finos.legend.pure.m3.platform.pure.functions.lang.TryResult'),
-      [j_code('org.finos.legend.pure.m3.platform.pure.functions.lang.TryResultImpl pureTryR = new org.finos.legend.pure.m3.platform.pure.functions.lang.TryResultImpl(); '
-         + 'try { pureTryR._value(pureIifeIn.get()); } '
-         + 'catch (Throwable pureTryEx) { '
-         // The Pure call chain, not the host one: `stack` is Pure-facing (the
-         // test runner prints `at <frame>` from it, and it is what lands in the
-         // JSON report), so raw StackTraceElements there named generated class
-         // files nobody reads. Every error caught by tryEval gets this — which is
-         // every error a Pure program or a test suite ever sees. Frames are
-         // unpositioned; PureStack says why.
-         + 'pureTryR._failure(new org.finos.legend.pure.m3.platform.pure.functions.lang.ErrorImpl()._message(String.valueOf(pureTryEx.getMessage()))._stack('
-         + $conv->platform::extensions::language::java::translation::platformClass('execution.PureStack') + '.frames(pureTryEx))); } '
-         + 'return pureTryR;', javaVoid())]);
+   $conv->runtimeCall('PureTry', 'tryEval', [$conv->translateExpression($fe.parametersValues->at(0))->j_castWithoutChecks(javaClass('java.util.function.Supplier'))], javaClass('org.finos.legend.pure.m3.platform.pure.functions.lang.TryResult'));
 }
 
 // Helper classes {@link tryEvalCoder} needs: TryResult and Error, with their
@@ -2550,43 +2207,18 @@ function <<access.private>> platform::extensions::language::java::translation::d
 // `range(count)`, `range(start, end)`, `range(start, end, step)` and the
 // `[start:end:step]` literal — the Integers from `start` (default 0) towards
 // `end`, exclusive, by `step` (default 1); a negative step counts down. A zero
-// step throws with the contract message the other platforms emit. All
-// arguments travel as one List so each is evaluated exactly once.
+// step throws with the contract message the other platforms emit.
 function <<access.private>> platform::extensions::language::java::translation::rangeCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    let n = $fe.parametersValues->size();
    assert($n >= 1 && $n <= 3, | 'rangeCoder expects 1 to 3 arguments, got ' + $n->toString());
-   valueIife(
-      j_invoke(javaClass('java.util.List'), 'of', $fe.parametersValues->map(p | $conv->translateExpression($p)->j_cast(javaLong())), javaList()),
-      javaList(),
-      javaList(),
-      [
-         j_declare(javaArrayList(), 'pureRangeOut', j_new(javaArrayList(), [])),
-         j_code('int pureRangeN = pureIifeIn.size(); '
-            + 'long pureRangeStart = pureRangeN == 1 ? 0L : ((Number) pureIifeIn.get(0)).longValue(); '
-            + 'long pureRangeEnd = ((Number) pureIifeIn.get(pureRangeN == 1 ? 0 : 1)).longValue(); '
-            + 'long pureRangeStep = pureRangeN == 3 ? ((Number) pureIifeIn.get(2)).longValue() : 1L; '
-            + 'if (pureRangeStep == 0L) { throw new IllegalArgumentException("range step must not be 0"); } '
-            + 'for (long pureRangeI = pureRangeStart; pureRangeStep > 0L ? pureRangeI < pureRangeEnd : pureRangeI > pureRangeEnd; pureRangeI += pureRangeStep) { pureRangeOut.add(pureRangeI); }', javaVoid()),
-         j_return(j_variable(javaList(), 'pureRangeOut'))
-      ]);
+   $conv->runtimeCall('PureCollections', 'range', $fe.parametersValues->map(p | $conv->translateExpression($p)->j_cast(javaLong())), javaList());
 }
 
 function <<access.private>> platform::extensions::language::java::translation::chunkCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'chunkCoder expects exactly 2 arguments');
-   let s = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString());
-   let n = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaInt());
-   // Supplier IIFE — multi-statement code in expression position.
-   let rawList = javaList();
-   let body = j_block([
-      j_declare(javaString(), 'src', $s),
-      j_declare(javaInt(), 'sz', $n),
-      j_declare(javaArrayList(), 'out', j_new(javaArrayList(), [])),
-      j_code('for (int i = 0; i < src.length(); i += sz) { out.add(src.substring(i, Math.min(i + sz, src.length()))); }', javaVoid()),
-      j_return(j_variable($rawList, 'out'))
-   ]);
-   j_lambda([], $body)->j_cast(javaSupplier($rawList))->j_invoke('get', [], $rawList);
+   $conv->runtimeCall('PureStrings', 'chunk', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong())], javaList());
 }
 
 // `zip(a, b)` — element-wise pair-up to {@code List<Map.Entry>}. Stops at
@@ -2594,22 +2226,7 @@ function <<access.private>> platform::extensions::language::java::translation::c
 function <<access.private>> platform::extensions::language::java::translation::zipCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'zipCoder expects exactly 2 arguments');
-   let a = $conv->translateAsList($fe.parametersValues->at(0));
-   let b = $conv->translateAsList($fe.parametersValues->at(1));
-   let rawList = javaList();
-   let body = j_block([
-      j_declare(javaList(), 'la', $a),
-      j_declare(javaList(), 'lb', $b),
-      j_declare(javaInt(), 'n', j_invoke(javaClass('java.lang.Math'), 'min',
-         [j_invoke(j_variable(javaList(), 'la'), 'size', [], javaInt()),
-          j_invoke(j_variable(javaList(), 'lb'), 'size', [], javaInt())], javaInt())),
-      j_declare(javaArrayList(), 'out', j_new(javaArrayList(), [])),
-      // A Pure pair, not a Map.Entry: it prints `<1, a>` and compares as Pure does.
-      j_code('for (int i = 0; i < n; i++) { out.add(new org.finos.legend.pure.m3.platform.pure.functions.collection.PairImpl()'
-           + '._first(la.get(i))._second(lb.get(i))); }', javaVoid()),
-      j_return(j_variable($rawList, 'out'))
-   ]);
-   j_lambda([], $body)->j_cast(javaSupplier($rawList))->j_invoke('get', [], $rawList);
+   $conv->runtimeCall('PureCollections', 'zip', [$conv->translateAsList($fe.parametersValues->at(0)), $conv->translateAsList($fe.parametersValues->at(1))], javaList());
 }
 
 // `groupBy(collection, key)` — a Map from each key to the Pure List of the
@@ -2617,16 +2234,7 @@ function <<access.private>> platform::extensions::language::java::translation::z
 function <<access.private>> platform::extensions::language::java::translation::groupByCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'groupByCoder expects exactly 2 arguments');
-   let coll = $conv->translateAsList($fe.parametersValues->at(0))->toObjectCode();
-   let key  = $conv->translateExpression($fe.parametersValues->at(1))->j_castWithoutChecks(javaClass('java.util.function.Function'));
-   valueIife(j_invoke(javaArrays(), 'asList', [$coll, $key], javaList()), javaList(), javaClass('java.util.Map'), [
-      j_code('java.util.function.Function pureGbKey = (java.util.function.Function) pureIifeIn.get(1); '
-           + 'java.util.LinkedHashMap<Object, java.util.List<Object>> pureGbGroups = new java.util.LinkedHashMap<>(); '
-           + 'for (Object pureGbV : (java.util.List<?>) pureIifeIn.get(0)) { pureGbGroups.computeIfAbsent(pureGbKey.apply(pureGbV), pureGbK -> new java.util.ArrayList<>()).add(pureGbV); } '
-           + 'java.util.LinkedHashMap<Object, Object> pureGbOut = new java.util.LinkedHashMap<>(); '
-           + 'for (java.util.Map.Entry<Object, java.util.List<Object>> pureGbE : pureGbGroups.entrySet()) { pureGbOut.put(pureGbE.getKey(), new org.finos.legend.pure.m3.platform.pure.functions.collection.ListImpl()._values(pureGbE.getValue())); } '
-           + 'return pureGbOut;', javaVoid())
-   ]);
+   $conv->runtimeCall('PureCollections', 'groupBy', [$conv->translateAsList($fe.parametersValues->at(0)), $conv->translateExpression($fe.parametersValues->at(1))->j_castWithoutChecks(javaClass('java.util.function.Function'))], javaClass('java.util.Map'));
 }
 
 // `regexpIndexOf(s, regex)` — first match position or -1. Pure's return is
@@ -2634,33 +2242,16 @@ function <<access.private>> platform::extensions::language::java::translation::g
 function <<access.private>> platform::extensions::language::java::translation::regexpIndexOfCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2 || $fe.parametersValues->size() == 3, | 'regexpIndexOfCoder expects 2 or 3 arguments (the RegexpParameter overload is not supported)');
-   let group = if ($fe.parametersValues->size() == 3, | $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaLong())->j_cast(javaInt()), | j_int(0));
-   let s = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString());
-   let r = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString());
-   let matcher = j_invoke(j_invoke(javaClass('java.util.regex.Pattern'), 'compile', [$r], javaObject()),
-                          'matcher', [$s], javaObject());
-   let body = j_block([
-      j_declare(javaClass('java.util.regex.Matcher'), 'm', $matcher->j_cast(javaClass('java.util.regex.Matcher'))),
-      j_declare(javaInt(), 'group', $group),
-      j_code('return (long) (m.find() ? m.start(group) : -1);', javaVoid())
-   ]);
-   j_lambda([], $body)->j_cast(javaSupplier(javaClass('java.lang.Long')))->j_invoke('get', [], javaLong());
+   let group = if ($fe.parametersValues->size() == 3, | $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaLong()), | j_long(0));
+   $conv->runtimeCall('PureStrings', 'regexpIndexOf', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString()), $group], javaLong());
 }
 
 // `regexpCount(s, regex)` — number of non-overlapping matches.
 function <<access.private>> platform::extensions::language::java::translation::regexpCountCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2 || $fe.parametersValues->size() == 3, | 'regexpCountCoder expects 2 or 3 arguments');
-   let s = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString());
-   let r = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString());
    let flags = if ($fe.parametersValues->size() > 2, | $fe.parametersValues->at(2)->enumLiteralNames()->javaRegexFlags(), | 0);
-   let body = j_block([
-      j_declare(javaClass('java.util.regex.Matcher'), 'm',
-         j_invoke(j_invoke(javaClass('java.util.regex.Pattern'), 'compile', [$r, j_int($flags)], javaObject()),
-                  'matcher', [$s], javaObject())->j_cast(javaClass('java.util.regex.Matcher'))),
-      j_code('long c = 0; while (m.find()) c++; return c;', javaVoid())
-   ]);
-   j_lambda([], $body)->j_cast(javaSupplier(javaClass('java.lang.Long')))->j_invoke('get', [], javaLong());
+   $conv->runtimeCall('PureStrings', 'regexpCount', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString()), j_int($flags)], javaLong());
 }
 
 // `regexpExtract(s, regex, extractAll)` — when extractAll is true, return
@@ -2668,52 +2259,25 @@ function <<access.private>> platform::extensions::language::java::translation::r
 function <<access.private>> platform::extensions::language::java::translation::regexpExtractCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 3 || $fe.parametersValues->size() == 4, | 'regexpExtractCoder expects 3 or 4 arguments (RegexpParameter overloads not supported)');
-   let group = if ($fe.parametersValues->size() == 4, | $conv->translateExpression($fe.parametersValues->at(3))->j_cast(javaInt()), | j_int(0));
-   let s   = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString());
-   let r   = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString());
-   let all = $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaBoolean());
-   let rawList = javaList();
-   let body = j_block([
-      j_declare(javaClass('java.util.regex.Matcher'), 'm',
-         j_invoke(j_invoke(javaClass('java.util.regex.Pattern'), 'compile', [$r], javaObject()),
-                  'matcher', [$s], javaObject())->j_cast(javaClass('java.util.regex.Matcher'))),
-      j_declare(javaArrayList(), 'out', j_new(javaArrayList(), [])),
-      j_declare(javaBoolean(), 'extractAll', $all),
-      j_declare(javaInt(), 'group', $group),
-      j_code('if (extractAll) { while (m.find()) out.add(m.group(group)); } else if (m.find()) { out.add(m.group(group)); }', javaVoid()),
-      j_return(j_variable($rawList, 'out'))
-   ]);
-   j_lambda([], $body)->j_cast(javaSupplier($rawList))->j_invoke('get', [], $rawList);
+   let group = if ($fe.parametersValues->size() == 4, | $conv->translateExpression($fe.parametersValues->at(3))->j_cast(javaLong()), | j_long(0));
+   $conv->runtimeCall('PureStrings', 'regexpExtract', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString()), $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaBoolean()), $group], javaList());
 }
 
 // `assertError(f, msg)` — Pure: assert that invoking {@code f} throws and
-// the thrown message matches {@code msg}. The 4-arg overload with line/col
+// the thrown message contains {@code msg} (PureAsserts.assertError). The 4-arg overload with line/col
 // is treated as the 2-arg form here (line/col verification not modelled
-// since Java exceptions don't carry Pure source positions).
+// since Java exceptions do not carry Pure source positions).
 function <<access.private>> platform::extensions::language::java::translation::assertErrorCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    let n = $fe.parametersValues->size();
    assert($n == 2 || $n == 4, | 'assertErrorCoder expects 2 or 4 arguments, got ' + $n->toString());
-   let f   = $conv->translateExpression($fe.parametersValues->at(0));
-   let msg = $conv->translateExpression($fe.parametersValues->at(1));
-   let body = j_block([
-      j_declare(javaSupplier(javaObject()), 'fn', $f->j_cast(javaSupplier(javaObject()))),
-      j_declare(javaString(), 'expected', $msg->j_cast(javaString())),
-      j_code('try { fn.get(); throw new AssertionError("expected exception with message: " + expected); } '
-         + 'catch (AssertionError e) { throw e; } '
-         + 'catch (Throwable t) { '
-         // describe(), not getMessage(): the compared text carries the Pure call
-         // chain, which is where bootstrap (NativeRegistry), Truffle
-         // (AssertErrorNode) and the JS runtime (__assertError) all append it —
-         // at the catch boundary, never at the throw site.
-         + '  String actual = ' + $conv->platform::extensions::language::java::translation::platformClass('execution.PureStack') + '.describe(t); '
-         // Containment, as the other hosts match: a test pins the part of the
-         // message that is the contract ('multiplicity'), not the whole of it.
-         + '  if (!actual.contains(expected)) throw new AssertionError("expected: " + expected + ", actual: " + actual); '
-         + '  return true; '
-         + '}', javaVoid())
-   ]);
-   j_lambda([], $body)->j_cast(javaSupplier(javaBoolean()))->j_invoke('get', [], javaBoolean());
+   // The thunk is bound on a line of its own: a frame is positioned by its Java line, so the lambda must not
+   // share the line of the call that runs it, or its frame would report the assertError call.
+   let fn = j_variable(javaSupplier(javaObject()), 'fn');
+   j_lambda([], j_block([
+      j_declare(javaSupplier(javaObject()), 'fn', $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaSupplier(javaObject()))),
+      j_return($conv->runtimeCall('PureAsserts', 'assertError', [$fn, $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString())], javaBoolean()))
+   ]))->j_cast(javaSupplier(javaBoolean()))->j_invoke('get', [], javaBoolean());
 }
 
 // `joinStrings` — two overloads:
@@ -2770,12 +2334,7 @@ function <<access.private>> platform::extensions::language::java::translation::c
    if ($fe.parametersValues->size() == 2,
       | $conv->translateExpression($fe.parametersValues->at(0))->j_invoke('contains', [$val], javaBoolean()),
       | // contains(col, value, comparator): some element for which comparator(value, element) holds.
-        valueIife(j_invoke(javaArrays(), 'asList', [$conv->translateAsList($fe.parametersValues->at(0))->toObjectCode(), $val->toObjectCode(), $conv->translateExpression($fe.parametersValues->at(2))->j_castWithoutChecks(javaClass('java.util.function.BiFunction'))], javaList()),
-           javaList(), javaBooleanBoxed(), [
-           j_code('java.util.function.BiFunction pureCtFn = (java.util.function.BiFunction) pureIifeIn.get(2); '
-                + 'for (Object pureCtV : (java.util.List<?>) pureIifeIn.get(0)) { if ((Boolean) pureCtFn.apply(pureIifeIn.get(1), pureCtV)) { return true; } } '
-                + 'return false;', javaVoid())
-        ])->j_cast(javaBoolean()));
+        $conv->runtimeCall('PureCollections', 'contains', [$conv->translateAsList($fe.parametersValues->at(0)), $val->toObjectCode(), $conv->translateExpression($fe.parametersValues->at(2))->j_castWithoutChecks(javaClass('java.util.function.BiFunction'))], javaBoolean()));
 }
 
 // `filter(coll, predicate)` — Stream.filter + toList. The predicate is a
@@ -2792,10 +2351,7 @@ function <<access.private>> platform::extensions::language::java::translation::f
         ->j_invoke('toList',  [], javaList(javaObject()));
 }
 
-// `removeDuplicates(coll)` and `removeDuplicates(coll, comparator)` —
-// order-preserving distinct via Stream.distinct. The 2-arg form's custom
-// comparator is ignored (Stream.distinct uses .equals/.hashCode); tests
-// relying on identity-vs-equality semantics will diverge here.
+// `removeDuplicates(coll)`, `(coll, eql)` and `(coll, key, eql)` — PureCollections.removeDuplicates.
 function <<access.private>> platform::extensions::language::java::translation::removeDuplicatesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    // removeDuplicates(col), (col, eql) and the native (col, key, eql), where
@@ -2807,17 +2363,7 @@ function <<access.private>> platform::extensions::language::java::translation::r
    let eql = if ($n == 3, | $conv->optionalFunctionArg($fe.parametersValues->at(2), javaClass('java.util.function.BiFunction')),
              |if ($n == 2, | $conv->optionalFunctionArg($fe.parametersValues->at(1), javaClass('java.util.function.BiFunction')),
                            | j_null()));
-   valueIife(j_invoke(javaArrays(), 'asList', [$conv->translateAsList($fe.parametersValues->at(0))->toObjectCode(), $key->toObjectCode(), $eql->toObjectCode()], javaList()),
-      javaList(), javaList(), [
-      j_code('java.util.function.Function pureRdKey = (java.util.function.Function) pureIifeIn.get(1); '
-           + 'java.util.function.BiFunction pureRdEq = (java.util.function.BiFunction) pureIifeIn.get(2); '
-           + 'java.util.List<Object> pureRdOut = new java.util.ArrayList<>(); java.util.List<Object> pureRdKeys = new java.util.ArrayList<>(); '
-           + 'for (Object pureRdV : (java.util.List<?>) pureIifeIn.get(0)) { '
-           + 'Object pureRdK = pureRdKey == null ? pureRdV : pureRdKey.apply(pureRdV); boolean pureRdDup = false; '
-           + 'for (Object pureRdSeen : pureRdKeys) { if (pureRdEq == null ? java.util.Objects.equals(pureRdSeen, pureRdK) : (Boolean) pureRdEq.apply(pureRdSeen, pureRdK)) { pureRdDup = true; break; } } '
-           + 'if (!pureRdDup) { pureRdOut.add(pureRdV); pureRdKeys.add(pureRdK); } } '
-           + 'return pureRdOut;', javaVoid())
-   ]);
+   $conv->runtimeCall('PureCollections', 'removeDuplicates', [$conv->translateAsList($fe.parametersValues->at(0)), $key->j_castWithoutChecks(javaClass('java.util.function.Function')), $eql->j_castWithoutChecks(javaClass('java.util.function.BiFunction'))], javaList());
 }
 
 // `removeAll(set, other)` — order-preserving set difference. Compares with
@@ -2829,25 +2375,14 @@ function <<access.private>> platform::extensions::language::java::translation::r
 function <<access.private>> platform::extensions::language::java::translation::removeAllCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'removeAllCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
-   let equal = $conv->platform::extensions::language::java::translation::runtimeClass('PureValues') + '.equal';
-   valueIife(j_invoke(javaArrays(), 'asList', [$conv->translateAsList($fe.parametersValues->at(0))->toObjectCode(), $conv->translateAsList($fe.parametersValues->at(1))->toObjectCode()], javaList()),
-      javaList(), javaList(), [
-      j_code('java.util.List<?> pureRaDrop = (java.util.List<?>) pureIifeIn.get(1); '
-           + 'java.util.List<Object> pureRaOut = new java.util.ArrayList<>(); '
-           + 'for (Object pureRaV : (java.util.List<?>) pureIifeIn.get(0)) { '
-           + 'boolean pureRaHit = false; '
-           + 'for (Object pureRaD : pureRaDrop) { if (' + $equal + '(pureRaV, pureRaD)) { pureRaHit = true; break; } } '
-           + 'if (!pureRaHit) { pureRaOut.add(pureRaV); } } '
-           + 'return pureRaOut;', javaVoid())
-   ]);
+   $conv->runtimeCall('PureCollections', 'removeAll', [$conv->translateAsList($fe.parametersValues->at(0)), $conv->translateAsList($fe.parametersValues->at(1))], javaList());
 }
 
 // `vs`, represented as a List, as a single value: its first element or null.
 function <<access.private>> platform::extensions::language::java::translation::translateAsOptional(conv: Conventions[1], vs: ValueSpecification[1]): Code[1]
 {
-   valueIife($conv->translateExpression($vs)->toObjectCode(), javaObject(), javaObject(), [
-      j_code('return pureIifeIn instanceof java.util.List ? (((java.util.List<?>) pureIifeIn).isEmpty() ? null : ((java.util.List<?>) pureIifeIn).get(0)) : pureIifeIn;', javaVoid())
-   ])->j_castWithoutChecks($conv->pureTypeToJavaType($vs.genericType, ZeroOne)->toBoxed());
+   $conv->runtimeCall('PureValues', 'one', [$conv->translateExpression($vs)->toObjectCode()], javaObject())
+      ->j_castWithoutChecks($conv->pureTypeToJavaType($vs.genericType, ZeroOne)->toBoxed());
 }
 
 // True for `[]`, possibly cast: `[]->cast(@String)`.
@@ -2894,15 +2429,10 @@ function <<access.private>> platform::extensions::language::java::translation::i
 function <<access.private>> platform::extensions::language::java::translation::atCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'atCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
-   let coll = $conv->translateAsList($fe.parametersValues->at(0));
-   let idx  = $conv->translateExpression($fe.parametersValues->at(1));
-   // An offset outside the collection fails with Pure's message; the element
-   // (Object) is cast back to its boxed type.
-   valueIife(j_invoke(javaArrays(), 'asList', [$coll, $idx], javaList()), javaList(), javaObject(), [
-      j_code('java.util.List<?> pureAtL = (java.util.List<?>) pureIifeIn.get(0); long pureAtI = ((Number) pureIifeIn.get(1)).longValue(); '
-           + 'if (pureAtI < 0 || pureAtI >= pureAtL.size()) { throw new RuntimeException("The system is trying to get an element at offset " + pureAtI + " where the collection is of size " + pureAtL.size()); } '
-           + 'return pureAtL.get((int) pureAtI);', javaVoid())
-   ])->j_castWithoutChecks($conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed());
+   // An offset outside the collection fails with Pure's message; the element (Object) is cast back to its
+   // boxed type.
+   $conv->runtimeCall('PureCollections', 'at', [$conv->translateAsList($fe.parametersValues->at(0)), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong())], javaObject())
+      ->j_castWithoutChecks($conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed());
 }
 
 // `readFile(path)` — the file's text, UTF-8.
@@ -3077,18 +2607,7 @@ function <<access.private>> platform::extensions::language::java::translation::r
 function <<access.private>> platform::extensions::language::java::translation::writeFileCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'writeFileCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
-   let args = j_invoke(javaArrays(), 'asList', [
-                 $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()),
-                 $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString())], javaList());
-   valueIife($args, javaList(), javaString(), [
-      j_code('String purePath = (String) pureIifeIn.get(0);\n'
-           + 'try {\n'
-           + '    java.nio.file.Path pureFile = java.nio.file.Path.of(purePath);\n'
-           + '    if (pureFile.getParent() != null) { java.nio.file.Files.createDirectories(pureFile.getParent()); }\n'
-           + '    java.nio.file.Files.writeString(pureFile, (String) pureIifeIn.get(1));\n'
-           + '    return purePath;\n'
-           + '} catch (java.io.IOException pureIoE) { throw new java.io.UncheckedIOException(pureIoE); }', javaVoid())
-   ]);
+   $conv->runtimeCall('PureFiles', 'writeFile', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString())], javaString());
 }
 
 // `currentTimeMillis()` — milliseconds since the epoch.
@@ -3118,48 +2637,16 @@ function <<access.private>> platform::extensions::language::java::translation::w
 function <<access.private>> platform::extensions::language::java::translation::directoryTreeCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'directoryTreeCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   valueIife($conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()), javaString(), javaList(), [
-      j_code('try (java.util.stream.Stream<java.nio.file.Path> pureWalk = java.nio.file.Files.walk(java.nio.file.Path.of(pureIifeIn))) { '
-           + 'return pureWalk.filter(java.nio.file.Files::isRegularFile).map(java.nio.file.Path::toString).sorted().collect(java.util.stream.Collectors.toList()); } '
-           + 'catch (java.io.IOException pureIoE) { throw new java.io.UncheckedIOException(pureIoE); }', javaVoid())
-   ]);
+   $conv->runtimeCall('PureFiles', 'directoryTree', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString())], javaList());
 }
 
 // `readFileBytes(path)` — the file's bytes as Pure Integers, through the
-// generated PureBytes list view (see {@link pureBytesHelperClass}).
+// platform's PureBytes list view (runtime library).
 function <<access.private>> platform::extensions::language::java::translation::readFileBytesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'readFileBytesCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
    // A Binary is the raw byte[]: no PureBytes view, no boxing.
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()),
-      javaString(),
-      javaArray(javaByte()),
-      [j_return(j_code('{ try { return java.nio.file.Files.readAllBytes(java.nio.file.Path.of(pureIifeIn)); } catch (java.io.IOException pureIoE) { throw new java.io.UncheckedIOException(pureIoE); } }', javaArray(javaByte())))]);
-}
-
-// A Pure `Integer[*]` of bytes over a byte[]: an unmodifiable List<Long> view
-// that boxes only the element read and slices without copying. A whole file
-// as boxed Longs would cost dozens of bytes per byte — a PDB is megabytes.
-function <<access.private>> platform::extensions::language::java::translation::pureBytesHelperClass(conv: Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
-{
-   let bytesType = javaClass($conv->platform::extensions::language::java::translation::runtimeClass('PureBytes'));
-   let longType  = javaClass('java.lang.Long');
-   javaClass(['public'], $conv->platform::extensions::language::java::translation::runtimeClass('PureBytes'))
-      ->jextends(javaParameterizedType(javaClass('java.util.AbstractList'), [$longType]))
-      ->implements(javaClass('java.util.RandomAccess'))
-      ->addField(javaField(['public'], javaArray(javaByte()), 'data'))
-      ->addField(javaField(['public'], javaInt(), 'offset'))
-      ->addField(javaField(['public'], javaInt(), 'length'))
-      ->addMethod(javaMethod(['public', 'static'], $bytesType, 'of', [j_parameter(javaArray(javaByte()), 'data'), j_parameter(javaInt(), 'offset'), j_parameter(javaInt(), 'length')],
-           'PureBytes b = new PureBytes();\nb.data = data;\nb.offset = offset;\nb.length = length;\nreturn b;'))
-      ->addMethod(javaMethod(['public', 'static'], $bytesType, 'read', [j_parameter(javaString(), 'path')],
-           'try {\n    byte[] bytes = java.nio.file.Files.readAllBytes(java.nio.file.Path.of(path));\n    return of(bytes, 0, bytes.length);\n} catch (java.io.IOException e) {\n    throw new java.io.UncheckedIOException(e);\n}'))
-      ->addMethod(javaMethod(['public'], $longType, 'get', [j_parameter(javaInt(), 'i')],
-           'if (i < 0 || i >= length) { throw new IndexOutOfBoundsException("Index " + i + " out of bounds for length " + length); }\nreturn (long) (data[offset + i] & 0xFF);'))
-      ->addMethod(javaMethod(['public'], javaInt(), 'size', [], 'return length;'))
-      ->addMethod(javaMethod(['public'], javaParameterizedType(javaClass('java.util.List'), [$longType]), 'subList', [j_parameter(javaInt(), 'from'), j_parameter(javaInt(), 'to')],
-           'if (from < 0 || to > length || from > to) { throw new IndexOutOfBoundsException("fromIndex = " + from + ", toIndex = " + to); }\nreturn of(data, offset + from, to - from);'));
+   $conv->runtimeCall('PureFiles', 'readFileBytes', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString())], javaArray(javaByte()));
 }
 
 // `reverseString(s)`
@@ -3294,20 +2781,7 @@ function <<access.private>> platform::extensions::language::java::translation::a
 // element — and fail when the outcome isn't the expected one; true otherwise.
 function <<access.private>> platform::extensions::language::java::translation::pureAssertion(conv: Conventions[1], fe: FunctionExpression[1], expectEqual: Boolean[1]): Code[1]
 {
-   let a = $conv->translateExpression($fe.parametersValues->at(0))->toObjectCode();
-   let b = $conv->translateExpression($fe.parametersValues->at(1))->toObjectCode();
-   valueIife(j_invoke(javaArrays(), 'asList', [$a, $b], javaList()), javaList(), javaBooleanBoxed(), [
-      j_code('Object[] pureAsV = pureIifeIn.toArray(); '
-           + 'for (int pureAsI = 0; pureAsI < 2; pureAsI++) { '
-           + 'if (pureAsV[pureAsI] == null) { pureAsV[pureAsI] = java.util.Collections.emptyList(); } '
-           + 'else if (pureAsV[pureAsI] instanceof java.util.List && ((java.util.List<?>) pureAsV[pureAsI]).size() == 1) { pureAsV[pureAsI] = ((java.util.List<?>) pureAsV[pureAsI]).get(0); } } '
-           + if ($expectEqual,
-                // PureValues.equal, not Objects.equals: Pure has one zero, and
-                // -0.0 must equal the literal 0.0 here as it does anywhere else.
-                | 'if (!' + $conv->equalCall() + ') { throw new RuntimeException("\\nexpected: " + pureAsV[0] + "\\nactual:   " + pureAsV[1]); } ',
-                | 'if (' + $conv->equalCall() + ') { throw new RuntimeException("Objects are the same: " + pureAsV[0]); } ')
-           + 'return true;', javaVoid())
-   ])->j_cast(javaBoolean());
+   $conv->runtimeCall('PureAsserts', if($expectEqual, | 'assertEqual', | 'assertNotEqual'), [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode(), $conv->translateExpression($fe.parametersValues->at(1))->toObjectCode()], javaBoolean());
 }
 
 function <<access.private>> platform::extensions::language::java::translation::assertFalseCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
@@ -3324,9 +2798,6 @@ function <<access.private>> platform::extensions::language::java::translation::a
    $conv->pureAssertion($fe, false);
 }
 
-// `assert(cond[, message...])` — identity on the boolean condition. For
-// PCT-via-translator the outer test runner catches the boolean signal;
-// throw-on-false semantics aren't needed.
 // Pure `assert(condition[, message])`: throws when the condition is false — a
 // tryEval around it relies on that — and is true otherwise. The message may be
 // a String or a `{-> String}` thunk (cast to Supplier: a bare lambda can't sit
@@ -3339,15 +2810,7 @@ function <<access.private>> platform::extensions::language::java::translation::a
    let msg  = if ($n == 1,                                         | j_string('Assert failed'),
               |if ($fe.parametersValues->at(1)->isLambdaLiteral(), | $conv->translateExpression($fe.parametersValues->at(1))->j_castWithoutChecks(javaClass('java.util.function.Supplier')),
                                                                    | $conv->translateExpression($fe.parametersValues->at(1))));
-   valueIife(
-      j_invoke(javaClass('java.util.List'), 'of', [$cond, $msg], javaList()),
-      javaList(),
-      javaBoolean(),
-      [j_code('if (!(Boolean) pureIifeIn.get(0)) { '
-         + 'Object pureAssertM = pureIifeIn.get(1); '
-         + 'if (pureAssertM instanceof java.util.function.Supplier) { pureAssertM = ((java.util.function.Supplier) pureAssertM).get(); } '
-         + 'throw new RuntimeException(String.valueOf(pureAssertM)); } '
-         + 'return true;', javaVoid())]);
+   $conv->runtimeCall('PureAsserts', 'assertTrue', [$cond->j_cast(javaBoolean()), $msg->toObjectCode()], javaBoolean());
 }
 
 // `exists(coll, predicate)` — Stream.anyMatch with the translated predicate.
@@ -3603,23 +3066,7 @@ function <<access.private>> platform::extensions::language::java::translation::t
 
 function <<access.private>> platform::extensions::language::java::translation::valueRepresentation(conv: Conventions[1], fe: FunctionExpression[1]): Code[1]
 {
-   // Pure literal syntax, as the JS runtime's __toRepresentation: a String is
-   // single-quoted with \ ' newline tab and CR escaped, a date gets its `%`,
-   // a Float prints as {@link pureFloatStringJava}. The escape characters are
-   // built with (char) codes to keep backslashes out of this Pure string.
-   valueIife(
-      $conv->translateExpression($fe.parametersValues->at(0)),
-      javaObject(),
-      javaString(),
-      [j_code('if (pureIifeIn == null) { return ""; } '
-         + 'if (pureIifeIn instanceof String) { '
-         + 'String pureRepB = String.valueOf((char) 92); String pureRepQ = String.valueOf((char) 39); '
-         + 'return pureRepQ + ((String) pureIifeIn).replace(pureRepB, pureRepB + pureRepB).replace(pureRepQ, pureRepB + pureRepQ)'
-         + '.replace(String.valueOf((char) 10), pureRepB + "n").replace(String.valueOf((char) 9), pureRepB + "t")'
-         + '.replace(String.valueOf((char) 13), pureRepB + "r") + pureRepQ; } '
-         + 'if (pureIifeIn instanceof java.time.temporal.Temporal || pureIifeIn.getClass().getSimpleName().equals("PureDate")) { return "%" + pureIifeIn; } '
-         + pureFloatStringJava('pureIifeIn')
-         + 'return String.valueOf(pureIifeIn);', javaVoid())]);
+   $conv->runtimeCall('PureStrings', 'toRepresentation', [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaString());
 }
 
 // `cast(value, type)` — Pure's runtime type assertion. Java's type system
@@ -3764,7 +3211,7 @@ function <<access.private>> platform::extensions::language::java::translation::c
    let bindThis  = j_declare($valueType, 'this_', j_variable(javaObject(), 'pureConstrainedV')->j_castWithoutChecks($valueType));
    let bindings  = $typeBindings->concatenate($bindThis);
    let checks    = $constraints->map(c | $conv->constraintCheck($c, $target));
-   let body      = $bindings->concatenate($checks)->concatenate(j_code('return pureConstrainedV;', javaVoid()));
+   let body      = $bindings->concatenate($checks)->concatenate(j_return(j_variable(javaObject(), 'pureConstrainedV')));
    let checked   = j_lambda([j_parameter(javaObject(), 'pureConstrainedV')], j_block($body))
                       ->j_cast(javaFunction(javaObject(), javaObject()))
                       ->j_invoke('apply', [$code->toObjectCode()], javaObject());
@@ -3820,13 +3267,8 @@ function <<access.private>> platform::extensions::language::java::translation::c
 {
    let javaType = $conv->pureTypeToJavaType($target->typeGenericType(), PureOne)->toBoxed();
    let name     = $target->cast(@platform::pure::metamodel::PackageableElement).name->toOne();
-   valueIife($value->toObjectCode(), javaObject(), javaObject(), [
-      j_code('for (Object pureCastV : pureIifeIn instanceof java.util.List ? (java.util.List<?>) pureIifeIn : java.util.Collections.singletonList(pureIifeIn)) { '
-           + 'if (pureCastV != null && !(pureCastV instanceof ' + $javaType->platform::extensions::language::java::serialization::typeToString() + ')) { '
-           + 'String pureCastT = pureCastV instanceof Long ? "Integer" : pureCastV instanceof Double ? "Float" : pureCastV instanceof java.math.BigDecimal ? "Decimal" : pureCastV.getClass().getSimpleName().equals("PureDate") ? (pureCastV.toString().contains("T") ? "DateTime" : pureCastV.toString().length() >= 10 ? "StrictDate" : "Date") : pureCastV.getClass().getSimpleName(); '
-           + 'throw new RuntimeException("Cast exception: " + pureCastT + " cannot be cast to ' + $name + '"); } } '
-           + 'return pureIifeIn;', javaVoid())
-   ])->fitToType($conv->pureTypeToJavaType($fe.genericType, $fe->resolvedMultiplicity())->toBoxed(), $conv);
+   $conv->runtimeCall('PureValues', 'checkedCast', [$value->toObjectCode(), j_classField($javaType), j_string($name)], javaObject())
+      ->fitToType($conv->pureTypeToJavaType($fe.genericType, $fe->resolvedMultiplicity())->toBoxed(), $conv);
 }
 
 // A GenericType for `t`.
@@ -3924,12 +3366,7 @@ function <<access.private>> platform::extensions::language::java::translation::c
         if ($fe.parametersValues->at(0).genericType->rawType() != $fe.parametersValues->at(1).genericType->rawType(),
            | // Values of unrelated types order by their Java class name first, as
              // on the Truffle runtime; same-class values by their natural order.
-             valueIife(j_invoke(javaArrays(), 'asList', [$a->toObjectCode(), $b->toObjectCode()], javaList()), javaList(), javaLongBoxed(), [
-                j_code('Object pureCmpX = pureIifeIn.get(0); Object pureCmpY = pureIifeIn.get(1); '
-                     + 'int pureCmpC = pureCmpX.getClass().getName().compareTo(pureCmpY.getClass().getName()); '
-                     + 'if (pureCmpC == 0) { pureCmpC = ((Comparable) pureCmpX).compareTo(pureCmpY); } '
-                     + 'return (long) Integer.signum(pureCmpC);', javaVoid())
-             ])->j_cast(javaLong()),
+             $conv->runtimeCall('PureCollections', 'compare', [$a->toObjectCode(), $b->toObjectCode()], javaLong()),
            | j_cast(j_invoke($a->j_cast(javaClass('java.lang.Comparable')), 'compareTo', [$b], javaInt()), javaLong())););
 }
 
@@ -3937,7 +3374,7 @@ function <<access.private>> platform::extensions::language::java::translation::c
 // `value->match(lambdas, extra)` — dispatch on type AND multiplicity: the first
 // lambda whose parameter accepts the value (its size within the multiplicity's
 // bounds, every element an instance of the type) runs. The dispatch lives in
-// the generated PureMatch class (see {@link pureMatchHelperClass}); the call
+// the platform's PureMatch class (runtime library); the call
 // site only passes the value, the translated lambdas, each parameter's bounds
 // and Java class. Doing it inline would need locals, and a match nested in an
 // arm's body would redeclare them — javac rejects a lambda parameter or local
@@ -3980,7 +3417,7 @@ function <<access.private>> platform::extensions::language::java::translation::l
    let fnType    = if ($withExtra, | javaClass('java.util.function.BiFunction'), | javaClass('java.util.function.Function'));
    let arms      = j_invoke(javaArrays(), 'asList', $lambdas->map(l | $conv->translateLambdaValue($l)->j_castWithoutChecks($fnType)), javaList());
    let params    = $lambdas->map(l | $l.parameters->at(0));
-   let bounds    = j_code('new long[]{' + $params->map(p | $p.multiplicity->matchBounds())->joinStrings(', ') + '}', javaObject());
+   let bounds    = j_invoke(javaArrays(), 'asList', $params->map(p | $p.multiplicity->matchBounds())->map(b | j_long($b)), javaList());
    let classes   = j_invoke(javaArrays(), 'asList', $params->map(p | $conv->matchClassLiteral($p)), javaList());
    let extra     = if ($withExtra, | $conv->translateExpression($fe.parametersValues->at(2))->toObjectCode(), | j_null());
    let many      = if ($fe.multiplicity->holdsManyValues(), | j_true(), | j_false());
@@ -4002,13 +3439,12 @@ function <<access.private>> platform::extensions::language::java::translation::m
 
 // `lower, upper` of a match parameter's multiplicity; upper -1 is unbounded,
 // and a multiplicity parameter accepts any size.
-function <<access.private>> platform::extensions::language::java::translation::matchBounds(m: platform::pure::metamodel::multiplicity::Multiplicity[1]): String[1]
+function <<access.private>> platform::extensions::language::java::translation::matchBounds(m: platform::pure::metamodel::multiplicity::Multiplicity[1]): Integer[*]
 {
    if (!$m->instanceOf(platform::pure::metamodel::multiplicity::ConcreteMultiplicity),
-      | '0L, -1L',
+      | [0, -1],
       | let c = $m->cast(@platform::pure::metamodel::multiplicity::ConcreteMultiplicity);
-        let upper = if ($c.upperBound->isEmpty(), | -1, | $c.upperBound->toOne().value->toOne());
-        $c.lowerBound.value->toOne()->toString() + 'L, ' + $upper->toString() + 'L';
+        [$c.lowerBound.value->toOne(), if ($c.upperBound->isEmpty(), | -1, | $c.upperBound->toOne().value->toOne())];
    );
 }
 
@@ -4033,58 +3469,6 @@ function <<access.private>> platform::extensions::language::java::translation::m
            j_field(javaClass('java.util.function.Function'), 'class', javaClass('java.lang.Class')),
            j_field(javaClass('java.util.function.BiFunction'), 'class', javaClass('java.lang.Class')),
            j_field(javaClass('java.util.function.Supplier'), 'class', javaClass('java.lang.Class'))], javaList()));
-}
-
-// The generated class behind {@link matchCoder}. `bounds` holds each lambda's
-// lower and upper bound in turn; a lambda whose upper bound is 1 takes the
-// value itself (or null), any other takes the list — the same representation
-// {@link holdsManyValues} gives its parameter.
-function <<access.private>> platform::extensions::language::java::translation::pureMatchHelperClass(conv: Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
-{
-   let match = javaMethod(['public', 'static'], javaObject(), 'match',
-      [j_parameter(javaObject(), 'value'), j_parameter(javaList(), 'arms'), j_parameter(javaObject(), 'boundsIn'),
-       j_parameter(javaList(), 'classes'), j_parameter(javaObject(), 'extra'), j_parameter(javaBoolean(), 'withExtra'), j_parameter(javaBoolean(), 'many')],
-      'long[] bounds = (long[]) boundsIn;\n'
-      + 'java.util.List values = value instanceof java.util.List ? (java.util.List) value : value == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(value);\n'
-      + 'for (int i = 0; i < arms.size(); i++) {\n'
-      + '    long lower = bounds[2 * i];\n'
-      + '    long upper = bounds[2 * i + 1];\n'
-      + '    if (values.size() < lower || (upper >= 0 && values.size() > upper)) { continue; }\n'
-      + '    Object type = classes.get(i);\n'
-      + '    java.util.List<?> types = type instanceof java.util.List ? (java.util.List<?>) type : java.util.Collections.singletonList(type);\n'
-      + '    boolean accepted = true;\n'
-      + '    for (Object v : values) { boolean any = false; for (Object t : types) { if (((Class<?>) t).isInstance(v)) { any = true; break; } } if (!any) { accepted = false; break; } }\n'
-      + '    if (!accepted) { continue; }\n'
-      + '    Object arg = upper == 1 ? (values.isEmpty() ? null : values.get(0)) : values;\n'
-      + '    Object result = withExtra ? ((java.util.function.BiFunction) arms.get(i)).apply(arg, extra) : ((java.util.function.Function) arms.get(i)).apply(arg);\n'
-      + '    if (many) { return result instanceof java.util.List ? result : result == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(result); }\n'
-      + '    if (result instanceof java.util.List) { java.util.List l = (java.util.List) result; return l.isEmpty() ? null : l.size() == 1 ? l.get(0) : l; }\n'
-      + '    return result;\n'
-      + '}\n'
-      + 'throw new RuntimeException("Match failure: " + value);'
-   );
-   // Arms held in a variable carry their own parameter type and bounds: the
-   // translator cannot see them, so the metadata answers at run time.
-   let dynamic = javaMethod(['public', 'static'], javaObject(), 'matchDynamic',
-      [j_parameter(javaObject(), 'value'), j_parameter(javaList(), 'arms'),
-       j_parameter(javaObject(), 'extra'), j_parameter(javaBoolean(), 'withExtra'), j_parameter(javaBoolean(), 'many')],
-      'java.util.List values = value instanceof java.util.List ? (java.util.List) value : value == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(value);\n'
-      + 'for (int i = 0; i < arms.size(); i++) {\n'
-      + '    Object[] arm = org.finos.legend.pure.platform.java.compiler.module.pdbModule.Metadata.matchArm(arms.get(i));\n'
-      + '    long lower = (Long) arm[1], upper = (Long) arm[2];\n'
-      + '    if (values.size() < lower || (upper >= 0 && values.size() > upper)) { continue; }\n'
-      + '    boolean accepted = true;\n'
-      + '    for (Object v : values) { if (!org.finos.legend.pure.platform.java.compiler.module.pdbModule.Metadata.instanceOf(v, arm[0])) { accepted = false; break; } }\n'
-      + '    if (!accepted) { continue; }\n'
-      + '    Object arg = upper == 1 ? (values.isEmpty() ? null : values.get(0)) : values;\n'
-      + '    Object result = org.finos.legend.pure.platform.java.compiler.module.pdbModule.Metadata.invoke(arms.get(i), withExtra ? java.util.Arrays.asList(arg, extra) : java.util.Collections.singletonList(arg));\n'
-      + '    if (many) { return result instanceof java.util.List ? result : result == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(result); }\n'
-      + '    if (result instanceof java.util.List) { java.util.List l = (java.util.List) result; return l.isEmpty() ? null : l.size() == 1 ? l.get(0) : l; }\n'
-      + '    return result;\n'
-      + '}\n'
-      + 'throw new RuntimeException("Match failure: " + value);'
-   );
-   javaClass(['public'], $conv->platform::extensions::language::java::translation::runtimeClass('PureMatch'))->addMethod($match)->addMethod($dynamic);
 }
 
 // True when `exprs` call a function with one of `names`, lambda bodies and
@@ -4321,8 +3705,63 @@ function platform::extensions::language::java::translation::translateExpression(
       // `@CC_Person` — a type written as a value. With metadata it is the
       // holder the platform builds for that type.
       h: platform::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder[1] | $conv->translateTypeHolder($h),
-      x: ValueSpecification[1]  | fail('translateExpression: unsupported VS subtype ' + $x.classifierGenericType->toOne()->rawType()->toOne()->elementToPath()); j_null();
+      // A language extension's value (an expression island compiled to its own class): it evaluates to the
+      // instance itself, so it is emitted as the instance — what `^Class(...)` with its slots emits.
+      x: ValueSpecification[1]  | if ($x->isUserClassInstance(),
+                                      | $conv->translateExtensionValue($x),
+                                      | fail('translateExpression: unsupported VS subtype ' + $x.classifierGenericType->toOne()->rawType()->toOne()->elementToPath()); j_null();)
    ]);
+}
+
+// An extension value as a constant: its slots as a `new XImpl()._p(v)...` chain (translateClassInstance),
+// with the classifier `^X(...)` sets, so instanceOf and genericType see the same object either way.
+// It is also a value SPECIFICATION, and its type and multiplicity are its own (a TDS's type is its relation
+// type, TDS<(a:Integer[1], …)>): they are set too, as the metamodel values they are (translateMetamodelValue).
+function <<access.private>> platform::extensions::language::java::translation::translateExtensionValue(conv: Conventions[1], v: ValueSpecification[1]): Code[1]
+{
+   let cls = $v->platform::pure::functions::meta::genericType()->rawType()->toOne()->cast(@platform::pure::metamodel::type::Class<Any>);
+   let clsType = javaClass($cls->platform::extensions::language::java::translation::platform::platformTypeName(platform::extensions::language::java::translation::platform::platformRoot()) + 'Impl');
+   let typed = $conv->translateClassInstance($v)
+      ->j_invoke('_genericType', [$conv->translateMetamodelValue($v.genericType)], $clsType)
+      ->j_invoke('_multiplicity', [$conv->translateMetamodelValue($v.multiplicity)], $clsType);
+   $conv->withClassifier($typed, $clsType, $cls, [], []);
+}
+
+// A metamodel value as code: an element (a class, a primitive type, a canonical generic type, PureOne) as
+// the platform's metadata element; a primitive as its literal; any other instance (a UserDefinedGenericType,
+// a RelationType, a Column) as its generated class with every property it has set, each such a value too.
+function <<access.private>> platform::extensions::language::java::translation::translateMetamodelValue(conv: Conventions[1], v: Any[1]): Code[1]
+{
+   let type = $v->platform::pure::functions::meta::genericType()->rawType()->toOne();
+   if([pair(| $v->instanceOf(platform::pure::metamodel::PackageableElement),
+            | j_invoke(javaClass($conv->pdbClass('Metadata')), 'element', [j_string($v->cast(@platform::pure::metamodel::PackageableElement)->elementToPath())], javaObject())),
+       pair(| !$type->instanceOf(platform::pure::metamodel::type::Class),
+            | $conv->translateScalarAtomicValue($v))],
+      | $conv->translateMetamodelInstance($v, $type->cast(@platform::pure::metamodel::type::Class<Any>)));
+}
+
+function <<access.private>> platform::extensions::language::java::translation::translateMetamodelInstance(conv: Conventions[1], v: Any[1], cls: platform::pure::metamodel::type::Class<Any>[1]): Code[1]
+{
+   let clsType = javaClass($cls->platform::extensions::language::java::translation::platform::platformTypeName(platform::extensions::language::java::translation::platform::platformRoot()) + 'Impl');
+   let built = $cls->platform::extensions::language::java::translation::allMetamodelProperties()->filter(p | $p.name != 'classifierGenericType')
+      ->fold({p, acc | platform::extensions::language::java::translation::setMetamodelProperty($conv, $acc, $clsType, $p, $p->eval($v))}, j_new($clsType, []));
+   $conv->withClassifier($built, $clsType, $cls, [], []);
+}
+
+function <<access.private>> platform::extensions::language::java::translation::setMetamodelProperty(conv: Conventions[1], acc: Code[1], clsType: platform::extensions::language::java::metamodel::Type[1], p: platform::pure::metamodel::function::property::Property<Any, Any>[1], values: Any[*]): Code[1]
+{
+   if([pair(| $values->isEmpty(), | $acc),
+       pair(| $values->size() == 1, | $acc->j_invoke('_' + $p.name->toOne(), [$conv->translateMetamodelValue($values->toOne())], $clsType))],
+      | $acc->j_invoke('_' + $p.name->toOne(), [j_invoke(javaArrays(), 'asList', $values->map(x | $conv->translateMetamodelValue($x)), javaList(javaObject()))], $clsType));
+}
+
+// Every property of `cls`, inherited ones included, metamodel ancestors and all (allUserProperties stops at them).
+function <<access.private>> platform::extensions::language::java::translation::allMetamodelProperties(cls: platform::pure::metamodel::type::Class<Any>[1]): platform::pure::metamodel::function::property::Property<Any, Any>[*]
+{
+   let supers = $cls.generalizations->map(g | $g.general->rawType())
+                    ->filter(t | $t->isNotEmpty() && $t->toOne()->instanceOf(platform::pure::metamodel::type::Class))
+                    ->cast(@platform::pure::metamodel::type::Class<Any>);
+   $cls.properties->concatenate($supers->map(s | $s->platform::extensions::language::java::translation::allMetamodelProperties()))->removeDuplicatesBy(p | $p.name->toOne());
 }
 
 // FunctionExpression dispatch with two fallbacks:
@@ -5038,103 +4477,6 @@ function <<access.private>> platform::extensions::language::java::translation::g
    $conv->pureMapCall('getIfAbsentPutWithKey', [$m, $key, $fn], javaObject());
 }
 
-// Generate the per-compilation-unit `PureMap` class. Methods use raw types
-// (java.util.Map, java.util.List, Object) so they accept anything the
-// callsite passes — Pure's generics erase at the Java boundary anyway.
-// Body code is hand-written Java source because the verbosity of building
-// these via the Code factory tree dwarfs the alternative.
-function <<access.private>> platform::extensions::language::java::translation::pureMapHelperClass(conv: Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
-{
-   let mapType  = javaClass('java.util.Map');
-   let listType = javaClass('java.util.List');
-   let objType  = javaObject();
-   let fnType   = javaClass('java.util.function.Function');
-   let cls = javaClass(['public'], $conv->platform::extensions::language::java::translation::runtimeClass('PureMap'));
-   let mNewMap = javaMethod(['public', 'static'], $mapType, 'newMap',
-      [j_parameter($objType, 'entries')],
-      'java.util.LinkedHashMap m = new java.util.LinkedHashMap();\n'
-      + 'addEntries(m, entries);\n'
-      + 'return m;'
-   );
-   let mGet = javaMethod(['public', 'static'], $objType, 'get',
-      [j_parameter($mapType, 'm'), j_parameter($objType, 'key')],
-      'return m == null ? null : m.get(key);'
-   );
-   let mPut = javaMethod(['public', 'static'], $mapType, 'put',
-      [j_parameter($mapType, 'm'), j_parameter($objType, 'key'), j_parameter($objType, 'value')],
-      'java.util.LinkedHashMap nm = new java.util.LinkedHashMap(m);\n'
-      + 'nm.put(key, value);\n'
-      + 'return nm;'
-   );
-   let mPutAll = javaMethod(['public', 'static'], $mapType, 'putAll',
-      [j_parameter($mapType, 'm'), j_parameter($objType, 'additions')],
-      'java.util.LinkedHashMap nm = new java.util.LinkedHashMap(m);\n'
-      + 'if (additions instanceof java.util.Map) {\n'
-      + '    nm.putAll((java.util.Map) additions);\n'
-      + '} else {\n'
-      + '    addEntries(nm, additions);\n'
-      + '}\n'
-      + 'return nm;'
-   );
-   let mRemove = javaMethod(['public', 'static'], $mapType, 'remove',
-      [j_parameter($mapType, 'm'), j_parameter($objType, 'key')],
-      'java.util.LinkedHashMap nm = new java.util.LinkedHashMap(m);\n'
-      + 'nm.remove(key);\n'
-      + 'return nm;'
-   );
-   let mKeys = javaMethod(['public', 'static'], $listType, 'keys',
-      [j_parameter($mapType, 'm')],
-      'return new java.util.ArrayList(m.keySet());'
-   );
-   let mValues = javaMethod(['public', 'static'], $listType, 'values',
-      [j_parameter($mapType, 'm')],
-      'return new java.util.ArrayList(m.values());'
-   );
-   let mKeyValues = javaMethod(['public', 'static'], $listType, 'keyValues',
-      [j_parameter($mapType, 'm')],
-      // Pure pairs, not Java entries: `$map->keyValues()` is a Pair[*].
-      'java.util.List<Object> pairs = new java.util.ArrayList<>();\n'
-      + 'for (java.util.Map.Entry<?, ?> e : ((java.util.Map<?, ?>) m).entrySet()) {\n'
-      + '    pairs.add(new org.finos.legend.pure.m3.platform.pure.functions.collection.PairImpl()._first(e.getKey())._second(e.getValue()));\n'
-      + '}\n'
-      + 'return pairs;'
-   );
-   let mReplaceAll = javaMethod(['public', 'static'], $mapType, 'replaceAll',
-      [j_parameter($mapType, 'm'), j_parameter($objType, 'pairs')],
-      'return newMap(pairs);'
-   );
-   // Pure semantics: get-or-compute. Pure's name suggests the value is also
-   // stored, but Pure Maps are immutable — the caller wouldn't see the
-   // mutation anyway — so we just compute on miss.
-   let mGetOrCompute = javaMethod(['public', 'static'], $objType, 'getIfAbsentPutWithKey',
-      [j_parameter($mapType, 'm'), j_parameter($objType, 'key'), j_parameter($fnType, 'fn')],
-      'return m.containsKey(key) ? m.get(key) : fn.apply(key);'
-   );
-   // Private helper — takes a List<Map.Entry> OR a single Map.Entry and
-   // pours its entries into the target map. Used by newMap / putAll.
-   let mAddEntries = javaMethod(['private', 'static'], javaVoid(), 'addEntries',
-      [j_parameter($mapType, 'm'), j_parameter($objType, 'entries')],
-      'if (entries == null) { return; }\n'
-      + 'java.util.List list = entries instanceof java.util.List ? (java.util.List) entries\n'
-      + '    : java.util.Collections.singletonList(entries);\n'
-      + 'for (Object e : list) {\n'
-      + '    java.util.Map.Entry pair = (java.util.Map.Entry) e;\n'
-      + '    m.put(pair.getKey(), pair.getValue());\n'
-      + '}'
-   );
-   $cls->addMethod($mNewMap)
-       ->addMethod($mGet)
-       ->addMethod($mPut)
-       ->addMethod($mPutAll)
-       ->addMethod($mRemove)
-       ->addMethod($mKeys)
-       ->addMethod($mValues)
-       ->addMethod($mKeyValues)
-       ->addMethod($mReplaceAll)
-       ->addMethod($mGetOrCompute)
-       ->addMethod($mAddEntries);
-}
-
 // Pull the target Class name from a `new`'s first arg. Common shapes:
 //   - AtomicValue holding a Class (`^Foo(...)` -> ^Foo's class reference)
 //   - UserDefinedGenericTypeAndMultiplicityHolder carrying a GenericType
@@ -5253,7 +4595,7 @@ function <<access.private>> platform::extensions::language::java::translation::t
 // and `0x` (no digits) parses to a zero-length array.
 function <<access.private>> platform::extensions::language::java::translation::binaryLiteralToJava(hex: String[1]): Code[1]
 {
-   j_code('java.util.HexFormat.of().parseHex("' + $hex + '")', javaArray(javaByte()));
+   j_invoke(javaClass('java.util.HexFormat'), 'of', [], javaClass('java.util.HexFormat'))->j_invoke('parseHex', [j_string($hex)], javaArray(javaByte()));
 }
 
 function <<access.private>> platform::extensions::language::java::translation::isDateTypeFor(conv: Conventions[1], t: platform::pure::metamodel::type::Type[1]): Boolean[1]
@@ -5446,7 +4788,9 @@ function <<access.private>> platform::extensions::language::java::translation::q
 ): platform::extensions::language::java::metamodel::Code[*]
 {
    // `$this` translates to the variable `this_` (`this` is a Java keyword), bound here.
-   let receiver = j_code($cls->platform::extensions::language::java::translation::platform::platformTypeName($javaRoot) + ' this_ = this;', javaVoid());
+   // Bodies are emitted on the implementation only, so `this` is the Impl, held as the class's interface.
+   let selfType = javaClass($cls->platform::extensions::language::java::translation::platform::platformTypeName($javaRoot));
+   let receiver = j_declare($selfType, 'this_', j_this(javaClass($cls->platform::extensions::language::java::translation::platform::platformTypeName($javaRoot) + 'Impl')));
    // `Class X(x:Integer[1])` — its qualified properties read `$x`, which the
    // instance carries on its classifier.
    let typeVars = $cls.typeVariables->map(v |
@@ -5461,7 +4805,7 @@ function <<access.private>> platform::extensions::language::java::translation::q
                                | $raw->returningNormalized($conv)););
    if ($attempt.failure->isEmpty(),
       | $receiver->concatenate($typeVars)->concatenate($attempt.value->toOne()->cast(@platform::extensions::language::java::metamodel::Code)),
-      | j_code('throw new UnsupportedOperationException(' + ('not translated: ' + $cls->elementToPath() + '.' + $qp->platform::extensions::language::java::translation::platform::qualifiedPropertyName() + ': ' + $attempt.failure->toOne().message->split('\n')->at(0))->escapedString() + ');', javaVoid()));
+      | j_throw(j_new(javaClass('java.lang.UnsupportedOperationException'), [j_string('not translated: ' + $cls->elementToPath() + '.' + $qp->platform::extensions::language::java::translation::platform::qualifiedPropertyName() + ': ' + $attempt.failure->toOne().message->split('\n')->at(0))])));
 }
 
 // A packageable element as its metamodel object on the Java platform:
@@ -5582,7 +4926,7 @@ function <<access.private>> platform::extensions::language::java::translation::p
    j_invoke($conv->javaPureDateType(), 'of', [j_string($stripped)], $conv->javaPureDateType());
 }
 
-// The generated PureDate class (see {@link pureDateHelperClass}) as a Java type.
+// The platform's PureDate class (runtime library) as a Java type.
 function <<access.private>> platform::extensions::language::java::translation::javaPureDateType(conv: Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    javaClass($conv->platform::extensions::language::java::translation::runtimeClass('PureDate'));
@@ -5642,14 +4986,17 @@ function <<access.private>> platform::extensions::language::java::translation::w
    let index = range($all->size())->filter(i | $all->at($i)->atSamePosition($lambda));
    // The wrapper keeps the lambda's Java type, so it still fits where a
    // functional interface is expected (`.map(f)`); arities the platform cannot
-   // call are left as plain lambdas.
+   // call (four parameters and more) are left as plain lambdas.
    let arity = $lambda.parameters->size();
    // Raw interfaces: a cast between two parameterizations of Function is illegal,
-   // and the call site casts the value to the shape it expects.
+   // and the call site casts the value to the shape it expects. Three parameters
+   // is the platform's PureFunction3 (an island handler's compile), which
+   // PureLambda proxies like the JDK's two.
    let type  = if ($arity == 0, | [javaClass('java.util.function.Supplier')],
                |if ($arity == 1, | [javaClass('java.util.function.Function')],
                |if ($arity == 2, | [javaClass('java.util.function.BiFunction')],
-                                 | []->cast(@platform::extensions::language::java::metamodel::Type))));
+               |if ($arity == 3, | [javaClass(platform::extensions::language::java::translation::pureFunction3Class())],
+                                 | []->cast(@platform::extensions::language::java::metamodel::Type)))));
    if ($index->isEmpty() || $type->isEmpty(),
       | $code,
       | j_invoke(javaClass($conv->pdbClass('PureLambda')), 'of',
@@ -5819,7 +5166,7 @@ function <<access.private>> platform::extensions::language::java::translation::b
 // UDF (its `execute`) and one per user class and enumeration the Java can
 // name. The runtime classes the code calls (PureMap, PureMatch, Variant,
 // PureDate, PureFormat, PureBytes) are the platform's, see
-// {@link generateRuntimeClasses}. `bodies` and `signatureTypes`
+// the runtime library in the platform's sources. `bodies` and `signatureTypes`
 // are the program's own; `udfs` are translated and scanned too; `extraTypes`
 // are classes/enumerations to generate even when nothing references them.
 function <<access.private>> platform::extensions::language::java::translation::supportClasses(
@@ -6054,7 +5401,8 @@ function <<access.private>> platform::extensions::language::java::translation::t
       fe: FunctionExpression[1]    | $fe.parametersValues->map(p | $p->typesInValueSpecification()),
       c: Collection[1]             | $c.values->map(v | $v->typesInValueSpecification()),
       a: AtomicValue[1]            | $a.value->map(v | $v->typesInValue()),
-      other: ValueSpecification[1] | []->cast(@platform::pure::metamodel::type::Type)
+      // A language extension's value: the types its slots hold, as for a value an AtomicValue holds.
+      other: ValueSpecification[1] | if ($other->isUserClassInstance(), | $other->typesInValue(), | []->cast(@platform::pure::metamodel::type::Type))
    ]);
    $vs.genericType->map(g | $g->typesInGenericType())->concatenate($nested);
 }
@@ -6100,7 +5448,8 @@ function <<access.private>> platform::extensions::language::java::translation::c
       a: AtomicValue[1] | $a.value->map(v | if ($v->instanceOf(LambdaFunction),
                                                | $conv->collectNewClassRefs($v->cast(@LambdaFunction<Any>).expressionSequence),
                                                | $v->classRefsFromValue())),
-      other: ValueSpecification[1] | []->cast(@platform::extensions::language::java::translation::ClassRef)
+      // A language extension's value is a class instance emitted as a constant (translateExtensionValue).
+      other: ValueSpecification[1] | if ($other->isUserClassInstance(), | $other->classRefsFromValue(), | []->cast(@platform::extensions::language::java::translation::ClassRef))
    ]);
 }
 
@@ -6217,9 +5566,8 @@ function <<access.private>> platform::extensions::language::java::translation::b
    if (!$returnsMany || !$lastValue->resolvedMultiplicity()->isSingleValued(),
       | $body,
       | $body->slice(0, $body->size() - 1)->concatenate(j_return(
-           valueIife($body->at($body->size() - 1)->cast(@platform::extensions::language::java::metamodel::Return).expression->toOne()->toObjectCode(), javaObject(), javaList(), [
-              // Already a list (a `[1]` literal is typed [1] but translated as a List): as is.
-              j_code('return pureIifeIn instanceof java.util.List ? (java.util.List) pureIifeIn : pureIifeIn == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(pureIifeIn);', javaVoid())]))));
+           // Already a list (a `[1]` literal is typed [1] but translated as a List): as is.
+           $conv->runtimeCall('PureValues', 'list', [$body->at($body->size() - 1)->cast(@platform::extensions::language::java::metamodel::Return).expression->toOne()->toObjectCode()], javaList()))));
 }
 
 function <<access.private>> platform::extensions::language::java::translation::buildJavaBody(
@@ -6297,94 +5645,6 @@ function <<access.private>> platform::extensions::language::java::translation::a
       | j_expressionStatement(j_invoke(javaClass('java.util.Objects'), 'toString', [$expr, j_null()], javaString()))
    );
 }
-// The generated class behind the Variant functions (fromJson, toJson,
-// toVariant, to, toMany, get): a JSON value held in JDK types — `type` is the
-// JSON kind (NULL, BOOLEAN, NUMBER, STRING, ARRAY, OBJECT) and `value` a
-// Boolean, the number's literal text, a String, a java.util.List of Variant
-// or a LinkedHashMap of Variant. It ports bootstrap-execution's JsonValue
-// parser and printer, and the coercion rules and error messages of its
-// VariantHelper, which are part of the cross-platform PCT contract. The target
-// of `to`/`toMany` is fixed by the translator, which composes the `as*`
-// converters (see {@link variantConverter}); only the value checks run here.
-// Converters take Object so `Variant::asInteger` fits a raw Function.
-function <<access.private>> platform::extensions::language::java::translation::pureVariantHelperClass(conv: Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
-{
-   let variantType = javaClass($conv->platform::extensions::language::java::translation::runtimeClass('Variant'));
-   let fields = [
-      javaField(['public'], javaString(), 'type'),
-      javaField(['public'], javaObject(), 'value'),
-      javaField(['public'], javaBoolean(), 'integral')
-   ];
-   let methods = [
-      javaMethod(['public', 'static'], $variantType, 'make', [j_parameter(javaString(), 'type'), j_parameter(javaObject(), 'value'), j_parameter(javaBoolean(), 'integral')],
-         'Variant v = new Variant();\nv.type = type;\nv.value = value;\nv.integral = integral;\nreturn v;'),
-      javaMethod(['public'], javaString(), '_purePath', [],
-         'return "platform::pure::metamodel::variant::Variant";'),
-      javaMethod(['public'], javaString(), 'toString', [],
-         'StringBuilder sb = new StringBuilder();\nwrite(this, sb);\nreturn sb.toString();'),
-      javaMethod(['public'], javaBoolean(), 'equals', [j_parameter(javaObject(), 'o')],
-         'if (!(o instanceof Variant)) { return false; }\nVariant other = (Variant) o;\nif (!type.equals(other.type)) { return false; }\nif ("NUMBER".equals(type)) { return integral == other.integral && new java.math.BigDecimal((String) value).compareTo(new java.math.BigDecimal((String) other.value)) == 0; }\nreturn java.util.Objects.equals(value, other.value);'),
-      javaMethod(['public'], javaInt(), 'hashCode', [],
-         'return "NUMBER".equals(type) ? new java.math.BigDecimal((String) value).stripTrailingZeros().hashCode() : java.util.Objects.hash(type, value);'),
-      javaMethod(['static'], javaVoid(), 'write', [j_parameter($variantType, 'v'), j_parameter(javaClass('java.lang.StringBuilder'), 'sb')],
-         'switch (v.type) {\n    case "NULL": sb.append("null"); break;\n    case "BOOLEAN": case "NUMBER": sb.append(v.value); break;\n    case "STRING": quote((String) v.value, sb); break;\n    case "ARRAY": {\n        sb.append(\'[\');\n        boolean first = true;\n        for (Object e : (java.util.List<?>) v.value) { if (!first) { sb.append(\',\'); } first = false; write((Variant) e, sb); }\n        sb.append(\']\');\n        break;\n    }\n    default: {\n        sb.append(\'{\');\n        boolean first = true;\n        for (java.util.Map.Entry<?, ?> e : ((java.util.Map<?, ?>) v.value).entrySet()) { if (!first) { sb.append(\',\'); } first = false; quote((String) e.getKey(), sb); sb.append(\':\'); write((Variant) e.getValue(), sb); }\n        sb.append(\'}\');\n    }\n}'),
-      javaMethod(['static'], javaVoid(), 'quote', [j_parameter(javaString(), 's'), j_parameter(javaClass('java.lang.StringBuilder'), 'sb')],
-         'sb.append(\'"\');\nfor (int i = 0; i < s.length(); i++) {\n    char c = s.charAt(i);\n    switch (c) {\n        case \'"\': sb.append("\\\\\\""); break;\n        case \'\\\\\': sb.append("\\\\\\\\"); break;\n        case \'\\n\': sb.append("\\\\n"); break;\n        case \'\\r\': sb.append("\\\\r"); break;\n        case \'\\t\': sb.append("\\\\t"); break;\n        case \'\\b\': sb.append("\\\\b"); break;\n        case \'\\f\': sb.append("\\\\f"); break;\n        default: if (c < 0x20) { sb.append(String.format("\\\\u%04x", (int) c)); } else { sb.append(c); }\n    }\n}\nsb.append(\'"\');'),
-      javaMethod(['public', 'static'], $variantType, 'fromJson', [j_parameter(javaString(), 'text')],
-         'int[] p = {0};\nskip(text, p);\nVariant v = parse(text, p);\nskip(text, p);\nif (p[0] < text.length()) { throw error(p, "Unexpected trailing content"); }\nreturn v;'),
-      javaMethod(['static'], javaClass('java.lang.RuntimeException'), 'error', [j_parameter(javaArray(javaInt()), 'p'), j_parameter(javaString(), 'message')],
-         'return new RuntimeException("Invalid JSON (at offset " + p[0] + "): " + message);'),
-      javaMethod(['static'], javaVoid(), 'skip', [j_parameter(javaString(), 't'), j_parameter(javaArray(javaInt()), 'p')],
-         'while (p[0] < t.length() && " \\t\\n\\r".indexOf(t.charAt(p[0])) >= 0) { p[0]++; }'),
-      javaMethod(['static'], javaChar(), 'peek', [j_parameter(javaString(), 't'), j_parameter(javaArray(javaInt()), 'p')],
-         'if (p[0] >= t.length()) { throw error(p, "Unexpected end of input"); }\nreturn t.charAt(p[0]);'),
-      javaMethod(['static'], javaVoid(), 'expect', [j_parameter(javaString(), 't'), j_parameter(javaArray(javaInt()), 'p'), j_parameter(javaChar(), 'c')],
-         'if (p[0] >= t.length() || t.charAt(p[0]) != c) { throw error(p, "Expected \'" + c + "\'"); }\np[0]++;'),
-      javaMethod(['static'], $variantType, 'parse', [j_parameter(javaString(), 't'), j_parameter(javaArray(javaInt()), 'p')],
-         'char c = peek(t, p);\nif (c == \'{\') {\n    expect(t, p, \'{\');\n    java.util.LinkedHashMap<String, Object> fields = new java.util.LinkedHashMap<>();\n    skip(t, p);\n    if (peek(t, p) == \'}\') { p[0]++; return make("OBJECT", fields, false); }\n    while (true) {\n        skip(t, p);\n        String key = parseString(t, p);\n        skip(t, p);\n        expect(t, p, \':\');\n        skip(t, p);\n        fields.put(key, parse(t, p));\n        skip(t, p);\n        char d = peek(t, p);\n        if (d == \',\') { p[0]++; } else if (d == \'}\') { p[0]++; return make("OBJECT", fields, false); } else { throw error(p, "Expected \',\' or \'}\'"); }\n    }\n}\nif (c == \'[\') {\n    expect(t, p, \'[\');\n    java.util.ArrayList<Object> values = new java.util.ArrayList<>();\n    skip(t, p);\n    if (peek(t, p) == \']\') { p[0]++; return make("ARRAY", values, false); }\n    while (true) {\n        skip(t, p);\n        values.add(parse(t, p));\n        skip(t, p);\n        char d = peek(t, p);\n        if (d == \',\') { p[0]++; } else if (d == \']\') { p[0]++; return make("ARRAY", values, false); } else { throw error(p, "Expected \',\' or \']\'"); }\n    }\n}\nif (c == \'"\') { return make("STRING", parseString(t, p), false); }\nif (c == \'t\' || c == \'f\' || c == \'n\') {\n    for (String keyword : new String[]{"true", "false", "null"}) {\n        if (t.startsWith(keyword, p[0])) { p[0] += keyword.length(); return keyword.equals("null") ? make("NULL", null, false) : make("BOOLEAN", Boolean.valueOf(keyword), false); }\n    }\n    throw error(p, "Unexpected token");\n}\nint start = p[0];\nif (p[0] < t.length() && t.charAt(p[0]) == \'-\') { p[0]++; }\nwhile (p[0] < t.length() && Character.isDigit(t.charAt(p[0]))) { p[0]++; }\nif (p[0] < t.length() && t.charAt(p[0]) == \'.\') { p[0]++; while (p[0] < t.length() && Character.isDigit(t.charAt(p[0]))) { p[0]++; } }\nif (p[0] < t.length() && (t.charAt(p[0]) == \'e\' || t.charAt(p[0]) == \'E\')) {\n    p[0]++;\n    if (p[0] < t.length() && (t.charAt(p[0]) == \'+\' || t.charAt(p[0]) == \'-\')) { p[0]++; }\n    while (p[0] < t.length() && Character.isDigit(t.charAt(p[0]))) { p[0]++; }\n}\nString literal = t.substring(start, p[0]);\nif (literal.isEmpty() || literal.equals("-")) { throw error(p, "Unexpected token"); }\nreturn make("NUMBER", literal, literal.indexOf(\'.\') < 0 && literal.indexOf(\'e\') < 0 && literal.indexOf(\'E\') < 0);'),
-      javaMethod(['static'], javaString(), 'parseString', [j_parameter(javaString(), 't'), j_parameter(javaArray(javaInt()), 'p')],
-         'expect(t, p, \'"\');\nStringBuilder sb = new StringBuilder();\nwhile (true) {\n    if (p[0] >= t.length()) { throw error(p, "Unterminated string"); }\n    char c = t.charAt(p[0]++);\n    if (c == \'"\') { return sb.toString(); }\n    if (c != \'\\\\\') { sb.append(c); continue; }\n    if (p[0] >= t.length()) { throw error(p, "Unterminated escape"); }\n    char esc = t.charAt(p[0]++);\n    switch (esc) {\n        case \'"\': sb.append(\'"\'); break;\n        case \'\\\\\': sb.append(\'\\\\\'); break;\n        case \'/\': sb.append(\'/\'); break;\n        case \'b\': sb.append(\'\\b\'); break;\n        case \'f\': sb.append(\'\\f\'); break;\n        case \'n\': sb.append(\'\\n\'); break;\n        case \'r\': sb.append(\'\\r\'); break;\n        case \'t\': sb.append(\'\\t\'); break;\n        case \'u\':\n            if (p[0] + 4 > t.length()) { throw error(p, "Invalid unicode escape"); }\n            sb.append((char) Integer.parseInt(t.substring(p[0], p[0] + 4), 16));\n            p[0] += 4;\n            break;\n        default: throw error(p, "Invalid escape character \'\\\\" + esc + "\'");\n    }\n}'),
-      javaMethod(['public', 'static'], javaString(), 'toJson', [j_parameter($variantType, 'v')],
-         'return v.toString();'),
-      javaMethod(['public', 'static'], $variantType, 'toVariant', [j_parameter(javaObject(), 'value')],
-         'if (value instanceof java.util.List) {\n    java.util.List<?> values = (java.util.List<?>) value;\n    if (values.isEmpty()) { return make("NULL", null, false); }\n    if (values.size() == 1) { return of(values.get(0)); }\n}\nreturn of(value);'),
-      javaMethod(['static'], $variantType, 'of', [j_parameter(javaObject(), 'value')],
-         'if (value == null) { return make("NULL", null, false); }\nif (value instanceof Variant) { return (Variant) value; }\nif (value instanceof java.util.List || (value instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject && ((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) value)._purePath().equals("platform::pure::functions::collection::List"))) {\n    Object values = value instanceof java.util.List ? value : ((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) value).__values("values");\n    java.util.ArrayList<Object> elements = new java.util.ArrayList<>();\n    if (values instanceof java.util.List) { for (Object e : (java.util.List<?>) values) { elements.add(of(e)); } } else if (values != null) { elements.add(of(values)); }\n    return make("ARRAY", elements, false);\n}\nif (value instanceof java.util.Map) {\n    java.util.TreeMap<String, Object> sorted = new java.util.TreeMap<>();\n    for (java.util.Map.Entry<?, ?> e : ((java.util.Map<?, ?>) value).entrySet()) {\n        if (!(e.getKey() instanceof String)) { throw new RuntimeException("Only maps with String keys can be converted to Variant, got key: " + e.getKey()); }\n        sorted.put((String) e.getKey(), of(e.getValue()));\n    }\n    return make("OBJECT", new java.util.LinkedHashMap<>(sorted), false);\n}\nif (value instanceof Long || value instanceof Integer) { return make("NUMBER", value.toString(), true); }\nif (value instanceof Double) { return make("NUMBER", Double.toString((Double) value), false); }\nif (value instanceof java.math.BigDecimal) { return make("NUMBER", ((java.math.BigDecimal) value).toPlainString(), false); }\nif (value instanceof Boolean) { return make("BOOLEAN", value, false); }\nif (value instanceof String || value instanceof java.time.temporal.Temporal || value instanceof PureDate) { return make("STRING", value.toString(), false); }\nthrow new RuntimeException(value.getClass().getSimpleName() + " - not supported!");'),
-      javaMethod(['static'], javaClass('java.lang.RuntimeException'), 'wrong', [j_parameter($variantType, 'v'), j_parameter(javaString(), 'target')],
-         'return new RuntimeException("Variant of type \'" + v.type + "\' cannot be converted to " + target);'),
-      javaMethod(['public', 'static'], javaObject(), 'to', [j_parameter($variantType, 'v'), j_parameter(javaClass('java.util.function.Function'), 'convert')],
-         'return v == null ? null : convert.apply(v);'),
-      javaMethod(['public', 'static'], javaList(), 'toMany', [j_parameter($variantType, 'v'), j_parameter(javaClass('java.util.function.Function'), 'convert')],
-         'java.util.ArrayList<Object> out = new java.util.ArrayList<>();\nif (v == null) { return out; }\nif (!"ARRAY".equals(v.type)) { throw new RuntimeException("Expect variant that contains an \'ARRAY\', but got \'" + v.type + "\'"); }\nfor (Object e : (java.util.List<?>) v.value) { Object r = convert.apply(e); if (r != null) { out.add(r); } }\nreturn out;'),
-      javaMethod(['public', 'static'], javaObject(), 'asVariant', [j_parameter(javaObject(), 'x')],
-         'Variant v = (Variant) x;\nreturn v;'),
-      javaMethod(['public', 'static'], javaObject(), 'asInteger', [j_parameter(javaObject(), 'x')],
-         'Variant v = (Variant) x;\nif ("NULL".equals(v.type)) { return null; }\nif (("NUMBER".equals(v.type) && v.integral) || "STRING".equals(v.type)) { return Long.parseLong((String) v.value); }\nthrow wrong(v, "Integer");'),
-      javaMethod(['public', 'static'], javaObject(), 'asFloat', [j_parameter(javaObject(), 'x')],
-         'Variant v = (Variant) x;\nif ("NULL".equals(v.type)) { return null; }\nif ("NUMBER".equals(v.type) || "STRING".equals(v.type)) { return Double.parseDouble((String) v.value); }\nthrow wrong(v, "Float");'),
-      javaMethod(['public', 'static'], javaObject(), 'asBoolean', [j_parameter(javaObject(), 'x')],
-         'Variant v = (Variant) x;\nif ("NULL".equals(v.type)) { return null; }\nif ("BOOLEAN".equals(v.type)) { return v.value; }\nif ("STRING".equals(v.type)) {\n    if ("true".equals(v.value)) { return true; }\n    if ("false".equals(v.value)) { return false; }\n    throw new RuntimeException("Invalid Pure Boolean: \'" + v.value + "\'");\n}\nthrow wrong(v, "Boolean");'),
-      javaMethod(['public', 'static'], javaObject(), 'asString', [j_parameter(javaObject(), 'x')],
-         'Variant v = (Variant) x;\nif ("NULL".equals(v.type)) { return null; }\nif ("STRING".equals(v.type) || "NUMBER".equals(v.type) || "BOOLEAN".equals(v.type)) { return v.value.toString(); }\nthrow wrong(v, "String");'),
-      javaMethod(['public', 'static'], javaObject(), 'asStrictDate', [j_parameter(javaObject(), 'x')],
-         'Variant v = (Variant) x;\nif ("NULL".equals(v.type)) { return null; }\nif ("STRING".equals(v.type)) {\n    String s = (String) v.value;\n    if (!s.matches("\\\\d{4}-\\\\d{1,2}-\\\\d{1,2}")) { throw new RuntimeException("StrictDate must be a calendar day, got: " + s); }\n    return PureDate.of(s);\n}\nthrow wrong(v, "StrictDate");'),
-      javaMethod(['public', 'static'], javaObject(), 'asDateTime', [j_parameter(javaObject(), 'x')],
-         'Variant v = (Variant) x;\nif ("NULL".equals(v.type)) { return null; }\nif ("STRING".equals(v.type)) {\n    String s = (String) v.value;\n    if (s.indexOf(\'T\') < 0) { throw new RuntimeException("DateTime must include time information, got: " + s); }\n    return PureDate.of(s);\n}\nthrow wrong(v, "DateTime");'),
-      javaMethod(['public', 'static'], javaClass('java.util.function.Function'), 'asList', [j_parameter(javaClass('java.util.function.Function'), 'element'), j_parameter(javaString(), 'target')],
-         'return (java.util.function.Function<Object, Object>) x -> {\n    Variant v = (Variant) x;\n    if ("NULL".equals(v.type)) { return null; }\n    if (!"ARRAY".equals(v.type)) { throw wrong(v, target); }\n    java.util.ArrayList<Object> out = new java.util.ArrayList<>();\n    for (Object e : (java.util.List<?>) v.value) { Object r = element.apply(e); if (r != null) { out.add(r); } }\n    return new org.finos.legend.pure.m3.platform.pure.functions.collection.ListImpl()._values(out);\n};'),
-      javaMethod(['public', 'static'], javaClass('java.util.function.Function'), 'asMap', [j_parameter(javaClass('java.util.function.Function'), 'valueConverter'), j_parameter(javaString(), 'target')],
-         'return (java.util.function.Function<Object, Object>) x -> {\n    Variant v = (Variant) x;\n    if ("NULL".equals(v.type)) { return null; }\n    if (!"OBJECT".equals(v.type)) { throw wrong(v, target); }\n    java.util.LinkedHashMap<Object, Object> out = new java.util.LinkedHashMap<>();\n    for (java.util.Map.Entry<?, ?> e : ((java.util.Map<?, ?>) v.value).entrySet()) { out.put(e.getKey(), valueConverter.apply(e.getValue())); }\n    return out;\n};'),
-      javaMethod(['public', 'static'], javaClass('java.util.function.Function'), 'unsupported', [j_parameter(javaString(), 'target')],
-         'return (java.util.function.Function<Object, Object>) x -> {\n    if ("NULL".equals(((Variant) x).type)) { return null; }\n    throw new RuntimeException(target + " is not managed yet!");\n};'),
-      javaMethod(['public', 'static'], $variantType, 'get', [j_parameter($variantType, 'v'), j_parameter(javaString(), 'key')],
-         'Object map = to(v, asMap(Variant::asVariant, "Map<String, Variant>"));\nreturn map == null ? null : (Variant) ((java.util.Map<?, ?>) map).get(key);'),
-      javaMethod(['public', 'static'], $variantType, 'at', [j_parameter($variantType, 'v'), j_parameter(javaLong(), 'index')],
-         'return (Variant) toMany(v, Variant::asVariant).get((int) index);')
-   ];
-   let withFields = $fields->fold({f, c | $c->addField($f)}, javaClass(['public'], $conv->platform::extensions::language::java::translation::runtimeClass('Variant')));
-   $methods->fold({m, c | $c->addMethod($m)}, $withFields);
-}
-
 // The generated Variant class as a Java type.
 function <<access.private>> platform::extensions::language::java::translation::javaVariantType(conv: Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
 {
@@ -6514,96 +5774,3 @@ function <<access.private>> platform::extensions::language::java::translation::v
    if ($args->isEmpty(), | $simple, | $simple + '<' + $args->map(a | $a->variantTypeName())->joinStrings(', ') + '>');
 }
 
-// The generated class behind Pure's Date, DateTime, StrictDate and LatestDate.
-// java.time can't hold a Pure date: `%2015` and `%2015-04` are dates too, a
-// DateTime may stop at the hour, and `.4990000` keeps its trailing zeros. So a
-// date is its normalized text (zero-padded, time zone folded into UTC) and its
-// kind (StrictDate, DateTime, or Date for a partial one); toString() is the
-// text and equality compares it. Arithmetic parses to LocalDateTime and prints
-// back at the original precision. Ported from the Truffle runtime's PureDate,
-// DateHelper and the adjust / dateDiff / datePart nodes, whose results are the
-// cross-platform PCT contract.
-function <<access.private>> platform::extensions::language::java::translation::pureDateHelperClass(conv: Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
-{
-   let dateType = javaClass($conv->platform::extensions::language::java::translation::runtimeClass('PureDate'));
-   let fields = [
-      javaField(['public'], javaString(), 'value'),
-      javaField(['public'], javaString(), 'kind')
-   ];
-   let methods = [
-      javaMethod(['public', 'static'], $dateType, 'of', [j_parameter(javaString(), 'text')],
-         'PureDate d = new PureDate();\nString normalized = normalize(text.trim());\nif (normalized.endsWith("Z")) { normalized = normalized.substring(0, normalized.length() - 1); }\nd.value = normalized;\n// Year, year-month or full date, for a negative year too: count the\n// separators of the part after it, not fixed positions.\nString pureDateBody = normalized.startsWith("-") ? normalized.substring(1) : normalized;\nd.kind = normalized.contains("T") ? "DateTime" : pureDateBody.split("-").length >= 3 ? "StrictDate" : "Date";\nreturn d;'),
-      javaMethod(['static'], $dateType, 'ofKind', [j_parameter(javaString(), 'value'), j_parameter(javaString(), 'kind')],
-         'PureDate d = new PureDate();\nd.value = value;\nd.kind = kind;\nreturn d;'),
-      javaMethod(['public'], javaString(), '_purePath', [],
-         'return "platform::pure::metamodel::type::primitives::Date";'),
-      javaMethod(['public'], javaString(), 'toString', [],
-         'return value;'),
-      javaMethod(['public'], javaBoolean(), 'equals', [j_parameter(javaObject(), 'o')],
-         'return o instanceof PureDate && value.equals(((PureDate) o).value);'),
-      javaMethod(['public'], javaInt(), 'hashCode', [],
-         'return value.hashCode();'),
-      javaMethod(['public'], javaInt(), 'compareTo', [j_parameter(javaObject(), 'o')],
-         'return Integer.signum(toLocalDateTime().compareTo(((PureDate) o).toLocalDateTime()));'),
-      javaMethod(['public', 'static'], javaBoolean(), 'is', [j_parameter(javaObject(), 'value'), j_parameter(javaString(), 'kind')],
-         'return value instanceof PureDate && (kind.equals("Date") || ((PureDate) value).kind.equals(kind));'),
-      javaMethod(['static'], javaString(), 'normalize', [j_parameter(javaString(), 'dateStr')],
-         '// A negative year: the sign is not a field separator.\nif (dateStr.startsWith("-")) { return "-" + normalize(dateStr.substring(1)); }\nint tIdx = dateStr.indexOf(\'T\');\nif (tIdx < 0) {\n    String[] parts = dateStr.split("-");\n    if (parts.length >= 3) { return parts[0] + "-" + (parts[1].length() < 2 ? "0" + parts[1] : parts[1]) + "-" + (parts[2].length() < 2 ? "0" + parts[2] : parts[2]); }\n    if (parts.length == 2) { return parts[0] + "-" + (parts[1].length() < 2 ? "0" + parts[1] : parts[1]); }\n    return dateStr;\n}\ntry {\n    String datePart = dateStr.substring(0, tIdx);\n    String timeAndTz = dateStr.substring(tIdx + 1);\n    String timePart;\n    String tzStr = null;\n    int tzIdx = Math.max(timeAndTz.lastIndexOf(\'+\'), timeAndTz.lastIndexOf(\'-\'));\n    if (tzIdx > 0) { timePart = timeAndTz.substring(0, tzIdx); tzStr = timeAndTz.substring(tzIdx); } else { timePart = timeAndTz; }\n    String[] dp = datePart.split("-");\n    int year = Integer.parseInt(dp[0]);\n    int month = dp.length > 1 ? Integer.parseInt(dp[1]) : 1;\n    int day = dp.length > 2 ? Integer.parseInt(dp[2]) : 1;\n    String[] tp = timePart.split(":");\n    int hour = Integer.parseInt(tp[0]);\n    int minute = tp.length > 1 ? Integer.parseInt(tp[1]) : 0;\n    boolean hasMinutes = tp.length > 1;\n    boolean hasSeconds = tp.length > 2;\n    int second = 0;\n    String fracStr = "";\n    if (hasSeconds) {\n        String secPart = tp[2];\n        int dotIdx = secPart.indexOf(\'.\');\n        if (dotIdx >= 0) { second = Integer.parseInt(secPart.substring(0, dotIdx)); fracStr = secPart.substring(dotIdx); } else { second = Integer.parseInt(secPart); }\n    }\n    if (tzStr != null) {\n        int tzSign = tzStr.charAt(0) == \'-\' ? -1 : 1;\n        int tzOffsetMinutes = tzSign * (Integer.parseInt(tzStr.substring(1, 3)) * 60 + (tzStr.length() > 3 ? Integer.parseInt(tzStr.substring(3, 5)) : 0));\n        if (tzOffsetMinutes != 0) {\n            java.time.OffsetDateTime utc = java.time.OffsetDateTime.of(java.time.LocalDateTime.of(year, month, day, hour, minute, second), java.time.ZoneOffset.ofTotalSeconds(tzOffsetMinutes * 60)).withOffsetSameInstant(java.time.ZoneOffset.UTC);\n            year = utc.getYear(); month = utc.getMonthValue(); day = utc.getDayOfMonth(); hour = utc.getHour(); minute = utc.getMinute(); second = utc.getSecond();\n        }\n    }\n    StringBuilder sb = new StringBuilder(String.format("%04d-%02d-%02dT%02d", year, month, day, hour));\n    if (hasMinutes) { sb.append(String.format(":%02d", minute)); }\n    if (hasSeconds) { sb.append(String.format(":%02d", second)).append(fracStr); }\n    return sb.toString();\n} catch (RuntimeException e) {\n    return dateStr;\n}'),
-      javaMethod(['public'], javaClass('java.time.LocalDateTime'), 'toLocalDateTime', [],
-         'String s = value;\nif (s.contains("T")) {\n    int t = s.indexOf(\'T\');\n    String[] tp = s.substring(t + 1).split(":");\n    String[] dp = s.substring(0, t).split("-");\n    int second = 0;\n    int nanos = 0;\n    if (tp.length > 2) {\n        String sec = tp[2];\n        int dot = sec.indexOf(\'.\');\n        second = Integer.parseInt(dot >= 0 ? sec.substring(0, dot) : sec);\n        if (dot >= 0) { String frac = (sec.substring(dot + 1) + "000000000").substring(0, 9); nanos = Integer.parseInt(frac); }\n    }\n    return java.time.LocalDateTime.of(Integer.parseInt(dp[0]), Integer.parseInt(dp[1]), Integer.parseInt(dp[2]), Integer.parseInt(tp[0]), tp.length > 1 ? Integer.parseInt(tp[1]) : 0, second, nanos);\n}\nString[] dp = s.split("-");\nreturn java.time.LocalDate.of(Integer.parseInt(dp[0]), dp.length > 1 && !dp[1].equals("00") ? Integer.parseInt(dp[1]) : 1, dp.length > 2 && !dp[2].equals("00") ? Integer.parseInt(dp[2]) : 1).atStartOfDay();'),
-      javaMethod(['public'], javaLong(), 'year', [],
-         'return toLocalDateTime().getYear();'),
-      javaMethod(['public'], javaLong(), 'monthNumber', [],
-         'return toLocalDateTime().getMonthValue();'),
-      javaMethod(['public'], javaLong(), 'dayOfMonth', [],
-         'return toLocalDateTime().getDayOfMonth();'),
-      javaMethod(['public'], javaLong(), 'hour', [],
-         'return toLocalDateTime().getHour();'),
-      javaMethod(['public'], javaLong(), 'minute', [],
-         'return toLocalDateTime().getMinute();'),
-      javaMethod(['public'], javaLong(), 'second', [],
-         'return toLocalDateTime().getSecond();'),
-      javaMethod(['public', 'static'], $dateType, 'datePart', [j_parameter($dateType, 'd')],
-         'String datePart = d.value.contains("T") ? d.value.substring(0, d.value.indexOf(\'T\')) : d.value;\nif (datePart.length() == 4) { datePart += "-01-01"; } else if (datePart.length() == 7) { datePart += "-01"; }\nreturn ofKind(datePart, "StrictDate");'),
-      javaMethod(['public', 'static'], $dateType, 'adjust', [j_parameter($dateType, 'date'), j_parameter(javaLong(), 'amt'), j_parameter(javaString(), 'unit')],
-         'String dateStr = date.value;\njava.time.LocalDateTime ldt = date.toLocalDateTime();\njava.time.LocalDateTime adjusted;\nswitch (unit) {\n    case "YEARS": adjusted = ldt.plusYears(amt); break;\n    case "MONTHS": adjusted = ldt.plusMonths(amt); break;\n    case "WEEKS": adjusted = ldt.plusWeeks(amt); break;\n    case "DAYS": adjusted = ldt.plusDays(amt); break;\n    case "HOURS": adjusted = ldt.plusHours(amt); break;\n    case "MINUTES": adjusted = ldt.plusMinutes(amt); break;\n    case "SECONDS": adjusted = ldt.plusSeconds(amt); break;\n    case "MILLISECONDS": adjusted = ldt.plusNanos(amt * 1_000_000); break;\n    case "MICROSECONDS": adjusted = ldt.plusNanos(amt * 1_000); break;\n    case "NANOSECONDS": adjusted = ldt.plusNanos(amt); break;\n    default: throw new RuntimeException("Unknown duration unit: " + unit);\n}\nif (dateStr.contains("T")) {\n    String datePart = String.format("%d-%02d-%02d", adjusted.getYear(), adjusted.getMonthValue(), adjusted.getDayOfMonth());\n    String timePart = String.format("%02d:%02d:%02d", adjusted.getHour(), adjusted.getMinute(), adjusted.getSecond());\n    if (dateStr.contains(".")) {\n        String inputFrac = dateStr.substring(dateStr.indexOf(\'.\') + 1);\n        int fracDigits = inputFrac.length();\n        long nanos = adjusted.getNano();\n        String fracStr = fracDigits <= 3 ? String.format(".%03d", nanos / 1_000_000) : fracDigits <= 6 ? String.format(".%06d", nanos / 1_000) : String.format(".%0" + fracDigits + "d", nanos / (long) Math.pow(10, 9 - fracDigits));\n        return ofKind(datePart + "T" + timePart + fracStr, "DateTime");\n    }\n    return ofKind(datePart + "T" + timePart, "DateTime");\n}\nString cleanDate = dateStr.startsWith("+") || dateStr.startsWith("-") ? dateStr.substring(1) : dateStr;\nif (cleanDate.indexOf(\'-\') < 0 && "YEARS".equals(unit)) { return ofKind(String.valueOf(adjusted.getYear()), "Date"); }\nreturn ofKind(String.format("%d-%02d-%02d", adjusted.getYear(), adjusted.getMonthValue(), adjusted.getDayOfMonth()), "StrictDate".equals(date.kind) ? "StrictDate" : "Date");'),
-      javaMethod(['public', 'static'], javaLong(), 'dateDiff', [j_parameter($dateType, 'd1'), j_parameter($dateType, 'd2'), j_parameter(javaString(), 'unit')],
-         'java.time.LocalDateTime ldt1 = d1.toLocalDateTime();\njava.time.LocalDateTime ldt2 = d2.toLocalDateTime();\nlong absResult;\nswitch (unit) {\n    case "YEARS": absResult = Math.abs((long) ldt1.getYear() - ldt2.getYear()); break;\n    case "MONTHS": absResult = Math.abs((ldt1.getYear() * 12L + ldt1.getMonthValue()) - (ldt2.getYear() * 12L + ldt2.getMonthValue())); break;\n    case "WEEKS": {\n        long absDiffDays = Math.abs(java.time.temporal.ChronoUnit.DAYS.between(ldt1.toLocalDate(), ldt2.toLocalDate()));\n        int startDay = ldt1.get(java.time.temporal.ChronoField.DAY_OF_WEEK);\n        int sundayIdx = startDay == 7 ? 1 : startDay + 1;\n        int noDaysTillSunday = ldt1.isBefore(ldt2) ? 7 - (sundayIdx - 1) : sundayIdx - 1;\n        absResult = noDaysTillSunday > absDiffDays ? 0 : (absDiffDays - noDaysTillSunday) / 7 + (noDaysTillSunday > 0 ? 1 : 0);\n        break;\n    }\n    case "DAYS": absResult = Math.abs(java.time.temporal.ChronoUnit.DAYS.between(ldt1.toLocalDate(), ldt2.toLocalDate())); break;\n    case "HOURS": absResult = Math.abs(java.time.temporal.ChronoUnit.MILLIS.between(ldt1, ldt2)) / 3600_000L; break;\n    case "MINUTES": absResult = Math.abs(java.time.temporal.ChronoUnit.MILLIS.between(ldt1, ldt2)) / 60_000L; break;\n    case "SECONDS": absResult = Math.abs(java.time.temporal.ChronoUnit.MILLIS.between(ldt1, ldt2)) / 1000L; break;\n    case "MILLISECONDS": absResult = Math.abs(java.time.temporal.ChronoUnit.MILLIS.between(ldt1, ldt2)); break;\n    case "MICROSECONDS": absResult = Math.abs(java.time.temporal.ChronoUnit.MICROS.between(ldt1, ldt2)); break;\n    case "NANOSECONDS": absResult = Math.abs(java.time.temporal.ChronoUnit.NANOS.between(ldt1, ldt2)); break;\n    default: throw new RuntimeException("Unknown duration unit: " + unit);\n}\nint sign = ldt1.isEqual(ldt2) ? 0 : ldt1.isBefore(ldt2) ? 1 : -1;\nreturn sign * absResult;'),
-      javaMethod(['public'], javaLong(), 'millis', [],
-         'int dot = value.indexOf(\'.\');\nif (value.indexOf(\'T\') < 0 || dot < 0) { return 0L; }\nreturn Long.parseLong((value.substring(dot + 1) + "000").substring(0, 3));')
-   ];
-   let withFields = $fields->fold({f, c | $c->addField($f)}, javaClass(['public'], $conv->platform::extensions::language::java::translation::runtimeClass('PureDate'))->implements(javaClass('java.lang.Comparable')));
-   $methods->fold({m, c | $c->addMethod($m)}, $withFields);
-}
-
-
-// The generated class behind `format(pattern, args)`: Pure's printf dialect
-// (%s, %d, %f, %.Nf, %0Nd, %r, %t, %t{pattern} with an optional [zone]),
-// ported from the Truffle runtime's FormatNode, with Pure's toString of the
-// Java representations — Float text, Map.Entry and the generated Pair as
-// `<a, b>`, the generated List as `[a, b]`, enums by name. The generated
-// List, Pair, PureDate and enum classes are recognized by name and read
-// reflectively, so this class compiles whether or not they are emitted.
-function <<access.private>> platform::extensions::language::java::translation::pureFormatHelperClass(conv: Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
-{
-   let formatType = javaClass($conv->platform::extensions::language::java::translation::runtimeClass('PureFormat'));
-
-   let methods = [
-      javaMethod(['public', 'static'], javaString(), 'format', [j_parameter(javaString(), 'formatStr'), j_parameter(javaObject(), 'args')],
-         'java.util.List<?> list = args instanceof java.util.List ? (java.util.List<?>) args : args == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(args);\nObject[] rawArgs = new Object[list.size()];\nfor (int i = 0; i < rawArgs.length; i++) { rawArgs[i] = list.get(i) == null ? "" : list.get(i); }\nStringBuilder sb = new StringBuilder();\nint argIdx = 0;\nint len = formatStr.length();\nfor (int i = 0; i < len; i++) {\n    char c = formatStr.charAt(i);\n    if (c != \'%\' || i + 1 >= len) { sb.append(c); continue; }\n    char next = formatStr.charAt(i + 1);\n    if (next == \'%\') { sb.append(\'%\'); i++; continue; }\n    if (argIdx >= rawArgs.length) { sb.append(c); continue; }\n    if (next == \'s\' || next == \'d\') { sb.append(str(rawArgs[argIdx++])); i++; }\n    else if (next == \'f\') { sb.append(formatFloat(rawArgs[argIdx++], -1)); i++; }\n    else if (next == \'r\') { sb.append(repr(rawArgs[argIdx++])); i++; }\n    else if (next == \'t\') {\n        i++;\n        int closeIdx = i + 1 < len && formatStr.charAt(i + 1) == \'{\' ? formatStr.indexOf(\'}\', i + 2) : -1;\n        if (closeIdx >= 0) { sb.append(formatDate(rawArgs[argIdx++], formatStr.substring(i + 2, closeIdx))); i = closeIdx; }\n        else { sb.append(str(rawArgs[argIdx++])); }\n    }\n    else if (next == \'.\' || (next >= \'0\' && next <= \'9\')) {\n        int j = i + 1;\n        while (j < len && (formatStr.charAt(j) == \'.\' || (formatStr.charAt(j) >= \'0\' && formatStr.charAt(j) <= \'9\'))) { j++; }\n        if (j < len) {\n            char specChar = formatStr.charAt(j);\n            String specBody = formatStr.substring(i + 1, j);\n            if (specChar == \'f\') { sb.append(formatFloat(rawArgs[argIdx++], specBody.startsWith(".") ? Integer.parseInt(specBody.substring(1)) : -1)); }\n            else if (specChar == \'d\') { sb.append(formatInt(rawArgs[argIdx++], specBody)); }\n            else { sb.append(str(rawArgs[argIdx++])); }\n            i = j;\n        } else { sb.append(str(rawArgs[argIdx++])); i = j - 1; }\n    }\n    else { sb.append(str(rawArgs[argIdx++])); i++; }\n}\nreturn sb.toString();'),
-      javaMethod(['static'], javaObject(), 'field', [j_parameter(javaObject(), 'o'), j_parameter(javaString(), 'name')],
-         'try {\n    java.lang.reflect.Field f = o.getClass().getField(name);\n    f.setAccessible(true);\n    return f.get(o);\n} catch (ReflectiveOperationException e) {\n    return null;\n}'),
-      javaMethod(['public', 'static'], javaString(), 'str', [j_parameter(javaObject(), 'v')],
-         'if (v == null) { return ""; }\nif (v instanceof String) { return (String) v; }\nif (v instanceof Double) {\n    double d = (Double) v;\n    if (Double.isNaN(d) || Double.isInfinite(d)) { return Double.toString(d); }\n    String s = new java.math.BigDecimal(Double.toString(d)).stripTrailingZeros().toPlainString();\n    return s.contains(".") ? s : s + ".0";\n}\nif (v instanceof java.util.Map.Entry) { return "<" + str(((java.util.Map.Entry<?, ?>) v).getKey()) + ", " + str(((java.util.Map.Entry<?, ?>) v).getValue()) + ">"; }\nif (v instanceof Enum) { return ((Enum<?>) v).name(); }\nString purePath = v instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject ? ((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v)._purePath() : "";\nif (purePath.equals("platform::pure::functions::collection::Pair")) { return "<" + str(((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v).__values("first").stream().findFirst().orElse(null)) + ", " + str(((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v).__values("second").stream().findFirst().orElse(null)) + ">"; }\nObject values = purePath.equals("platform::pure::functions::collection::List") ? ((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v).__values("values") : v instanceof java.util.List ? v : null;\nif (purePath.equals("platform::pure::functions::collection::List") || v instanceof java.util.List) {\n    java.util.List<?> elements = values instanceof java.util.List ? (java.util.List<?>) values : values == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(values);\n    StringBuilder sb = new StringBuilder("[");\n    for (int i = 0; i < elements.size(); i++) { if (i > 0) { sb.append(", "); } sb.append(str(elements.get(i))); }\n    return sb.append(\']\').toString();\n}\nif (v instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) {\n    org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject lo = (org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v;\n    // A packageable element prints as its name (`STR_Person->toString()`); an\n    // instance that merely HAS a name property does not, so the package decides.\n    if (!lo.__values("package").isEmpty() && !lo.__values("name").isEmpty()) { return String.valueOf(lo.__values("name").get(0)); }\n}\nreturn String.valueOf(v);'),
-      javaMethod(['static'], javaString(), 'repr', [j_parameter(javaObject(), 'v')],
-         'if (v instanceof String) { return "\'" + ((String) v).replace("\\\\", "\\\\\\\\").replace("\'", "\\\\\'") + "\'"; }\nif (v.getClass().getSimpleName().equals("PureDate") || v instanceof java.time.temporal.Temporal) { return "%" + v; }\nif (v instanceof Enum) {\n    try {\n        java.lang.reflect.Method m = v.getClass().getMethod("_purePath");\n        m.setAccessible(true);\n        return m.invoke(v) + "." + ((Enum<?>) v).name();\n    } catch (ReflectiveOperationException e) {\n        return ((Enum<?>) v).name();\n    }\n}\nreturn str(v);'),
-      javaMethod(['static'], javaString(), 'formatFloat', [j_parameter(javaObject(), 'v'), j_parameter(javaInt(), 'precision')],
-         'if (!(v instanceof Number)) { return str(v); }\nif (precision >= 0) { return java.math.BigDecimal.valueOf(((Number) v).doubleValue()).setScale(precision, java.math.RoundingMode.HALF_DOWN).toPlainString(); }\nreturn str(v instanceof Double ? v : (Object) ((Number) v).doubleValue());'),
-      javaMethod(['static'], javaString(), 'formatInt', [j_parameter(javaObject(), 'v'), j_parameter(javaString(), 'spec')],
-         'if (!(v instanceof Number)) { return str(v); }\nlong val = ((Number) v).longValue();\nif (spec.startsWith("0") && spec.length() > 1) {\n    int width = Integer.parseInt(spec.substring(1));\n    String digits = String.valueOf(Math.abs(val));\n    while (digits.length() < width) { digits = "0" + digits; }\n    return (val < 0 ? "-" : "") + digits;\n}\nreturn String.valueOf(val);'),
-      javaMethod(['static'], javaString(), 'formatDate', [j_parameter(javaObject(), 'v'), j_parameter(javaString(), 'pattern')],
-         'String dateStr = str(v);\nString tz = null;\nString actualPattern = pattern;\nif (actualPattern.startsWith("[") && actualPattern.indexOf(\']\') > 0) {\n    tz = actualPattern.substring(1, actualPattern.indexOf(\']\'));\n    actualPattern = actualPattern.substring(actualPattern.indexOf(\']\') + 1);\n}\ntry {\n    java.time.temporal.TemporalAccessor parsed;\n    if (dateStr.contains("T")) {\n        java.time.format.DateTimeFormatter parser = new java.time.format.DateTimeFormatterBuilder()\n                .appendPattern("yyyy-MM-dd\'T\'HH:mm:ss")\n                .optionalStart().appendPattern(".SSS").optionalEnd()\n                .optionalStart().appendPattern("XXX").optionalEnd()\n                .parseDefaulting(java.time.temporal.ChronoField.OFFSET_SECONDS, 0)\n                .toFormatter();\n        java.time.ZonedDateTime zdt = java.time.ZonedDateTime.parse(dateStr, parser);\n        if (tz != null) { zdt = zdt.withZoneSameInstant(java.time.ZoneId.of(tz, java.time.ZoneId.SHORT_IDS)); }\n        parsed = zdt;\n    } else {\n        parsed = java.time.LocalDate.parse(dateStr, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));\n    }\n    return java.time.format.DateTimeFormatter.ofPattern(actualPattern.replace(\'"\', \'\\\'\')).format(parsed);\n} catch (RuntimeException e) {\n    return dateStr;\n}')
-   ];
-   // No fields: PureFormat is all static methods.
-   $methods->fold({m, c | $c->addMethod($m)}, javaClass(['public'], $conv->platform::extensions::language::java::translation::runtimeClass('PureFormat')));
-}

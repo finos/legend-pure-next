@@ -28,7 +28,14 @@ import platform::pure::metamodel::type::*;
 //                   short names (same name in multiple packages) stay FQN.
 function platform::pure::functions::printer::compiled::printCompiledElements(elements: PackageableElement[*], mode: PrintMode[1]): String[1]
 {
-    let ctx = buildPrintContext($elements, $mode);
+    printCompiledElements($elements, $mode, []);
+}
+
+// The same, printing a language extension's values with `valuePrinters` (see PrintContext).
+function platform::pure::functions::printer::compiled::printCompiledElements(elements: PackageableElement[*], mode: PrintMode[1], valuePrinters: Function<{ValueSpecification[1]->String[0..1]}>[*]): String[1]
+{
+    let built = buildPrintContext($elements, $mode);
+    let ctx = ^$built(valuePrinters = $valuePrinters);
     let importsBlock = if ($ctx.imports->isEmpty(),
                            | '',
                            | $ctx.imports->map(p | 'import ' + $p + '::*;')->joinStrings('\n') + '\n\n'

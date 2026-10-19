@@ -49,6 +49,7 @@ translation_js_dir := repo_root / "pure" / "modules" / "translation" / "javascri
 language_javascript_out    := repo_root / "pure" / "modules" / "language" / "javascript" / "build"
 # Language extensions (pure/extensions/*) each write their own pdb into their build/.
 extension_diagram_out      := repo_root / "pure" / "extensions" / "diagram" / "build"
+extension_tds_out          := repo_root / "pure" / "extensions" / "pure" / "tds" / "build"
 translation_shared_out     := repo_root / "pure" / "modules" / "translation" / "shared" / "build"
 translation_javascript_out := repo_root / "pure" / "modules" / "translation" / "javascript" / "build"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
@@ -75,7 +76,7 @@ translate_all_fn := "platform::extensions::language::javascript::translation::pd
 
 # Everything an emission reads: the pdbs the translator runs against and the jars
 # of the runtime running it (bin/pure-truffle puts every build/*.jar on its classpath).
-emit_pdbs := shared / "core.pdb" + " " + shared / "core-tests.pdb" + " " + shared / "parser-mappings.pdb" + " " + shared / "compiler.pdb" + " " + shared / "compiler-tests.pdb" + " " + language_javascript_out / "javascript.pdb" + " " + language_javascript_out / "javascript-tests.pdb" + " " + translation_shared_out / "translation-shared.pdb" + " " + translation_shared_out / "translation-shared-tests.pdb" + " " + translation_javascript_out / "javascript-translation.pdb" + " " + translation_javascript_out / "javascript-translation-tests.pdb" + " " + extension_diagram_out / "diagram.pdb" + " " + extension_diagram_out / "diagram-tests.pdb"
+emit_pdbs := shared / "core.pdb" + " " + shared / "core-tests.pdb" + " " + shared / "parser-mappings.pdb" + " " + shared / "compiler.pdb" + " " + shared / "compiler-tests.pdb" + " " + language_javascript_out / "javascript.pdb" + " " + language_javascript_out / "javascript-tests.pdb" + " " + translation_shared_out / "translation-shared.pdb" + " " + translation_shared_out / "translation-shared-tests.pdb" + " " + translation_javascript_out / "javascript-translation.pdb" + " " + translation_javascript_out / "javascript-translation-tests.pdb" + " " + extension_diagram_out / "diagram.pdb" + " " + extension_diagram_out / "diagram-tests.pdb" + " " + extension_tds_out / "tds.pdb" + " " + extension_tds_out / "tds-tests.pdb"
 emit_rt_jars := if pure_rt == "truffle" { repo_root / "platforms" / "truffle" / "build" / "*.jar" } else { repo_root / "bootstrap" / "build" / "pure-bootstrap.jar" }
 
 header := "h(){ s=\"[javascript::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
@@ -108,6 +109,7 @@ _emit PKG OUT FN=translate_fn:
     test -f {{translation_shared_out}}/translation-shared-tests.pdb || (echo "ERROR: missing {{translation_shared_out}}/translation-shared-tests.pdb (run \`just modules::build\` first — split-built lean pdbs carry refs into their -tests companion)" && exit 1)
     test -f {{extension_diagram_out}}/diagram.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram.pdb (run \`just extensions::build\` first)" && exit 1)
     test -f {{extension_diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram-tests.pdb (run \`just extensions::build-tests\` first — the extension's <<test.Test>> functions are translated too, so `test-extensions` can run them on this host)" && exit 1)
+    test -f {{extension_tds_out}}/tds-tests.pdb || (echo "ERROR: missing {{extension_tds_out}}/tds-tests.pdb (run \`just extensions::build-tests\` first)" && exit 1)
     mkdir -p {{js_root}}/generated/.stamps
     # Skip when the inputs hash to the key of the last successful emission: each
     # `just` process re-runs its dependencies, and a CI job reaches generate-all
@@ -269,6 +271,19 @@ spec-compiler: generate-all
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
         --function "platform::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{test_results}}/spec/compiler/pure@cli-javascript.json"
+    @{{substep}} 'runTests over platform::pure::compiler::test (JavaScript host)'
+    mkdir -p {{test_results}}/spec/compiler-unit
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::compiler::test" "{{test_results}}/spec/compiler-unit/pure@cli-javascript.json"
 
 # PCT specification over platform::pure::functions, through bin/pure-js.
 spec-pct: generate-all
@@ -470,6 +485,42 @@ test-extensions: generate-all
         --pdb {{extension_diagram_out}}/diagram-tests.pdb \
         --function "platform::extensions::pure::diagram::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_" \
         --args "{{repo_root}}/pure/extensions/diagram/tests/compiler" "{{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{repo_root}}/pure/extensions/diagram/generated/diagram.fbs" "{{test_results}}/spec/diagram/pdb/pure@cli-javascript.json"
+    test -f {{extension_tds_out}}/tds-tests.pdb || (echo "ERROR: missing {{extension_tds_out}}/tds-tests.pdb (run \`just extensions::build-tests\` first)" && exit 1)
+    mkdir -p {{test_results}}/spec/tds/compiler {{test_results}}/spec/tds/pdb {{test_results}}/spec/tds/unit
+    @{{substep}} 'TDS compiler fixtures: pure/extensions/pure/tds/tests/compiler (JavaScript host)'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{extension_tds_out}}/tds.pdb \
+        --pdb {{extension_tds_out}}/tds-tests.pdb \
+        --function "platform::extensions::pure::tds::tests::runCompilerTests_String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/pure/tds/tests/compiler" "{{test_results}}/spec/tds/compiler/pure@cli-javascript.json"
+    @{{substep}} 'TDS PDB goldens: pure/extensions/pure/tds/tests/compiler-pdb-serialization (JavaScript host; its own decoder reads one back in host-api)'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{extension_tds_out}}/tds.pdb \
+        --pdb {{extension_tds_out}}/tds-tests.pdb \
+        --function "platform::extensions::pure::tds::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/pure/tds/tests/compiler" "{{repo_root}}/pure/extensions/pure/tds/tests/compiler-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{repo_root}}/pure/extensions/pure/tds/generated/tds.fbs" "{{test_results}}/spec/tds/pdb/pure@cli-javascript.json"
+    @{{substep}} 'TDS test package: platform::extensions::pure::tds::tests (JavaScript host; compileSource translates at run time, hence the translator pdbs)'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --pdb {{extension_tds_out}}/tds.pdb \
+        --pdb {{extension_tds_out}}/tds-tests.pdb \
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::extensions::pure::tds::tests" "{{test_results}}/spec/tds/unit/pure@cli-javascript.json"
 
 # Generate the lexers/parsers this host parses with: the Pure language's own (Top + M3) and one
 # directory per extension. ANTLR's JavaScript target via the complete jar bundled with antlr4ng-cli

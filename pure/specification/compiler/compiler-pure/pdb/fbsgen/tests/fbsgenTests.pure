@@ -92,3 +92,21 @@ function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testClashWi
    assertError(| generateFbs(['platform::pure::compiler::pdb::fbsgen::tests::model'], $base, ''),
                'fbsgen: SpotDef already declared by the base schema');
 }
+
+// A language extension's value specification has no arm of its own in m3's unions: it is written as an
+// ExtensionValueDef, which is APPENDED after AncestorRef so no existing discriminant moves.
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testExtensionValueArmIsAppended():Boolean[1]
+{
+   let u = taxonomyUnion(platform::pure::metamodel::valuespecification::ValueSpecification,
+                         [platform::pure::metamodel::valuespecification::AtomicValue, platform::pure::metamodel::valuespecification::Collection])->toOne();
+   assertEquals(['AtomicValueDef', 'CollectionDef', 'AncestorRef', 'ExtensionValueDef'], $u.members);
+   true;
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testOtherTaxonomiesHaveNoExtensionValueArm():Boolean[1]
+{
+   let u = taxonomyUnion(platform::pure::metamodel::type::Type,
+                         [platform::pure::metamodel::type::Class, platform::pure::metamodel::type::PrimitiveType])->toOne();
+   assertEquals('AncestorRef', $u.members->last()->toOne());
+   true;
+}

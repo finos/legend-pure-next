@@ -1,0 +1,186 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The compiler's island seam, exercised with toy handlers.
+//
+// `echo` claims `#ECHO{…}#` and compiles it to an EchoLiteral (test/islands/metamodel.pure) holding the
+// text between the braces; `echoTwice` claims `#ECHO{{…}}#`, which `echo` claims too, so ambiguity can be
+// tested. `ref` claims `#REF{m::Person}#` and compiles it to a RefLiteral pointing at the element at that
+// path — an island pointing into the graph. Each also answers for its values after pass 2 (owns, print,
+// printGraph), as a language extension does. The specification's fixtures run with all three (see
+// runCompiledGraphTestsWithReport), and so does bootstrap's Java compiler in its specification tests
+// (IslandTestLanguageExtension): pure/specification/compiler/tests/valueSpecification/island pins them.
+
+import platform::pure::compiler::*;
+import platform::pure::compiler::extension::*;
+import platform::pure::compiler::structural::valueSpecificationCompiler::*;
+import platform::pure::metamodel::valuespecification::*;
+
+function <<test.TestDependency>> platform::pure::compiler::test::islandTestExtension(): CompilerExtension[1]
+{
+   ^CompilerExtension(
+      name    = 'islandTest',
+      handles = e: platform::pure::protocol::grammar::PackageableElement[1] | false,
+      islands = [
+         ^IslandHandler(
+            name       = 'echo',
+            claims     = t: String[1] | $t->startsWith('ECHO{') && $t->endsWith('}'),
+            compile    = {i: platform::pure::protocol::grammar::valuespecification::Island[1], ctx: CompilerContext[1], scope: VariableExpression[*] |
+                            platform::pure::compiler::test::compileEcho($i, 'ECHO{'->length(), $ctx)},
+            owns       = v: ValueSpecification[1] | $v->instanceOf(platform::pure::compiler::test::islands::metamodel::EchoLiteral),
+            print      = v: ValueSpecification[1] | '#ECHO{' + $v->cast(@platform::pure::compiler::test::islands::metamodel::EchoLiteral).text + '}#',
+            printGraph = {v: ValueSpecification[1], indent: String[1], ctx: CompilerContext[1] |
+                            $indent + 'EchoLiteral  \'' + $v->cast(@platform::pure::compiler::test::islands::metamodel::EchoLiteral).text + '\'' + platform::pure::compiler::test::islandGraphSuffix($v, $ctx)}),
+         ^IslandHandler(
+            name       = 'echoTwice',
+            claims     = t: String[1] | $t->startsWith('ECHO{{') && $t->endsWith('}}'),
+            compile    = {i: platform::pure::protocol::grammar::valuespecification::Island[1], ctx: CompilerContext[1], scope: VariableExpression[*] |
+                            platform::pure::compiler::test::compileEcho($i, 'ECHO{{'->length(), $ctx)}),
+         ^IslandHandler(
+            name       = 'ref',
+            claims     = t: String[1] | $t->startsWith('REF{') && $t->endsWith('}'),
+            compile    = {i: platform::pure::protocol::grammar::valuespecification::Island[1], ctx: CompilerContext[1], scope: VariableExpression[*] |
+                            platform::pure::compiler::test::compileRef($i, $ctx)},
+            owns       = v: ValueSpecification[1] | $v->instanceOf(platform::pure::compiler::test::islands::metamodel::RefLiteral),
+            print      = v: ValueSpecification[1] | '#REF{' + platform::pure::compiler::test::refPath($v) + '}#',
+            printGraph = {v: ValueSpecification[1], indent: String[1], ctx: CompilerContext[1] |
+                            $indent + 'RefLiteral  ' + platform::pure::compiler::test::refPath($v) + platform::pure::compiler::test::islandGraphSuffix($v, $ctx)})
+      ]
+   );
+}
+
+// The text between the opening `prefixLength` characters and the matching closing braces, as an
+// EchoLiteral at the island's location — unless the text holds a `!`, which an echo refuses: an error AT
+// the `!`, inside the island (islandSourceInformation maps the text's line and column to the file).
+function <<test.TestDependency>> platform::pure::compiler::test::compileEcho(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], prefixLength: Integer[1], ctx: CompilerContext[1]): ValueCompileResult[1]
+{
+   let text = $island.text;
+   let bang = $text->indexOf('!');
+   if($bang >= 0,
+      | platform::pure::compiler::test::echoRefuses($island, $text->substring(0, $bang), $ctx),
+      | let typed = platform::pure::compiler::test::islandType('platform::pure::compiler::test::islands::metamodel::EchoLiteral', $ctx);
+        ^ValueCompileResult(
+           values        = ^platform::pure::compiler::test::islands::metamodel::EchoLiteral(
+                              text              = $text->substring($prefixLength, $text->length() - ($prefixLength - 'ECHO'->length())),
+                              genericType       = $typed.value->toOne(),
+                              multiplicity      = platform::pure::metamodel::multiplicity::PureOne,
+                              sourceInformation = platform::pure::compiler::structural::sourceInformationCompiler::compileSourceInformation($island.p_sourceInformation, $typed.context)),
+           openVariables = [],
+           context       = $typed.context););
+}
+
+// The `!` that follows `before` in the island's text: its line and column there, 1-based.
+function <<test.TestDependency>> platform::pure::compiler::test::echoRefuses(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], before: String[1], ctx: CompilerContext[1]): ValueCompileResult[1]
+{
+   let line = $before->length() - $before->replace('\n', '')->length() + 1;
+   let column = $before->length() - $before->lastIndexOf('\n');
+   islandErrorAt('An echo cannot contain \'!\'', islandSourceInformation($island, $line, $column, $line, $column), $ctx);
+}
+
+// `#REF{m::Person}#`: a RefLiteral pointing at the element at that path — recorded as a reference of the
+// enclosing element, which m3 does not do for a value it does not walk into. A path naming nothing is
+// refused AT the path, inside the island.
+function <<test.TestDependency>> platform::pure::compiler::test::compileRef(
+   island: platform::pure::protocol::grammar::valuespecification::Island[1], ctx: CompilerContext[1]): ValueCompileResult[1]
+{
+   let path = $island.text->substring('REF{'->length(), $island.text->length() - 1);
+   let element = $ctx->pathToElementInContext($path);
+   if($element->isEmpty(),
+      | islandErrorAt('The element \'' + $path + '\' cannot be found',
+                      islandSourceInformation($island, 1, 'REF{'->length() + 1, 1, 'REF{'->length() + $path->length()), $ctx),
+      | let typed = platform::pure::compiler::test::islandType('platform::pure::compiler::test::islands::metamodel::RefLiteral', $ctx);
+        ^ValueCompileResult(
+           values        = ^platform::pure::compiler::test::islands::metamodel::RefLiteral(
+                              target            = $element->toOne()->platform::pure::compiler::helper::pointer::toElementPointer()->cast(@platform::pure::metamodel::PackageableElement),
+                              genericType       = $typed.value->toOne(),
+                              multiplicity      = platform::pure::metamodel::multiplicity::PureOne,
+                              sourceInformation = platform::pure::compiler::structural::sourceInformationCompiler::compileSourceInformation($island.p_sourceInformation, $typed.context)),
+           openVariables = [],
+           context       = $typed.context->recordReference($path)););
+}
+
+// The type an island value evaluates to: its own class.
+function <<test.TestDependency>> platform::pure::compiler::test::islandType(path: String[1], ctx: CompilerContext[1]): CompilerResult<platform::pure::metamodel::type::generics::GenericType>[1]
+{
+   ^platform::pure::protocol::grammar::type::generics::UserDefinedGenericType(type = ^platform::pure::protocol::grammar::type::Type_Pointer(value = $path))
+      ->platform::pure::compiler::structural::genericTypeCompiler::compileGenericType($ctx, '', []);
+}
+
+// What a RefLiteral points at: the pointer's path while compiling, the element's once it is loaded.
+function <<test.TestDependency>> platform::pure::compiler::test::refPath(v: ValueSpecification[1]): String[1]
+{
+   let target = $v->cast(@platform::pure::compiler::test::islands::metamodel::RefLiteral).target;
+   if($target->instanceOf(platform::pure::metamodel::pointer::TempCompilerPointer),
+      | $target->cast(@platform::pure::metamodel::pointer::TempCompilerPointer).path,
+      | $target->elementToPath());
+}
+
+// The ###CompiledGraph tail every expression line has: its type and multiplicity, classifier, location.
+function <<test.TestDependency>> platform::pure::compiler::test::islandGraphSuffix(v: ValueSpecification[1], ctx: CompilerContext[1]): String[1]
+{
+   ' :' + platform::pure::compiler::test::printer::printType($v.genericType) + platform::pure::compiler::test::printer::printMul($v.multiplicity)
+      + platform::pure::compiler::test::printer::vsCGT($v) + platform::pure::compiler::test::printer::printSourceInfo($v.sourceInformation);
+}
+
+function <<test.Test>> platform::pure::compiler::test::testWithoutHandlersAnIslandIsAnError(): Boolean[1]
+{
+   let file = platform::pure::functions::meta::parse('islandTest',
+      '###Pure\nfunction a::f(): String[1]\n{\n  #ECHO{hi}#\n}\n');
+   let errors = platform::pure::compiler::compile($file, [], true).errors;
+   assertEquals('No handler claims the island \'#ECHO{hi}#\' (no island handlers) (at islandTest:4c3-4c12)', $errors->joinStrings('\n'));
+   true;
+}
+
+function <<test.Test>> platform::pure::compiler::test::testAnIslandIsOfferedToEveryExtension(): Boolean[1]
+{
+   // The handler sits on a second extension: islands are not owned by the first one passed.
+   let file = platform::pure::functions::meta::parse('islandTest',
+      '###Pure\nfunction a::f(): Any[1]\n{\n  #ECHO{hi}#\n}\n');
+   let errors = platform::pure::compiler::compile($file,
+      [platform::pure::compiler::test::extensionTestExtension(), platform::pure::compiler::test::islandTestExtension()], true).errors;
+   assertEmpty($errors);
+   true;
+}
+
+// An island value evaluates to AN INSTANCE OF ITS CLASS: no extension code runs. Each source is compiled at
+// run time by compileSource, which compiles with the runtime's languages — the test language among them,
+// so its island handlers (Truffle, the Java platform and JavaScript; bootstrap has no languages) — and its
+// one function evaluated.
+function <<test.TestDependency>> platform::pure::compiler::test::evaluateIslandFunction(source:String[1]):Any[*]
+{
+   let result = platform::pure::functions::meta::compileSource('islandEval', $source, ['core', 'compiler', 'compiler-tests']);
+   assert($result.errors->isEmpty(), | $result.errors->joinStrings('\n'));
+   $result.elements->filter(e | $e->instanceOf(platform::pure::metamodel::function::PackageableFunction))
+      ->cast(@platform::pure::metamodel::function::PackageableFunction<Any>)->toOne()->evaluate([]);
+}
+
+function <<test.Test>> platform::pure::compiler::test::testAnIslandValueEvaluatesToAnInstanceOfItsClass():Boolean[1]
+{
+   assertEquals('hi', platform::pure::compiler::test::evaluateIslandFunction('function cs::isl::echo():Any[1] { #ECHO{hi}#.text }'));
+}
+
+function <<test.Test>> platform::pure::compiler::test::testAnIslandValueInALambdaEvaluates():Boolean[1]
+{
+   assertEquals('x', platform::pure::compiler::test::evaluateIslandFunction('function cs::isl::lambda():Any[1] { {| #ECHO{x}#}->eval().text }'));
+}
+
+function <<test.Test>> platform::pure::compiler::test::testAnIslandValuePointsIntoTheGraph():Boolean[1]
+{
+   // A loaded element: an element compileSource compiles is handed back as a value, never added to the
+   // graph a translated program resolves paths in (JavaScript), so pointing at one would test that instead.
+   let target = platform::pure::compiler::test::evaluateIslandFunction('function cs::isl::ref():Any[1] { #REF{platform::pure::functions::collection::Pair}#.target }');
+   assertEquals('Pair', $target->toOne()->cast(@platform::pure::metamodel::PackageableElement).name);
+}

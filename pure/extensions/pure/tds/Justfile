@@ -1,0 +1,197 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# pure/extensions/pure/tds/Justfile — builds the `#TDS{…}#` island extension of the Pure language.
+#
+# Direct invocation: just <recipe>     (from pure/extensions/pure/tds/)
+#
+# Inputs:  shared/core.pdb, shared/compiler.pdb (produced by `bootstrap::build`).
+# Output:  build/tds.pdb (+ build/tds-tests.pdb from `build-tests`)
+#
+# No grammar and no section: the TDS is an expression island (`#TDS{…}#`), compiled by the island
+# handler in code/compiler (its header through M3's own `~[…]`), to a value of code/metamodel's TDS class,
+# whose PDB form (generated/tds.fbs + generated/writer.pure) is generated from that metamodel.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+ts_root        := source_directory()
+repo_root      := ts_root / ".." / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+test_results   := repo_root / "test-results"
+tds_out        := ts_root / "build"
+# EVERYTHING derived from code/compiler/metamodel.pure lives in generated/: the protocol, the PDB schema
+# fragment and the PDB writer. `--source` picks up its .pure files, `**/generated/` keeps it out of git,
+# and none of it is ever hand-edited — `generate` recreates it, so deleting it is always safe. code/ is
+# hand-written only, build/ only what is loaded at run time (the PDBs).
+gen_dir        := ts_root / "generated"
+metamodel_stage := ts_root / "build" / "metamodel-stage"
+pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+
+verbose := ""
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+header := "h(){ s=\"[extensions-pure-tds::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
+
+# Default: build tds.pdb.
+default: build
+
+# Generate (schema fragment + PDB writer) and compile -> build/tds.pdb.
+build: _depCheck_base-pdbs generate
+    @{{header}} 'build'
+    @{{substep}} 'compile pure/extensions/pure/tds -> build/tds.pdb'
+    mkdir -p {{tds_out}}
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{ts_root}}/code --source {{gen_dir}} \
+        --output-dir {{tds_out}} {{err_filter}}
+
+# No syntax and no element: only an island value, whose PDB form (the schema fragment and the writer) is
+# generated from its metamodel, as the diagram's elements are.
+# Generate generated/tds.fbs and generated/writer.pure from code/metamodel.
+generate: _depCheck_base-pdbs
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'generate'
+    {{substep}} 'compile code/metamodel/metamodel.pure alone (the generator reads a compiled metamodel)'
+    rm -rf "{{metamodel_stage}}"
+    mkdir -p "{{metamodel_stage}}/code/metamodel"
+    cp "{{ts_root}}/module.json" "{{metamodel_stage}}/"
+    cp "{{ts_root}}/code/metamodel/metamodel.pure" "{{metamodel_stage}}/code/metamodel/"
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --base-pdb {{shared_out}}/compiler-tests.pdb \
+        --source "{{metamodel_stage}}" \
+        --output-dir "{{metamodel_stage}}/build" 2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2)
+    {{substep}} 'generateFbs -> generated/tds.fbs (+ tds-fbs-field-ids.txt)'
+    ids="{{ts_root}}/tds-fbs-field-ids.txt"
+    test -f "$ids" || printf '# FlatBuffer field-ID registry — keeps wire format stable across builds.\n# Auto-maintained by RdfFbsSchemaGenerator. Append-only.\n# Format: TableName.field_name=ID\n\n' > "$ids"
+    mkdir -p "{{gen_dir}}" "{{tds_out}}"
+    gen=$(mktemp); trap 'rm -f "$gen"' EXIT
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb "{{metamodel_stage}}/build/tds.pdb" \
+        --function "platform::pure::compiler::pdb::fbsgen::printFbs_String_1__String_1__String_1__Boolean_1_" \
+        --args "platform::extensions::pure::tds::metamodel" "{{shared_out}}/specification/m3.fbs" "$ids" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) > "$gen"
+    awk '/^===FBS-BEGIN===$/{f=1;next} /^===FBS-END===$/{f=0} f' "$gen" > "{{gen_dir}}/tds.fbs"
+    awk '/^===IDS-BEGIN===$/{f=1;next} /^===IDS-END===$/{f=0} f' "$gen" > "$ids"
+    test -s "{{gen_dir}}/tds.fbs" || { echo "ERROR: generateFbs produced nothing" >&2; cat "$gen" >&2; exit 1; }
+    echo "  wrote generated/tds.fbs ($(grep -c '^table ' "{{gen_dir}}/tds.fbs") tables)"
+    {{substep}} 'generateExtensionWriter -> generated/writer.pure'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb "{{metamodel_stage}}/build/tds.pdb" \
+        --function "platform::pure::compiler::pdb::generator::printExtensionWriter_String_1__String_1__String_1__String_1__Boolean_1_" \
+        --args "{{shared_out}}/specification/m3.fbs" "{{gen_dir}}/tds.fbs" \
+               "platform::extensions::pure::tds::metamodel" "platform::extensions::pure::tds::pdb::gen" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) > "$gen"
+    awk '/^===GENWRITER-BEGIN===$/{f=1;next} /^===GENWRITER-END===$/{f=0} f' "$gen" > "{{gen_dir}}/writer.pure"
+    test -s "{{gen_dir}}/writer.pure" || { echo "ERROR: generateExtensionWriter produced nothing" >&2; cat "$gen" >&2; exit 1; }
+    rm -rf "{{metamodel_stage}}"
+    echo "  wrote generated/writer.pure ($(wc -c < "{{gen_dir}}/writer.pure" | tr -d ' ') bytes)"
+
+# No sibling-extension deps — alias of `build` for symmetry with the module Justfiles.
+build-all: build
+
+# Compile with tests split into build/tds-tests.pdb (needed by `test-all`).
+build-tests: _depCheck_base-pdbs generate
+    @{{header}} 'build-tests'
+    @{{substep}} 'compile pure/extensions/pure/tds -> build/tds.pdb + tds-tests.pdb'
+    mkdir -p {{tds_out}}
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --base-pdb {{shared_out}}/compiler-tests.pdb \
+        --source {{ts_root}}/code --source {{gen_dir}} \
+        --output-dir {{tds_out}} \
+        --tests split {{err_filter}}
+
+# The compiler fixtures (tests/compiler, the specification's runner with the TDS extension) and the test
+# package (platform::extensions::pure::tds::tests: blob writers, evaluation through compileSource).
+# Run the extension's tests on Truffle.
+test-all: build-tests
+    @{{header}} 'test-all'
+    test -f {{shared_out}}/core-tests.pdb || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
+    mkdir -p {{test_results}}/spec/tds/compiler {{test_results}}/spec/tds/unit
+    @{{substep}} 'compiler fixtures: tests/compiler (Truffle)'
+    {{pure_truffle}} execute \
+        --root {{repo_root}} \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{tds_out}}/tds-tests.pdb \
+        --function "platform::extensions::pure::tds::tests::runCompilerTests_String_1__String_1__String_1_" \
+        --args "{{ts_root}}/tests/compiler" "{{test_results}}/spec/tds/compiler/pure@cli-truffle.json" {{err_filter}}
+    @{{substep}} 'printer corpus: tests/compiler prints back (Truffle)'
+    mkdir -p {{test_results}}/spec/tds/printer
+    {{pure_truffle}} execute \
+        --root {{repo_root}} \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{tds_out}}/tds-tests.pdb \
+        --function "platform::extensions::pure::tds::tests::runPrinterCorpus_String_1__String_1__String_1_" \
+        --args "{{ts_root}}/tests/compiler" "{{test_results}}/spec/tds/printer/pure@cli-truffle.json" {{err_filter}}
+    @{{substep}} 'runTests over platform::extensions::pure::tds::tests (Truffle)'
+    {{pure_truffle}} execute \
+        --root {{repo_root}} \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{tds_out}}/tds-tests.pdb \
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::extensions::pure::tds::tests" "{{test_results}}/spec/tds/unit/pure@cli-truffle.json" {{err_filter}}
+
+# Internal: fail loudly if the base PDBs aren't staged.
+_depCheck_base-pdbs:
+    #!/usr/bin/env bash
+    for pdb in core compiler; do
+        if [[ ! -f "{{shared_out}}/$pdb.pdb" ]]; then
+            echo "ERROR: missing {{shared_out}}/$pdb.pdb (run \`just bootstrap::build\` first)" >&2
+            exit 1
+        fi
+    done
+
+# Rewrite the PDB goldens (tests/compiler-pdb-serialization) after an intended change to the metamodel,
+# the compiler or the PDB format: each success fixture under tests/compiler, compiled and written by the
+# Pure writer (goldenHexOf). Read the diff — and run the hosts' spec-tds-pdb — before keeping them.
+# Rewrite the PDB goldens from the compiler fixtures.
+regen-pdb-goldens: build-tests
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'regen-pdb-goldens'
+    cd "{{ts_root}}/tests/compiler"
+    for f in $(find . -name '*.pure' ! -name '*_E_*' | sort); do
+        name="${f#./}"; name="${name%.pure}"
+        mkdir -p "{{ts_root}}/tests/compiler-pdb-serialization/$(dirname "$name")"
+        {{pure_truffle}} execute --root {{repo_root}} \
+            --pdb {{shared_out}}/core-tests.pdb --pdb {{shared_out}}/compiler-tests.pdb --pdb {{tds_out}}/tds-tests.pdb \
+            --function "platform::extensions::pure::tds::tests::goldenHexOf_String_1__String_1__String_1_" \
+            --args "{{ts_root}}/tests/compiler" "$name" 2>/dev/null | grep -v '^\[graal' | tail -1 | tr -d '\n' \
+            | xxd -r -p > "{{ts_root}}/tests/compiler-pdb-serialization/$name.pdb"
+        echo "  wrote tests/compiler-pdb-serialization/$name.pdb"
+    done
+
+# Remove build/ (tds.pdb, the tests PDB, metamodel-stage/) and generated/ (schema, writer).
+clean:
+    @{{header}} 'clean'
+    @{{substep}} 'remove build/ and generated/'
+    rm -rf {{tds_out}} {{gen_dir}}

@@ -46,7 +46,9 @@ import java.util.List;
 @NodeInfo(shortName = "compileSource")
 public final class CompileSourceNode extends PureNode
 {
-    private static final String COMPILE_FN = "platform::pure::compiler::compile_PureFile_MANY__CompilationResult_1_";
+    // The overload taking the language extensions: a source holding an extension's section or an island
+    // compiles with the runtime's languages, as a build does (the Java platform and JavaScript do the same).
+    private static final String COMPILE_FN = "platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
     private static final String RESULT_CLASS = "platform::pure::functions::meta::CompileSourceResult";
 
     @Child
@@ -90,7 +92,8 @@ public final class CompileSourceNode extends PureNode
         Object errors;
         try
         {
-            Object result = ctx.executeFunction(compileFn, new Object[]{file});
+            // silent: a compile inside a program prints no progress bar.
+            Object result = ctx.executeFunction(compileFn, new Object[]{file, ctx.compilerExtensions(), true});
             elements = _Any.read(result, "elements");
             errors = _Any.read(result, "errors");
         }

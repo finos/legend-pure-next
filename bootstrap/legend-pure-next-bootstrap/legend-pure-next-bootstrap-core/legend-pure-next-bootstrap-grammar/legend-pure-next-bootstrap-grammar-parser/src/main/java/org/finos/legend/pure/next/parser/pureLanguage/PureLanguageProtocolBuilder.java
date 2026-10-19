@@ -29,14 +29,20 @@
 // the Pure-side interpreter driven from parser-mappings.pdb (see TrufflePureParser).
 package org.finos.legend.pure.next.parser.pureLanguage;
 
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
+import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.factory.Lists;
+import org.eclipse.collections.impl.list.mutable.ListAdapter;
+import org.finos.legend.pure.next.parser.m3.M3Parser;
+import org.finos.legend.pure.next.parser.m3.M3ParserBaseVisitor;
 import platform.pure.protocol.grammar.Enum_PointerImpl;
 import platform.pure.protocol.grammar.Package_PointerImpl;
 import platform.pure.protocol.grammar.PackageableElement;
+import platform.pure.protocol.grammar.PointerValueImpl;
 import platform.pure.protocol.grammar.SourceInformation;
 import platform.pure.protocol.grammar.SourceInformationImpl;
-import platform.pure.protocol.grammar.constraint.Constraint;
 import platform.pure.protocol.grammar.constraint.ConstraintImpl;
-import platform.pure.protocol.grammar.extension.AnnotatedElement;
 import platform.pure.protocol.grammar.extension.ProfileImpl;
 import platform.pure.protocol.grammar.extension.StereotypeImpl;
 import platform.pure.protocol.grammar.extension.Stereotype_PointerImpl;
@@ -48,14 +54,11 @@ import platform.pure.protocol.grammar.function.NativeFunctionImpl;
 import platform.pure.protocol.grammar.function.UserDefinedFunctionImpl;
 import platform.pure.protocol.grammar.function.property.PropertyImpl;
 import platform.pure.protocol.grammar.function.property.QualifiedPropertyImpl;
-import platform.pure.protocol.grammar.multiplicity.MultiplicityParameter;
 import platform.pure.protocol.grammar.multiplicity.MultiplicityValueImpl;
 import platform.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
 import platform.pure.protocol.grammar.multiplicity.UndefinedMultiplicityImpl;
 import platform.pure.protocol.grammar.multiplicity.UserDefinedAdHocMultiplicityImpl;
 import platform.pure.protocol.grammar.multiplicity.UserDefinedMultiplicityParameterImpl;
-import platform.pure.protocol.grammar.type.generics.TypeParameterImpl;
-import platform.pure.protocol.grammar.PointerValueImpl;
 import platform.pure.protocol.grammar.relation.ColumnImpl;
 import platform.pure.protocol.grammar.relation.GenericTypeOperationImpl;
 import platform.pure.protocol.grammar.relation.RelationTypeImpl;
@@ -67,7 +70,7 @@ import platform.pure.protocol.grammar.type.FunctionTypeImpl;
 import platform.pure.protocol.grammar.type.PrimitiveTypeImpl;
 import platform.pure.protocol.grammar.type.Type_PointerImpl;
 import platform.pure.protocol.grammar.type.generics.GenericType;
-import platform.pure.protocol.grammar.type.generics.TypeParameter;
+import platform.pure.protocol.grammar.type.generics.TypeParameterImpl;
 import platform.pure.protocol.grammar.type.generics.UndefinedGenericTypeImpl;
 import platform.pure.protocol.grammar.type.generics.UserDefinedGenericTypeImpl;
 import platform.pure.protocol.grammar.valuespecification.ArrowInvocationImpl;
@@ -76,17 +79,10 @@ import platform.pure.protocol.grammar.valuespecification.CollectionImpl;
 import platform.pure.protocol.grammar.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl;
 import platform.pure.protocol.grammar.valuespecification.DotApplicationImpl;
 import platform.pure.protocol.grammar.valuespecification.FunctionInvocationImpl;
+import platform.pure.protocol.grammar.valuespecification.IslandImpl;
 import platform.pure.protocol.grammar.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl;
 import platform.pure.protocol.grammar.valuespecification.ValueSpecification;
 import platform.pure.protocol.grammar.valuespecification.VariableExpressionImpl;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.Token;
-import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.impl.factory.Lists;
-import org.eclipse.collections.impl.list.mutable.ListAdapter;
-import org.finos.legend.pure.next.parser.m3.M3Lexer;
-import org.finos.legend.pure.next.parser.m3.M3Parser;
-import org.finos.legend.pure.next.parser.m3.M3ParserBaseVisitor;
 
 public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
 {
@@ -344,7 +340,9 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
         }
         if (ctx.dsl() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.dsl()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(ctx.dsl().DSL_TEXT().getText());
+            // An expression island: the text between the two `#`s, interpreted by the compiler's island handlers.
+            String token = ctx.dsl().DSL_TEXT().getText();
+            return new IslandImpl()._p_sourceInformation(islandSourceInfo(ctx.dsl(), token))._text(token.substring(1, token.length() - 1));
         }
         if (ctx.columnBuilders() != null)
         {
@@ -1105,6 +1103,20 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
     protected SourceInformationImpl buildSourceInfo(final ParserRuleContext ctx)
     {
         return new SourceInformationImpl()._startLine((long) (ctx.getStart().getLine()) + lineOffset)._startColumn((long) (ctx.getStart().getCharPositionInLine()) + 1)._endLine((long) (ctx.getStop().getLine()) + lineOffset)._endColumn((long) (ctx.getStop().getCharPositionInLine() + ctx.getStop().getText().length()));
+    }
+
+    // An island may span lines, and its token is ONE token: ANTLR gives it the line it starts on, so the end
+    // is counted in its text — the line of the closing `#`, at the column of that `#`.
+    private SourceInformationImpl islandSourceInfo(final ParserRuleContext ctx, String token)
+    {
+        SourceInformationImpl at = buildSourceInfo(ctx);
+        int lastBreak = token.lastIndexOf('\n');
+        if (lastBreak < 0)
+        {
+            return at;
+        }
+        long breaks = token.length() - token.replace("\n", "").length();
+        return at._endLine(at._startLine() + breaks)._endColumn((long) (token.length() - lastBreak - 1));
     }
 
     protected SourceInformationImpl buildOpSourceInfo(final Token opTok, final ValueSpecification left, final ParserRuleContext ctx)

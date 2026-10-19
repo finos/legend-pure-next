@@ -46,6 +46,13 @@ public final class PureLanguage
     /** The languages this module owns, for {@code PureRuntime.Builder.withLanguages}. */
     public static ImmutableList<Language> all()
     {
-        return Language.fromResources(MANIFESTS, GRAMMAR_PACKAGE);
+        // The test language's island values (EchoLiteral, RefLiteral: its schema fragment) decode to their
+        // generated implementations, as a language extension's elements do (DiagramPdbTypes).
+        return Language.fromResources(MANIFESTS, GRAMMAR_PACKAGE).collect(l -> TEST_LANGUAGE.equals(l.name())
+                ? l.withTypes(org.finos.legend.pure.m3.platform.pure.compiler.test.islands.IslandTestPdbTypes::create)
+                : l);
     }
+
+    /** language_test.json's name. */
+    private static final String TEST_LANGUAGE = "compiler test sections";
 }

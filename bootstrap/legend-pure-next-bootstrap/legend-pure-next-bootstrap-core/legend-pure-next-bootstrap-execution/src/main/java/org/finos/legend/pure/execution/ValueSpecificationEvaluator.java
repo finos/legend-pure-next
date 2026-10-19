@@ -447,8 +447,9 @@ public class ValueSpecificationEvaluator
             // GenericTypeAndMultiplicityHolder (and subtypes) carry type annotations — pass through as-is
             case GenericTypeAndMultiplicityHolder gmh -> (ValueSpecification) gmh;
             case FunctionExpression fe -> evaluateFunctionExpression(fe);
-            default -> throw new RuntimeException(
-                    "Unsupported ValueSpecification type: " + vs.getClass().getSimpleName());
+            // A language extension's value (an expression island compiled to its own class) evaluates to the
+            // instance itself: it is data, as an atomic value's payload is.
+            default -> _E_ValueSpecification.wrap(vs, vs._genericType(), vs._multiplicity(), this.natives.resolver());
         };
     }
 

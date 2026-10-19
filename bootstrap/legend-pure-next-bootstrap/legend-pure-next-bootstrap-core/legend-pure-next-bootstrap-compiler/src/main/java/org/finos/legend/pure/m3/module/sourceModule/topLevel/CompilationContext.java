@@ -20,6 +20,7 @@ import platform.pure.metamodel.function.Function;
 import platform.pure.metamodel.function.property.Property;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
+import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
@@ -84,9 +85,23 @@ public class CompilationContext
 
     private final MutableList<CompilerContextExtension> compilerContextExtensions;
 
+    // Every extension's expression-island handlers: an island is offered to all of them.
+    private final ListIterable<IslandHandler> islandHandlers;
+
     public CompilationContext(MutableList<CompilerContextExtension> compilerContextExtensions)
     {
+        this(compilerContextExtensions, Lists.immutable.empty());
+    }
+
+    public CompilationContext(MutableList<CompilerContextExtension> compilerContextExtensions, ListIterable<IslandHandler> islandHandlers)
+    {
         this.compilerContextExtensions = compilerContextExtensions;
+        this.islandHandlers = islandHandlers;
+    }
+
+    public ListIterable<IslandHandler> islandHandlers()
+    {
+        return this.islandHandlers;
     }
 
     // ========================================================================
@@ -170,6 +185,17 @@ public class CompilationContext
         applySourceId(error);
         this.currentErrors.add(error);
         debug("ERROR ADDED #%d: %s", currentErrorCount(), error.message());
+    }
+
+    /**
+     * Record an error exactly as given: it skips the staging area, so no enclosing element is added to
+     * it (see {@link #enrichCurrentErrors}) and no rollback discards it. For errors whose location
+     * already says everything — an expression island no handler claims, as the Pure compiler words it.
+     */
+    public void addErrorWithoutContext(CompilationError error)
+    {
+        applySourceId(error);
+        this.errors.add(error);
     }
 
     public MutableList<CompilationError> snapshotErrorsFrom(int fromIndex)
