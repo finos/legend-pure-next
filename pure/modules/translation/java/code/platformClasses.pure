@@ -259,9 +259,10 @@ function platform::extensions::language::java::translation::platform::withMapEnt
 {
    if ($cls != platform::pure::functions::collection::Pair,
       | $impl,
-      | $impl->addMethod(javaMethod(['public'], javaObject(), 'getKey', [], 'return first();'))
-             ->addMethod(javaMethod(['public'], javaObject(), 'getValue', [], 'return second();'))
-             ->addMethod(javaMethod(['public'], javaObject(), 'setValue', [j_parameter(javaObject(), 'value')], 'throw new UnsupportedOperationException("A Pure Pair is immutable");')));
+      | $impl->addMethod(javaMethod(['public'], javaObject(), 'getKey', [], j_return(j_this($impl)->j_invoke('first', [], javaObject()))))
+             ->addMethod(javaMethod(['public'], javaObject(), 'getValue', [], j_return(j_this($impl)->j_invoke('second', [], javaObject()))))
+             ->addMethod(javaMethod(['public'], javaObject(), 'setValue', [j_parameter(javaObject(), 'value')],
+                  j_throw(j_new(javaClass('java.lang.UnsupportedOperationException'), [j_string('A Pure Pair is immutable')])))));
 }
 
 // Every qualified property of `cls` and of its generalizations, each name once.
@@ -339,31 +340,39 @@ function platform::extensions::language::java::translation::platform::platformIm
                  ->jextends(javaClass($conv->platform::extensions::language::java::translation::pdbClass('LazyObject')))
                  ->implements(javaClass($cls->platformTypeName($javaRoot))))
                  ->javaDoc('PDB-backed implementation of Pure class ' + $cls->elementToPath() + '. Generated.')
-                 ->addMethod(javaMethod(['public'], javaString(), '_purePath', [], 'return "' + $cls->elementToPath() + '";'))
+                 ->addMethod(javaMethod(['public'], javaString(), '_purePath', [], j_return(j_string($cls->elementToPath()))))
                  ->withMapEntry($cls);
    $cls->allPlatformProperties()->fold({p, c |
       let type = $p.genericType->platformValueType($p.multiplicity, $javaRoot);
       let raw  = $p.genericType->rawType();
       let name = $p.name->toOne();
-      let body = if ($type->typeToString()->startsWith('java.util.List'), | 'return many("' + $name + '");',
+      let implType = javaClass($cls->platformTypeName($javaRoot) + 'Impl');
+      let self = j_this($implType);
+      let value = j_variable(javaObject(), 'v');
+      let body = if ($type->typeToString()->startsWith('java.util.List'), | j_return($self->j_invoke('many', [j_string($name)], $type)),
                  |if ($raw->isNotEmpty() && $raw->toOne()->instanceOf(Enumeration) && $type != javaObject(),
                     // Read from a PDB an enum value is its name; set at run time, the constant.
-                    | 'Object v = one("' + $name + '");\nreturn v == null || v instanceof ' + $type->typeToString() + ' ? (' + $type->typeToString() + ') v : ' + $type->typeToString() + '.valueOf((String) v);',
-                    | 'return (' + $type->typeToString() + ') one("' + $name + '");'));
+                    | [j_declare(javaObject(), 'v', $self->j_invoke('one', [j_string($name)], javaObject())),
+                       j_return(j_conditional(j_or(j_eq($value, j_null()), j_instanceof($value, $type)),
+                                              $value->j_castWithoutChecks($type),
+                                              j_invoke($type, 'valueOf', [$value->j_castWithoutChecks(javaString())], $type)))],
+                    | j_return($self->j_invoke('one', [j_string($name)], javaObject())->j_castWithoutChecks($type))));
       // A pointer stands in for an element it has not been resolved to, so a
       // read of a slot it only inherits is a caller that skipped resolution:
       // guard it here, in the 28 pointer impls, rather than in LazyObject's
       // one()/many() where all ~4000 classes would pay for it. LazyObject holds
       // the list of slots a pointer does answer for itself.
       let guarded = if ($cls->elementToPath()->startsWith('platform::pure::metamodel::pointer::'),
-                       | 'checkPointerAccess("' + $name + '");\n' + $body,
+                       | j_expressionStatement($self->j_invoke('checkPointerAccess', [j_string($name)], javaVoid()))->concatenate($body),
                        | $body);
-      let implType = javaClass($cls->platformTypeName($javaRoot) + 'Impl');
       $c->addMethod(javaMethod(['public'], $type, $name->getterName(), [], $guarded))
-        ->addMethod(javaMethod(['public'], $implType, '_' + $name, [j_parameter(javaObject(), 'value')], 'set("' + $name + '", value);\nreturn this;'))
-        ->addMethod(javaMethod(['public'], $implType, '_' + $name + '_add', [j_parameter(javaObject(), 'value')], 'add("' + $name + '", value);\nreturn this;'));
+        ->addMethod(javaMethod(['public'], $implType, '_' + $name, [j_parameter(javaObject(), 'value')],
+             [j_expressionStatement($self->j_invoke('set', [j_string($name), j_variable(javaObject(), 'value')], javaVoid())), j_return($self)]))
+        ->addMethod(javaMethod(['public'], $implType, '_' + $name + '_add', [j_parameter(javaObject(), 'value')],
+             [j_expressionStatement($self->j_invoke('add', [j_string($name), j_variable(javaObject(), 'value')], javaVoid())), j_return($self)]));
    }, $conv->platform::extensions::language::java::translation::platformQualifiedPropertyMethods($cls, $javaRoot, true)->fold({m, c | $c->addMethod($m)},
-         $base->addMethod(javaMethod(['public'], javaClass($cls->platformTypeName($javaRoot) + 'Impl'), '_copy', [], 'return copyInto(new ' + $cls.name->toOne() + 'Impl());'))))
+         $base->addMethod(javaMethod(['public'], javaClass($cls->platformTypeName($javaRoot) + 'Impl'), '_copy', [],
+            j_return(j_this(javaClass($cls->platformTypeName($javaRoot) + 'Impl'))->j_invoke('copyInto', [j_new(javaClass($cls->platformTypeName($javaRoot) + 'Impl'), [])], javaClass($cls->platformTypeName($javaRoot) + 'Impl')))))))
       ->withAssociationFinish($cls, $javaRoot, $conv)
       ->platform::extensions::language::java::translation::platform::withKeyEquality($cls, $conv)
       ->withPureToString($cls);
@@ -379,12 +388,14 @@ function platform::extensions::language::java::translation::platform::withAssoci
    if ($props->isEmpty(),
       | $impl,
       | let newType = $conv->platform::extensions::language::java::translation::pdbClass('PureNew');
-        let checks  = $props->map(p | $newType + '.checkFresh(__values("' + $p.name->toOne() + '"), "' + $p.name->toOne() + '", "' + $cls->elementToPath() + '");');
+        let self    = j_this(javaClass($cls->platformTypeName($javaRoot) + 'Impl'));
+        let valuesOf = {name: String[1] | $self->j_invoke('__values', [j_string($name)], javaList())};
+        let checks  = $props->map(p | j_expressionStatement(j_invoke(javaClass($newType), 'checkFresh', [$valuesOf->eval($p.name->toOne()), j_string($p.name->toOne()), j_string($cls->elementToPath())], javaVoid())));
         let links   = $props->map(p |
            $p.owner->cast(@platform::pure::metamodel::relationship::Association).properties->filter(q | $q.name != $p.name)
-              ->map(r | $newType + '.link(__values("' + $p.name->toOne() + '"), "' + $r.name->toOne() + '", ' + if ($r.multiplicity->holdsManyValues(), | 'true', | 'false') + ', this);'));
+              ->map(r | j_expressionStatement(j_invoke(javaClass($newType), 'link', [$valuesOf->eval($p.name->toOne()), j_string($r.name->toOne()), if ($r.multiplicity->holdsManyValues(), | j_true(), | j_false()), $self], javaVoid()))));
         $impl->addMethod(javaMethod(['public'], javaClass($cls->platformTypeName($javaRoot) + 'Impl'), '_pureFinish', [],
-           $checks->concatenate($links)->concatenate('return this;')->joinStrings('\n')));
+           $checks->concatenate($links)->concatenate(j_return($self))));
    );
 }
 
@@ -401,13 +412,20 @@ function platform::extensions::language::java::translation::platform::withKeyEqu
        ->map(p | $p.name->toOne());
    if ($keys->isEmpty(),
       | $impl,
-      | $impl->addMethod(javaMethod(['public'], javaBoolean(), 'equals', [j_parameter(javaObject(), 'o')],
-           'if (this == o) { return true; }\n'
-           + 'if (o == null || o.getClass() != getClass()) { return false; }\n'
-           + $conv->platform::extensions::language::java::translation::pdbClass('LazyObject') + ' other = (' + $conv->platform::extensions::language::java::translation::pdbClass('LazyObject') + ') o;\n'
-           + 'return ' + $keys->map(k | 'java.util.Objects.equals(__values("' + $k + '"), other.__values("' + $k + '"))')->joinStrings(' && ') + ';'))
+      | let lazy   = javaClass($conv->platform::extensions::language::java::translation::pdbClass('LazyObject'));
+        let self   = j_this($impl);
+        let o      = j_variable(javaObject(), 'o');
+        let other  = j_variable($lazy, 'other');
+        let objects = javaClass('java.util.Objects');
+        let keyEqs = $keys->map(k | j_invoke($objects, 'equals', [$self->j_invoke('__values', [j_string($k)], javaList()), $other->j_invoke('__values', [j_string($k)], javaList())], javaBoolean()));
+        $impl->addMethod(javaMethod(['public'], javaBoolean(), 'equals', [j_parameter(javaObject(), 'o')],
+           [j_if(j_eq($self, $o), j_return(j_true())),
+            j_if(j_or(j_eq($o, j_null()), j_ne($o->j_invoke('getClass', [], javaClass('java.lang.Class')), $self->j_invoke('getClass', [], javaClass('java.lang.Class')))), j_return(j_false())),
+            j_declare($lazy, 'other', $o->j_castWithoutChecks($lazy)),
+            j_return($keyEqs->tail()->fold({e, a | j_and($a, $e)}, $keyEqs->at(0)))]))
              ->addMethod(javaMethod(['public'], javaInt(), 'hashCode', [],
-           'return java.util.Objects.hash(' + $keys->map(k | '__values("' + $k + '")')->joinStrings(', ') + ');')));
+           j_return(j_invoke($objects, 'hash', $keys->map(k | $self->j_invoke('__values', [j_string($k)], javaList())), javaInt()))));
+   );
 }
 
 // Pure's toString for the collection classes: a List prints its values as
@@ -416,13 +434,21 @@ function platform::extensions::language::java::translation::platform::withPureTo
 {
    let path = $cls->elementToPath();
    if ($path == 'platform::pure::functions::collection::List',
-      | $impl->addMethod(javaMethod(['public'], javaString(), 'toString', [],
-           'StringBuilder sb = new StringBuilder("[");\n'
-           + 'java.util.List<Object> vs = __values("values");\n'
-           + 'for (int i = 0; i < vs.size(); i++) { if (i > 0) { sb.append(", "); } sb.append(vs.get(i)); }\n'
-           + 'return sb.append("]").toString();')),
+      | let builder = javaClass('java.lang.StringBuilder');
+        let sb = j_variable($builder, 'sb');
+        let vs = j_variable(javaList(javaObject()), 'vs');
+        let i  = j_variable(javaInt(), 'i');
+        $impl->addMethod(javaMethod(['public'], javaString(), 'toString', [],
+           [j_declare($builder, 'sb', j_new($builder, [j_string('[')])),
+            j_declare(javaList(javaObject()), 'vs', j_this($impl)->j_invoke('__values', [j_string('values')], javaList(javaObject()))),
+            j_for($i->j_declare(j_int(0)), $i->j_lt($vs->j_invoke('size', [], javaInt())), $i->j_inc(),
+                  [j_if(j_gt($i, j_int(0)), j_expressionStatement($sb->j_invoke('append', [j_string(', ')], $builder))),
+                   j_expressionStatement($sb->j_invoke('append', [$vs->j_invoke('get', [$i], javaObject())], $builder))]),
+            j_return($sb->j_invoke('append', [j_string(']')], $builder)->j_invoke('toString', [], javaString()))]));,
    |if ($path == 'platform::pure::functions::collection::Pair',
-      | $impl->addMethod(javaMethod(['public'], javaString(), 'toString', [], 'return "<" + one("first") + ", " + one("second") + ">";')),
+      | $impl->addMethod(javaMethod(['public'], javaString(), 'toString', [],
+           j_return(j_string('<')->j_plus(j_this($impl)->j_invoke('one', [j_string('first')], javaObject()))->j_plus(j_string(', '))
+                       ->j_plus(j_this($impl)->j_invoke('one', [j_string('second')], javaObject()))->j_plus(j_string('>'))))),
       | $impl));
 }
 
@@ -444,11 +470,11 @@ function platform::extensions::language::java::translation::platform::platformTy
 // or a language extension's (see generateExtensionTypeFactory).
 function platform::extensions::language::java::translation::platform::platformTypeFactory(storable: Class<Any>[*], javaRoot: String[1], conv: platform::extensions::language::java::translation::Conventions[1], factoryName: String[1]): platform::extensions::language::java::metamodel::Class[1]
 {
-   let cases = $storable->map(c | '    case "' + $c.name->toOne() + 'Def": return new ' + $c->platformTypeName($javaRoot) + 'Impl();')->joinStrings('\n');
+   let cases = $storable->map(c | pair(j_string($c.name->toOne() + 'Def'), j_return(j_new(javaClass($c->platformTypeName($javaRoot) + 'Impl'), []))));
    javaClass(['public', 'final'], $factoryName)
       ->javaDoc('FlatBuffer table name to generated implementation. Generated.')
       ->addMethod(javaMethod(['public', 'static'], javaClass($conv->platform::extensions::language::java::translation::pdbClass('LazyObject')), 'create', [j_parameter(javaString(), 'table')],
-           'switch (table)\n{\n' + $cases + '\n    default: return null;\n}'));
+           j_switch(j_variable(javaString(), 'table'), $cases, j_return(j_null()))));
 }
 
 function platform::extensions::language::java::translation::platform::platformEnum(e: Enumeration<Any>[1], javaRoot: String[1], conv: platform::extensions::language::java::translation::Conventions[1]): platform::extensions::language::java::metamodel::Class[1]

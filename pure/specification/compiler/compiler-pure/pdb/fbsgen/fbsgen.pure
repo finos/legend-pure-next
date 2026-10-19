@@ -286,7 +286,16 @@ function platform::pure::compiler::pdb::fbsgen::taxonomyUnion(c:Class<Any>[1], u
    if($subs->isEmpty(),
       | []->cast(@FbsUnion),
       | ^FbsUnion(name = $c.name->toOne() + 'Union',
-                  members = $subs->map(s | $s.name->toOne() + 'Def')->concatenate($self)->concatenate('AncestorRef')));
+                  members = $subs->map(s | $s.name->toOne() + 'Def')->concatenate($self)->concatenate('AncestorRef')
+                               ->concatenate(if(platform::pure::compiler::pdb::fbsgen::holdsExtensionValues($c), | 'ExtensionValueDef', | []->cast(@String)))));
+}
+
+// The taxonomies a language extension's value specification can stand in (an expression, or a value an
+// AtomicValue holds): their unions end with ExtensionValueDef — APPENDED, after AncestorRef, so no
+// discriminant an existing archive uses moves.
+function platform::pure::compiler::pdb::fbsgen::holdsExtensionValues(c:Class<Any>[1]):Boolean[1]
+{
+   ['platform::pure::metamodel::valuespecification::ValueSpecification', 'platform::pure::metamodel::type::Any']->contains($c->elementToPath());
 }
 
 // --- pass 2: tables -------------------------------------------------------------------
@@ -374,7 +383,9 @@ function platform::pure::compiler::pdb::fbsgen::m3PreludeTables(st:GenState[1]):
    let s4 = platform::pure::compiler::pdb::fbsgen::renderTable('FloatValueDef', [], pair('val', 'double'), $s3);
    let s5 = platform::pure::compiler::pdb::fbsgen::renderTable('DecimalValueDef', [], pair('val', 'string'), $s4);
    let s6 = platform::pure::compiler::pdb::fbsgen::renderTable('BooleanValueDef', [], pair('val', 'bool'), $s5);
-   platform::pure::compiler::pdb::fbsgen::renderTable('StringValueDef', [], pair('val', 'string'), $s6);
+   let s7 = platform::pure::compiler::pdb::fbsgen::renderTable('StringValueDef', [], pair('val', 'string'), $s6);
+   // A language extension's value specification: a finished FlatBuffer rooted at its own table `kind`.
+   platform::pure::compiler::pdb::fbsgen::renderTable('ExtensionValueDef', [], [pair('kind', 'string'), pair('blob', '[ubyte]')], $s7);
 }
 
 function platform::pure::compiler::pdb::fbsgen::m3PreludeUnions():String[1]

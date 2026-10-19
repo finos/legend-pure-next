@@ -48,6 +48,10 @@ Class platform::pure::functions::printer::compiled::PrintContext
     mode: PrintMode[1];
     imports: String[*];
     shortenable: String[*];
+    // How a language extension's values (expression islands compiled to its own classes) print back:
+    // each answers for the values it knows, empty otherwise. Supplied by whoever compiled with the
+    // extension (the printer cannot know one).
+    valuePrinters: Function<{ValueSpecification[1]->String[0..1]}>[*];
 }
 
 // Build the context for a print run. FullFQN returns an empty context (no

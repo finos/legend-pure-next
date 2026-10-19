@@ -25,9 +25,12 @@ import platform.pure.metamodel.valuespecification.DotApplicationImpl;
 import platform.pure.metamodel.valuespecification.FunctionInvocationImpl;
 import platform.pure.metamodel.valuespecification.ValueSpecification;
 import platform.pure.metamodel.valuespecification.VariableExpressionImpl;
+import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.IslandHandler;
 import platform.pure.metamodel.type.generics.CompilerNotSetGenericType;
 import platform.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
 import platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
@@ -71,9 +74,43 @@ public final class ValueSpecificationCompiler
                     compileDotApplication(dot, imports, model, context);
             case platform.pure.protocol.grammar.valuespecification.GenericTypeAndMultiplicityHolder holder ->
                     compileGenericTypeAndMultiplicityHolder(holder, imports, model, context);
+            case platform.pure.protocol.grammar.valuespecification.IslandImpl island ->
+                    compileIsland(island, imports, model, context);
             default -> throw new UnsupportedOperationException(
                     "Unsupported ValueSpecification type: " + vs.getClass().getName());
         };
+    }
+
+    // An expression island, compiled by the one handler (of any extension) that claims its text — as the
+    // Pure compiler's compileIsland does, with the same errors. Unclaimed or claimed by several, an empty
+    // collection stands in for it so compilation carries on and reports every error.
+    private static ValueSpecification compileIsland(
+            platform.pure.protocol.grammar.valuespecification.IslandImpl island,
+            MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    {
+        ListIterable<IslandHandler> handlers = context.islandHandlers();
+        ListIterable<IslandHandler> claiming = handlers.select(h -> h.claims(island._text()));
+        if (claiming.size() == 1)
+        {
+            return claiming.getOnly().compile(island, imports, model, context);
+        }
+        String shown = "'#" + island._text() + "#'";
+        String message = claiming.size() > 1
+                ? "The island " + shown + " is claimed by several handlers: " + claiming.collect(IslandHandler::name).makeString(", ")
+                : "No handler claims the island " + shown + (handlers.isEmpty() ? " (no island handlers)" : " (handlers: " + handlers.collect(IslandHandler::name).makeString(", ") + ")");
+        return islandErrorAt(message, island._p_sourceInformation(), imports, model, context);
+    }
+
+    /**
+     * How a handler reports an error — as {@code islandErrorAt} in Pure: {@code message} at {@code at}
+     * (usually a range inside the island, from {@link IslandHandler#sourceInformation}), naming no enclosing
+     * element; an empty collection stands in for the island so compilation carries on.
+     */
+    public static ValueSpecification islandErrorAt(String message, platform.pure.protocol.grammar.SourceInformation at,
+                                                   MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    {
+        context.addErrorWithoutContext(new CompilationError(message, SourceInformationCompiler.compile(at, context.getSourceId(), model)));
+        return compile(new platform.pure.protocol.grammar.valuespecification.CollectionImpl()._p_sourceInformation(at), imports, model, context);
     }
 
     private static ArrowInvocationImpl compileArrowInvocation(

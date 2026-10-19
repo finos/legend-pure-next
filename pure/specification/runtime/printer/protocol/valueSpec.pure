@@ -40,6 +40,7 @@ function platform::pure::functions::printer::protocol::printValueSpec(vs: platfo
         dot: platform::pure::protocol::grammar::valuespecification::DotApplication[1] | printDotApplication($dot),
         gmh: platform::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] | printGenericTypeAndMultiplicityHolder($gmh),
         l:   platform::pure::protocol::grammar::function::LambdaFunction[1] | printLambdaFunction($l),
+        i:   platform::pure::protocol::grammar::valuespecification::Island[1] | '#' + $i.text + '#',
         any: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1] | '/* todo: ' + $any->genericType().type->toOne()->elementToPath() + ' */'
     ]);
 }
@@ -120,20 +121,17 @@ function platform::pure::functions::printer::protocol::atomicValueTypeName(a: pl
 }
 
 // Render a string literal: pick `'...'` for single-line, `'''...'''` for
-// multi-line (heredoc). DSL bodies are stored as strings shaped `#{...}#`
-// and emitted verbatim (no quotes) — that matches the parser's surface.
+// multi-line (heredoc). (An expression island is an Island, printed by printValueSpec.)
 function platform::pure::functions::printer::protocol::printStringLiteral(s: String[1]): String[1]
 {
-    if ($s->startsWith('#{') && $s->endsWith('}#'),
-        | $s,
-    | if ($s->contains('\n'),
+    if ($s->contains('\n'),
         // Heredoc form. Parser strips the leading newline (text-block style)
         // but preserves the trailing one — so a trailing `\n` is the signal
         // that the source had `'''` on its own opening line. Re-add the
         // leading `\n` in that case so the printed form matches.
         | '\'\'\'' + if ($s->endsWith('\n'), | '\n', | '') + $s + '\'\'\'',
         | '\'' + escapeStringLiteral($s) + '\''
-    ));
+    );
 }
 
 // Pure source uses backslash escapes for `'` and `\` inside `'...'` literals.

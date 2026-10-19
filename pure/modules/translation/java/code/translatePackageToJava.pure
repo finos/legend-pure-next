@@ -215,7 +215,7 @@ function <<test.TestDependency>> platform::extensions::language::java::translati
    let attempt   = tryEval(| $conv->translateUdf($udf)->platform::extensions::language::java::serialization::classToStringWithPositions());
    let source    = if ($attempt.failure->isEmpty(),
                       | $attempt.value->toOne(),
-                      | $className->untranslatedStub($udf->elementToPath() + ': ' + $attempt.failure->toOne().message));
+                      | $className->untranslatedStub($udf.parameters->size(), $udf->elementToPath() + ': ' + $attempt.failure->toOne().message));
    '//// FILE ' + $className->replace('.', '/') + '.java\n' + $source;
 }
 
@@ -279,17 +279,14 @@ function <<access.private>> platform::extensions::language::java::translation::p
       | '//// FILE ' + $lines->at(0)->trim() + platform::extensions::language::java::translation::positionFileSuffix() + '\n' + $rows);
 }
 
-// A class `className` whose `execute` accepts any arguments and throws "not translated: <reason>".
-function <<test.TestDependency>> platform::extensions::language::java::translation::untranslatedStub(className: String[1], reason: String[1]): String[1]
+// A class `className` whose `execute` takes the function's `arity` arguments and throws "not translated: <reason>".
+function <<test.TestDependency>> platform::extensions::language::java::translation::untranslatedStub(className: String[1], arity: Integer[1], reason: String[1]): String[1]
 {
-   let simpleName  = $className->split('.')->last()->toOne();
-   let packageName = $className->substring(0, $className->length() - $simpleName->length() - 1);
-   let message     = 'not translated: ' + $reason->split('\n')->at(0);
-   'package ' + $packageName + ';\n\n'
-      + 'public class ' + $simpleName + '\n{\n'
-      + '    public static Object execute(Object... args)\n    {\n'
-      + '        throw new UnsupportedOperationException(' + $message->escapedString() + ');\n'
-      + '    }\n}\n';
+   let message = 'not translated: ' + $reason->split('\n')->at(0);
+   javaClass(['public'], $className)
+      ->addMethod(javaMethod(['public', 'static'], javaObject(), 'execute', range($arity)->map(i | j_parameter(javaObject(), 'a' + $i->toString())),
+           j_throw(j_new(javaClass('java.lang.UnsupportedOperationException'), [j_string($message)]))))
+      ->platform::extensions::language::java::serialization::classToString();
 }
 
 // Functions, classes and enumerations under `pkg`, sub-packages included,

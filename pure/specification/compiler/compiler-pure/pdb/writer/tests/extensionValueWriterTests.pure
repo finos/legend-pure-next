@@ -1,0 +1,61 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Writing a language extension's value specification (an island value) into m3's archive: the
+// extension's generated writer gives each of its value classes a `<Class>_pdbValueBlob`, which m3's
+// writer looks up beside the class and wraps in an ExtensionValueDef.
+
+Class platform::pure::compiler::pdb::writer::tests::islands::Spark extends platform::pure::metamodel::valuespecification::ValueSpecification
+{
+   label : String[1];
+}
+
+Class platform::pure::compiler::pdb::writer::tests::islands::Unwritten extends platform::pure::metamodel::valuespecification::ValueSpecification
+{
+}
+
+function platform::pure::compiler::pdb::writer::tests::islands::target():platform::pure::compiler::pdb::generator::WriterTarget[1]
+{
+   ^platform::pure::compiler::pdb::generator::WriterTarget(
+      packages  = 'platform::pure::compiler::pdb::writer::tests::islands',
+      ns        = 'x::gen',
+      schema    = platform::pure::compiler::pdb::schema::parseFbs('table SparkDef {\n    label: string (id: 0);\n}'),
+      ownTables = 'SparkDef',
+      ownUnions = [],
+      m3        = false);
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::writer::tests::islands::testExtensionValuesGetABlobWriter():Boolean[1]
+{
+   let text = platform::pure::compiler::pdb::generator::emitValueBlobs(platform::pure::compiler::pdb::writer::tests::islands::target());
+   assert($text->contains('function platform::pure::compiler::pdb::writer::tests::islands::Spark_pdbValueBlob(v:Any[1]):Binary[1]'), | $text);
+   assert($text->contains('x::gen::writeSpark('), | $text);
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::writer::tests::islands::testAValueWithoutABlobWriterFailsTheWrite():Boolean[1]
+{
+   assertError(| platform::pure::compiler::pdb::writerHelper::writeExtensionValue(platform::pure::compiler::pdb::fbb::newBuilder(),
+                    ^platform::pure::compiler::pdb::writer::tests::islands::Unwritten(
+                       genericType = ^platform::pure::metamodel::type::generics::CompilerNotSetGenericType(),
+                       multiplicity = ^platform::pure::metamodel::multiplicity::CompilerNotSetMultiplicity())),
+               'PDB writer: no serializer for the value of class \'platform::pure::compiler::pdb::writer::tests::islands::Unwritten\'');
+}
+
+// An extension whose metamodel has value classes but no element (a language of islands only) still
+// gets an element dispatch that compiles.
+function <<test.Test>> platform::pure::compiler::pdb::writer::tests::islands::testAnElementlessExtensionHasAWriteElementBlob():Boolean[1]
+{
+   let text = platform::pure::compiler::pdb::generator::emitWriteElementBlob(platform::pure::compiler::pdb::writer::tests::islands::target());
+   assert($text->contains('writes no element'), | $text);
+}

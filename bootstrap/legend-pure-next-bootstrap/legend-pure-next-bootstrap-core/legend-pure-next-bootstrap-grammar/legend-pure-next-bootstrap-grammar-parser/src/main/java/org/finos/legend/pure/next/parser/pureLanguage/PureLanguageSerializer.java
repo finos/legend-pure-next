@@ -52,6 +52,7 @@ import platform.pure.protocol.grammar.valuespecification.Collection;
 import platform.pure.protocol.grammar.valuespecification.DotApplication;
 import platform.pure.protocol.grammar.valuespecification.FunctionExpression;
 import platform.pure.protocol.grammar.valuespecification.GenericTypeAndMultiplicityHolder;
+import platform.pure.protocol.grammar.valuespecification.Island;
 import platform.pure.protocol.grammar.valuespecification.ValueSpecification;
 import platform.pure.protocol.grammar.valuespecification.VariableExpression;
 import org.eclipse.collections.api.factory.Lists;
@@ -454,6 +455,7 @@ public class PureLanguageSerializer
             case GenericTypeAndMultiplicityHolder gth -> serializeGenericTypeAndMultiplicityHolder(sb, gth);
             case Collection col -> serializeCollection(sb, col);
             case AtomicValue av -> serializeAtomicValue(sb, av);
+            case Island island -> sb.append('#').append(island._text()).append('#');
             case DotApplication dot -> serializeDotApplication(sb, dot);
             case FunctionExpression sfe -> serializeFunctionExpression(sb, sfe);
             case VariableExpression ve ->
@@ -1147,12 +1149,7 @@ public class PureLanguageSerializer
         }
         else if (v instanceof String str)
         {
-            if (str.startsWith("#") && str.endsWith("#"))
-            {
-                // DSL text: emit as-is without quotes
-                sb.append(str);
-            }
-            else if (str.indexOf('\n') >= 0)
+            if (str.indexOf('\n') >= 0)
             {
                 // Triple-quoted form. If any line after a `\n` starts with
                 // whitespace, the stripper would treat that as a common

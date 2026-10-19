@@ -1,0 +1,83 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The TDS is tested the way the specification is: compiler fixtures (tests/compiler/<area>/<case>.pure with
+// ###CompiledGraph + ###ReverseIndex, or ###Error + ###CompilerStats), run by the specification's own
+// runner with the TDS extension, plus the line a TDS prints as in ###CompiledGraph.
+
+import platform::pure::compiler::*;
+import platform::pure::compiler::extension::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::extensions::pure::tds::compiler::*;
+import platform::extensions::pure::tds::metamodel::*;
+
+// The TDS extension, with how a TDS prints in ###CompiledGraph — a test printer, as the specification's are.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::tds::tests::tdsTestExtension(): CompilerExtension[1]
+{
+   let extension = tdsExtension();
+   ^$extension(islands = $extension.islands->map(h | ^$h(printGraph = {v: ValueSpecification[1], indent: String[1], ctx: CompilerContext[1] |
+      platform::extensions::pure::tds::tests::printTdsGraph($v->cast(@TDS<Any>), $indent, $ctx)})));
+}
+
+// `TDS` and the value's type, then each row as written, one per line.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::tds::tests::printTdsGraph(tds: TDS<Any>[1], indent: String[1], ctx: CompilerContext[1]): String[1]
+{
+   let rows = lines($tds.csv)->tail()->map(l | $l->trim())->filter(l | $l != '');
+   $indent + 'TDS' + platform::pure::compiler::test::islandGraphSuffix($tds, $ctx) + $rows->map(r | '\n' + $indent + '  | ' + $r)->joinStrings('');
+}
+
+// Every tests/compiler/**/*.pure compiles to its ###CompiledGraph / ###Error, with the TDS extension.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::tds::tests::runCompilerTests(testDir: String[1], reportPath: String[1]): String[1]
+{
+   platform::pure::compiler::test::runCompiledGraphTests($testDir, $reportPath, platform::extensions::pure::tds::tests::tdsTestExtension(), []);
+}
+
+// Every success fixture under tests/compiler prints back as written: its TDS literals through the TDS
+// handler's printer.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::tds::tests::runPrinterCorpus(testDir: String[1], reportPath: String[1]): String[1]
+{
+   platform::pure::compiler::test::printer::runCompiledPrinterCorpus($testDir, $reportPath, tdsExtension());
+}
+
+// Every tests/compiler-pdb-serialization/<area>/<case>.pdb is what tests/compiler/<area>/<case>.pure writes,
+// table by table — the specification's golden runner with the TDS extension and its schema fragment.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::tds::tests::runPdbGoldenTests(testDir: String[1], goldenDir: String[1], m3Fbs: String[1], tdsFbs: String[1], reportPath: String[1]): String[1]
+{
+   platform::pure::compiler::test::pdb::runPdbGoldenTests($testDir, $goldenDir, [$m3Fbs, $tdsFbs], $reportPath, tdsExtension());
+}
+
+// The archive a compiler fixture writes, as hex — how a golden is (re)generated (`xxd -r -p`), then
+// inspected before it is kept.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::tds::tests::goldenHexOf(testDir: String[1], name: String[1]): String[1]
+{
+   platform::pure::compiler::test::pdb::writeFixture(readFile($testDir + '/' + $name + '.pure'), $name, tdsExtension())->platform::pure::functions::binary::binaryToHex();
+}
+
+// A host READS a golden back with its own decoder: the TDS in the body of `functionPath`, decoded from the
+// loaded archive, has the type and the rows its fixture's ###CompiledGraph shows. The golden runner compares
+// archives with the Pure reader; this is what checks each host's own (Truffle, the Java platform, JavaScript).
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::tds::tests::readBack(fixtureFile: String[1], functionPath: String[1]): String[1]
+{
+   let graph = readFile($fixtureFile)->split('###CompiledGraph')->at(1)->split('###')->at(0);
+   let lines = platform::extensions::pure::tds::compiler::lines($graph)->map(l | $l->trim());
+   let line = $lines->filter(l | $l->startsWith('TDS :'))->toOne();
+   let expectedType = $line->substring('TDS :'->length(), $line->indexOf('[1]  ~'));
+   let expectedRows = $lines->filter(l | $l->startsWith('| '))->map(l | $l->substring(2, $l->length()));
+   let tds = platform::pure::functions::meta::pathToElement($functionPath)
+                ->cast(@platform::pure::metamodel::function::UserDefinedFunction<Any>).expressionSequence->at(0)
+                ->cast(@TDS<Any>);
+   assertEquals($expectedType, platform::pure::compiler::test::printer::printType($tds.genericType));
+   assertEquals($expectedRows, platform::extensions::pure::tds::compiler::lines($tds.csv)->tail()->map(l | $l->trim())->filter(l | $l != ''));
+   'READ BACK ' + $functionPath + ': identical to its ###CompiledGraph';
+}

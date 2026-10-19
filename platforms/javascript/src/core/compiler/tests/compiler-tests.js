@@ -52,6 +52,10 @@ import { TestReport } from "../../tests/test-report.js";
 const HERE = dirname(fileURLToPath(import.meta.url)); // .../src/core/compiler/tests
 const REPO = join(HERE, "../../../../../.."); // -> repo root
 const TESTS = join(REPO, "pure/specification/compiler/tests");
+// Every runner of the specification's fixtures compiles with the test package's island handlers
+// (valueSpecification/island needs them): compile(files, extensions, silent), and the extension itself.
+const COMPILE_WITH = "platform$pure$compiler$compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
+const ISLAND_TEST_EXTENSION = "platform$pure$compiler$test$islandTestExtension__CompilerExtension_1_";
 const GOLDENS = process.env.PDB_GOLDENS_DIR || join(HERE, "../../../../../../pure/specification/compiler/tests-pdb-serialization");
 
 const clean = (s) => (s || "").replace(/\r/g, "").split("\n").map((l) => l.trim()).filter((l) => l).join("\n").trim();
@@ -72,7 +76,7 @@ async function main() {
     const golden = process.argv.includes("--golden");
     // `{ tests: true }`: printGraph and the compiled-graph assertions are `<<test.TestDependency>>`,
     // so they are in the generated TEST halves rather than the library ones.
-    const { parse, compile, printGraph, registry } = await loadCompiler({ tests: true });
+    const { parse, printGraph, registry } = await loadCompiler({ tests: true });
 
     // The compiler prints progress/stats to stdout; mute it during the run.
     const realWrite = process.stdout.write.bind(process.stdout);
@@ -110,7 +114,7 @@ async function main() {
             // Position ###Pure at its original file line so error positions match.
             const nl = (c.slice(0, c.indexOf("###Pure")).match(/\n/g) || []).length;
             const input = "\n".repeat(nl) + "###Pure\n" + section(c, "Pure");
-            const r = compile([parse(sid, input)]);
+            const r = globalThis[COMPILE_WITH]([parse(sid, input)], [globalThis[ISLAND_TEST_EXTENSION]()], false);
             muted = false;
             if (isError) {
                 const actual = clean((r.errors || []).join("\n"));

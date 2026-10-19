@@ -19,6 +19,7 @@ import org.finos.legend.pure.truffle.compiler.module.ModuleRegistry;
 import org.finos.legend.pure.truffle.compiler.module.inMemoryModule.InMemoryModule;
 import org.finos.legend.pure.truffle.execution.natives.NativeRegistry;
 import org.finos.legend.pure.truffle.extensions.diagram.DiagramLanguage;
+import org.finos.legend.pure.truffle.extensions.tds.TdsLanguage;
 import org.finos.legend.pure.truffle.runtime.PureRuntime;
 
 import java.nio.file.Files;
@@ -81,7 +82,7 @@ public final class UsageExample
         ModuleRegistry registry = new ModuleRegistry();
         PureRuntime runtime = PureRuntime.builder()
                 .withRegistry(registry)
-                .withLanguages(DiagramLanguage.all())   // ###Pure is always there; name the extensions
+                .withLanguages(DiagramLanguage.all().newWithAll(TdsLanguage.all()))   // ###Pure is always there; name the extensions
                 .withNatives(NativeRegistry.createDefault())
                 .withModuleRoot(repoRoot())
                 .build();

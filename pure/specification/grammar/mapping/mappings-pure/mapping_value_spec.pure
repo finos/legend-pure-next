@@ -482,11 +482,20 @@ function platform::pure::parser::mappings::buildAtomicExpression(ctx: AntlrConte
    | atomic($ctx, '<unsupported atomicExpression>', 'String', $lineOffset))))))))));
 }
 
-// `#{...}#` DSL block — captured as a String AtomicValue whose value is the
-// raw DSL_TEXT (no parsing on the spec side; the host language handles it).
+// `#…#` expression island (`#ECHO{hello}#`, `#TDS{…}#`, `#>{a::DB.t}#`): an Island holding the text
+// between the two `#`s. The parser does not interpret it: the compiler offers it to every extension's
+// island handlers, which decide from its first characters which one compiles it.
 function platform::pure::parser::mappings::buildDslAtomic(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
-   atomic($ctx, $ctx->getTokenText('DSL_TEXT')->toOne(), 'String', $lineOffset)
+   let token = $ctx->getTokenText('DSL_TEXT')->toOne();
+   let at = buildSourceInfo($ctx, $lineOffset);
+   // An island may span lines, and its token is ONE token: ANTLR gives it the line it starts on, so the
+   // end is counted in its text — the line of the closing `#`, at the column of that `#`.
+   let breaks = $token->length() - $token->replace('\n', '')->length();
+   ^platform::pure::protocol::grammar::valuespecification::Island(
+      p_sourceInformation = if($breaks == 0, | $at, | ^$at(endLine = $at.startLine + $breaks, endColumn = $token->length() - $token->lastIndexOf('\n') - 1)),
+      text                = $token->substring(1, $token->length() - 1)
+   );
 }
 
 // `~`, `~.~`, `~.foo`, etc. Builds VariableExpression("~") then folds DotApplication

@@ -20,6 +20,7 @@ import org.finos.legend.pure.truffle.compiler.module.ModuleRegistry;
 import org.finos.legend.pure.truffle.compiler.module.pdbModule.PdbModule;
 import org.finos.legend.pure.truffle.execution.natives.NativeRegistry;
 import org.finos.legend.pure.truffle.extensions.diagram.DiagramLanguage;
+import org.finos.legend.pure.truffle.extensions.tds.TdsLanguage;
 import org.finos.legend.pure.truffle.grammar.PureLanguage;
 import org.finos.legend.pure.truffle.runtime.PureRuntime;
 
@@ -250,7 +251,7 @@ public final class PureCompileMain
      */
     private static org.eclipse.collections.api.list.ListIterable<org.finos.legend.pure.truffle.grammar.Language> languages()
     {
-        return DiagramLanguage.all();   // ###Pure is always there
+        return DiagramLanguage.all().newWithAll(TdsLanguage.all());   // ###Pure is always there
     }
 
     private static void execute(String[] args) throws Exception
@@ -501,7 +502,7 @@ public final class PureCompileMain
         java.util.LinkedHashSet<String> ordered = new java.util.LinkedHashSet<>();
         if (moduleRoot != null)
         {
-            PureLanguage.all().newWithAll(DiagramLanguage.all())
+            PureLanguage.all().newWithAll(DiagramLanguage.all()).newWithAll(TdsLanguage.all())
                     .forEach((language) -> language.pdbs()
                             .forEach((pdb) -> ordered.add(moduleRoot.resolve(pdb).normalize().toString())));
         }

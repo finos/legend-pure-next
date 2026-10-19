@@ -75,6 +75,26 @@
     :genericType [ :type :String ] ;
     :multiplicity :ZeroOne .
 
+# --- Island ---
+# An expression island, `#…#`: the parser keeps the text between the two `#`s (`ECHO{hello}`,
+# `TDS{…}`, `>{a::DB.t}`) and the compiler offers it to every CompilerExtension's island handlers,
+# which decide from its first characters which one compiles it. Protocol only: a handler compiles it
+# to ordinary value specifications, so it never reaches the metamodel. Declared here, after the
+# metamodel -> protocol package rename, hence the protocol package.
+
+:Island a :Class ;
+    :name [ :classifierGenericType :GenericType_String ; :data "Island" ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Island ] ] ;
+    :package :platform_pure_protocol_grammar_valuespecification ;
+    :generalizations ( [ :general [ :type :ValueSpecification ] ] ) .
+
+:Island_text a :Property ;
+    :name [ :classifierGenericType :GenericType_String ; :data "text" ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Island ] [ :type :String ] ) ; :multiplicityArguments :PureOne ] ;
+    :owner :Island ;
+    :genericType [ :type :String ] ;
+    :multiplicity :PureOne .
+
 # --- Enum_Pointer ---
 # Protocol pointer for Enumeration values. pointerValue is the Enumeration path,
 # extraPointerValues[0].value is the enum value name.

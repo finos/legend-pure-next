@@ -162,6 +162,8 @@
                                     <directory>${shared.dir}/specification</directory>
                                     <includes>
                                         <include>m3.fbs</include>
+                                        <!-- language_test.json's `fbs`: the test package's island values -->
+                                        <include>islandTest.fbs</include>
                                     </includes>
                                 </resource>
                             </resources>

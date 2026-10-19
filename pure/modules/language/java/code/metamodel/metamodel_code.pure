@@ -120,6 +120,21 @@ Class platform::extensions::language::java::metamodel::If extends Statement
    <<equality.Key>> else : Code[0..1];
 }
 
+// `switch (expression) { case label: body … default: body }`. Each case's body is complete statements (no
+// fall-through is modelled): typically a `return`.
+Class platform::extensions::language::java::metamodel::Switch extends Statement
+{
+   <<equality.Key>> expression : Code[1];
+   <<equality.Key>> cases      : platform::extensions::language::java::metamodel::SwitchCase[*];
+   <<equality.Key>> default    : Code[0..1];
+}
+
+Class platform::extensions::language::java::metamodel::SwitchCase
+{
+   <<equality.Key>> label : Code[1];
+   <<equality.Key>> body  : Code[1];
+}
+
 Class platform::extensions::language::java::metamodel::For extends Statement
 {
    <<equality.Key>> init   : Code[0..1];

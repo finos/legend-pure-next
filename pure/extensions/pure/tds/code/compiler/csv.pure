@@ -1,0 +1,120 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The body of a TDS literal is CSV: `,` between cells, `"` around a cell that holds one (`""` inside is a
+// `"`), spaces around a cell ignored, an empty cell or `null` holding no value. Every cell keeps where it
+// is — line and columns in the island text — so a cell that cannot be its column's type is reported AT it.
+
+// A line of the island text: its number (1-based) and the column its first character is at (the first
+// line starts after `TDS{`).
+Class platform::extensions::pure::tds::compiler::CsvLine
+{
+   line        : Integer[1];
+   firstColumn : Integer[1];
+   text        : String[1];
+}
+
+// A cell: its value (none for an empty cell or `null`), its text as written, and where it is.
+Class platform::extensions::pure::tds::compiler::CsvCell
+{
+   value     : String[0..1];
+   text      : String[1];
+   column    : Integer[1];
+   endColumn : Integer[1];
+}
+
+// A row: its number among the rows (1-based), the line it is on, its cells.
+Class platform::extensions::pure::tds::compiler::CsvRow
+{
+   number : Integer[1];
+   line   : Integer[1];
+   cells  : platform::extensions::pure::tds::compiler::CsvCell[*];
+}
+
+// Reading a line, one character at a time: the cells done, and the one being read.
+Class platform::extensions::pure::tds::compiler::CsvScan
+{
+   cells    : platform::extensions::pure::tds::compiler::CsvCell[*];
+   chars    : String[1];
+   start    : Integer[0..1];
+   end      : Integer[0..1];
+   quoted   : Boolean[1];
+   inQuotes : Boolean[1];
+   closed   : Boolean[1];
+   column   : Integer[1];
+}
+
+// The lines of `text`, empty ones included (`split` drops them, and a line number must not move).
+function platform::extensions::pure::tds::compiler::lines(text: String[1]): String[*]
+{
+   let at = $text->indexOf('\n');
+   if($at < 0,
+      | $text,
+      | $text->substring(0, $at)->concatenate(platform::extensions::pure::tds::compiler::lines($text->substring($at + 1, $text->length()))));
+}
+
+// The cells of one line whose first character is at `firstColumn`.
+function platform::extensions::pure::tds::compiler::cells(text: String[1], firstColumn: Integer[1]): platform::extensions::pure::tds::compiler::CsvCell[*]
+{
+   let scan = $text->chunk(1)->fold({c: String[1], s: platform::extensions::pure::tds::compiler::CsvScan[1] | platform::extensions::pure::tds::compiler::scanCharacter($s, $c)},
+      ^platform::extensions::pure::tds::compiler::CsvScan(chars = '', quoted = false, inQuotes = false, closed = false, column = $firstColumn));
+   $scan.cells->concatenate(platform::extensions::pure::tds::compiler::finishCell($scan));
+}
+
+function platform::extensions::pure::tds::compiler::scanCharacter(s: platform::extensions::pure::tds::compiler::CsvScan[1], c: String[1]): platform::extensions::pure::tds::compiler::CsvScan[1]
+{
+   let at = $s.column;
+   let next = ^$s(column = $at + 1);
+   let started = if($s.start->isEmpty(), | $at, | $s.start->toOne());
+   if([pair(| $s.inQuotes && ($c == '"'), | ^$next(inQuotes = false, closed = true, end = $at)),
+       pair(| $s.inQuotes, | ^$next(chars = $s.chars + $c, end = $at)),
+       pair(| ($c == '"') && $s.closed, | ^$next(chars = $s.chars + '"', inQuotes = true, closed = false)),
+       pair(| ($c == '"') && !$s.quoted && ($s.chars->trim() == ''), | ^$next(chars = '', quoted = true, inQuotes = true, start = $started, end = $at)),
+       pair(| $c == ',', | ^$next(cells = $s.cells->concatenate(platform::extensions::pure::tds::compiler::finishCell($s)), chars = '', start = [], end = [], quoted = false, inQuotes = false, closed = false)),
+       pair(| ($c == ' ') || ($c == '\t'), | ^$next(chars = if($s.quoted, | $s.chars, | $s.chars + $c), closed = false))],
+      | ^$next(chars = $s.chars + $c, start = $started, end = $at, closed = false));
+}
+
+// The cell read so far, ended by a `,` or by the end of the line at the scan's column.
+function platform::extensions::pure::tds::compiler::finishCell(s: platform::extensions::pure::tds::compiler::CsvScan[1]): platform::extensions::pure::tds::compiler::CsvCell[1]
+{
+   let text = if($s.quoted, | $s.chars, | $s.chars->trim());
+   ^platform::extensions::pure::tds::compiler::CsvCell(
+      value     = if(!$s.quoted && (($text == '') || ($text == 'null')), | [], | $text),
+      text      = $text,
+      column    = if($s.start->isEmpty(), | $s.column, | $s.start->toOne()),
+      endColumn = if($s.end->isEmpty(), | $s.column, | $s.end->toOne()));
+}
+
+// The rows of a body: its lines that hold something, read as cells.
+function platform::extensions::pure::tds::compiler::rows(lines: platform::extensions::pure::tds::compiler::CsvLine[*]): platform::extensions::pure::tds::compiler::CsvRow[*]
+{
+   let filled = $lines->filter(l | $l.text->trim() != '');
+   range($filled->size())->map(i |
+      ^platform::extensions::pure::tds::compiler::CsvRow(
+         number = $i + 1,
+         line   = $filled->at($i).line,
+         cells  = platform::extensions::pure::tds::compiler::cells($filled->at($i).text, $filled->at($i).firstColumn)));
+}
+
+// The lines of `text`, numbered from `firstLine`; the first starts at `firstColumn`, the others at 1.
+function platform::extensions::pure::tds::compiler::numberedLines(text: String[1], firstLine: Integer[1], firstColumn: Integer[1]): platform::extensions::pure::tds::compiler::CsvLine[*]
+{
+   let texts = platform::extensions::pure::tds::compiler::lines($text);
+   range($texts->size())->map(i |
+      ^platform::extensions::pure::tds::compiler::CsvLine(
+         line        = $firstLine + $i,
+         firstColumn = if($i == 0, | $firstColumn, | 1),
+         text        = $texts->at($i)));
+}

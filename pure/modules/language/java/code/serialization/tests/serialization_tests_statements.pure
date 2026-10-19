@@ -210,3 +210,28 @@ function <<test.Test>> platform::extensions::language::java::serialization::test
            ->inferImports()
    );
 }
+
+function <<test.Test>> platform::extensions::language::java::serialization::tests::switchStatement():Boolean[1]
+{
+   let table = j_parameter(javaString(), 'table');
+
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public Object create(String table)
+            {
+                switch (table)
+                {
+                    case "ADef": return new A();
+                    case "BDef": return new B();
+                    default: return null;
+                }
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaObject(), 'create', [$table],
+                j_switch($table, [pair(j_string('ADef'), j_return(j_new(javaClass('org.finos.test.A'), []))), pair(j_string('BDef'), j_return(j_new(javaClass('org.finos.test.B'), [])))], j_return(j_null()))))
+   );
+}

@@ -34,6 +34,8 @@ translation_java_out   := repo_root / "pure" / "modules" / "translation" / "java
 pure_truffle           := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
 # The diagram extension's PDBs, built by `just extensions::diagram::build-tests`.
 diagram_out            := repo_root / "pure" / "extensions" / "diagram" / "build"
+# The TDS extension's PDBs, built by `just extensions::pure::tds::build-tests`.
+tds_out                := repo_root / "pure" / "extensions" / "pure" / "tds" / "build"
 pure_bootstrap         := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 
 # The Pure runtime that RUNS the transform when generating this platform's Java.
@@ -80,10 +82,13 @@ extensions             := aggregator / "legend-pure-next-platform-java-extension
 diagram_module         := extensions / "legend-pure-next-platform-java-extensions-diagram"
 diagram_generated      := diagram_module / "generated"
 diagram_classes        := diagram_module / "target" / "classes"
+tds_module             := extensions / "legend-pure-next-platform-java-extensions-tds"
+tds_generated          := tds_module / "generated"
+tds_classes            := tds_module / "target" / "classes"
 cli_classes            := aggregator / "legend-pure-next-platform-java-interfaces" / "legend-pure-next-platform-java-cli" / "target" / "classes"
 example_classes        := aggregator / "legend-pure-next-platform-java-interfaces" / "legend-pure-next-platform-java-usage-example" / "target" / "classes"
 # What a run needs. Nothing from bootstrap or Truffle.
-run_classpath          := classes + ":" + diagram_classes + ":" + cli_classes + ":" + lib_jars
+run_classpath          := classes + ":" + diagram_classes + ":" + tds_classes + ":" + cli_classes + ":" + lib_jars
 # `main` is the CLI's, not the engine's: it installs the languages, and the engine must not name one.
 main_class             := "org.finos.legend.pure.platform.java.cli.PureJava"
 
@@ -155,26 +160,6 @@ generate-types:
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
     echo "  $(find {{generated}}/org/finos/legend/pure/m3 -name '*.java' | wc -l | tr -d ' ') files"
-
-# Generate the runtime classes every translated program calls (PureMap, PureMatch,
-# Variant, PureDate, PureFormat, PureBytes) into generated/org/finos/legend/pure/platform/java/runtime.
-generate-runtime:
-    @{{header}} 'generate-runtime'
-    @{{substep}} 'generate PureMap, PureMatch, Variant, PureDate, PureFormat, PureBytes -> generated/.../runtime'
-    test -f {{translation_java_out}}/java-translation-tests.pdb || (echo "ERROR: missing {{translation_java_out}}/java-translation-tests.pdb (run \`just modules::translation_java::build-tests\` first)" && exit 1)
-    rm -rf {{generated}}/org/finos/legend/pure/platform/java/runtime
-    set -o pipefail; {{emit_rt}} execute \
-        --pdb {{shared}}/core.pdb \
-        --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb \
-        --pdb {{shared}}/parser-mappings.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
-        --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::extensions::language::java::translation::generateRuntimeClasses__String_1_" \
-        2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
 
 # Translate the Java translator (platform::extensions::language::java::translation) and
 # every function it reaches (the java factory and serializer, translation shared,
@@ -259,6 +244,22 @@ generate-tests:
         --args "platform::pure::functions,platform::pure::compiler::pdb" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
+    @{{substep}} 'the PDB table -> implementation factory for the test island values (IslandTestPdbTypes)'
+    set -o pipefail; {{emit_rt}} execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{shared}}/parser-mappings.pdb \
+        --pdb {{language_java_out}}/java.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_java_out}}/java-translation.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --function "platform::extensions::language::java::translation::platform::generateExtensionTypeFactory_String_1__String_1__String_1__String_1_" \
+        --args "platform::pure::compiler::test::islands::metamodel" "org.finos.legend.pure.m3" "org.finos.legend.pure.m3.platform.pure.compiler.test.islands.IslandTestPdbTypes" \
+        2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
+        | awk -v root="{{generated}}" -v keep="org/finos/legend/pure/m3/platform/pure/compiler/test/islands/" \
+              '/^\/\/\/\/ FILE /{ if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { print > file }'
     @{{substep}} 'types the wrappers reference (FuncColSpec/AggColSpec: stored with the functions, so the package walk misses them)'
     set -o pipefail; {{emit_rt}} execute \
         --pdb {{shared}}/core.pdb \
@@ -345,6 +346,63 @@ generate-diagram: _depCheck_emit_rt
               '/^\/\/\/\/ FILE /{ if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { print > file }'
     @echo "  $(find {{diagram_generated}} -name '*.java' | wc -l | tr -d ' ') files ($(find {{diagram_generated}} -path '*tests*' -name '*.java' | wc -l | tr -d ' ') of them tests)"
 
+# The TDS EXTENSION's Pure, translated into its own module, as the diagram's is (see generate-diagram).
+generate-tds: _depCheck_emit_rt
+    @{{header}} 'generate-tds'
+    @{{substep}} 'translate platform::extensions::pure::tds -> the TDS module''s generated/'
+    test -f {{tds_out}}/tds-tests.pdb || (echo "ERROR: missing {{tds_out}}/tds-tests.pdb (run \`just extensions::pure::tds::build-tests\` first)" && exit 1)
+    rm -rf {{tds_generated}}
+    set -o pipefail; {{emit_rt}} execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/parser-mappings.pdb \
+        --pdb {{language_java_out}}/java.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_java_out}}/java-translation.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{tds_out}}/tds.pdb \
+        --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
+        --args "platform::extensions::pure::tds" \
+        2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
+        | awk -v root="{{tds_generated}}" -v keep="org/finos/legend/pure/m3/platform/extensions/pure/tds/" \
+              '/^\/\/\/\/ FILE /{ if (file != "") close(file); if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
+    @{{substep}} 'translate the extension''s test packages (they live in tds-tests.pdb)'
+    set -o pipefail; {{emit_rt}} execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/parser-mappings.pdb \
+        --pdb {{language_java_out}}/java.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_java_out}}/java-translation.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{tds_out}}/tds.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{tds_out}}/tds-tests.pdb \
+        --function "platform::extensions::language::java::translation::translateTestPackagesToJava_String_1__String_1_" \
+        --args "platform::extensions::pure::tds" \
+        2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
+        | awk -v root="{{tds_generated}}" -v keep="org/finos/legend/pure/m3/platform/extensions/pure/tds/" \
+              '/^\/\/\/\/ FILE /{ if (file != "") close(file); if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
+    @{{substep}} 'the PDB table -> implementation factory for the metamodel (TdsPdbTypes)'
+    set -o pipefail; {{emit_rt}} execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/parser-mappings.pdb \
+        --pdb {{language_java_out}}/java.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_java_out}}/java-translation.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{tds_out}}/tds.pdb \
+        --function "platform::extensions::language::java::translation::platform::generateExtensionTypeFactory_String_1__String_1__String_1__String_1_" \
+        --args "platform::extensions::pure::tds::metamodel" "org.finos.legend.pure.m3" "org.finos.legend.pure.m3.platform.extensions.pure.tds.TdsPdbTypes" \
+        2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
+        | awk -v root="{{tds_generated}}" -v keep="org/finos/legend/pure/m3/platform/extensions/pure/tds/" \
+              '/^\/\/\/\/ FILE /{ if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { print > file }'
+    @echo "  $(find {{tds_generated}} -name '*.java' | wc -l | tr -d ' ') files ($(find {{tds_generated}} -path '*tests*' -name '*.java' | wc -l | tr -d ' ') of them tests)"
+
 # Remove everything this platform builds: the translator's output AND Maven's
 # target/. `clean-generated` alone leaves target/classes behind, so a compiled
 # class could outlive both its Pure source and the generated Java it came from.
@@ -358,7 +416,7 @@ clean: clean-generated
 
 # Remove everything generated, so no stale class outlives its Pure source.
 clean-generated:
-    rm -rf {{generated}} {{diagram_generated}}
+    rm -rf {{generated}} {{diagram_generated}} {{tds_generated}}
 
 # Compile the module: the handwritten host and the translator's output together,
 # with the JDK alone. The pom declares NO dependencies, so a generated class that
@@ -371,7 +429,7 @@ clean-generated:
 _depCheck_emit_rt:
     test -f {{emit_rt_jar}} || (echo "ERROR: missing {{emit_rt_jar}} — this platform generates its Java with {{pure_rt}}. Run \`{{emit_rt_recipe}}\` first, or generate with the other runtime: \`just pure_rt=bootstrap java::compile\`" && exit 1)
 
-compile: _depCheck_emit_rt clean-generated generate-types generate-runtime generate-pdb generate-translator generate-functions generate-tests generate-diagram
+compile: _depCheck_emit_rt clean-generated generate-types generate-pdb generate-translator generate-functions generate-tests generate-diagram generate-tds
     @{{header}} 'compile'
     @{{substep}} 'mvn compile: src/main/java + target/generated-sources/pure, JDK only'
     cd {{aggregator}} && mvn -q clean compile
@@ -470,6 +528,57 @@ spec-diagram-pdb:
         --args "{{repo_root}}/pure/extensions/diagram/tests/compiler/diagram/$f.pure" "m::D" || exit 1; \
     done
 
+# The TDS island's PDB form on the Java platform: the goldens beside the compiler fixtures (see
+# truffle::spec-tds-pdb), then the Java platform's OWN decoder reads each one back and finds the TDS its
+# fixture's ###CompiledGraph shows.
+spec-tds-pdb:
+    @{{header}} 'spec-tds-pdb'
+    mkdir -p {{repo_root}}/test-results/spec/tds/pdb
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{tds_out}}/tds-tests.pdb \
+        --function "platform::extensions::pure::tds::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/pure/tds/tests/compiler" "{{repo_root}}/pure/extensions/pure/tds/tests/compiler-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{repo_root}}/pure/extensions/pure/tds/generated/tds.fbs" "{{repo_root}}/test-results/spec/tds/pdb/java@platform.json"
+    for c in typedHeader:test::tds::typedHeader__Any_MANY_ inferredColumns:test::tds::inferredColumns__Any_MANY_ mixedInference:test::tds::mixedInference__Any_MANY_ quotedNamesAndCells:test::tds::quotedNamesAndCells__Any_MANY_ enumeration:test::tds::enumeration__Any_MANY_ quotedValues:test::tds::quotedValues__Any_MANY_ manyMultiplicity:test::tds::manyMultiplicity__Any_MANY_ primitiveExtension:test::tds::primitiveExtension__Any_MANY_; do \
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{tds_out}}/tds-tests.pdb \
+        --pdb {{repo_root}}/pure/extensions/pure/tds/tests/compiler-pdb-serialization/tds/${c%%:*}.pdb \
+        --function "platform::extensions::pure::tds::tests::readBack_String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/pure/tds/tests/compiler/tds/${c%%:*}.pure" "${c#*:}" || exit 1; \
+    done
+
+# The TDS island ON this platform: its compiler fixtures (the specification's runner with the TDS extension)
+# and its test package (blob writer, evaluation through compileSource).
+spec-tds: compile
+    @{{header}} 'spec-tds'
+    test -f {{tds_out}}/tds-tests.pdb || (echo "ERROR: missing {{tds_out}}/tds-tests.pdb (run \`just extensions::pure::tds::build-tests\` first)" && exit 1)
+    mkdir -p {{repo_root}}/test-results/spec/tds/compiler {{repo_root}}/test-results/spec/tds/unit
+    @{{substep}} 'compiler fixtures: pure/extensions/pure/tds/tests/compiler (Java platform)'
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{tds_out}}/tds-tests.pdb \
+        --function "platform::extensions::pure::tds::tests::runCompilerTests_String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/pure/tds/tests/compiler" "{{repo_root}}/test-results/spec/tds/compiler/java@platform.json"
+    @{{substep}} 'runTests over platform::extensions::pure::tds::tests (Java platform)'
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{tds_out}}/tds-tests.pdb \
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::extensions::pure::tds::tests" "{{repo_root}}/test-results/spec/tds/unit/java@platform.json"
+
 # The grammar corpus ON this platform: parse each fixture under
 # pure/specification/grammar/tests and compare with its expected protocol.
 spec-grammar: compile
@@ -499,6 +608,16 @@ spec-compiler: compile
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
         --args "{{repo_root}}/pure/specification/compiler/tests" "{{repo_root}}/test-results/spec/compiler/java@platform.json" \
+        || echo "  failures do not fail the build: they are in the report"
+    @{{substep}} 'runTests over platform::pure::compiler::test (Java platform)'
+    mkdir -p {{repo_root}}/test-results/spec/compiler-unit
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::compiler::test" "{{repo_root}}/test-results/spec/compiler-unit/java@platform.json" \
         || echo "  failures do not fail the build: they are in the report"
 
 # EMBEDDING THIS PLATFORM, run: name two languages, compile a source holding a `###Pure` and a
@@ -623,7 +742,7 @@ test-junit: compile
     @{{substep}} 'mvn test: src/test/java'
     cd {{aggregator}} && mvn -q test
 
-test-all: pct test-junit test-translation spec-functions spec-grammar spec-compiler spec-pdb-format spec-pdb spec-diagram spec-diagram-pdb usage-example
+test-all: pct test-junit test-translation spec-functions spec-grammar spec-compiler spec-pdb-format spec-pdb spec-diagram spec-diagram-pdb spec-tds spec-tds-pdb usage-example
 
 # The Pure -> Java gallery, rendered BY THIS PLATFORM: the translated renderer
 # runs on the JVM, so every card shows the Java this platform generates and runs

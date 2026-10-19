@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,7 +74,11 @@ public final class FbsSchemaParser
             for (String raw : um.group(2).split(","))
             {
                 String m = raw.trim();
-                if (!m.isEmpty()) { members.add(m); }
+                // ExtensionValueDef (a language extension's value specification, decoded with its own schema
+                // fragment) has no m3 class behind it: bootstrap never writes or reads one, so the code
+                // generated from this view leaves it out. It is the LAST member, so no other discriminant moves,
+                // and a value of that arm reaches the generated readers' unknown-member error.
+                if (!m.isEmpty() && !"ExtensionValueDef".equals(m)) { members.add(m); }
             }
             unions.put(unionName, new FbsSchema.FbsUnion(unionName, members));
         }

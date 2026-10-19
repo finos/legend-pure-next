@@ -41,7 +41,9 @@ function platform::pure::functions::printer::compiled::printCompiledValueSpec(vs
         dot: DotApplication[1] | printCompiledDotApplication($dot, $ctx),
         l:   LambdaFunction<Any>[1] | printCompiledLambdaFunction($l, $ctx),
         h:   GenericTypeAndMultiplicityHolder<Any>[1] | printCompiledTypeHolder($h, $ctx),
-        any: ValueSpecification[1] | '/* todo: ' + $any->genericType().type->toOne()->elementToPath() + ' */'
+        any: ValueSpecification[1] |
+            let printed = $ctx.valuePrinters->map(p | $p->eval($any))->head();
+            if($printed->isEmpty(), | '/* todo: ' + $any->genericType().type->toOne()->elementToPath() + ' */', | $printed->toOne());
     ]);
 }
 

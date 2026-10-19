@@ -135,6 +135,7 @@ function <<access.private>> platform::extensions::language::java::factory::conta
       c:Block[1]                    | $c.statements->containsSimpleCode(),
       c:ExpressionStatement[1]      | $c.expression->containsSimpleCode(),
       c:If[1]                       | $c.test->containsSimpleCode() || $c.then->containsSimpleCode() || $c.else->containsSimpleCode(),
+      c:Switch[1]                   | $c.expression->containsSimpleCode() || $c.cases->exists(k| $k.label->containsSimpleCode() || $k.body->containsSimpleCode()) || $c.default->containsSimpleCode(),
       c:For[1]                      | $c.init->containsSimpleCode() || $c.test->containsSimpleCode() || $c.update->containsSimpleCode(),
       c:ForEach[1]                  | $c.parameter->cast(@Code)->containsSimpleCode() || $c.collection->containsSimpleCode() || $c.body->containsSimpleCode(),
       c:While[1]                    | $c.test->containsSimpleCode() || $c.then->containsSimpleCode(),

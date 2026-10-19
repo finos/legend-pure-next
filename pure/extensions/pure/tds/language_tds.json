@@ -1,0 +1,20 @@
+{
+  "name": "tds",
+  "sections": [],
+  "module": "tds",
+  "pure": {
+    "compilerExtension": "platform::extensions::pure::tds::compiler::tdsExtension__CompilerExtension_1_"
+  },
+  "pdbs": [
+    "pure/extensions/pure/tds/build/tds.pdb"
+  ],
+  "fbs": "pure/extensions/pure/tds/generated/tds.fbs",
+  "packages": [
+    "platform::extensions::pure::tds::metamodel",
+    "platform::extensions::pure::tds::compiler",
+    "platform::extensions::pure::tds::pdb::gen"
+  ],
+  "testPackages": [
+    "platform::extensions::pure::tds::tests"
+  ]
+}

@@ -209,6 +209,12 @@ public final class PureContext
      * must check.
      */
     public ModuleRegistry modules() { return modules; }
+
+    // The compiler passes of the runtime's languages (PureRuntime sets it): what a compile at run time
+    // (compileSource) hands compiler-pure, so it sees the languages a build does. None until a runtime is built.
+    private java.util.function.Supplier<Object> compilerExtensions = () -> org.finos.legend.pure.truffle.execution.types.PureSequence.EMPTY;
+    public Object compilerExtensions() { return compilerExtensions.get(); }
+    public void setCompilerExtensions(java.util.function.Supplier<Object> extensions) { this.compilerExtensions = extensions; }
     public PureASTBuilder astBuilder() { return astBuilder; }
     public TrufflePureParser pureParser() { return pureParser; }
     public void setPureParser(TrufflePureParser parser) { this.pureParser = parser; }

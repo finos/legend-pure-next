@@ -514,6 +514,14 @@ public class StringNatives
                     ._multiplicity(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(size, size, resolver));
         });
 
+        // inferType(String[*]) : Type[1] — the type a CSV column's cells have (see inferType.pure for the rules)
+        natives.put("inferType_String_MANY__Type_1_", (args, eval, genericType, multiplicity) ->
+        {
+            List<String> cells = new ArrayList<>();
+            _E_ValueSpecification.toCollection(args.get(0), resolver)._values().forEach(v -> cells.add((String) _E_ValueSpecification.unwrap(v)));
+            return _E_ValueSpecification.wrap(resolver.getElement(inferTypePath(cells)), genericType, multiplicity, resolver);
+        });
+
         // parseInteger(String[1]) : Integer[1]
         natives.put("parseInteger_String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Long.parseLong(((String) _E_ValueSpecification.unwrap(args.get(0))).trim()), genericType, multiplicity, resolver));
@@ -582,6 +590,64 @@ public class StringNatives
      *   <li>{@code NON_NEWLINE_SENSITIVE} — {@link Pattern#DOTALL}.</li>
      * </ul>
      */
+    private static final Pattern INFER_INTEGER = Pattern.compile("[+-]?\\d+");
+    private static final Pattern INFER_FLOAT = Pattern.compile("[+-]?(\\d+\\.?\\d*|\\.\\d+)([eE][+-]?\\d+)?");
+    private static final Pattern INFER_DATE = Pattern.compile("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:?\\d{2})");
+
+    /**
+     * The path of the type a CSV column's cells have — Legend Engine's rules (deephaven-csv's default parsers).
+     * An empty or {@code null} cell tells nothing; another is Boolean, Integer (within 64 bits), Float, Date
+     * (a date-time with a time and a zone), else String; the column is its cells' kind, Float for Integer and
+     * Float, String for any other mix or when no cell tells anything.
+     */
+    static String inferTypePath(List<String> cells)
+    {
+        String kind = null;
+        for (String raw : cells)
+        {
+            String cell = raw == null ? "" : raw.trim();
+            if (cell.isEmpty() || "null".equals(cell))
+            {
+                continue;
+            }
+            String cellKind = inferCellKind(cell);
+            kind = kind == null || kind.equals(cellKind) ? cellKind
+                    : (isNumberKind(kind) && isNumberKind(cellKind)) ? "Float"
+                    : "String";
+        }
+        return "platform::pure::metamodel::type::primitives::" + (kind == null ? "String" : kind);
+    }
+
+    private static boolean isNumberKind(String kind)
+    {
+        return "Integer".equals(kind) || "Float".equals(kind);
+    }
+
+    private static String inferCellKind(String cell)
+    {
+        if ("true".equalsIgnoreCase(cell) || "false".equalsIgnoreCase(cell))
+        {
+            return "Boolean";
+        }
+        if (INFER_INTEGER.matcher(cell).matches())
+        {
+            try
+            {
+                Long.parseLong(cell.startsWith("+") ? cell.substring(1) : cell);
+                return "Integer";
+            }
+            catch (NumberFormatException e)
+            {
+                return "Float";
+            }
+        }
+        if (INFER_FLOAT.matcher(cell).matches())
+        {
+            return "Float";
+        }
+        return INFER_DATE.matcher(cell).matches() ? "Date" : "String";
+    }
+
     private static int regexpFlags(ValueSpecification arg, MetadataAccess resolver)
     {
         if (arg == null) return 0;

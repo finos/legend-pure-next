@@ -516,10 +516,13 @@ function platform::pure::compiler::pdb::generator::emitWriteElementBlob(target:W
          + '[1] | ' + $target.ns + '::write' + $c.name->toOne()
          + '(' + $fbb + '::newBuilder(), $v' + $c.name->toOne() + ', []),\n');
    'function ' + $target.ns + '::writeElementBlob(e:Any[1]):Binary[1]\n'
-      + '{\n   let r = $e->match([\n'
-      + $arms->joinStrings('')->substring(0, $arms->joinStrings('')->length() - 2) + '\n'
-      + '   ]);\n'
-      + '   $r.builder->' + $fbb + '::finish($r.offset)->' + $fbb + '::result();\n}\n';
+      + if($arms->isEmpty(),
+           // An extension of values only (a language of islands): no element of it reaches the archive writer.
+           | '{\n   fail(\'' + $target.ns + ': this extension writes no element\');\n   []->cast(@Binary)->toOne();\n}\n',
+           | '{\n   let r = $e->match([\n'
+               + $arms->joinStrings('')->substring(0, $arms->joinStrings('')->length() - 2) + '\n'
+               + '   ]);\n'
+               + '   $r.builder->' + $fbb + '::finish($r.offset)->' + $fbb + '::result();\n}\n');
 }
 
 function platform::pure::compiler::pdb::generator::emitUnion(target:WriterTarget[1], u:FbsUnion[1], classes:Class<Any>[*]):String[1]
@@ -532,7 +535,9 @@ function platform::pure::compiler::pdb::generator::emitUnion(target:WriterTarget
    // ProtocolToDynamicInstance depth guard (100) when the SELF-HOST compiler
    // parses this generated file. The pair list is a flat collection literal;
    // conditions still evaluate lazily in dispatch order, first match wins.
-   let arms = dispatchOrder($members, $classes)->map({m |
+   // ExtensionValueDef (a language extension's value) has no m3 class to dispatch on: it is what a value no
+   // other arm takes falls to (writeUnionFallback).
+   let arms = dispatchOrder($members->filter(m | $m != 'ExtensionValueDef'), $classes)->map({m |
       let byte = unionByteFor($members, $m)->toString();
       if($m == 'PointerRef',
          | 'pair(| $vv->instanceOf(platform::pure::metamodel::PackageableElement) || $vv->instanceOf(platform::pure::metamodel::function::property::AbstractProperty) || $vv->instanceOf(platform::pure::metamodel::extension::Stereotype) || $vv->instanceOf(platform::pure::metamodel::extension::Tag),\n' +
@@ -546,7 +551,12 @@ function platform::pure::compiler::pdb::generator::emitUnion(target:WriterTarget
               'pair(| $vv->instanceOf(' + $full + '),\n' +
               '           | let r = ' + nsFor($target, $m) + '::write' + $simple + '($b, $vv->cast(@' + $full + typeArgsSuffix($cls) + '), $stack); ' + $ur + $byte + ');)';));
    });
-   let inner = 'if([\n       ' + $arms->joinStrings(',\n       ') + '],\n      | platform::pure::compiler::pdb::writerHelper::failUnion($b, \'' + $u.name + '\'))';
+   // Where a language extension's value can stand, a value no arm takes is written as an ExtensionValueDef
+   // (writerHelper::writeExtensionValue fails, naming its class, when its extension wrote no blob writer).
+   let fallback = if($members->contains('ExtensionValueDef'),
+      | 'let r = platform::pure::compiler::pdb::writerHelper::writeExtensionValue($b, $vv); ' + $ur + unionByteFor($members, 'ExtensionValueDef')->toString() + ');',
+      | 'platform::pure::compiler::pdb::writerHelper::failUnion($b, \'' + $u.name + '\')');
+   let inner = 'if([\n       ' + $arms->joinStrings(',\n       ') + '],\n      | ' + $fallback + ')';
 
    'function ' + $target.ns + '::writeUnion_' + $u.name + '(b:platform::pure::compiler::pdb::fbb::Builder[1], v:Any[0..1], stack:Any[*]):platform::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
    '{\n' +
@@ -617,6 +627,21 @@ function platform::pure::compiler::pdb::generator::generateWriter(fbsPath:String
    $header + emitAll(m3Target(parseFbs(platform::pure::functions::io::readFile($fbsPath))));
 }
 
+// A language extension's value specifications (island values), which m3's unions hold as ExtensionValueDef:
+// for each, `<its package>::<Class>_pdbValueBlob(v):Binary[1]` — its table written as a finished FlatBuffer,
+// with a fresh stack (everything pointing out of the blob is a PointerRef). Beside the class, so m3's writer
+// finds it from the value alone (writerHelper::writeExtensionValue).
+function platform::pure::compiler::pdb::generator::emitValueBlobs(target:WriterTarget[1]):String[1]
+{
+   let fbb = 'platform::pure::compiler::pdb::fbb';
+   writerClasses($target)
+      ->filter(c | allSuperClasses($c)->map(x | $x->elementToPath())->contains('platform::pure::metamodel::valuespecification::ValueSpecification'))
+      ->map(c | 'function ' + $c.package->toOne()->elementToPath() + '::' + $c.name->toOne() + '_pdbValueBlob(v:Any[1]):Binary[1]\n'
+                  + '{\n   let r = ' + $target.ns + '::write' + $c.name->toOne() + '(' + $fbb + '::newBuilder(), $v->cast(@' + $c->elementToPath() + typeArgsSuffix($c) + '), []);\n'
+                  + '   $r.builder->' + $fbb + '::finish($r.offset)->' + $fbb + '::result();\n}\n')
+      ->joinStrings('\n');
+}
+
 // Everything a target's writer holds: union dispatches, (m3 only) the AtomicValue content
 // dispatch, one writeX per table class, then the element-level dispatches.
 function platform::pure::compiler::pdb::generator::emitAll(target:WriterTarget[1]):String[1]
@@ -627,7 +652,8 @@ function platform::pure::compiler::pdb::generator::emitAll(target:WriterTarget[1
       + if($target.m3, | '\n' + emitAtomicValueContent($target.schema, $classes), | '')
       + '\n' + $own->map(c | emitClass($target, $c, $classes))->joinStrings('\n')
       + '\n' + emitElementTypeName($target)
-      + '\n' + emitWriteElementBlob($target);
+      + '\n' + emitWriteElementBlob($target)
+      + if($target.m3, | '', | '\n' + emitValueBlobs($target));
 }
 
 // The generated function an extension's `CompilerExtension.pdb` points at.

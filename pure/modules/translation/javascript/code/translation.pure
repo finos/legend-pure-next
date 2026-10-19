@@ -169,6 +169,7 @@ function platform::extensions::language::javascript::translation::stringCoders()
       pair('toUpper',           toUpperCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('toLower',           toLowerCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('parseInteger',      parseIntegerCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('inferType',         inferTypeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('parseFloat',        parseFloatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('parseDecimal',      parseDecimalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('parseBoolean',      parseBooleanCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -785,7 +786,13 @@ function platform::extensions::language::javascript::translation::translateExpre
                  )
              );
          )));
-      }
+      },
+      // A language extension's value (an expression island compiled to its own class) evaluates to the
+      // instance itself: emitted as the instance, as a canonicalised `^X(...)` is (translatePureValueToTs).
+      // It is also a value SPECIFICATION whose type and multiplicity are its own (a TDS's type is its
+      // relation type), so those are set on it too.
+      x: ValueSpecification[1] | jsCall(jsAccess(jsCall(jsAccess($x->translatePureValueToTs($conv), '_genericType'), [$x.genericType->genericTypeToCgtObject()]),
+                                                 '_multiplicity'), [$x.multiplicity->translatePureValueToTs($conv)])
    ]);
 }
 
@@ -1197,12 +1204,22 @@ function platform::extensions::language::javascript::translation::genericTypeToC
    //    finds them missing — Type's `nonPointerSubtypes` metadata tag lists
    //    exactly these three classes as the ones whose meaning is structural.
    //  - Empty rawType: emit nothing.
-   let typeEntry = if ($rt->isEmpty() || !$rt->toOne()->instanceOf(platform::pure::metamodel::PackageableElement),
-                       | []->cast(@platform::extensions::language::javascript::metamodel::PropertyAssignment),
+   let typeEntry = if ([pair(| $rt->isEmpty(),
+                             | []->cast(@platform::extensions::language::javascript::metamodel::PropertyAssignment)),
+                        pair(| $rt->toOne()->instanceOf(platform::pure::metamodel::relation::RelationType),
+                             | [jsEntry('type', $rt->toOne()->cast(@platform::pure::metamodel::relation::RelationType<Any>)->relationTypeToObject())]),
+                        pair(| !$rt->toOne()->instanceOf(platform::pure::metamodel::PackageableElement),
+                             | []->cast(@platform::extensions::language::javascript::metamodel::PropertyAssignment))],
                        | [jsEntry('type', encodePeRef($rt->toOne()))]);
    let taEntry   = if ($typeArgs->isEmpty(),
                        | []->cast(@platform::extensions::language::javascript::metamodel::PropertyAssignment),
-                       | [jsEntry('typeArguments', jsArrayLit($typeArgs->map(ta | $ta->genericTypeToCgtObject())))]);
+                       // An argument the compiler gave as a CANONICAL generic type (`^TDS<Any>` carries
+                       // GenericType_..._Any, a PackageableElement) is that element, as on the JVM hosts;
+                       // a fresh copy of it would print and serialise as a different generic type.
+                       | [jsEntry('typeArguments', jsArrayLit($typeArgs->map(ta |
+                            if($ta->instanceOf(platform::pure::metamodel::PackageableElement),
+                               | jsCall(jsId('__pureResolve'), [jsStrLit($ta->cast(@platform::pure::metamodel::PackageableElement)->elementToPath())]),
+                               | $ta->genericTypeToCgtObject()))))]);
    let tvvEntry  = if ($tvValues->isEmpty(),
                        | []->cast(@platform::extensions::language::javascript::metamodel::PropertyAssignment),
                        | [jsEntry('typeVariableValues', jsArrayLit($tvValues->map(v | translateExpression($v, defaultConvention()))))]);
@@ -1253,6 +1270,35 @@ function platform::extensions::language::javascript::translation::genericTypeToC
    // the plain object when it is absent.
    jsCall(jsId('__newCgt'),
       [jsObject($typeEntry->concatenate($taEntry)->concatenate($tvvEntry)->concatenate($eqEntry)->concatenate($cgtEntry))]);
+}
+
+// A relation type (`(a:Integer[1], b:String[0..1])`, a TDS's) as the instance it is: `new <RelationType>()`
+// with its columns set through their setters, each column a `new <Column>()` likewise — what reads of
+// `genericType.typeArguments[0].type.columns` reach. Named directly, as `^X(...)` and a captured instance are:
+// only compiled code holds a structural relation type, never the standalone parser.
+function platform::extensions::language::javascript::translation::relationTypeToObject(rt: platform::pure::metamodel::relation::RelationType<Any>[1]): Expression[1]
+{
+   newWithSetters('platform::pure::metamodel::relation::RelationType',
+      jsEntry('columns', jsArrayLit($rt.columns->cast(@platform::pure::metamodel::relation::Column<Nil, Any|*>)->map(c | $c->columnToObject()))));
+}
+
+function platform::extensions::language::javascript::translation::columnToObject(c: platform::pure::metamodel::relation::Column<Nil, Any|*>[1]): Expression[1]
+{
+   newWithSetters('platform::pure::metamodel::relation::Column',
+      [jsEntry('name', jsStrLit($c.name)),
+       jsEntry('nameWildCard', jsBoolLit($c.nameWildCard)),
+       jsEntry('genericType', $c.genericType->genericTypeToCgtObject()),
+       jsEntry('multiplicity', $c.multiplicity->translatePureValueToTs(defaultConvention()))]);
+}
+
+// `new <Class>()._p1(v1)._p2(v2)…`: an instance of the translated class at `classPath`, its slots set through
+// their setters — the shape `^X(...)` emits.
+function platform::extensions::language::javascript::translation::newWithSetters(classPath: String[1], setters: platform::extensions::language::javascript::metamodel::PropertyAssignment[*]): Expression[1]
+{
+   $setters->fold({e, acc | jsCall(jsAccess($acc, '_' + $e.name), [$e.initializer])},
+      ^platform::extensions::language::javascript::metamodel::NewExpression(
+         expression = jsId(safeJsName($classPath->split('::')->joinStrings('$'))),
+         arguments  = [])->cast(@Expression));
 }
 
 // Collect a class's `<<equality.Key>>` property names, including inherited
@@ -1741,6 +1787,12 @@ function platform::extensions::language::javascript::translation::toUpperCoder(a
 function platform::extensions::language::javascript::translation::toLowerCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    methodCall($args, 'toLowerCase', $conv);
+}
+
+// `inferType(cells)`: the type a CSV column's cells have — the runtime's __inferType (see inferType.pure).
+function platform::extensions::language::javascript::translation::inferTypeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__inferType'), [translateExpression($args->at(0), $conv)]);
 }
 
 function platform::extensions::language::javascript::translation::parseIntegerCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]

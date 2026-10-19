@@ -16,6 +16,7 @@
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
 import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.FbsNode;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.decodeExtensionValue_FbsSchema_1__FbsNode_1__FbsNode_1_;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.archive.Zip;
 import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.ReadAncestorRef;
 import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.ReadPointerRef;
@@ -72,6 +73,8 @@ public final class PdbRuntime
     private final List<Archive> archives = new ArrayList<>();
     private final Map<String, Object> elements = new HashMap<>();
     private final Map<Object, Map<Long, LazyObject>> nodes = new IdentityHashMap<>();
+    /** Extension values by the ExtensionValueDef that holds them: buffer, then position (see extensionValue). */
+    private final Map<Object, Map<Long, LazyObject>> extensionValues = new IdentityHashMap<>();
     private final Map<String, Boolean> typeStoredAs = new HashMap<>();
     private java.util.Set<String> moduleNames;
     private List<Object> allTypes;
@@ -397,6 +400,10 @@ public final class PdbRuntime
     {
         if (value instanceof FbsNode node)
         {
+            if ("ExtensionValueDef".equals(node.type()))
+            {
+                return extensionValue(node);
+            }
             if (!SCALAR_WRAPPERS.contains((String) node.type()))
             {
                 return wrap(node, owner);
@@ -422,6 +429,31 @@ public final class PdbRuntime
             return target;
         }
         return value;
+    }
+
+    /**
+     * A language extension's value (an expression island compiled to its own class): its blob is a finished
+     * FlatBuffer rooted at the extension's table, declared by the fragment its language registered. A blob is
+     * re-sliced on every read, so the decoded object is kept by where the ExtensionValueDef sits — one object
+     * per value, as for every other node. Written with a fresh stack: nothing in it reaches back out.
+     */
+    private LazyObject extensionValue(FbsNode node)
+    {
+        Map<Long, LazyObject> byPosition = extensionValues.computeIfAbsent(node.bytes(), k -> new HashMap<>());
+        LazyObject object = byPosition.get((Long) node.pos());
+        if (object == null)
+        {
+            FbsNode root = decodeExtensionValue_FbsSchema_1__FbsNode_1__FbsNode_1_.execute(schema, node);
+            // A value of a language this runtime never registered (so its schema fragment is missing): say so,
+            // as for an element, rather than decode an object whose every property is empty.
+            if (table_FbsSchema_1__String_1__FbsTable_$0_1$_.execute(schema, (String) root.type()) == null)
+            {
+                throw new IllegalStateException("no schema for " + root.type() + " — is the language that defines it registered?");
+            }
+            object = wrap(root, null);
+            byPosition.put((Long) node.pos(), object);
+        }
+        return object;
     }
 
     private LazyObject wrap(FbsNode node, LazyObject parent)

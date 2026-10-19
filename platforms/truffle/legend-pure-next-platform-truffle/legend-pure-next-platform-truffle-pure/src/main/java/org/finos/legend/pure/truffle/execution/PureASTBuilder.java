@@ -180,6 +180,13 @@ public final class PureASTBuilder
         {
             return lowerFunctionExpression(vs);
         }
+        // A language extension's value (an expression island compiled to its own class) evaluates to the
+        // instance itself: a constant, as a GenericTypeAndMultiplicityHolder is.
+        if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(vs,
+                "platform::pure::metamodel::valuespecification::ValueSpecification", resolver))
+        {
+            return new AtomicValueNode(vs);
+        }
         throw new RuntimeException(
                 "Unsupported ValueSpecification type: " + (vs == null ? "null" : vs.getClass().getName()));
     }

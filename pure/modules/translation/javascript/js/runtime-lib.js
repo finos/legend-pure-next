@@ -1605,6 +1605,29 @@ function __parseInteger(s) {
   // whitespace; throws on anything else (BigInt is strict past that).
   return BigInt(String(s).trim().replace(/^\+/, ""));
 }
+// inferType(cells): the type a CSV column's cells have, by Legend Engine's rules (see inferType.pure) — the
+// same as bootstrap's StringNatives, Truffle's InferTypeNode and the Java platform's PureValues.
+const __INFER_LONG_MIN = -(2n ** 63n);
+const __INFER_LONG_MAX = 2n ** 63n - 1n;
+function __inferCellKind(cell) {
+  if (/^(true|false)$/i.test(cell)) return "Boolean";
+  if (/^[+-]?\d+$/.test(cell)) {
+    const v = BigInt(cell.replace(/^\+/, ""));
+    return v >= __INFER_LONG_MIN && v <= __INFER_LONG_MAX ? "Integer" : "Float";
+  }
+  if (/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(cell)) return "Float";
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(cell)) return "Date";
+  return "String";
+}
+function __inferType(cells) {
+  const isNumber = (k) => k === "Integer" || k === "Float";
+  const kind = (cells === void 0 ? [] : Array.isArray(cells) ? cells : [cells])
+    .map((raw) => (raw === null || raw === void 0 ? "" : String(raw).trim()))
+    .filter((cell) => cell !== "" && cell !== "null")
+    .map(__inferCellKind)
+    .reduce((acc, k) => (acc === null || acc === k ? k : isNumber(acc) && isNumber(k) ? "Float" : "String"), null);
+  return __pureResolve("platform::pure::metamodel::type::primitives::" + (kind ?? "String"));
+}
 function __parseDecimalScaled(s, scale) {
   return Number(parseFloat(String(s)).toFixed(Number(scale)));
 }

@@ -343,7 +343,9 @@ check("every language manifest names its sections as a list and none says bundle
 });
 
 check("the Pure language's schema comes from its manifest", () => {
-    assert.equal(languageSchema(CORE), readFileSync(join(SHARED, "specification/m3.fbs"), "utf8"));
+    // ###Pure's own; CORE also holds the test language, whose fragment (its island values) follows m3's.
+    assert.equal(languageSchema([languageNamed("Pure").descriptor]), readFileSync(join(SHARED, "specification/m3.fbs"), "utf8"));
+    assert.ok(languageSchema(CORE).startsWith(readFileSync(join(SHARED, "specification/m3.fbs"), "utf8")), "m3 first");
     assert.equal(LANGUAGES.find((l) => l.name === "Pure").fbs, "shared/specification/m3.fbs");
 });
 
@@ -513,6 +515,66 @@ check("a ###Diagram golden reads back pointers to class-typed, generic and inher
     } finally {
         host.unregister("test");
     }
+});
+
+// An island value (a language extension's value specification, which m3's unions hold as an
+// ExtensionValueDef) reads back as an object of its own class, its pointers resolved like any other. The
+// archive is the specification's island golden for `#REF{m::Person}#`; the schema fragment comes with the
+// test language (language_test.json).
+const ISLAND_GOLDEN = join(REPO, "pure/specification/compiler/tests-pdb-serialization/valueSpecification/island/ref.pdb");
+
+check("an island value reads back as an object of its own class", () => {
+    host.register(PdbModule.open(ISLAND_GOLDEN));
+    try {
+        const value = asArray(host.getElement("test::island::ref__Any_MANY_").expressionSequence)[0];
+        assert.equal(one(one(value.target).name), "Person", "the RefLiteral points at the class m::Person");
+    } finally {
+        host.unregister("test");
+    }
+});
+
+check("an island value fails loudly without the language that declares it", () => {
+    const registry = new ModuleRegistry().useLanguages([languageNamed("Pure").descriptor]);
+    registry.register(PdbModule.open(join(SHARED, "core.pdb")));
+    registry.register(PdbModule.open(ISLAND_GOLDEN));
+    assert.throws(() => metadataHost(registry).metadataRead("test::island::ref__Any_MANY_", "expressionSequence"), /no schema for RefLiteralDef/);
+});
+
+// The Pure language's own island extensions live one level down (pure/extensions/pure/<name>), and are
+// found there like any other: an extension is a directory holding language_<name>.json.
+check("the TDS extension is found under pure/extensions/pure", () => {
+    const tds = EXTENSION_DESCRIPTORS.find((d) => d.name === "tds");
+    assert.ok(tds, `no tds descriptor in [${EXTENSION_DESCRIPTORS.map((d) => d.name).join(", ")}]`);
+    assert.equal(tds.dir, "pure/tds");
+    assert.deepEqual(tds.sections, []);
+    assert.deepEqual(tds.pdbs, ["pure/extensions/pure/tds/build/tds.pdb"]);
+});
+
+// A TDS golden (pure/extensions/pure/tds/tests/compiler-pdb-serialization, regenerated with
+// `just extensions::pure::tds::regen-pdb-goldens`): the `#TDS{…}#` in its fixture's function, decoded by THIS
+// host with the schema fragment the tds language declares.
+const TDS_GOLDEN = join(REPO, "pure/extensions/pure/tds/tests/compiler-pdb-serialization/tds/typedHeader.pdb");
+
+check("a TDS value reads back as the relation it compiled to", () => {
+    host.register(PdbModule.open(TDS_GOLDEN));
+    try {
+        const tds = asArray(host.getElement("test::tds::typedHeader__Any_MANY_").expressionSequence)[0];
+        assert.equal(one(tds.csv).split("\n")[0], "id, name, amount", "csv starts with the column names");
+        const relation = one(one(asArray(one(tds.genericType).typeArguments)[0]).type);
+        const columns = asArray(relation.columns);
+        assert.deepEqual(columns.map((c) => one(c.name)), ["id", "name", "amount"]);
+        assert.deepEqual(columns.map((c) => one(one(one(c.genericType).type).name)), ["Integer", "String", "Decimal"],
+            "a declared type, an inferred one, and a declared [0..1] one");
+    } finally {
+        host.unregister("test");
+    }
+});
+
+check("a TDS value fails loudly without the tds language", () => {
+    const registry = new ModuleRegistry().useLanguages(CORE);
+    registry.register(PdbModule.open(join(SHARED, "core.pdb")));
+    registry.register(PdbModule.open(TDS_GOLDEN));
+    assert.throws(() => metadataHost(registry).metadataRead("test::tds::typedHeader__Any_MANY_", "expressionSequence"), /no schema for TDSDef/);
 });
 
 check("a PDB holding ###Diagram elements fails loudly without the diagram language", () => {

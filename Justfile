@@ -309,6 +309,7 @@ _test-all-build: javascript::antlr-bundle \
 #                                       generated writer while Truffle's self-host compiles it
 #   truffle::usage-example              would rebuild Truffle's jar, which java and modules run on
 #   modules::*::test-all                would rebuild the module PDBs every platform reads
+#   extensions::pure::tds::test-all     would rebuild tds.pdb, which java and javascript read
 # The JS translation module's tests regenerate platforms/javascript/generated, so they run in the
 # javascript branch after the platform's own suites, never beside them. translation_java::test-all
 # is not run separately: it is `java::test-translation`, which the java branch runs.
@@ -320,7 +321,7 @@ _test-all-suites:
     mkdir -p "$logs"
     j() { just --justfile "{{justfile()}}" "$@"; }
     branch_bootstrap()  { j bootstrap::spec && j --no-deps bootstrap::spec-compiler-selfhost; }
-    branch_truffle()    { j truffle::spec truffle::spec-compiler-selfhost truffle::native::test-all && j --no-deps truffle::usage-example; }
+    branch_truffle()    { j truffle::spec truffle::spec-compiler-selfhost truffle::native::test-all && j --no-deps truffle::usage-example && j --no-deps extensions::pure::tds::test-all; }
     branch_javascript() { j javascript::test-all modules::translation_javascript::test-all; }
     branch_modules()    { j --no-deps modules::language_java::test-all modules::language_javascript::test-all modules::translation_shared::test-all; }
     branch_java()       { j java::test-all; }
@@ -364,7 +365,7 @@ test-all-serial: (doctor "test-all")
 _test-all-serial: clean \
     (_stage-start "bootstrap") javascript::antlr-bundle bootstrap::test-all (_stage-end "bootstrap") \
     (_stage-start "modules-build") modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests (_stage-end "modules-build") \
-    (_stage-start "truffle") truffle::test-all (_stage-end "truffle") \
+    (_stage-start "truffle") truffle::test-all extensions::pure::tds::test-all (_stage-end "truffle") \
     (_stage-start "javascript") javascript::test-all (_stage-end "javascript") \
     (_stage-start "modules-test") modules::test-all (_stage-end "modules-test") \
     (_stage-start "java") java::test-all (_stage-end "java")

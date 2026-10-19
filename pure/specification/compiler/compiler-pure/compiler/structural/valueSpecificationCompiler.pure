@@ -142,6 +142,9 @@ function platform::pure::compiler::structural::valueSpecificationCompiler::compi
         gmh:platform::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] |
             compileGenericTypeAndMultiplicityHolder($gmh, $vs, $ctxGT),
 
+        i:platform::pure::protocol::grammar::valuespecification::Island[1] |
+            platform::pure::compiler::extension::compileIsland($i, $ctxGT, $scope),
+
         any:Any[1] |
             ^ValueCompileResult(values = [], openVariables = [])
     ]);

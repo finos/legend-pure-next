@@ -667,6 +667,14 @@ public final class GenericFbDecoder
                     }
                     return val;
                 }
+                if ("ExtensionValueDef".equals(type))
+                {
+                    // A language extension's value (an expression island compiled to its own class): its blob is
+                    // a finished FlatBuffer rooted at the extension's table, declared by the fragment its
+                    // language registered. Written with a fresh stack, so nothing in it reaches back here.
+                    FbsNode root = org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.decodeExtensionValue_FbsSchema_1__FbsNode_1__FbsNode_1_.execute(pureSchema(), node);
+                    return nestedPdo(root.type(), root, resolver, null);
+                }
                 return nestedPdo(type, node, resolver, parent);
             }
             // decodeNode already turned PointerRef / AncestorRef into their

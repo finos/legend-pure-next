@@ -130,6 +130,8 @@ generate-writer:
     # Only the generated writer: every caller resolves gen:: at runtime, so the
     # rest of compiler-pure — tests included — compiles without it.
     rm -rf "$stage/src/pdb/writer/generated"
+    # The test island values' generated writer too (test/islands/generated): it calls the m3 writer.
+    rm -rf "$stage/src/test/islands/generated"
     {{substep}} 'pass 1: compile compiler-pure without the generated writer'
     if ! {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
@@ -180,6 +182,55 @@ generate-writer:
         '// limitations under the License.' > "{{gen_writer}}"
     cat "$body" >> "{{gen_writer}}"
     echo "  wrote {{gen_writer}} ($(grep -c '^function ' "$body") generated functions)"
+    # The test package's island values (test/islands/metamodel.pure: EchoLiteral, RefLiteral) are a language
+    # extension's values: their fbs fragment and writer are generated from the metamodel exactly as the
+    # diagram's are (pure/extensions/diagram/Justfile `generate`), from pass 1's PDBs. The fragment is also
+    # staged beside m3.fbs, where the specification's PDB golden runner and the test language read it.
+    {{substep}} 'test island values -> test/islands/generated/{islandTest.fbs,writer.pure}'
+    isl="{{compiler_src}}/test/islands"; ids="$isl/islandTest-fbs-field-ids.txt"
+    test -f "$ids" || printf '# FlatBuffer field-ID registry — keeps wire format stable across builds.\n# Auto-maintained by RdfFbsSchemaGenerator. Append-only.\n# Format: TableName.field_name=ID\n\n' > "$ids"
+    mkdir -p "$isl/generated"
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb --pdb {{shared_out}}/core-tests.pdb \
+        --pdb "$stage/out/compiler.pdb" --pdb "$stage/out/compiler-tests.pdb" \
+        --function "platform::pure::compiler::pdb::fbsgen::printFbs_String_1__String_1__String_1__Boolean_1_" \
+        --args "platform::pure::compiler::test::islands::metamodel" "{{shared_out}}/specification/m3.fbs" "$ids" 2>"$log" > "$body"
+    awk '/^===FBS-BEGIN===$/{f=1;next} /^===FBS-END===$/{f=0} f' "$body" > "$isl/generated/islandTest.fbs"
+    awk '/^===IDS-BEGIN===$/{f=1;next} /^===IDS-END===$/{f=0} f' "$body" > "$ids"
+    test -s "$isl/generated/islandTest.fbs" || { echo "ERROR: printFbs produced nothing for the test island values" >&2; cat "$log" "$body" >&2; exit 1; }
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb --pdb {{shared_out}}/core-tests.pdb \
+        --pdb "$stage/out/compiler.pdb" --pdb "$stage/out/compiler-tests.pdb" \
+        --function "platform::pure::compiler::pdb::generator::printExtensionWriter_String_1__String_1__String_1__String_1__Boolean_1_" \
+        --args "{{shared_out}}/specification/m3.fbs" "$isl/generated/islandTest.fbs" \
+               "platform::pure::compiler::test::islands::metamodel" "platform::pure::compiler::test::islands::pdb::gen" 2>"$log" > "$body"
+    head -13 "{{gen_writer}}" > "$isl/generated/writer.pure"
+    awk '/^===GENWRITER-BEGIN===$/{f=1;next} /^===GENWRITER-END===$/{f=0} f' "$body" >> "$isl/generated/writer.pure"
+    grep -q '_pdbValueBlob' "$isl/generated/writer.pure" || { echo "ERROR: printExtensionWriter produced no value writers for the test island values" >&2; cat "$log" "$body" >&2; exit 1; }
+    cp "$isl/generated/islandTest.fbs" "{{shared_out}}/specification/islandTest.fbs"
+    echo "  wrote test/islands/generated/islandTest.fbs ($(grep -c '^table ' "$isl/generated/islandTest.fbs") tables) and writer.pure"
+
+# The island goldens (pure/specification/compiler/tests-pdb-serialization/valueSpecification/island): the
+# archives the island SUCCESS fixtures compile to, written by the Pure writer with the test island handlers
+# (the Java compiler cannot build the test package's island values, so PdbGoldenGeneratorTest skips them).
+# Read each one back before keeping it.
+regen-island-goldens: build-compiler-pdb
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'regen-island-goldens'
+    tests="{{spec}}/compiler/tests"; out="{{spec}}/compiler/tests-pdb-serialization/valueSpecification/island"
+    mkdir -p "$out"
+    for f in $(cd "$tests" && find valueSpecification/island -name '*.pure' ! -name '*_E_*' | sort); do
+        name="${f%.pure}"
+        {{pure_bootstrap}} execute \
+            --pdb {{shared_out}}/core.pdb --pdb {{shared_out}}/core-tests.pdb \
+            --pdb {{shared_out}}/compiler.pdb --pdb {{shared_out}}/compiler-tests.pdb \
+            --function "platform::pure::compiler::test::pdb::goldenHexOf_String_1__String_1__String_1_" \
+            --args "$tests" "$name" 2>/dev/null | grep -v '^\[graal' | tail -1 | tr -d '\n' \
+            | xxd -r -p > "$out/$(basename "$name").pdb"
+        test -s "$out/$(basename "$name").pdb" || { echo "ERROR: no archive for $name" >&2; exit 1; }
+        echo "  wrote tests-pdb-serialization/$name.pdb"
+    done
 
 # Compile compiler-pure -> shared/compiler.pdb (lean) + compiler-tests.pdb via the bootstrap CLI.
 build-compiler-pdb: (_step-start "bootstrap/compiler-pdb") generate-writer

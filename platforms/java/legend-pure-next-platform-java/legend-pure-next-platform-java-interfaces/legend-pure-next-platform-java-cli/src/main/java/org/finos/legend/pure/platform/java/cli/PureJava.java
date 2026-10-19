@@ -19,6 +19,7 @@ import org.finos.legend.pure.platform.java.compiler.module.pdbModule.PdbModule;
 import org.finos.legend.pure.platform.java.execution.Execute;
 import org.finos.legend.pure.platform.java.execution.PureStack;
 import org.finos.legend.pure.platform.java.extensions.diagram.DiagramLanguage;
+import org.finos.legend.pure.platform.java.extensions.tds.TdsLanguage;
 import org.finos.legend.pure.platform.java.runtime.PureRuntime;
 
 import org.eclipse.collections.api.factory.Lists;
@@ -105,7 +106,7 @@ public final class PureJava
         // costs nothing when it is not used.
         PureRuntime.Builder builder = PureRuntime.builder()
                 .withRegistry(new ModuleRegistry().registerAll(archives.collect(Functions.throwing(PdbModule::open))))
-                .withLanguages(DiagramLanguage.all())
+                .withLanguages(DiagramLanguage.all().newWithAll(TdsLanguage.all()))
                 .withModuleRoot(root);
         if (schema != null)
         {

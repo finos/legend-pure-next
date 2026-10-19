@@ -73,6 +73,10 @@ function platform::pure::compiler::pdb::reader::tests::testSchema():platform::pu
       '    value: string (id: 3);',
       '    profile: PointerRef (id: 4);',
       '}',
+      'table ExtensionValueDef {',
+      '    kind: string (id: 0);',
+      '    blob: [ubyte] (id: 1);',
+      '}',
       'table SourceInformationDef {',
       '    classifier_generic_type: ClassifierGenericTypePropertyUnion (id: 1);',
       '    source_information: SourceInformationDef (id: 2);',
@@ -270,4 +274,45 @@ function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testOptiona
    let zeroBytes = $zero.builder->platform::pure::compiler::pdb::fbb::finish($zero.offset)->platform::pure::compiler::pdb::fbb::result();
    assert(platform::pure::compiler::pdb::reader::readOptionalFloatField(platform::pure::compiler::pdb::reader::rootNode($absentBytes, 'T'), 0)->isEmpty());
    assertEquals(0.0, platform::pure::compiler::pdb::reader::readOptionalFloatField(platform::pure::compiler::pdb::reader::rootNode($zeroBytes, 'T'), 0));
+}
+
+// An ExtensionValueDef (a language extension's value) holds a finished FlatBuffer rooted at the table
+// `kind` names: decodeExtensionValue gives that root, read like any node. The blob here is an m3
+// SourceInformationDef standing in for an extension's table.
+// An ExtensionValueDef around a SourceInformationDef ending on `endLine` (an extension table stand-in).
+function platform::pure::compiler::pdb::reader::tests::extensionValueBytes(endLine:Integer[1]):Binary[1]
+{
+   let cpSI  = ^platform::pure::metamodel::pointer::ClassPointer<Any>(path = 'platform::pure::metamodel::SourceInformation');
+   let upgt  = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                  type = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::type::generics::UserDefinedGenericType')->cast(@Class<Any>));
+   let si    = ^platform::pure::metamodel::SourceInformation(
+                  classifierGenericType = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = $cpSI, classifierGenericType = $upgt),
+                  sourceId = 'island.pure', startLine = 1, startColumn = 2, endLine = $endLine, endColumn = 4);
+   let inner = platform::pure::compiler::pdb::writerHelper::evalGenWrite('writeSourceInformation_Builder_1__SourceInformation_1__Any_MANY__BuilderAndOffset_1_', platform::pure::compiler::pdb::fbb::newBuilder(), $si, []);
+   let blob  = $inner.builder->platform::pure::compiler::pdb::fbb::finish($inner.offset)->platform::pure::compiler::pdb::fbb::result();
+   let outer = platform::pure::compiler::pdb::writerHelper::writeExtensionValueDef(platform::pure::compiler::pdb::fbb::newBuilder(), 'SourceInformationDef', $blob);
+   $outer.builder->platform::pure::compiler::pdb::fbb::finish($outer.offset)->platform::pure::compiler::pdb::fbb::result();
+}
+
+// An ExtensionValueDef (a language extension's value) holds a finished FlatBuffer rooted at the table
+// `kind` names: decodeExtensionValue gives that root, read like any node.
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testReadExtensionValue():Boolean[1]
+{
+   let s     = platform::pure::compiler::pdb::reader::tests::testSchema();
+   let node  = platform::pure::compiler::pdb::reader::rootNode(platform::pure::compiler::pdb::reader::tests::extensionValueBytes(3), 'ExtensionValueDef');
+   let value = platform::pure::compiler::pdb::reader::decodeExtensionValue($s, $node);
+   assertEquals('SourceInformationDef', $value.type);
+   assertEquals('island.pure', platform::pure::compiler::pdb::reader::readField($s, $value, 'source_id'));
+   assertEquals(3, platform::pure::compiler::pdb::reader::readField($s, $value, 'end_line'));
+}
+
+// The golden runner compares two extension values as the tables their blobs hold: a difference is reported
+// at the field that differs, not as two different byte runs; equal values report nothing.
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testGoldenComparesExtensionValuesByTable():Boolean[1]
+{
+   let s = platform::pure::compiler::pdb::reader::tests::testSchema();
+   let a = platform::pure::compiler::pdb::reader::rootNode(platform::pure::compiler::pdb::reader::tests::extensionValueBytes(3), 'ExtensionValueDef');
+   let b = platform::pure::compiler::pdb::reader::rootNode(platform::pure::compiler::pdb::reader::tests::extensionValueBytes(9), 'ExtensionValueDef');
+   assertEquals(['v.end_line: 3 in the Pure archive, 9 in the golden'], platform::pure::compiler::test::pdb::compareNode($s, $a, $b, 'v'));
+   assertEmpty(platform::pure::compiler::test::pdb::compareNode($s, $a, platform::pure::compiler::pdb::reader::rootNode(platform::pure::compiler::pdb::reader::tests::extensionValueBytes(3), 'ExtensionValueDef'), 'v'));
 }

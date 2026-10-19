@@ -91,6 +91,12 @@ public class CompilerCompiledGraphTest
     // Tests that compile with intentional errors — skip them here (covered by CompilerErrorTest)
     private static final Set<String> SKIP_TESTS = Set.of();
 
+    // valueSpecification/island compiles to the test package's island values (EchoLiteral, RefLiteral): classes
+    // of a Pure-defined metamodel, which this compiler — built on m3.ttl's classes — cannot instantiate. Their
+    // compiled graphs and archives are pinned by the Pure compiler on every host (the island goldens are
+    // written by the Pure writer); this compiler still runs the island ERROR fixtures (CompilerErrorTest).
+    static final String ISLAND_VALUE_FIXTURES = "valueSpecification/island/";
+
     /**
      * Walk up from cwd until we find the {@code specification/compiler/tests/} directory.
      */
@@ -170,7 +176,7 @@ public class CompilerCompiledGraphTest
                                 String testName = relative.endsWith(".pure")
                                         ? relative.substring(0, relative.length() - 5)
                                         : relative;
-                                if (!SKIP_TESTS.contains(testName))
+                                if (!SKIP_TESTS.contains(testName) && !testName.startsWith(ISLAND_VALUE_FIXTURES))
                                 {
                                     // Pass absolute filesystem path; loadResource falls through to it
                                     tests.add(Arguments.of(testName, p.toString()));

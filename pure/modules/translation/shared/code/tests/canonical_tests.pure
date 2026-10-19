@@ -1316,3 +1316,15 @@ function <<test.Test>> platform::extensions::pure::translation::canonical::tests
       )
    );
 }
+
+// A language extension's value (an island value) decompiles to an atomic value holding it, but an m3 value
+// specification with no arm of its own still fails loudly — the extension arm must not swallow it.
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testDecompileStillFailsOnAnM3HolderWithoutAnArm():Boolean[1]
+{
+   assertError(| platform::extensions::pure::translation::decompile::toProtocolValueSpec(
+                    ^platform::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder<Any|*>(
+                       genericType  = ^platform::pure::metamodel::type::generics::CompilerNotSetGenericType(),
+                       multiplicity = ^platform::pure::metamodel::multiplicity::CompilerNotSetMultiplicity()),
+                    newMap([]->cast(@platform::pure::functions::collection::Pair<String, List<Any>>))),
+               'toProtocolValueSpec: unhandled subtype; classifier=platform::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder');
+}

@@ -295,6 +295,11 @@ function platform::extensions::pure::translation::decompile::toProtocolValueSpec
             multiplicity = $pMul
          );
       },
+      // A language extension's value (an expression island compiled to its own class; the arms above are
+      // m3's): it evaluates to the instance itself, so it travels as an atomic value holding it.
+      {ext: platform::pure::metamodel::valuespecification::ValueSpecification[1] |
+         platform::extensions::pure::translation::decompile::classInstanceToProtocol($ext)
+      },
       // Diagnostic catch-all: surface the value's runtime classifier so we
       // know which arm to add (or which Truffle PDO construction site is
       // missing classifierGenericType, à la the lambda fix).

@@ -371,6 +371,12 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::printV
         col:Collection[1] | $col->printCollection($indent, $context),
         v:VariableExpression[1] | $v->printVariable($indent),
         gmh:GenericTypeAndMultiplicityHolder[1] | $gmh->printHolder($indent),
+        // A language extension's value (an island compiled to its own class): its handler prints it.
+        ext:ValueSpecification[1] |
+            let h = platform::pure::compiler::extension::islandHandlerOwning($context, $ext);
+            if($h->isEmpty() || $h.printGraph->isEmpty(),
+               | $indent + 'unsupported: ' + $ext->type()->elementToPath(),
+               | $h.printGraph->toOne()->eval($ext, $indent, $context));,
         other:Any[1] | $indent + 'unsupported: ' + $other->type()->elementToPath()
     ]);
 }

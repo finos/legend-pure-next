@@ -232,6 +232,15 @@ Class platform::pure::compiler::pdb::reader::ReadAncestorRef
    depth : Integer[1];
 }
 
+// A language extension's value (an ExtensionValueDef): its blob, a finished FlatBuffer, rooted at the table
+// `kind` names — declared in the extension's schema fragment, which `s` must include.
+function platform::pure::compiler::pdb::reader::decodeExtensionValue(s:platform::pure::compiler::pdb::schema::FbsSchema[1], node:platform::pure::compiler::pdb::reader::FbsNode[1]):platform::pure::compiler::pdb::reader::FbsNode[1]
+{
+   platform::pure::compiler::pdb::reader::rootNode(
+      platform::pure::compiler::pdb::reader::readField($s, $node, 'blob')->cast(@Binary)->toOne(),
+      platform::pure::compiler::pdb::reader::readField($s, $node, 'kind')->cast(@String)->toOne());
+}
+
 // PointerRef/AncestorRef nodes become descriptions; everything else stays a node.
 function platform::pure::compiler::pdb::reader::decodeNode(node:platform::pure::compiler::pdb::reader::FbsNode[1]):Any[1]
 {

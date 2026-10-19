@@ -27,7 +27,7 @@
 // thin delegates to the registry; only `__metadataRead` does real work here.
 
 import {
-    readField, hasField, unwrapValueDef,
+    readField, hasField, unwrapValueDef, rootNode,
     isFbsNode, isPointerRef, isAncestorRef, asList, POINTER_KINDS,
 } from "./pure-reader.js";
 
@@ -223,6 +223,14 @@ export function marshal(sx, v, stack = []) {
         return stack[idx];
     }
     if (isFbsNode(v)) {
+        // A language extension's value (an expression island compiled to its own class): its blob is a finished
+        // FlatBuffer rooted at the extension's table, declared by the fragment its language registered. Written
+        // with a fresh stack, so nothing in it reaches back up this one.
+        if (v.type === "ExtensionValueDef") {
+            const root = rootNode(readField(sx, v, "blob")[0], readField(sx, v, "kind")[0]);
+            if (!sx.tables.has(root.type)) throw new Error(`no schema for ${root.type} — is the language that defines it registered?`);
+            return marshal(sx, root, []);
+        }
         // A scalar `*ValueDef` wraps a single primitive in `val` (the FlatBuffer
         // encoding of an AtomicValue's raw payload). Unwrap it back to the bare
         // scalar the runtime holds in memory. (ValueDefs are not write-stack

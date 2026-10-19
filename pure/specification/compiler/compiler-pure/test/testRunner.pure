@@ -59,13 +59,15 @@ function <<test.TestDependency>> platform::pure::compiler::test::runCompiledGrap
     platform::pure::compiler::test::runCompiledGraphTestsWithReport($testDir, $reportPath);
 }
 
+// The specification's fixtures run with the test package's island handlers (islandTestExtension), so
+// valueSpecification/island can pin how an expression island compiles; they claim only `#ECHO{…}#`.
 function <<test.TestDependency>> platform::pure::compiler::test::runCompiledGraphTestsWithReport(testDir:String[1], reportPath:String[0..1]):String[1]
 {
-    platform::pure::compiler::test::runCompiledGraphTestsWithReport($testDir, $reportPath, [], []);
+    platform::pure::compiler::test::runCompiledGraphTestsWithReport($testDir, $reportPath, platform::pure::compiler::test::islandTestExtension(), []);
 }
 
 // What a language extension's own fixtures run with: its compiler passes and its graph printers (see
-// assertCompiledGraph). The specification's fixtures run with none.
+// assertCompiledGraph).
 function <<test.TestDependency>> platform::pure::compiler::test::runCompiledGraphTests(testDir:String[1], reportPath:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*], printers:Function<{platform::pure::metamodel::PackageableElement[1], platform::pure::compiler::CompilerContext[1]->String[0..1]}>[*]):String[1]
 {
     platform::pure::compiler::test::runCompiledGraphTestsWithReport($testDir, $reportPath, $extensions, $printers);

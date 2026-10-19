@@ -5,14 +5,7 @@
     "elements" : [ {
       "_type" : "UserDefinedFunction",
       "expressionSequence" : [ {
-        "_type" : "AtomicValue",
-        "genericType" : {
-          "_type" : "UserDefinedGenericType",
-          "type" : {
-            "_type" : "Type_Pointer",
-            "value" : "platform::pure::metamodel::type::primitives::String"
-          }
-        },
+        "_type" : "Island",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 6,
@@ -20,7 +13,7 @@
           "startColumn" : 3,
           "startLine" : 4
         },
-        "value" : "#{}#"
+        "text" : "{}"
       } ],
       "functionName" : "dslExpression",
       "name" : "dslExpression__Any_MANY_",
