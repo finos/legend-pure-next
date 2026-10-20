@@ -65,6 +65,13 @@ public final class PureContext
     private PureASTBuilder astBuilder;
     private TrufflePureParser pureParser;
 
+    // memoize (lang/eval/memoize.pure): results per (function address, arguments) for this execution,
+    // and the calls being computed, to report a call that needs its own result. Both are cleared when
+    // the outermost execution ends (executionDepth back to 0).
+    private final java.util.Map<Object, Object> memo = new java.util.HashMap<>();
+    private final java.util.Set<Object> memoizing = new java.util.HashSet<>();
+    private int executionDepth;
+
     // Per-FD compilation cache: layout + lowered body
     private final WeakHashMap<Object, CompiledFunction> functionCache = new WeakHashMap<>();
     // Per-lambda caches
@@ -939,5 +946,51 @@ public final class PureContext
         }
         catch (RuntimeException ignored) {}
         return "lambda@" + System.identityHashCode(lambda);
+    }
+
+    /**
+     * Start a top-level execution; nested ones (a native running Pure again) share its memo.
+     */
+    public void beginExecution()
+    {
+        executionDepth++;
+    }
+
+    /**
+     * End an execution: the outermost one forgets everything memoized during it.
+     */
+    public void endExecution()
+    {
+        if (--executionDepth == 0)
+        {
+            memo.clear();
+            memoizing.clear();
+        }
+    }
+
+    /**
+     * The memoized result for {@code key}, computing it with {@code compute} the first time. A failing
+     * computation caches nothing; one that needs its own result is an error.
+     */
+    public Object memoized(Object key, String address, java.util.function.Supplier<Object> compute)
+    {
+        if (memo.containsKey(key))
+        {
+            return memo.get(key);
+        }
+        if (!memoizing.add(key))
+        {
+            throw new RuntimeException("memoize cycle: " + address + " is already being computed for these arguments");
+        }
+        try
+        {
+            Object result = compute.get();
+            memo.put(key, result);
+            return result;
+        }
+        finally
+        {
+            memoizing.remove(key);
+        }
     }
 }

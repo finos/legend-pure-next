@@ -909,38 +909,40 @@ function meta::pure::bridge::m3::wrap(x: Any[1]): Any[1]
    $x->match([
       n: platform::pure::metamodel::type::Class<Any>[1] | ^meta::pure::metamodel::type::Class<Any>(_next = $n),
       n: platform::pure::metamodel::function::UserDefinedFunction<Any>[1] | ^meta::pure::metamodel::function::ConcreteFunctionDefinition<Any>(_next = $n),
+      n: platform::pure::metamodel::function::NativeFunction<Any>[1] | ^meta::pure::metamodel::function::NativeFunction<Any>(_next = $n),
       n: platform::pure::metamodel::type::PrimitiveType[1] | ^meta::pure::metamodel::type::PrimitiveType(_next = $n),
       n: platform::pure::metamodel::type::Enumeration<Any>[1] | ^meta::pure::metamodel::type::Enumeration<Any>(_next = $n),
-      n: platform::pure::metamodel::function::NativeFunction<Any>[1] | ^meta::pure::metamodel::function::NativeFunction<Any>(_next = $n),
       n: platform::pure::metamodel::function::PackageableFunction<Any>[1] | ^meta::pure::metamodel::function::PackageableFunction<Any>(_next = $n),
       n: platform::pure::metamodel::function::property::QualifiedProperty<Any>[1] | ^meta::pure::metamodel::function::property::QualifiedProperty<Any>(_next = $n),
       n: platform::pure::metamodel::type::generics::PackageableGenericType[1] | ^meta::pure::metamodel::type::generics::GenericType(_next = $n),
       n: platform::pure::metamodel::type::DataType[1] | ^meta::pure::metamodel::type::DataType(_next = $n),
       n: platform::pure::metamodel::multiplicity::PackageableMultiplicity[1] | ^meta::pure::metamodel::multiplicity::PackageableMultiplicity(_next = $n),
-      n: platform::pure::metamodel::relationship::Association[1] | ^meta::pure::metamodel::relationship::Association(_next = $n),
       n: platform::pure::metamodel::function::property::Property<Any, Any|*>[1] | ^meta::pure::metamodel::function::property::Property<Any, Any|*>(_next = $n),
-      n: platform::pure::metamodel::type::generics::InferredGenericType[1] | ^meta::pure::metamodel::type::generics::InferredGenericType(_next = $n),
-      n: platform::pure::metamodel::Package[1] | ^meta::pure::metamodel::Package(_next = $n),
+      n: platform::pure::metamodel::relationship::Association[1] | ^meta::pure::metamodel::relationship::Association(_next = $n),
       n: platform::pure::metamodel::function::property::AbstractProperty<Any>[1] | ^meta::pure::metamodel::function::property::AbstractProperty<Any>(_next = $n),
+      n: platform::pure::metamodel::Package[1] | ^meta::pure::metamodel::Package(_next = $n),
       n: platform::pure::metamodel::extension::Profile[1] | ^meta::pure::metamodel::extension::Profile(_next = $n),
       n: platform::pure::metamodel::PackageableElement[1] | ^meta::pure::metamodel::PackageableElement(_next = $n),
       n: platform::pure::metamodel::type::Enum[1] | ^meta::pure::metamodel::type::Enum(_next = $n),
+      n: platform::pure::metamodel::type::generics::InferredGenericType[1] | ^meta::pure::metamodel::type::generics::InferredGenericType(_next = $n),
       n: platform::pure::metamodel::type::ConstraintsGetterOverride[1] | ^meta::pure::metamodel::type::ConstraintsGetterOverride(_next = $n),
       n: platform::pure::metamodel::function::LambdaFunction<Any>[1] | ^meta::pure::metamodel::function::LambdaFunction<Any>(_next = $n),
+      n: platform::pure::metamodel::type::generics::TypeParameter[1] | ^meta::pure::metamodel::type::generics::TypeParameter(_next = $n),
       n: platform::pure::metamodel::extension::AnnotatedElement[1] | ^meta::pure::metamodel::extension::AnnotatedElement(_next = $n),
+      n: platform::pure::metamodel::valuespecification::VariableExpression[1] | ^meta::pure::metamodel::valuespecification::VariableExpression(_next = $n),
       n: platform::pure::metamodel::valuespecification::DotApplication[1] | ^meta::pure::metamodel::valuespecification::SimpleFunctionExpression(_next = $n),
       n: platform::pure::metamodel::valuespecification::FunctionApplication[1] | ^meta::pure::metamodel::valuespecification::SimpleFunctionExpression(_next = $n),
       n: platform::pure::metamodel::function::FunctionDefinition<Any>[1] | ^meta::pure::metamodel::function::FunctionDefinition<Any>(_next = $n),
-      n: platform::pure::metamodel::type::generics::TypeParameter[1] | ^meta::pure::metamodel::type::generics::TypeParameter(_next = $n),
       n: platform::pure::metamodel::PropertyOwner[1] | ^meta::pure::metamodel::PropertyOwner(_next = $n),
       n: platform::pure::metamodel::type::GetterOverride[1] | ^meta::pure::metamodel::type::GetterOverride(_next = $n),
       n: platform::pure::metamodel::type::ConstraintsOverride[1] | ^meta::pure::metamodel::type::ConstraintsOverride(_next = $n),
-      n: platform::pure::metamodel::valuespecification::VariableExpression[1] | ^meta::pure::metamodel::valuespecification::VariableExpression(_next = $n),
       n: platform::pure::metamodel::valuespecification::AtomicValue[1] | ^meta::pure::metamodel::valuespecification::InstanceValue(_next = $n),
       n: platform::pure::metamodel::valuespecification::Collection[1] | ^meta::pure::metamodel::valuespecification::InstanceValue(_next = $n),
       n: platform::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder<Any|*>[1] | ^meta::pure::metamodel::valuespecification::InstanceValue(_next = $n),
       n: platform::pure::metamodel::valuespecification::FunctionExpression[1] | ^meta::pure::metamodel::valuespecification::FunctionExpression(_next = $n),
       n: platform::pure::metamodel::type::FunctionType[1] | ^meta::pure::metamodel::type::FunctionType(_next = $n),
+      n: platform::pure::metamodel::extension::Stereotype[1] | ^meta::pure::metamodel::extension::Stereotype(_next = $n),
+      n: platform::pure::metamodel::extension::Tag[1] | ^meta::pure::metamodel::extension::Tag(_next = $n),
       n: platform::pure::metamodel::relation::GenericTypeOperation[1] | ^meta::pure::metamodel::relation::GenericTypeOperation(_next = $n),
       n: platform::pure::metamodel::relation::RelationType<Any>[1] | ^meta::pure::metamodel::relation::RelationType<Any>(_next = $n),
       n: platform::pure::metamodel::relation::RelationElementAccessor<Any>[1] | ^meta::pure::metamodel::relation::RelationElementAccessor<Any>(_next = $n),
@@ -957,13 +959,20 @@ function meta::pure::bridge::m3::wrap(x: Any[1]): Any[1]
       n: platform::pure::metamodel::valuespecification::ValueSpecification[1] | ^meta::pure::metamodel::valuespecification::ValueSpecification(_next = $n),
       n: platform::pure::metamodel::function::Function<Any>[1] | ^meta::pure::metamodel::function::Function<Any>(_next = $n),
       n: platform::pure::metamodel::extension::Annotation[1] | ^meta::pure::metamodel::extension::Annotation(_next = $n),
-      n: platform::pure::metamodel::extension::Stereotype[1] | ^meta::pure::metamodel::extension::Stereotype(_next = $n),
-      n: platform::pure::metamodel::extension::Tag[1] | ^meta::pure::metamodel::extension::Tag(_next = $n),
       n: platform::pure::metamodel::extension::TaggedValue[1] | ^meta::pure::metamodel::extension::TaggedValue(_next = $n),
       n: platform::pure::metamodel::constraint::Constraint[1] | ^meta::pure::metamodel::constraint::Constraint(_next = $n),
       n: platform::pure::metamodel::testable::Test[1] | ^meta::pure::metamodel::testable::Test(_next = $n),
       n: platform::pure::metamodel::testable::Testable[1] | ^meta::pure::metamodel::testable::Testable(_next = $n),
       n: platform::pure::metamodel::relation::Relation<Any>[1] | ^meta::pure::metamodel::relation::Relation<Any>(_next = $n),
+      a: Any[1] | $a
+   ])
+}
+
+// The next object behind a wrapper; any other value is its own next value.
+function meta::pure::bridge::m3::unwrap(x: Any[1]): Any[1]
+{
+   $x->match([
+      w: meta::pure::bridge::Wrapper[1] | $w._next,
       a: Any[1] | $a
    ])
 }

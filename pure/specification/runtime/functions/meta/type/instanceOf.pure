@@ -61,6 +61,15 @@ function <<PCT.test>>   platform::pure::functions::meta::tests::instanceOf::test
     assertEquals(false, $f->eval(|1->instanceOf(Date)));
 }
 
+function <<PCT.test>> platform::pure::functions::meta::tests::instanceOf::testInstanceOfEnumValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    // an enum value is an instance of its enumeration and of the metamodel's Enum
+    assertEquals(true, $f->eval(|CC_GeographicEntityType.CITY->instanceOf(CC_GeographicEntityType)));
+    assertEquals(true, $f->eval(|CC_GeographicEntityType.CITY->instanceOf(platform::pure::metamodel::type::Enum)));
+    assertEquals(true, $f->eval(|CC_GeographicEntityType.CITY->instanceOf(Any)));
+    assertEquals(false, $f->eval(|CC_GeographicEntityType.CITY->instanceOf(String)));
+}
+
 function <<PCT.test>> platform::pure::functions::meta::tests::instanceOf::testInstanceOfInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(true, $f->eval(|let a = ^CC_Address(name='Jersey City', type=CC_GeographicEntityType.CITY); $a->instanceOf(CC_Address);));

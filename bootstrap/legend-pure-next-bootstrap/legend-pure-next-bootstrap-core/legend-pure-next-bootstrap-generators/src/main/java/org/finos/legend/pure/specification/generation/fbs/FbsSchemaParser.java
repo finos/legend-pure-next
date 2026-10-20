@@ -50,7 +50,8 @@ public final class FbsSchemaParser
     // are tolerated — RdfFbsSchemaGenerator emits explicit IDs to keep wire
     // format stable across builds, so this parser must accept them.
     private static final Pattern FIELD_PATTERN = Pattern.compile(
-            "(\\w+)\\s*:\\s*(\\[\\s*(\\w+)\\s*\\]|(\\w+))(?:\\s*=\\s*[^;()]+)?(?:\\s*\\([^)]*\\))?\\s*;");
+            "(\\w+)\\s*:\\s*(\\[\\s*(\\w+)\\s*\\]|(\\w+))(?:\\s*=\\s*[^;()]+)?(?:\\s*\\(([^)]*)\\))?\\s*;");
+    private static final Pattern ID_ATTRIBUTE = Pattern.compile("\\bid\\s*:\\s*(\\d+)");
 
     private FbsSchemaParser()
     {
@@ -104,6 +105,7 @@ public final class FbsSchemaParser
     private static FbsSchema.FbsTable parseTable(String tableName, String body, MutableMap<String, FbsSchema.FbsUnion> unions)
     {
         MutableMap<String, String> fieldUnion = Maps.mutable.empty();
+        MutableMap<String, Integer> fieldIds = Maps.mutable.empty();
         Matcher fm = FIELD_PATTERN.matcher(body);
         while (fm.find())
         {
@@ -115,8 +117,13 @@ public final class FbsSchemaParser
             {
                 fieldUnion.put(fieldName, typeName);
             }
+            Matcher id = fm.group(5) == null ? null : ID_ATTRIBUTE.matcher(fm.group(5));
+            if (id != null && id.find())
+            {
+                fieldIds.put(fieldName, Integer.parseInt(id.group(1)));
+            }
         }
-        return new FbsSchema.FbsTable(tableName, fieldUnion);
+        return new FbsSchema.FbsTable(tableName, fieldUnion, fieldIds);
     }
 
     private static int findMatchingBrace(String s, int openAfter)

@@ -712,8 +712,7 @@ spec-pdb: compile
         --pdb {{shared}}/compiler-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
-        --args "{{repo_root}}/pure/specification/compiler/tests" "{{repo_root}}/pure/specification/compiler/tests-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{repo_root}}/test-results/spec/pdb/java@platform.json" \
-        || echo "  failures do not fail the build: they are in the report"
+        --args "{{repo_root}}/pure/specification/compiler/tests" "{{repo_root}}/pure/specification/compiler/tests-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{repo_root}}/test-results/spec/pdb/java@platform.json"
 
 # The translator's OWN <<test.Test>> suite (platform::extensions::language::java::translation,
 # including the per-PCT wrappers in code/tests/) run ON this platform. This used to

@@ -28,9 +28,9 @@
 // A whole SourceInformation element: exercises a union field (classifierGenericType
 // -> UserDefinedGenericTypeDef arm), a nested table (writeUserDefinedGenericType)
 // with its own union fields (PointerRef arms for a packageable GenericTypeValue
-// and a ClassPointer through TypePropertyUnion), shared strings, long scalars in
-// non-monotonic slot order (endLine=3, sourceId=6, startColumn=4, endColumn=5,
-// startLine=7), and vtable trimming — 248 bytes.
+// and a ClassPointer through TypePropertyUnion), shared strings, long scalars
+// written in field-id order (endLine=3, startColumn=4, endColumn=5, sourceId=6,
+// startLine=7), and vtable trimming — 248 bytes (2026-10-19).
 function <<test.Test>> platform::pure::compiler::pdb::gen::tests::testWriteSourceInformationWireFormat():Boolean[1]
 {
    let cpSI = ^platform::pure::metamodel::pointer::ClassPointer<Any>(path = 'platform::pure::metamodel::SourceInformation');
@@ -46,7 +46,7 @@ function <<test.Test>> platform::pure::compiler::pdb::gen::tests::testWriteSourc
    let r   = platform::pure::compiler::pdb::writerHelper::evalGenWrite('writeSourceInformation_Builder_1__SourceInformation_1__Any_MANY__BuilderAndOffset_1_', platform::pure::compiler::pdb::fbb::newBuilder(), $si, []);
    let fin = $r.builder->platform::pure::compiler::pdb::fbb::finish($r.offset);
    assertEquals(
-      '1C0000000000000014003800370030000000240014000C0020000400140000000100000000000000040000000000000002000000000000000000000018000000030000000000000000000000280000000000000409000000746573742E70757265001200140013000C000000000000000B0004001200000010000000000000015400000000000001BCFFFFFF0400000001000000040000002C000000706C6174666F726D3A3A707572653A3A6D6574616D6F64656C3A3A536F75726365496E666F726D6174696F6E000000000800080000000400080000000400000001000000040000000C00000074657374416E63686F72475400000000',
+      '1C000000000000001400380037003000000024001C00140010000400140000000100000000000000000000002800000004000000000000000200000000000000030000000000000000000000280000000000000409000000746573742E70757265001200140013000C000000000000000B0004001200000010000000000000015400000000000001BCFFFFFF0400000001000000040000002C000000706C6174666F726D3A3A707572653A3A6D6574616D6F64656C3A3A536F75726365496E666F726D6174696F6E000000000800080000000400080000000400000001000000040000000C00000074657374416E63686F72475400000000',
       $fin->platform::pure::compiler::pdb::fbb::result()->platform::pure::functions::binary::binaryToHex());
 }
 

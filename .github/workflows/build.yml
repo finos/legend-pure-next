@@ -29,6 +29,8 @@
 #               │                            compiler-pure via Pure-on-Java and PDB-diff against Java direct)
 #               ├── printer-compiled        (Temurin 25 — `just bootstrap::spec-printer-compiled`:
 #               │                            parse+compile+print each compiler/tests/ file, compare to source)
+#               ├── pdb-golden              (Temurin 25 — `just bootstrap::spec-pdb-golden`: compile and
+#               │                            PDB-write each compiler/tests/ file interpreted, compare to the Java golden)
 #               ├── printer-protocol        (Temurin 25 — `just bootstrap::spec-printer-protocol`:
 #               │                            parse+print each grammar/tests/ file, compare to source)
 #               ├── truffle-self-host       (GraalVM 25 — `just truffle::test` (mvn surefire + Truffle
@@ -52,7 +54,7 @@
 #                                            via the AOT binary and PDB-diffs against Java direct;
 #                                            `specifications` runs every specification on it)
 #
-# bootstrap-self-host, printer-compiled, printer-protocol, truffle-self-host,
+# bootstrap-self-host, printer-compiled, pdb-golden, printer-protocol, truffle-self-host,
 # and truffle-native-self-host all run in parallel after bootstrap finishes;
 # language-java, language-javascript and truffle-specifications run in parallel after
 # truffle-self-host (they need its uploaded truffle CLI jar + extension jars to invoke pure-truffle).
@@ -439,6 +441,89 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: dashboard-reports-printer-compiled
+          path: |
+            test-results/
+            !test-results/*.json
+            !test-results/*.html
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload build steps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
+          path: build-steps/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  pdb-golden:
+    name: PDB goldens — interpreted
+    needs: bootstrap
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v5
+        env:
+          cache-name: cache-mvn-deps
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JDK_VERSION }}
+          java-package: jdk
+
+      - name: Install just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+
+      - name: Download bootstrap artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bootstrap-artifacts
+
+      - name: Restore bootstrap artifacts
+        run: |
+          tar -xf bootstrap-artifacts.tar
+          mkdir -p ~/.m2/repository
+          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
+
+      # compile each pure/specification/compiler/tests fixture with the Pure compiler on the
+      # bootstrap interpreter, write it with the Pure PDB writer and compare it with its Java golden
+      # (tests-pdb-serialization). ~100s, so a job of its own, in parallel with the other
+      # bootstrap-only jobs; truffle-specifications and translations run it on their hosts.
+      - name: PDB goldens (interpreted)
+        run: just bootstrap::spec-pdb-golden
+
+      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
+      # publish-gallery, which renders one dashboard from every job's reports.
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results build-steps
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
+          if [[ -f test-results/builds.json ]]; then
+            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
+          fi
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-pdb-golden
           path: |
             test-results/
             !test-results/*.json
@@ -1342,6 +1427,7 @@ jobs:
       - bootstrap
       - bootstrap-self-host
       - printer-compiled
+      - pdb-golden
       - printer-protocol
       - truffle-self-host
       - truffle-native-self-host
@@ -1484,6 +1570,7 @@ jobs:
       - bootstrap
       - bootstrap-self-host
       - printer-compiled
+      - pdb-golden
       - printer-protocol
       - truffle-self-host
       - truffle-native-self-host

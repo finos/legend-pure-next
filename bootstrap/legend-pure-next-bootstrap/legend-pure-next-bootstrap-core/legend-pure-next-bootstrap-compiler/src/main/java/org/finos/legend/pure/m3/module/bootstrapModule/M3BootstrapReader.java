@@ -892,8 +892,8 @@ public class M3BootstrapReader
 
     private static String getName(Model model, Resource res)
     {
-        // Check both :name (used by Classes, Packages, etc.) and :abstractProperty_name (used by Properties)
-        for (String predicate : new String[]{"name", "typeParameter_name", "MultiplicityParameter_name", "abstractProperty_name", "stereotype_name", "tag_value", "enumValue", "VariableExpression_name"})
+        // :name for every NamedElement; stereotypes and tags name themselves by their value
+        for (String predicate : new String[]{"name", "stereotype_name", "tag_value"})
         {
             Statement stmt = getM3Statement(model, res, predicate);
             if (stmt != null)
@@ -1131,11 +1131,11 @@ public class M3BootstrapReader
         if (returnMulStmt != null && returnMulStmt.getObject().isResource())
         {
             Resource mulRes = returnMulStmt.getObject().asResource();
-            Statement mulParamStmt = getM3Statement(model, mulRes, "MultiplicityParameter_name");
+            Statement mulParamStmt = mulRes.isAnon() ? getM3Statement(model, mulRes, "name") : null;
             String mulParamName = mulParamStmt != null ? getLiteralString(model, mulParamStmt) : null;
             if (mulParamName != null)
             {
-                // Multiplicity parameter reference: [ :MultiplicityParameter_name [ :classifierGenericType ... ; :data "m" ] ]
+                // Multiplicity parameter reference: [ :name [ :classifierGenericType ... ; :data "m" ] ]
                 platform.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mp = new platform.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()._name(mulParamName);
                 Statement cgtStmt = getM3Statement(model, mulRes, "classifierGenericType");
                 if (cgtStmt != null && cgtStmt.getObject().isResource())
@@ -1204,7 +1204,7 @@ public class M3BootstrapReader
                 else if ("TypeParameter".equals(rdfTypeName))
                 {
                     String paramName = null;
-                    Statement tpNameStmt = getM3Statement(model, rawTypeRes, "typeParameter_name");
+                    Statement tpNameStmt = getM3Statement(model, rawTypeRes, "name");
                     if (tpNameStmt != null)
                     {
                         paramName = getLiteralString(model, tpNameStmt);
@@ -1272,7 +1272,7 @@ public class M3BootstrapReader
         for (Resource mulArgRes : extractPropertyResources(model, gtRes, "multiplicityArguments"))
         {
             // Check for multiplicityParameter reference (e.g., [ :multiplicityParameter "m" ])
-            Statement mulParamStmt = getM3Statement(model, mulArgRes, "MultiplicityParameter_name");
+            Statement mulParamStmt = mulArgRes.isAnon() ? getM3Statement(model, mulArgRes, "name") : null;
             String mulArgParamName = mulParamStmt != null ? getLiteralString(model, mulParamStmt) : null;
             if (mulArgParamName != null)
             {

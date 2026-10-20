@@ -505,7 +505,7 @@ public class M3MetamodelReader
             {
                 Resource maRes = maStmt.getObject().asResource();
                 // Check for multiplicityParameter reference: [ :classifierGenericType :GenericType_String ; :data "m" ]
-                Statement mpStmt = getM3Statement(maRes, "MultiplicityParameter_name");
+                Statement mpStmt = maRes.isAnon() ? getM3Statement(maRes, "name") : null;
                 if (mpStmt != null)
                 {
                     String name = getLiteralString(mpStmt);
@@ -636,13 +636,13 @@ public class M3MetamodelReader
             throw new IllegalStateException("FunctionType " + ftRes + " has no returnMultiplicity");
         }
         Resource retMultRes = retMultStmt.getObject().asResource();
-        Statement mpStmt = getM3Statement(retMultRes, "MultiplicityParameter_name");
+        Statement mpStmt = retMultRes.isAnon() ? getM3Statement(retMultRes, "name") : null;
         if (mpStmt != null)
         {
             String mpName = getLiteralString(mpStmt);
             if (mpName == null)
             {
-                throw new IllegalStateException("FunctionType " + ftRes + " returnMultiplicity " + retMultRes + " has empty MultiplicityParameter_name");
+                throw new IllegalStateException("FunctionType " + ftRes + " returnMultiplicity " + retMultRes + " has an empty multiplicity parameter name");
             }
             sb.append("[").append(mpName).append("]");
         }
@@ -871,9 +871,8 @@ public class M3MetamodelReader
 
     /**
      * Get the "name" of a resource by trying all known name-like predicates.
-     * Different types use different property resource URIs for their name:
-     * PackageableElement uses :name, Property uses :abstractProperty_name,
-     * Enum values use :enumValue, TypeParameter uses :typeParameter_name, etc.
+     * NamedElements use :name; a few others name themselves differently
+     * (stereotypes, tags, constraints, resolved parameters).
      */
     private String getFqn(Resource res)
     {
@@ -939,16 +938,10 @@ public class M3MetamodelReader
     }
 
     private static final String[] NAME_PREDICATES = {
-            "name",                          // PackageableElement, Class, Enumeration, Profile, etc.
-            "abstractProperty_name",         // AbstractProperty (Property instances)
-            "enumValue",                     // Enum values (AggregationKind_None, etc.)
-            "typeParameter_name",            // TypeParameter
-            "MultiplicityParameter_name",    // MultiplicityParameter
+            "name",                          // every NamedElement: packageable elements, properties, columns, variables, type/multiplicity parameters, enum values
             "ResolvedTypeParameter_name",    // ResolvedTypeParameter
             "ResolvedMultiplicityParameter_name", // ResolvedMultiplicityParameter
-            "VariableExpression_name",       // VariableExpression
             "constraint_name",              // Constraint
-            "Column_name",                  // Column values
             "stereotype_name",              // Stereotype
             "tag_value",                    // Tag
             "PackageableFunction_functionName", // PackageableFunction

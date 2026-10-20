@@ -1,0 +1,101 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::test::pct::*;
+import platform::pure::functions::lang::tests::model::*;
+import platform::pure::functions::meta::addressing::*;
+import platform::pure::functions::printer::compiled::*;
+
+function
+    <<PCT.function>>
+    {
+        doc.doc='The stable address of an element: a packageable element\'s path; a property\'s owner address and name; a qualified property\'s owner address, name and parameters; an enum value\'s enumeration address and name; a stereotype\'s or tag\'s profile address and value.'
+    }
+    platform::pure::functions::meta::address(element:AddressableElement[1]):String[1]
+{
+    $element->match([
+        q:QualifiedProperty<Any>[1] | ownerAddress($q) + '.' + $q.name + '(' + $q.parameters->tail()->map(p | printParameter($p))->joinStrings(',') + ')',
+        p:AbstractProperty<Any>[1] | ownerAddress($p) + '.' + $p.name,
+        e:PackageableElement[1] | $e->elementToPath(),
+        v:Enum[1] | $v->genericType().type->cast(@PackageableElement)->toOne()->elementToPath() + '.' + $v.name,
+        s:platform::pure::metamodel::extension::Stereotype[1] | $s.profile->elementToPath() + '.' + $s.value,
+        t:platform::pure::metamodel::extension::Tag[1] | $t.profile->elementToPath() + '.' + $t.value
+    ])
+}
+
+function platform::pure::functions::meta::addressing::ownerAddress(p:AbstractProperty<Any>[1]):String[1]
+{
+    $p.owner->cast(@PackageableElement)->toOne()->elementToPath()
+}
+
+// A parameter as a qualified property's address shows it, as the compiled printer prints it: String[1]
+function platform::pure::functions::meta::addressing::printParameter(v:VariableExpression[1]):String[1]
+{
+    printGenericType($v.genericType->toOne(), buildPrintContext([], PrintMode.FullFQN)) + printMultiplicity($v.multiplicity->toOne())
+}
+
+
+function <<PCT.test>> platform::pure::functions::meta::tests::address::testAddressOfAPackageableElementIsItsPath<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        assertEquals('platform::pure::functions::lang::tests::model::LA_Person', LA_Person->address());
+        assertEquals('platform::pure::functions::meta::address_AddressableElement_1__String_1_', address_AddressableElement_1__String_1_->address());
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::meta::tests::address::testAddressOfAPropertyIsItsOwnerAndName<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        assertEquals('platform::pure::functions::lang::tests::model::LA_Person.firstName', LA_Person.properties->filter(p | $p.name == 'firstName')->toOne()->address());
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::meta::tests::address::testAddressOfAQualifiedPropertyHasItsParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        assertEquals('platform::pure::functions::lang::tests::model::LA_Person.nameWithTitle(String[1])', LA_Person.qualifiedProperties->filter(p | $p.name == 'nameWithTitle')->toOne()->address());
+        assertEquals('platform::pure::functions::lang::tests::model::LA_Person.name()', LA_Person.qualifiedProperties->filter(p | $p.name == 'name')->toOne()->address());
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::meta::tests::address::testAddressOfAnEnumValueIsItsEnumerationAndName<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        assertEquals('platform::pure::functions::lang::tests::model::LA_GeographicEntityType.CITY', LA_GeographicEntityType.CITY->address());
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::meta::tests::address::testAddressOfAStereotypeAndATagIsTheirProfileAndValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        assertEquals('platform::pure::profiles::test.Test', platform::pure::profiles::test.p_stereotypes->filter(s | $s.value == 'Test')->toOne()->address());
+        assertEquals('platform::pure::profiles::doc.doc', platform::pure::profiles::doc.p_tags->filter(t | $t.value == 'doc')->toOne()->address());
+    ));
+}
+
+// A property read in an expression on a generic class is the compiler's copy of the property, resolved for
+// the call site: it has the property's address all the same.
+function <<test.TestDependency>> platform::pure::functions::meta::tests::address::listValues(l:LA_List<String>[1]):String[*]
+{
+    $l.values
+}
+
+function <<PCT.test>> platform::pure::functions::meta::tests::address::testAResolvedPropertyHasThePropertysAddress<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        let read = platform::pure::functions::meta::tests::address::listValues_LA_List_1__String_MANY_.expressionSequence->toOne()->cast(@FunctionExpression).func->toOne()->cast(@AbstractProperty<Any>);
+        assertEquals('platform::pure::functions::lang::tests::model::LA_List.values', $read->address());
+        assertEquals(LA_List.properties->filter(p | $p.name == 'values')->toOne()->address(), $read->address());
+    ));
+}

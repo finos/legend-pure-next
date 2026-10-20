@@ -67,8 +67,16 @@ public final class InterpretedExecution implements Execution
         }
 
         ValueSpecification fnVS = _E_ValueSpecification.wrap(function, null, null, this.registry);
-        ValueSpecification result = evaluator.executeFunction(fnVS, wrappedArgs);
-        return result != null ? _E_ValueSpecification.unwrap(result) : null;
+        evaluator.beginExecution();
+        try
+        {
+            ValueSpecification result = evaluator.executeFunction(fnVS, wrappedArgs);
+            return result != null ? _E_ValueSpecification.unwrap(result) : null;
+        }
+        finally
+        {
+            evaluator.endExecution();
+        }
     }
 
     public static final class Builder implements Execution.Builder

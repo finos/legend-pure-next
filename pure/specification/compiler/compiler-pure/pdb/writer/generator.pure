@@ -227,34 +227,28 @@ function platform::pure::compiler::pdb::generator::unionByteFor(members:String[*
 // --- (5) the emitter ---------------------------------------------------------------
 //
 // EMISSION ORDER IS LOAD-BEARING — do not "tidy" it. Every phase below walks the
-// properties in MODEL ORDER, which `allWriterProperties` defines exactly: Any's
-// properties first, then a DFS of generalizations (parents fully before self),
-// then the class's own properties in declaration order, deduped by name
-// first-wins, minus <<ProtocolInfo.excluded>>. That order is deterministic — it
-// is a pure function of the metamodel, with no set or map iteration — and
-// regenerating twice always yields byte-identical output.
-//
-// It must stay MODEL order because it reproduces the reference
-// GeneratedFlatBufferWriter's add order, and add order determines the FlatBuffers
-// vtable layout and hence the serialized bytes. Ordering by fbs field id instead
-// (tried, reverted) still produces a valid archive but different bytes, failing
+// properties in FIELD-ID ORDER: the ids pinned in the fbs schema (and its id
+// registry), which a metamodel edit never moves. Write order determines the
+// FlatBuffers layout and hence the serialized bytes, so it must not depend on
+// anything that can shift: the metamodel's property order comes from reading
+// m3.ttl, and an unrelated edit there can reorder a class's properties. The
+// reference GeneratedFlatBufferWriter writes in the same field-id order, and
 // testWriteSourceInformationWireFormat, testElementEntryWireFormat,
-// testReadArchiveRoundTrip and testArchiveEntriesVsJavaPdb — the last of which
-// diffs entries against the Java-written PDB. Those four are what pin this.
+// testReadArchiveRoundTrip and testArchiveEntriesVsJavaPdb (which diffs entries
+// against the Java-written PDB) pin that the two agree.
 //
-// The cost of keying off the metamodel is that reordering or reparenting a class
-// silently changes the generated writer. That is why the writer is regenerated on
-// every build (`just bootstrap::generate-writer`, a prerequisite of
-// build-compiler-pdb) rather than committed — it cannot fall out of date.
+// The writer is still regenerated on every build (`just bootstrap::generate-writer`,
+// a prerequisite of build-compiler-pdb) rather than committed: which properties a
+// class has, and how each is written, still come from the metamodel.
 //
 // Emits platform::pure::compiler::pdb::gen::* — one writeX/writeX_body per Def-table
 // class and one writeUnion_X per union — mirroring the reference
 // GeneratedFlatBufferWriter's phase structure exactly:
-//   phase 1: per property IN MODEL ORDER, build child offsets (strings, pointer
+//   phase 1: per property IN FIELD-ID ORDER, build child offsets (strings, pointer
 //            refs, nested tables, union values, per-item list offsets);
 //   phase 1.5 (AtomicValue only): the special `value` content union;
-//   vectors: per many-property in model order, value vector THEN type vector;
-//   table:   startObject(maxId+1), then per property in model order add fields
+//   vectors: per many-property in field-id order, value vector THEN type vector;
+//   table:   startObject(maxId+1), then per property in field-id order add fields
 //            at their fbs slot ids (union: type byte at id-1 before value at id;
 //            AtomicValue.value LAST), endObject.
 // Emitted code is fully qualified (no imports) except system-imported primitives.
@@ -438,7 +432,9 @@ function platform::pure::compiler::pdb::generator::emitClass(target:WriterTarget
    let tblOpt = $schema.tables->filter(t | $t.name == ($clsName + 'Def'))->head();
    let tbl = $tblOpt->toOne();
    let props = allWriterProperties($cls);
-   let plans = range(0, $props->size())->map(i | buildPlan($target, $clsName, $props->at($i), $tbl, $i, $classes));
+   // in field-id order (see the emitter's header): ids are pinned, the metamodel's property order is not
+   let plans = range(0, $props->size())->map(i | buildPlan($target, $clsName, $props->at($i), $tbl, $i, $classes))
+      ->sort({a, b | $a.id - $b.id});
    let objType = $cls->elementToPath() + typeArgsSuffix($cls);
    let fieldCount = $tbl.fields.id->fold({v, m | if($v > $m, |$v, |$m)}, -1) + 1;
 
@@ -703,15 +699,13 @@ function platform::pure::compiler::pdb::generator::printGeneratedWriter():Boolea
 
 // --- tests ----------------------------------------------------------------------
 
-// Pinned against the REFERENCE GeneratedFlatBufferWriter.writeSourceInformation
-// add order (verified 2026-07-04): classifierGenericType, sourceInformation
-// (Any's props), then endLine, sourceId, startColumn, endColumn, startLine —
-// which is NOT the m3.fbs field-declaration order.
-function <<test.Test>> platform::pure::compiler::pdb::generator::tests::testSourceInformationPropertyOrder():Boolean[1]
+// The properties a SourceInformation is written with: Any's and its own, minus excluded ones. Their order
+// is the metamodel's; the order they are written in is the field-id order, pinned by the wire-format tests.
+function <<test.Test>> platform::pure::compiler::pdb::generator::tests::testSourceInformationWriterProperties():Boolean[1]
 {
    let si = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::SourceInformation')->cast(@Class<Any>);
-   assertEquals(['classifierGenericType','sourceInformation','endLine','sourceId','startColumn','endColumn','startLine'],
-      platform::pure::compiler::pdb::generator::allWriterProperties($si).name);
+   assertEquals(['classifierGenericType','endColumn','endLine','sourceId','sourceInformation','startColumn','startLine'],
+      platform::pure::compiler::pdb::generator::allWriterProperties($si).name->sort());
 }
 
 function <<test.Test>> platform::pure::compiler::pdb::generator::tests::testToFbsFieldName():Boolean[1]

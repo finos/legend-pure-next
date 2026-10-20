@@ -91,3 +91,84 @@ function <<PCT.test>> platform::pure::functions::meta::testResolveAndReturnGraph
     assertEquals(platform::pure::metamodel::function::property::AggregationKind, $aggregation->genericType().type);
     assert($aggregation == platform::pure::metamodel::function::property::AggregationKind.None);
 }
+
+// A pointer to an element of the graph resolves to that element's RESOLVED copy — the one returned —
+// so the result is self-consistent: a stereotype's profile is the returned profile, a property's owner
+// the returned class (not the input element they were copied from).
+function <<PCT.test>> platform::pure::functions::meta::testResolveAndReturnGraphPointsIntoTheResolvedGraph<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        let profile = ^platform::pure::metamodel::extension::Profile(name = 'RG_P',
+            package = ^platform::pure::metamodel::pointer::PackagePointer(path = 'platform::pure::functions::meta'),
+            p_stereotypes = ^platform::pure::metamodel::extension::Stereotype(value = 's',
+                profile = ^platform::pure::metamodel::pointer::ProfilePointer(path = 'platform::pure::functions::meta::RG_P')));
+        let resolvedProfile = platform::pure::functions::meta::resolveAndReturnGraph(newMap([pair('platform::pure::functions::meta::RG_P', $profile->cast(@platform::pure::metamodel::PackageableElement))]))
+            ->toOne()->cast(@platform::pure::metamodel::extension::Profile);
+        assertIs($resolvedProfile, $resolvedProfile.p_stereotypes->toOne().profile);
+
+        let cls = ^platform::pure::metamodel::type::Class<Any>(name = 'RG_C',
+            package = ^platform::pure::metamodel::pointer::PackagePointer(path = 'platform::pure::functions::meta'),
+            properties = ^platform::pure::metamodel::function::property::Property<Nil,Any|*>(name = 'p',
+                aggregation = platform::pure::metamodel::function::property::AggregationKind.None,
+                genericType = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = String),
+                multiplicity = platform::pure::metamodel::multiplicity::PureOne,
+                owner = ^platform::pure::metamodel::pointer::ClassPointer<Any>(path = 'platform::pure::functions::meta::RG_C')));
+        let resolvedClass = platform::pure::functions::meta::resolveAndReturnGraph(newMap([pair('platform::pure::functions::meta::RG_C', $cls->cast(@platform::pure::metamodel::PackageableElement))]))
+            ->toOne()->cast(@platform::pure::metamodel::type::Class<Any>);
+        assertIs($resolvedClass, $resolvedClass.properties->toOne().owner);
+    ));
+}
+
+// Every slot is resolved, an object's own classifier included, however deep the object sits: here an enum
+// value inside the default value of an enumeration's property, classified by a pointer to that enumeration.
+function <<PCT.test>> platform::pure::functions::meta::testResolveAndReturnGraphResolvesNestedClassifiers<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        let value = ^platform::pure::metamodel::type::Enum(name = 'V', classifierGenericType = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = ^platform::pure::metamodel::pointer::EnumerationPointer<Any>(path = 'platform::pure::functions::meta::RG_E')));
+        let defaultValue = ^platform::pure::metamodel::function::LambdaFunction<{->Any[1]}>(
+            expressionSequence = ^platform::pure::metamodel::valuespecification::AtomicValue(value = $value, genericType = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = ^platform::pure::metamodel::pointer::EnumerationPointer<Any>(path = 'platform::pure::functions::meta::RG_E')), multiplicity = platform::pure::metamodel::multiplicity::PureOne));
+        let enumeration = ^platform::pure::metamodel::type::Enumeration<Any>(name = 'RG_E',
+            package = ^platform::pure::metamodel::pointer::PackagePointer(path = 'platform::pure::functions::meta'),
+            properties = ^platform::pure::metamodel::function::property::Property<Nil,Any|*>(name = 'V',
+                aggregation = platform::pure::metamodel::function::property::AggregationKind.None,
+                genericType = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = String),
+                multiplicity = platform::pure::metamodel::multiplicity::PureOne,
+                owner = ^platform::pure::metamodel::pointer::EnumerationPointer<Any>(path = 'platform::pure::functions::meta::RG_E'),
+                defaultValue = $defaultValue));
+        let resolved = platform::pure::functions::meta::resolveAndReturnGraph(newMap([pair('platform::pure::functions::meta::RG_E', $enumeration->cast(@platform::pure::metamodel::PackageableElement))]))
+            ->toOne()->cast(@platform::pure::metamodel::type::Enumeration<Any>);
+        let resolvedValue = $resolved.properties->toOne().defaultValue->toOne().expressionSequence->toOne()->cast(@platform::pure::metamodel::valuespecification::AtomicValue).value->toOne();
+        assertIs($resolved, $resolvedValue->genericType().type->toOne());
+    ));
+}
+
+// The resolved copy keeps the graph's shape: an object reached from two places is still one object.
+function <<PCT.test>> platform::pure::functions::meta::testResolveAndReturnGraphKeepsSharedObjectsShared<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        let shared = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = String);
+        let property = {name:String[1] | ^platform::pure::metamodel::function::property::Property<Nil,Any|*>(name = $name,
+            aggregation = platform::pure::metamodel::function::property::AggregationKind.None, genericType = $shared,
+            multiplicity = platform::pure::metamodel::multiplicity::PureOne)};
+        let cls = ^platform::pure::metamodel::type::Class<Any>(name = 'S', properties = [$property->eval('a'), $property->eval('b')]);
+        let resolved = platform::pure::functions::meta::resolveAndReturnGraph(newMap([pair('S', $cls->cast(@platform::pure::metamodel::PackageableElement))]))
+            ->toOne()->cast(@platform::pure::metamodel::type::Class<Any>);
+        assertIs($resolved.properties->at(0).genericType->toOne(), $resolved.properties->at(1).genericType->toOne());
+    ));
+}
+
+// A pointer that names nothing — neither an element of the graph nor one already loaded — is an error: the
+// graph handed back must hold no pointers.
+function <<PCT.test>> platform::pure::functions::meta::testResolveAndReturnGraphFailsOnAnUnresolvablePointer<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertError(| $f->eval(|
+        let cls = ^platform::pure::metamodel::type::Class<Any>(name = 'RG_Dangling',
+            package = ^platform::pure::metamodel::pointer::PackagePointer(path = 'platform::pure::functions::meta'),
+            properties = ^platform::pure::metamodel::function::property::Property<Nil,Any|*>(name = 'p',
+                aggregation = platform::pure::metamodel::function::property::AggregationKind.None,
+                genericType = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = ^platform::pure::metamodel::pointer::ClassPointer<Any>(path = 'resolveTest::Missing')),
+                multiplicity = platform::pure::metamodel::multiplicity::PureOne,
+                owner = ^platform::pure::metamodel::pointer::ClassPointer<Any>(path = 'platform::pure::functions::meta::RG_Dangling')));
+        platform::pure::functions::meta::resolveAndReturnGraph(newMap([pair('platform::pure::functions::meta::RG_Dangling', $cls->cast(@platform::pure::metamodel::PackageableElement))]));
+    ), 'resolveAndReturnGraph: cannot resolve the pointer to \'resolveTest::Missing\'');
+}
