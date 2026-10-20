@@ -198,6 +198,12 @@ function <<PCT.test>> platform::pure::functions::lang::tests::match::testMatchEn
     );
 }
 
+// A string is a String whatever it says: one naming an enum value takes the String arm.
+function <<PCT.test>> platform::pure::functions::lang::tests::match::testMatchStringNamingAnEnumValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('string', $f->eval(|'platform::pure::functions::lang::tests::model::LA_GeographicEntityType.CITY'->match([e:Enum[1] | 'enum', s:String[1] | 'string'])));
+}
+
 function <<PCT.test>> platform::pure::functions::lang::tests::match::testMatchUserDefinedGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('gtv', $f->eval(|

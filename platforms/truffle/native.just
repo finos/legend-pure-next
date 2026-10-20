@@ -146,7 +146,7 @@ spec-pct: build
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
         --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
-        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-truffle-native.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-truffle-native.json" {{err_filter}}
 
 # Grammar corpus: parse each grammar.pure and compare the parse result with its protocol.json.
 spec-grammar: build

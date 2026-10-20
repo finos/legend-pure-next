@@ -199,8 +199,8 @@ jobs:
       - name: Bootstrap test
         run: just bootstrap::test
 
-      # Runtime functions and PCT on the bootstrap CLI, for the test dashboard (a PCT failure
-      # is reported without failing the build). A few seconds on the CLI and PDBs just built.
+      # Runtime functions and PCT on the bootstrap CLI, for the test dashboard. A PCT failure
+      # fails the build (and is in the report). A few seconds on the CLI and PDBs just built.
       - name: Bootstrap runtime functions and PCT
         run: just bootstrap::spec-functions bootstrap::spec-pct
 

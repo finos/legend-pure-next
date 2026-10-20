@@ -119,8 +119,18 @@ public final class PointerGraph
             // element's COPY, not the original the caller still holds.
             return walk(inMap, byPath, copies);
         }
-        Object live = Metadata.runtimeOrNull() == null ? null : Metadata.lenientElement(path);
-        return isPointer(live) ? null : live;
+        if (path.equals("::") || Metadata.runtimeOrNull() == null)
+        {
+            // The root package, or no metadata to look in: the pointer stays.
+            return null;
+        }
+        Object live = Metadata.lenientElement(path);
+        if (live == null || isPointer(live))
+        {
+            // The graph handed back holds no pointers: one that names nothing is an error.
+            throw new RuntimeException("resolveAndReturnGraph: cannot resolve the pointer to '" + path + "'");
+        }
+        return live;
     }
 
     private static Object walkObject(LazyObject value, Map<String, Object> byPath, IdentityHashMap<Object, Object> copies)

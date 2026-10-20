@@ -106,15 +106,10 @@ public final class IsNode extends PureNode
             }
             return false;
         }
-        if (aIsEnum && rawB instanceof String s)
+        if (aIsEnum || bIsEnum)
         {
-            return Objects.equals(_Any.readBySlot(rawA, SLOT_NAME),
-                    extractEnumValueName(s));
-        }
-        if (bIsEnum && rawA instanceof String s)
-        {
-            return Objects.equals(extractEnumValueName(s),
-                    _Any.readBySlot(rawB, SLOT_NAME));
+            // An enum value is only itself: a String naming it is a String (testIsStringNamingAnEnumValue).
+            return false;
         }
         return false;
     }
@@ -131,12 +126,6 @@ public final class IsNode extends PureNode
         return Objects.equals(a, b);
     }
 
-    @TruffleBoundary
-    private static String extractEnumValueName(String s)
-    {
-        int dotIdx = s.lastIndexOf('.');
-        return (dotIdx > 0 && s.contains("::")) ? s.substring(dotIdx + 1) : s;
-    }
 
     @TruffleBoundary
     private static Object normalize(Object v)

@@ -30,6 +30,15 @@ function <<PCT.test>> platform::pure::functions::string::tests::toString::testIn
     assertEquals('-1', $f->eval(|toString(-1)));
 }
 
+// A String's toString is the String itself, whatever it says: naming an enum value or looking like a
+// date changes nothing.
+function <<PCT.test>> platform::pure::functions::string::tests::toString::testStringToStringIsItself<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('platform::pure::functions::lang::tests::model::LA_GeographicEntityType.CITY', $f->eval(|'platform::pure::functions::lang::tests::model::LA_GeographicEntityType.CITY'->toString()));
+    assertEquals('2014-1-3', $f->eval(|'2014-1-3'->toString()));
+    assertEquals('2014-01-03T1:2:3', $f->eval(|'2014-01-03T1:2:3'->toString()));
+}
+
 function <<PCT.test>> platform::pure::functions::string::tests::toString::testFloatToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('3.14', $f->eval(|3.14->toString()));

@@ -184,37 +184,8 @@ public final class ToStringNode extends PureNode
                 }
             }
         }
-        // Enum value string (format "package::EnumType.VALUE") → return just the
-        // value name. The prefix must RESOLVE to an actual Enumeration:
-        // ordinary strings can legitimately contain "::" and dots (e.g. the
-        // pdb generator's code-template literals embed Pure paths and property
-        // accesses), and "looks like" matching made toString LOSSY for them —
-        // the self-hosted PDB writer routes plain String atomic values through
-        // toString (identity on the JVM/JS platforms) and silently wrote such
-        // literals truncated to their after-last-dot tail.
-        if (v instanceof String s && s.contains("::") && s.contains("."))
-        {
-            int dotIdx = s.lastIndexOf('.');
-            if (dotIdx > 0 && dotIdx < s.length() - 1)
-            {
-                String prefix = s.substring(0, dotIdx);
-                if (prefix.contains("::"))
-                {
-                    Object enumType = org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver().getElement(prefix);
-                    if (enumType != null
-                            && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(enumType,
-                                    "platform::pure::metamodel::type::Enumeration"))
-                    {
-                        return s.substring(dotIdx + 1);
-                    }
-                }
-            }
-        }
-        // String that looks like a date — normalize padding
-        if (v instanceof String s && isDateString(s))
-        {
-            return normalizeDateString(s);
-        }
+        // A String is its own toString, whatever it says (testStringToStringIsItself): neither a
+        // value-name tail for an enum-looking path nor re-padding for a date-looking one.
         // Date formatting
         if (v instanceof java.time.LocalDate ld)
         {

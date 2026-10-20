@@ -301,7 +301,7 @@ spec-pct:
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
         --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
-        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-bootstrap.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-bootstrap.json" {{err_filter}}
 
 # Parses + compiles each test source, runs the compiled-side printer, and
 # counts how many render without hitting an /* UNSUPPORTED */ sentinel.

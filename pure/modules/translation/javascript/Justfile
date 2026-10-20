@@ -155,7 +155,7 @@ test-translation: build-tests _host-generate _depCheck_runtime-pdbs
         --args "platform::extensions::language::javascript::translation" "{{test_results}}/pure/translation-javascript/pure@cli-javascript.json"
 
 # Run the standard Pure runtime suites over platform::pure::functions on the JavaScript host, plus the
-# PCT tests through the translator adapter (their failures are reported without failing the build).
+# PCT tests through the translator adapter. A failure fails the build: it is also in the report.
 test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
 
 # Run runTests over platform::pure::functions on the JavaScript host.
@@ -186,7 +186,7 @@ test-pure-runtime-PCTs: build-tests _host-generate _depCheck_runtime-pdbs
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
         --function "platform::extensions::language::javascript::translation::runPCTTestsViaTranslator_String_1__String_1__String_1_" \
-        --args "platform::pure::functions" "{{test_results}}/spec/pct/javascript-translation@cli-javascript.json" || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+        --args "platform::pure::functions" "{{test_results}}/spec/pct/javascript-translation@cli-javascript.json"
 
 # Build the Pure -> JavaScript translation gallery as a self-contained HTML page.
 # pure-js prints the returned String to stdout, so a plain redirect is enough.

@@ -129,6 +129,9 @@ function <<PCT.test>> platform::pure::functions::meta::testResolveAndReturnGraph
             expressionSequence = ^platform::pure::metamodel::valuespecification::AtomicValue(value = $value, genericType = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = ^platform::pure::metamodel::pointer::EnumerationPointer<Any>(path = 'platform::pure::functions::meta::RG_E')), multiplicity = platform::pure::metamodel::multiplicity::PureOne));
         let enumeration = ^platform::pure::metamodel::type::Enumeration<Any>(name = 'RG_E',
             package = ^platform::pure::metamodel::pointer::PackagePointer(path = 'platform::pure::functions::meta'),
+            // As the compiler emits it: every enumeration extends Enum.
+            generalizations = ^platform::pure::metamodel::relationship::Generalization(specific = ~.~,
+                general = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = platform::pure::metamodel::type::Enum)),
             properties = ^platform::pure::metamodel::function::property::Property<Nil,Any|*>(name = 'V',
                 aggregation = platform::pure::metamodel::function::property::AggregationKind.None,
                 genericType = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = String),

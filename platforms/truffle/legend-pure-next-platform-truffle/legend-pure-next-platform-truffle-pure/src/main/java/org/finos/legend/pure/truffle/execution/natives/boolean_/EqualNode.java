@@ -300,27 +300,13 @@ public final class EqualNode extends PureNode
                 // false-positive testEqualEnum and testIsEnum guard against.
                 return false;
             }
-            if (b instanceof String s)
-            {
-                Object eaName = _Any.readBySlot(ea, SLOT_NAME);
-                return Objects.equals(eaName, extractEnumValueName(s));
-            }
+            // An enum value equals only an enum value: a String naming it is a String
+            // (testEqualStringNamingAnEnumValue).
             return false;
         }
-        if (bIsEnum && a instanceof String s)
+        if (bIsEnum)
         {
-            Object ebName = _Any.readBySlot(b, SLOT_NAME);
-            return Objects.equals(extractEnumValueName(s), ebName);
-        }
-        // Two enum value strings: compare by extracted value name
-        if (a instanceof String sa && b instanceof String sb && sa.contains("::") && sb.contains("::"))
-        {
-            int dotA = sa.lastIndexOf('.');
-            int dotB = sb.lastIndexOf('.');
-            if (dotA > 0 && dotB > 0)
-            {
-                return sa.equals(sb);
-            }
+            return false;
         }
         // Generated PDBHelper equality — compare by property values respecting <<equality.Key>>.
         // Both are Pure metamodel objects iff their pureTypeOf is non-null
@@ -437,17 +423,6 @@ public final class EqualNode extends PureNode
         return (java.util.Map<Object, Object>) o;
     }
 
-    /** Extract just the value name from an enum value string like "pkg::EnumType.VALUE" → "VALUE". */
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static String extractEnumValueName(String s)
-    {
-        int dotIdx = s.lastIndexOf('.');
-        if (dotIdx > 0 && s.contains("::"))
-        {
-            return s.substring(dotIdx + 1);
-        }
-        return s;
-    }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean equalByProperties(Object a, Object b, MetadataAccess resolver)

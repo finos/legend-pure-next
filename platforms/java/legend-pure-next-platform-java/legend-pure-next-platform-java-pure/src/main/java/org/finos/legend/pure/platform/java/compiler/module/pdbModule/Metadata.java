@@ -315,6 +315,12 @@ public final class Metadata
         {
             return "";
         }
+        // A function reference (`someFunction_Integer_1__String_1_` used as a value) is the element it names.
+        Object named = PureLambda.elementOf(element);
+        if (named != null)
+        {
+            return path(named, separator);
+        }
         LazyObject object = (LazyObject) element;
         // A compiler pointer carries its canonical path itself: its name and
         // package are unset, so walking the package chain would read "". The
@@ -432,6 +438,43 @@ public final class Metadata
             throw new UnsupportedOperationException("No Pure type for " + (value == null ? "null" : value.getClass().getName()));
         }
         return element("platform::pure::metamodel::type::primitives::" + primitive);
+    }
+
+    private static final java.util.Map<PureEnumValue, Object> ENUM_VALUE_OBJECTS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The metadata value a generated enum constant stands for: its enumeration's value of the same name,
+     * where the PDB keeps what the constant does not (stereotypes, tagged values, source information).
+     * Null when the enumeration holds no such value.
+     */
+    static Object enumValueObject(PureEnumValue constant)
+    {
+        return ENUM_VALUE_OBJECTS.computeIfAbsent(constant, c ->
+        {
+            String name = ((java.lang.Enum<?>) c).name();
+            for (Object value : enumValues(element(c._purePath())))
+            {
+                if (value instanceof LazyObject && name.equals(enumName(value)))
+                {
+                    return value;
+                }
+            }
+            return null;
+        });
+    }
+
+    /** One `property` of the metadata value behind `constant`, or null. */
+    static Object enumValueSlot(PureEnumValue constant, String property)
+    {
+        List<Object> slots = enumValueSlots(constant, property);
+        return slots.isEmpty() ? null : slots.get(0);
+    }
+
+    /** The `property` values of the metadata value behind `constant`. */
+    static List<Object> enumValueSlots(PureEnumValue constant, String property)
+    {
+        Object value = enumValueObject(constant);
+        return value == null ? List.of() : ((LazyObject) value).__values(property);
     }
 
     /**

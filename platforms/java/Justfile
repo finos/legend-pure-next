@@ -498,8 +498,7 @@ pct PACKAGE="platform::pure::functions": compile
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
-        --args "{{PACKAGE}}" "{{repo_root}}/test-results/spec/pct/java@platform.json" \
-        || echo "  PCT failures do not fail the build: they are in the report"
+        --args "{{PACKAGE}}" "{{repo_root}}/test-results/spec/pct/java@platform.json"
 
 # The diagram's PDB form on the Java platform: the goldens beside the compiler fixtures (see
 # truffle::spec-diagram-pdb), then the Java platform's OWN decoder reads the propertyAndAssociation,
@@ -591,8 +590,7 @@ spec-grammar: compile
         --pdb {{shared}}/compiler-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::pure::test::grammar::runGrammarCorpus_String_1__String_1__String_1_" \
-        --args "{{repo_root}}/pure/specification/grammar/tests" "{{repo_root}}/test-results/spec/grammar/java@platform.json" \
-        || echo "  failures do not fail the build: they are in the report"
+        --args "{{repo_root}}/pure/specification/grammar/tests" "{{repo_root}}/test-results/spec/grammar/java@platform.json"
 
 # The compiler corpus ON this platform: compile each fixture under
 # pure/specification/compiler/tests and compare the graph with its
@@ -607,8 +605,7 @@ spec-compiler: compile
         --pdb {{shared}}/compiler-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
-        --args "{{repo_root}}/pure/specification/compiler/tests" "{{repo_root}}/test-results/spec/compiler/java@platform.json" \
-        || echo "  failures do not fail the build: they are in the report"
+        --args "{{repo_root}}/pure/specification/compiler/tests" "{{repo_root}}/test-results/spec/compiler/java@platform.json"
     @{{substep}} 'runTests over platform::pure::compiler::test (Java platform)'
     mkdir -p {{repo_root}}/test-results/spec/compiler-unit
     java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
@@ -617,8 +614,7 @@ spec-compiler: compile
         --pdb {{shared}}/compiler-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::pure::compiler::test" "{{repo_root}}/test-results/spec/compiler-unit/java@platform.json" \
-        || echo "  failures do not fail the build: they are in the report"
+        --args "platform::pure::compiler::test" "{{repo_root}}/test-results/spec/compiler-unit/java@platform.json"
 
 # EMBEDDING THIS PLATFORM, run: name two languages, compile a source holding a `###Pure` and a
 # `###Diagram` section, call a function and read the compiled diagram. It asserts nothing and writes no
@@ -653,8 +649,7 @@ spec-diagram: compile
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --pdb {{diagram_out}}/diagram-tests.pdb \
         --function "platform::extensions::pure::diagram::tests::runGrammarTests_String_1__String_1__String_1_" \
-        --args "{{repo_root}}/pure/extensions/diagram/tests/grammar" "{{repo_root}}/test-results/spec/diagram/grammar/java@platform.json" \
-        || echo "  failures do not fail the build: they are in the report"
+        --args "{{repo_root}}/pure/extensions/diagram/tests/grammar" "{{repo_root}}/test-results/spec/diagram/grammar/java@platform.json"
     @{{substep}} 'compiler fixtures: pure/extensions/diagram/tests/compiler (Java platform)'
     java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
         --root {{repo_root}} \
@@ -663,8 +658,7 @@ spec-diagram: compile
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --pdb {{diagram_out}}/diagram-tests.pdb \
         --function "platform::extensions::pure::diagram::tests::runCompilerTests_String_1__String_1__String_1_" \
-        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler" "{{repo_root}}/test-results/spec/diagram/compiler/java@platform.json" \
-        || echo "  failures do not fail the build: they are in the report"
+        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler" "{{repo_root}}/test-results/spec/diagram/compiler/java@platform.json"
 
 # The function corpus ON this platform: every `<<test.Test>>` under
 # platform::pure::functions, run straight from the PDBs (no parsing, so no ANTLR
@@ -678,8 +672,7 @@ spec-functions PACKAGE="platform::pure::functions": compile
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "{{PACKAGE}}" "{{repo_root}}/test-results/spec/functions/java@platform.json" \
-        || echo "  failures do not fail the build: they are in the report"
+        --args "{{PACKAGE}}" "{{repo_root}}/test-results/spec/functions/java@platform.json"
 
 # The PDB format suite ON this platform: the `<<test.Test>>` functions under
 # platform::pure::compiler::pdb (reader/writer unit level), run from the PDBs.
@@ -694,8 +687,7 @@ spec-pdb-format: compile
         --pdb {{shared}}/compiler-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::pure::compiler::pdb" "{{repo_root}}/test-results/spec/pdb-format/java@platform.json" \
-        || echo "  failures do not fail the build: they are in the report"
+        --args "platform::pure::compiler::pdb" "{{repo_root}}/test-results/spec/pdb-format/java@platform.json"
 
 # The PDB wire contract ON this platform: compile each compiler fixture, write it
 # with the Pure writer and compare the archive with the Java golden in
@@ -728,8 +720,7 @@ test-translation: compile
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::extensions::language::java::translation" "{{repo_root}}/test-results/pure/translation-java/java@platform.json" \
-        || echo "  failures do not fail the build: they are in the report"
+        --args "platform::extensions::language::java::translation" "{{repo_root}}/test-results/pure/translation-java/java@platform.json"
 
 # Every suite this platform runs, each writing its own java@platform report for
 # the dashboard. `compile` is a dependency of each and just runs it once.

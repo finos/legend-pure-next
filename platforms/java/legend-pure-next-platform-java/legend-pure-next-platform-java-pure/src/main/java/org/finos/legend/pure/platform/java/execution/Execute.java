@@ -55,6 +55,8 @@ public final class Execute
      */
     public static Object call(String path, Object... args) throws Exception
     {
+        // One execution: what `memoize` remembers lasts until the outermost call ends.
+        org.finos.legend.pure.platform.java.runtime.PureMemo.beginExecution();
         try
         {
             return invoke(path, args);
@@ -62,6 +64,10 @@ public final class Execute
         catch (ClassNotFoundException e)
         {
             return Metadata.translateAndInvoke(path, List.of(args));
+        }
+        finally
+        {
+            org.finos.legend.pure.platform.java.runtime.PureMemo.endExecution();
         }
     }
 
