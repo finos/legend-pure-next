@@ -80,6 +80,14 @@ public final class LangNodeFactories
         registry.register("eval_Function_1__T_n__U_p__W_q__V_m_",
                 (args, gt, mul, fe) -> new EvalNode(args));
 
+        // memoize(f, args...) : f->eval(args...), once per execution for a given function and arguments
+        registry.register("memoize_AddressableFunction_1__T_n__V_m_",
+                (args, gt, mul, fe) -> new MemoizeNode(args));
+        registry.register("memoize_AddressableFunction_1__T_n__U_o__V_m_",
+                (args, gt, mul, fe) -> new MemoizeNode(args));
+        registry.register("memoize_AddressableFunction_1__T_n__U_o__W_p__V_m_",
+                (args, gt, mul, fe) -> new MemoizeNode(args));
+
         // tryEval — run closure, return TryResult<V|m> (value or Error).
         registry.register("tryEval_Function_1__TryResult_1_",
                 (args, gt, mul, fe) -> new TryEvalNode(args[0]));

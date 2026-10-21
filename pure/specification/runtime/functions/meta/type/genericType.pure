@@ -46,6 +46,12 @@ function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testG
     assertIs(CC_GeographicEntityType, $f->eval(|CC_GeographicEntityType.CITY->genericType().type->toOne()));
 }
 
+// A string is a String whatever it says: naming an enum value does not make it one.
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericTypeOfStringNamingAnEnumValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertIs(String, $f->eval(|'platform::pure::functions::meta::tests::model::CC_GeographicEntityType.CITY'->genericType().type->toOne()));
+}
+
 function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericTypeWithGenerics<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let expected = [CC_List, String];

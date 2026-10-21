@@ -41,6 +41,7 @@ import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 
 import java.util.Comparator;
@@ -448,6 +449,15 @@ public abstract class FunctionIndexEntry implements PackageableFunction
                 if (nameCmp != 0)
                 {
                     return nameCmp;
+                }
+                // Same simple name, different types (e.g. two `Class`es in different packages):
+                // order by full path, so they are not taken for equally specific and reported ambiguous.
+                String path1 = (t1 instanceof PackageableElement pe1) ? _PackageableElement.path(pe1, model) : "";
+                String path2 = (t2 instanceof PackageableElement pe2) ? _PackageableElement.path(pe2, model) : "";
+                int pathCmp = path1.compareTo(path2);
+                if (pathCmp != 0)
+                {
+                    return pathCmp;
                 }
             }
 

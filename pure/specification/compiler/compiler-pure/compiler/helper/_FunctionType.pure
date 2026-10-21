@@ -333,7 +333,10 @@ function platform::pure::compiler::helper::functionType::compareFunctionTypes(f1
                              | if(platform::pure::compiler::helper::type::subtypeOf($t2->toOne(), $t1->toOne(), $context), | 1,
                                  | let n1 = if($t1->toOne()->instanceOf(PackageableElement), | $t1->toOne()->cast(@PackageableElement).name->toOne(), | '');
                                    let n2 = if($t2->toOne()->instanceOf(PackageableElement), | $t2->toOne()->cast(@PackageableElement).name->toOne(), | '');
-                                   $n1->compare($n2);
+                                   // Same simple name, different types (two `Class`es in different packages): order by full path
+                                   let p1 = if($t1->toOne()->instanceOf(PackageableElement), | $t1->toOne()->cast(@PackageableElement)->elementToPath(), | '');
+                                   let p2 = if($t2->toOne()->instanceOf(PackageableElement), | $t2->toOne()->cast(@PackageableElement)->elementToPath(), | '');
+                                   if($n1 != $n2, | $n1->compare($n2), | $p1->compare($p2));
                              );
                          );)],
                   | 0

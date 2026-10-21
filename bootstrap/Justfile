@@ -261,8 +261,8 @@ build-parser-mappings-pdb:
 # suites over core-tests.pdb) + the compiler corpus and PDB specification runs on the bootstrap interpreter.
 test: test-java stage build-compiler-pdb spec-compiler spec-pdb check-fbs-parity
 
-# `test` plus the self-hosted compiler run and both printer corpora.
-test-all: test spec-compiler-selfhost spec-functions spec-pct spec-printer-compiled spec-printer-protocol
+# `test` plus the self-hosted compiler run, the PDB goldens and both printer corpora.
+test-all: test spec-compiler-selfhost spec-functions spec-pct spec-pdb-golden spec-printer-compiled spec-printer-protocol
 
 # Build with surefire-driven Java tests (unit tests, plus the TestPureExecution / TestPCT factories
 # that run the Pure runTests and PCT suites).
@@ -274,7 +274,7 @@ test-java: (_mvn "with-tests")
 # remain visible.
 
 # Every specification run of the bootstrap host (self-host excluded: see `spec-compiler-selfhost`).
-spec: spec-compiler spec-pdb check-fbs-parity spec-functions spec-pct spec-printer-compiled spec-printer-protocol
+spec: spec-compiler spec-pdb check-fbs-parity spec-functions spec-pct spec-pdb-golden spec-printer-compiled spec-printer-protocol
 
 # Needs core-tests.pdb (runTests is <<test.TestDependency>>, classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
@@ -301,13 +301,27 @@ spec-pct:
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
         --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
-        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-bootstrap.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-bootstrap.json" {{err_filter}}
 
 # Parses + compiles each test source, runs the compiled-side printer, and
 # counts how many render without hitting an /* UNSUPPORTED */ sentinel.
 # Lives separately from spec-compiler because its purpose is to track
 # printer coverage, not graph correctness — both run over the same corpus
 # but check different things.
+
+# The Pure compiler and PDB writer, interpreted, against the Java golden archives in
+# pure/specification/compiler/tests-pdb-serialization (compiler-pure test/pdbGoldenRunner.pure) — the
+# check truffle::spec-pdb-golden and javascript::spec-pdb-golden run on their hosts. About 100s here.
+spec-pdb-golden:
+    @{{header}} 'spec-pdb-golden'
+    @{{substep}} 'runPdbGoldenTests: the Pure compiler and writer against the Java golden archives'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "platform::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" "{{spec}}/compiler/tests-pdb-serialization" "{{shared_out}}/specification/m3.fbs" "{{test_results}}/spec/pdb/pure@cli-bootstrap.json" {{err_filter}}
 
 # Compiled-printer corpus check over pure/specification/compiler/tests.
 spec-printer-compiled:

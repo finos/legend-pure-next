@@ -160,7 +160,11 @@ public final class PointerGraphImmutableResolver
         if (ptrPath != null)
         {
             Object live = resolvePointerToOriginal(value, ptrPath, ctx);
-            if (live == null) return value;
+            if (live == null)
+            {
+                // The graph handed back holds no pointers: one that names nothing is an error.
+                throw new RuntimeException("resolveAndReturnGraph: cannot resolve the pointer to '" + ptrPath + "'");
+            }
             // Resolved target may itself be in the input map → return its
             // copy so the resolved graph is fully detached. External live
             // targets (dep-PDB elements) flow through process and short-

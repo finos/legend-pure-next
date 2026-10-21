@@ -105,6 +105,12 @@ public class LangNatives
             eval.executeFunction(args.get(0), args.subList(1, args.size()))
         );
 
+        // memoize(f, args...) : f->eval(args...), once per execution for a given function and arguments
+        NativeImpl memoize = (args, eval, genericType, multiplicity) -> eval.memoize(args.get(0), args.subList(1, args.size()));
+        natives.put("memoize_AddressableFunction_1__T_n__V_m_", memoize);
+        natives.put("memoize_AddressableFunction_1__T_n__U_o__V_m_", memoize);
+        natives.put("memoize_AddressableFunction_1__T_n__U_o__W_p__V_m_", memoize);
+
         // tryEval(Function<{->V[m]}>[1]) : TryResult<V|m>[1]
         // Run the closure catching any exception. On success: TryResult.value
         // is the closure's return; failure is empty. On failure: TryResult.value

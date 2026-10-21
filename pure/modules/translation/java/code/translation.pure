@@ -242,6 +242,7 @@ function platform::extensions::language::java::translation::conventionsFor(baseP
          pair('range',             rangeCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('datePart',          datePartCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('tryEval',           tryEvalCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('memoize',           memoizeCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('enumValues',        enumValuesCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('fromJson',          fromJsonCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('toJson',            toJsonCoder_FunctionExpression_1__Conventions_1__Code_1_),
@@ -2163,6 +2164,21 @@ function <<access.private>> platform::extensions::language::java::translation::e
       | j_invoke(javaArrays(), 'asList', [j_invoke($conv->javaEnumType($enumeration->toOne()), 'values', [], javaObject())], javaList()));
 }
 
+// `memoize(f, args...)` — `f->eval(args...)` once per execution for a given function and arguments
+// (PureMemo.memoize, lang/eval/memoize.pure). The key is the function's address, which needs the
+// platform's metadata: without it there is nothing to address.
+function <<access.private>> platform::extensions::language::java::translation::memoizeCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1, | 'memoizeCoder expects at least 1 argument (the function)');
+   assert($conv.metadataElements, | 'memoize needs the platform\'s metadata: a function is memoized by its address');
+   let args = $fe.parametersValues->tail()->map(p | $conv->translateExpression($p)->typedFunctionValue());
+   let type = $conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed();
+   $conv->runtimeCall('PureMemo', 'memoize',
+                      [$conv->translateExpression($fe.parametersValues->at(0))->typedFunctionValue(),
+                       j_invoke(javaArrays(), 'asList', $args, javaList())], javaObject())
+      ->fitToType($type, $conv);
+}
+
 // `tryEval(|expr)` — evaluate the thunk and capture either its value or the
 // failure, as a TryResult (PureTry.tryEval).
 function <<access.private>> platform::extensions::language::java::translation::tryEvalCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
@@ -3461,14 +3477,29 @@ function <<access.private>> platform::extensions::language::java::translation::m
                  | $p.genericType->platform::extensions::language::java::translation::platform::platformValueType(PureOne, platform::extensions::language::java::translation::platform::platformRoot()));
    let literal = j_field($type, 'class', javaClass('java.lang.Class'));
    // A Pure function value is either a metamodel object (read from a PDB) or a
-   // Java lambda (a closure): such an arm accepts any of those classes.
-   let isFunction = $cls->exists(c | $c->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()->startsWith('platform::pure::metamodel::function::'));
+   // Java lambda (a closure): an arm a LAMBDA can match accepts any of those
+   // classes. Only an arm for LambdaFunction or one of its supertypes: a closure
+   // is never a property, and every function value is a java.util.function.Function,
+   // so an AbstractProperty arm listing it took function references too.
+   let lambdaTypes = platform::pure::metamodel::function::LambdaFunction->platform::extensions::language::java::translation::selfAndSupertypePaths();
+   let isFunction = $cls->exists(c | $lambdaTypes->contains($c->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()));
    if (!$isFunction,
       | $literal,
       | j_invoke(javaList(), 'of', [$literal,
            j_field(javaClass('java.util.function.Function'), 'class', javaClass('java.lang.Class')),
            j_field(javaClass('java.util.function.BiFunction'), 'class', javaClass('java.lang.Class')),
            j_field(javaClass('java.util.function.Supplier'), 'class', javaClass('java.lang.Class'))], javaList()));
+}
+
+// The paths of `type` and of every class it extends, through its generalizations.
+function <<access.private>> platform::extensions::language::java::translation::selfAndSupertypePaths(type: platform::pure::metamodel::type::Type[1]): String[*]
+{
+   let supers = if ($type->instanceOf(platform::pure::metamodel::type::Class),
+                    | $type->cast(@platform::pure::metamodel::type::Class<Any>).generalizations->map(g | $g.general->rawType()),
+                    | []);
+   $type->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()
+      ->concatenate($supers->map(t | $t->platform::extensions::language::java::translation::selfAndSupertypePaths()))
+      ->removeDuplicates();
 }
 
 // True when `exprs` call a function with one of `names`, lambda bodies and

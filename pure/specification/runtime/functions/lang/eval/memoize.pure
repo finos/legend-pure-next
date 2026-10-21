@@ -1,0 +1,174 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::test::pct::*;
+import platform::pure::functions::lang::tests::model::*;
+import platform::pure::functions::lang::tests::memoize::*;
+
+// memoize(f, args) gives what f->eval(args) gives — a property read honours the object's getter override,
+// as `.` and eval do — and gives the same result again, without calling f, the next time it is called with
+// the same function and arguments during the current execution (one top-level evaluation).
+//
+// The function is identified by its address (see `address`), so only functions with one can be memoized:
+// packageable functions and properties, not lambdas. Arguments compare by identity for objects, by value
+// for primitives, element by element for collections.
+//
+// A call that fails caches nothing. While f runs, it may memoize other calls; calling memoize again with
+// the same function and arguments is an error. Memoizing is invisible — but for identity, which it makes
+// stable — when f is pure and depends on nothing but its arguments.
+
+native function
+    <<PCT.function, PCT.platformOnly>>
+    {
+        doc.doc='The result of f->eval(a), computed once per execution for a given function and argument.'
+    }
+    platform::pure::functions::lang::memoize<T,V|n,m>(f:AddressableFunction<{T[n]->V[m]}>[1], a:T[n]):V[m];
+
+native function
+    <<PCT.function, PCT.platformOnly>>
+    {
+        doc.doc='The result of f->eval(a, b), computed once per execution for a given function and arguments.'
+    }
+    platform::pure::functions::lang::memoize<T,U,V|n,o,m>(f:AddressableFunction<{T[n],U[o]->V[m]}>[1], a:T[n], b:U[o]):V[m];
+
+native function
+    <<PCT.function, PCT.platformOnly>>
+    {
+        doc.doc='The result of f->eval(a, b, c), computed once per execution for a given function and arguments.'
+    }
+    platform::pure::functions::lang::memoize<T,U,W,V|n,o,p,m>(f:AddressableFunction<{T[n],U[o],W[p]->V[m]}>[1], a:T[n], b:U[o], c:W[p]):V[m];
+
+
+// ---- test functions: each call builds a new object, so identity shows whether a call happened ----
+
+function <<test.TestDependency>> platform::pure::functions::lang::tests::memoize::person(first:String[1]):LA_Person[1]
+{
+    ^LA_Person(firstName = $first, lastName = 'Doe')
+}
+
+function <<test.TestDependency>> platform::pure::functions::lang::tests::memoize::otherPerson(first:String[1]):LA_Person[1]
+{
+    ^LA_Person(firstName = $first, lastName = 'Roe')
+}
+
+function <<test.TestDependency>> platform::pure::functions::lang::tests::memoize::personOf(names:String[*]):LA_Person[1]
+{
+    ^LA_Person(firstName = $names->joinStrings(' '), lastName = 'Doe')
+}
+
+function <<test.TestDependency>> platform::pure::functions::lang::tests::memoize::personNamed(first:String[1], last:String[1]):LA_Person[1]
+{
+    ^LA_Person(firstName = $first, lastName = $last)
+}
+
+function <<test.TestDependency>> platform::pure::functions::lang::tests::memoize::personOfPair(names:Pair<String,String>[1]):LA_Person[1]
+{
+    ^LA_Person(firstName = $names.first, lastName = $names.second)
+}
+
+function <<test.TestDependency>> platform::pure::functions::lang::tests::memoize::failing(x:String[1]):String[1]
+{
+    []->toOne('failing ' + $x)
+}
+
+function <<test.TestDependency>> platform::pure::functions::lang::tests::memoize::selfReferencing(x:String[1]):String[1]
+{
+    memoize(selfReferencing_String_1__String_1_, $x)
+}
+
+function <<test.TestDependency>> platform::pure::functions::lang::tests::memoize::countDown(n:Integer[1]):Integer[1]
+{
+    if($n == 0, | 0, | memoize(countDown_Integer_1__Integer_1_, $n - 1) + 1)
+}
+
+
+function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoizeGivesTheResultOfTheFunction<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        assertEquals('Ada', memoize(person_String_1__LA_Person_1_, 'Ada').firstName);
+        assertEquals('Ada Lovelace', memoize(personNamed_String_1__String_1__LA_Person_1_, 'Ada', 'Lovelace')->map(p | $p.firstName + ' ' + $p.lastName));
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoizeCallsTheFunctionOncePerArguments<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        // called directly, each call builds a new person; memoized, the second call gives the first one
+        assertIsNot(person('Ada'), person('Ada'));
+        assertIs(memoize(person_String_1__LA_Person_1_, 'Ada'), memoize(person_String_1__LA_Person_1_, 'Ada'));
+        assertIs(memoize(personNamed_String_1__String_1__LA_Person_1_, 'Ada', 'Lovelace'), memoize(personNamed_String_1__String_1__LA_Person_1_, 'Ada', 'Lovelace'));
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoizeDistinguishesArgumentsAndFunctions<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        assertIsNot(memoize(person_String_1__LA_Person_1_, 'Ada'), memoize(person_String_1__LA_Person_1_, 'Grace'));
+        assertIsNot(memoize(personNamed_String_1__String_1__LA_Person_1_, 'Ada', 'Lovelace'), memoize(personNamed_String_1__String_1__LA_Person_1_, 'Ada', 'Byron'));
+        assertIsNot(memoize(person_String_1__LA_Person_1_, 'Ada'), memoize(otherPerson_String_1__LA_Person_1_, 'Ada'));
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoizeComparesPrimitivesByValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        let built = 'Ad' + 'a';
+        assertIs(memoize(person_String_1__LA_Person_1_, 'Ada'), memoize(person_String_1__LA_Person_1_, $built));
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoizeComparesObjectsByIdentity<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        // two pairs equal by their equality keys are still two arguments
+        let p1 = pair('Ada', 'Lovelace');
+        let p2 = pair('Ada', 'Lovelace');
+        assertEquals($p1, $p2);
+        assertIs(memoize(personOfPair_Pair_1__LA_Person_1_, $p1), memoize(personOfPair_Pair_1__LA_Person_1_, $p1));
+        assertIsNot(memoize(personOfPair_Pair_1__LA_Person_1_, $p1), memoize(personOfPair_Pair_1__LA_Person_1_, $p2));
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoizeComparesCollectionsElementByElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        assertIs(memoize(personOf_String_MANY__LA_Person_1_, ['Ada', 'Lovelace']), memoize(personOf_String_MANY__LA_Person_1_, ['Ada', 'Lovelace']));
+        assertIsNot(memoize(personOf_String_MANY__LA_Person_1_, ['Ada', 'Lovelace']), memoize(personOf_String_MANY__LA_Person_1_, ['Lovelace', 'Ada']));
+        assertIs(memoize(personOf_String_MANY__LA_Person_1_, []), memoize(personOf_String_MANY__LA_Person_1_, []));
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoizeOfAPropertyReadsIt<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        let firstName = LA_Person.properties->filter(p | $p.name == 'firstName')->toOne()->cast(@Property<LA_Person, String|1>);
+        assertEquals('Ada', memoize($firstName, ^LA_Person(firstName = 'Ada', lastName = 'Lovelace')));
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoizeCachesNothingWhenTheCallFails<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        assertError(| memoize(failing_String_1__String_1_, 'x'), 'failing x');
+        assertError(| memoize(failing_String_1__String_1_, 'x'), 'failing x');
+    ));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoizeAllowsNestedCallsButNotACycle<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        assertEquals(3, memoize(countDown_Integer_1__Integer_1_, 3));
+        assertError(| memoize(selfReferencing_String_1__String_1_, 'x'), 'memoize cycle: platform::pure::functions::lang::tests::memoize::selfReferencing_String_1__String_1_ is already being computed for these arguments');
+    ));
+}

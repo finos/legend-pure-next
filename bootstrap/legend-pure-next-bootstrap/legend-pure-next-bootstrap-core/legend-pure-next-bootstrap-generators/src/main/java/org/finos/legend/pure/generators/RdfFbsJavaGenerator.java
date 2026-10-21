@@ -102,6 +102,17 @@ public class RdfFbsJavaGenerator
      * Look up the union backing the given class+property. Returns null when
      * the field isn't union-typed in the schema.
      */
+    /**
+     * The pinned fbs field id of a class's property (its {@code <Class>Def} table field);
+     * properties the schema has no field for sort last.
+     */
+    private int fieldId(String className, String propName)
+    {
+        FbsSchema.FbsTable table = schema.hasTable(className + "Def") ? schema.table(className + "Def") : null;
+        Integer id = table == null ? null : table.fieldId(toFbsFieldName(propName));
+        return id == null ? Integer.MAX_VALUE : id;
+    }
+
     private FbsSchema.FbsUnion unionFor(String className, String propName)
     {
         return schema.unionForField(className + "Def", toFbsFieldName(propName));
@@ -1368,7 +1379,12 @@ public class RdfFbsJavaGenerator
                 return;
             }
 
-            MutableList<PropertyInfo> allProps = collectAllProperties(m3Model, classInfo);
+            // Written in field-id order: the ids are pinned in the fbs schema, while the
+            // metamodel's property order comes from reading m3.ttl and can shift with
+            // unrelated edits. Write order fixes the serialized bytes, and the Pure writer
+            // (compiler-pure pdb/writer/generator.pure) writes in the same order.
+            MutableList<PropertyInfo> allProps = collectAllProperties(m3Model, classInfo)
+                    .toSortedListBy(prop -> fieldId(classInfo.name, prop.name));
 
             sb.append("    public int write").append(classInfo.name).append("(").append(classInfo.name).append(" obj)\n");
             sb.append("    {\n");

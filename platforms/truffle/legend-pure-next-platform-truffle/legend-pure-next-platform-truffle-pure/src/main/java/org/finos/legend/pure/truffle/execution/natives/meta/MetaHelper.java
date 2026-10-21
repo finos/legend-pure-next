@@ -84,27 +84,6 @@ public final class MetaHelper
         }
         if (value instanceof String s)
         {
-            // Detect enum value strings: "package::EnumType.VALUE". The
-            // resolved prefix must actually BE an Enumeration — arbitrary
-            // string content can contain "::" and dots (e.g. the pdb
-            // generator's code-template literals, which embed Pure paths and
-            // property accesses); treating any resolvable prefix as an enum
-            // type routed such strings through the PDB writer's enum arm and
-            // silently truncated them to their after-last-dot tail. Same
-            // lesson as the date-format heuristic removed below: runtime
-            // typing must not degrade into content guessing.
-            int dotIdx = s.lastIndexOf('.');
-            if (dotIdx > 0 && s.contains("::"))
-            {
-                String enumTypePath = s.substring(0, dotIdx);
-                Object enumType = resolver.getElement(enumTypePath);
-                if (enumType != null
-                        && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(enumType,
-                                "platform::pure::metamodel::type::Enumeration"))
-                {
-                    return enumType;
-                }
-            }
             // A Java String value is genuinely a String — type/instanceOf/cast
             // must respect the runtime class, not the string content. Previously
             // a date-format heuristic returned DateTime for date-looking strings

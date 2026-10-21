@@ -256,14 +256,27 @@ public class CompilerNatives implements NativesExtension
         if (value instanceof platform.pure.metamodel.pointer.TempCompilerPointer p)
         {
             String path = p._path();
-            Object live = byPath.get(path);
-            if (live == null)
+            // An element of the graph resolves to its RESOLVED copy — the one returned — so the result
+            // is self-consistent (a property's owner is the returned class); copied on first reach, the
+            // copies table closing any cycle back to it. Anything else resolves to the live element.
+            Object inGraph = byPath.get(path);
+            if (inGraph != null)
             {
-                live = resolver.getElement(path);
+                return deepCopyAndRewritePointers(inGraph, byPath, resolver, copies);
             }
-            return (live != null && !(live instanceof platform.pure.metamodel.pointer.TempCompilerPointer))
-                    ? live
-                    : value;
+            if (path == null || path.isEmpty() || path.equals("::"))
+            {
+                // The root package: no element to resolve to, and none needed.
+                return value;
+            }
+            Object live = resolver.getElement(path);
+            if (live == null || live instanceof platform.pure.metamodel.pointer.TempCompilerPointer)
+            {
+                // The graph handed back holds no pointers: one that names nothing is an error.
+                throw new RuntimeException(
+                        "resolveAndReturnGraph: cannot resolve the pointer to '" + path + "'");
+            }
+            return live;
         }
         if (value instanceof String || value instanceof Number || value instanceof Boolean
                 || value instanceof Character)
@@ -365,12 +378,12 @@ public class CompilerNatives implements NativesExtension
             for (java.lang.reflect.Method m : c.getMethods())
             {
                 String name = m.getName();
-                // No-arg `_X` getters only — skip `_copy`, `_classifierGenericType`
-                // (carries the PE's own type metadata, not user-facing slots) and
-                // `_elementOverride` (compile-pure internal anchor).
+                // No-arg `_X` getters only — skip `_copy` and `_elementOverride` (compile-pure
+                // internal anchor). `_classifierGenericType` IS walked: compile-pure leaves pointers
+                // there (an enum value's enumeration), and the canonical anchors it otherwise holds are
+                // resolver elements, returned as they are.
                 if (name.startsWith("_") && m.getParameterCount() == 0
                         && !name.equals("_copy")
-                        && !name.equals("_classifierGenericType")
                         && !name.equals("_elementOverride"))
                 {
                     result.add(m);

@@ -1,0 +1,104 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# pure/extensions/legacy/Justfile — the legend-pure compatibility layer: legend-pure's metamodel and
+# functions over next's, so legacy Pure code (legend-engine's) compiles and runs on next.
+#
+# Direct invocation: just <recipe>     (from pure/extensions/legacy/)
+#
+# Inputs:  shared/core.pdb, shared/core-tests.pdb (produced by `bootstrap::build`).
+# Output:  build/legacy.pdb (+ build/legacy-tests.pdb from `build-tests`)
+#
+# code/m3/m3.pure is GENERATED (`generate`) from legend-pure's m3.pure (fetched from the pinned
+# legend-pure-m3-core jar), next's shared/specification/m3.pure and tools/m3-mapping.json. It is
+# committed, so building needs neither the jar nor node. Hand-written legacy property bodies live in
+# code/m3/overrides.pure.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+legacy_root    := source_directory()
+repo_root      := legacy_root / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+test_results   := repo_root / "test-results"
+legacy_out     := legacy_root / "build"
+pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+err_filter     := "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)"
+# The legend-pure release legend-engine builds on (legend.pure.version in its pom.xml)
+legend_pure_version := "5.108.0"
+legend_pure_dir     := legacy_out / "legend-pure-" + legend_pure_version
+
+header := "h(){ s=\"[extensions-legacy::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+
+default: build
+
+# Regenerate code/m3/m3.pure (the legacy metamodel as wrappers over next's), from the m3.pure of the
+# pinned legend-pure-m3-core jar.
+generate: _fetch-legend-pure
+    @{{header}} 'generate'
+    node {{legacy_root}}/tools/generate-m3.mjs {{legend_pure_version}} {{legend_pure_dir}}/platform/pure/grammar/m3.pure
+
+# legend-pure-m3-core <version> from the local Maven repository, else Maven Central, unpacked into build/.
+_fetch-legend-pure:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    test -f "{{legend_pure_dir}}/platform/pure/grammar/m3.pure" && exit 0
+    jar="$HOME/.m2/repository/org/finos/legend/pure/legend-pure-m3-core/{{legend_pure_version}}/legend-pure-m3-core-{{legend_pure_version}}.jar"
+    mkdir -p "{{legend_pure_dir}}"
+    if [[ ! -f "$jar" ]]; then
+        jar="{{legend_pure_dir}}/legend-pure-m3-core-{{legend_pure_version}}.jar"
+        curl -sfL -o "$jar" "https://repo1.maven.org/maven2/org/finos/legend/pure/legend-pure-m3-core/{{legend_pure_version}}/legend-pure-m3-core-{{legend_pure_version}}.jar"
+    fi
+    unzip -q -o "$jar" 'platform/pure/grammar/m3.pure' -d "{{legend_pure_dir}}"
+
+# Compile the layer -> build/legacy.pdb.
+build: _depCheck_base-pdbs
+    @{{header}} 'build'
+    mkdir -p {{legacy_out}}
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source {{legacy_root}}/code \
+        --output-dir {{legacy_out}} {{err_filter}}
+
+build-all: build
+
+# Compile with tests -> build/legacy.pdb + build/legacy-tests.pdb.
+build-tests: _depCheck_base-pdbs
+    @{{header}} 'build-tests'
+    mkdir -p {{legacy_out}}
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --source {{legacy_root}}/code \
+        --output-dir {{legacy_out}} \
+        --tests split {{err_filter}}
+
+# Run the layer's <<test.Test>> functions (meta::pure::bridge::tests) on the bootstrap runtime.
+test-all: build-tests
+    @{{header}} 'test-all'
+    mkdir -p {{test_results}}/spec/legacy/unit
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{legacy_out}}/legacy.pdb \
+        --pdb {{legacy_out}}/legacy-tests.pdb \
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::bridge::tests" "{{test_results}}/spec/legacy/unit/pure@cli-bootstrap.json" {{err_filter}}
+
+clean:
+    rm -rf {{legacy_out}}
+
+_depCheck_base-pdbs:
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/core-tests.pdb || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)

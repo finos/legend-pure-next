@@ -479,10 +479,11 @@ function platform::extensions::language::java::translation::platform::platformTy
 
 function platform::extensions::language::java::translation::platform::platformEnum(e: Enumeration<Any>[1], javaRoot: String[1], conv: platform::extensions::language::java::translation::Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
 {
-   // PureEnumValue: the constant names its enumeration, so `genericType()` and
-   // `type()` on an enum value resolve through the platform's metadata.
+   // PureEnumConstant: the constant IS a metamodel Enum (so a NamedElement, an AddressableElement, an
+   // AnnotatedElement), answering its metamodel properties through the platform's metadata — its
+   // enumeration is its classifier, and the PDB holds its annotations.
    javaEnum(['public'], $e->platformTypeName($javaRoot))
       ->addEntries($e->platform::pure::functions::meta::enumValues()->map(v | javaEnumEntry($v.name->toOne()->safeJavaName())))
-      ->implements(javaClass($conv->platform::extensions::language::java::translation::pdbClass('PureEnumValue')))
+      ->implements(javaClass($conv->platform::extensions::language::java::translation::pdbClass('PureEnumConstant')))
       ->addMethod(javaMethod(['public'], javaString(), '_purePath', [], j_return(j_string($e->elementToPath()))));
 }

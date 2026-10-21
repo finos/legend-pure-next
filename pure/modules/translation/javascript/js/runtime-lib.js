@@ -1141,17 +1141,31 @@ function __leBytesToFloat(b) {
   if (b.length !== 8) throw new Error("leBytesToFloat expects exactly 8 bytes, got " + b.length);
   return new DataView(b.buffer, b.byteOffset, 8).getFloat64(0, true);
 }
-// A class's qualified properties, read off the generated class itself (`static qualifiedProperties`).
-// Empty when that class is not loaded in this host, or declares none.
+// A class's translated qualified properties, read off the generated class itself (`static
+// qualifiedProperties`): `{ name, eval }` pairs, what `__qp` dispatches through. Empty when that
+// class is not loaded in this host, or declares none.
 //
 // This replaced a path-keyed side registry filled by `__registerClass` statements. That registry also
 // carried a `properties` list of accessor closures for every class — 346 of them — which nothing
 // read: a `<Class>.properties` reflection goes to the pdb, which is authoritative, and a slot read
 // goes through the class's own `_<name>()` accessor. Only the qualified properties had to survive,
 // because their `eval` is a TRANSLATED BODY no pdb can supply.
-function __qpsOf(path) {
+function __qpEvalsOf(path) {
   const Cls = globalThis[path.split("::").join("$")];
   return typeof Cls === "function" ? __asArr(Cls.qualifiedProperties) : [];
+}
+// `<Class>.qualifiedProperties`: the class's QualifiedProperty elements from the pdb — owner,
+// parameters and the rest, as reflection reads them — each carrying its translated body as `eval`
+// (matched by name and arity, the receiver counted) so `$qp->eval(...)` runs it. Non-enumerable,
+// so the element prints and compares as it is.
+function __qpsOf(path) {
+  const evals = __qpEvalsOf(path);
+  return __asArr(__pureResolve(path).qualifiedProperties).map((q) => {
+    if (q === null || typeof q !== "object" || typeof q.eval === "function") return q;
+    const entry = evals.find((e) => __eq(e.name, q.name) && e.eval.length === __asArr(q.parameters).length);
+    if (entry !== void 0) Object.defineProperty(q, "eval", { value: entry.eval, enumerable: false, configurable: true });
+    return q;
+  });
 }
 // Qualified-property call dispatched on the receiver's RUNTIME class: walk from
 // its class up the generalizations (breadth-first) to the first class
@@ -1168,7 +1182,7 @@ function __qp(ownerPath, name, recv, ...rest) {
     const path = queue.shift();
     if (seen.has(path)) continue;
     seen.add(path);
-    const q = declared(__qpsOf(path));
+    const q = declared(__qpEvalsOf(path));
     if (q) return q.eval(recv, ...rest);
     if (path === ownerPath || path === "platform::pure::metamodel::type::Any") continue;
     for (const g of __asArr(__pureResolve(path).generalizations)) {
@@ -1176,7 +1190,7 @@ function __qp(ownerPath, name, recv, ...rest) {
       if (typeof p === "string") queue.push(p);
     }
   }
-  const fallback = ownerPath ? declared(__qpsOf(ownerPath)) : void 0;
+  const fallback = ownerPath ? declared(__qpEvalsOf(ownerPath)) : void 0;
   if (!fallback) throw new Error("qualified property " + name + "/" + (arity - 1) + " not found on " + ownerPath);
   return fallback.eval(recv, ...rest);
 }
@@ -1323,6 +1337,53 @@ function __firstNonEmpty(thunks) {
     return v;
   }
   return [];
+}
+// memoize(f, args...) — `f->eval(args...)`, computed once per execution for a given function (by its
+// `address`, the Pure function, so every host keys a call the same way) and arguments: objects by
+// identity, primitives by value, a collection element by element. A failing call caches nothing; a
+// call that needs its own result is an error. See lang/eval/memoize.pure.
+const __memo = new Map();
+const __memoizing = new Set();
+const __memoIds = new WeakMap();
+let __memoNextId = 0;
+let __executionDepth = 0;
+function __beginExecution() { __executionDepth++; }
+function __endExecution() {
+  if (--__executionDepth <= 0) {
+    __executionDepth = 0;
+    __memo.clear();
+    __memoizing.clear();
+  }
+}
+function __memoElementKey(v) {
+  if (v === null || v === void 0) return "u";
+  if (typeof v === "bigint") return "i" + v;
+  if (typeof v === "number") return "f" + v;
+  if (typeof v === "string") return "s" + JSON.stringify(v);
+  if (typeof v === "boolean") return "b" + v;
+  if (v instanceof Big) return "d" + v.toString();
+  if (v instanceof Date) return "t" + __toString(v);
+  if (v instanceof Uint8Array) return "x" + Array.from(v, (b) => b.toString(16).padStart(2, "0")).join("");
+  let id = __memoIds.get(v);
+  if (id === void 0) {
+    id = __memoNextId++;
+    __memoIds.set(v, id);
+  }
+  return "o" + id;
+}
+function __memoize(fn, ...args) {
+  const address = __metadataInvoke("platform::pure::functions::meta::address_AddressableElement_1__String_1_", [fn]);
+  const key = JSON.stringify([address, args.map((a) => __asArr(a).map(__memoElementKey))]);
+  if (__memo.has(key)) return __memo.get(key);
+  if (__memoizing.has(key)) throw new Error("memoize cycle: " + address + " is already being computed for these arguments");
+  __memoizing.add(key);
+  try {
+    const result = __eval(fn, ...args);
+    __memo.set(key, result);
+    return result;
+  } finally {
+    __memoizing.delete(key);
+  }
 }
 function __tryEval(thunk) {
   try {
@@ -1742,9 +1803,19 @@ function __pgr_resolveTarget(path, byPath, resolver) {
   // case before resolving or we'd read properties off a non-existent element).
   if (path === "") return void 0;
   if (path in byPath) return byPath[path];
+  // __pureResolve hands back a lazy proxy whatever the path (it fails only when read), so ask the host
+  // whether the element exists.
+  const host = globalThis.__pureHost;
+  if (host && typeof host.metadataPathToElement === "function" && host.metadataPathToElement(path, "::") === null) {
+    throw new Error(__pgr_unresolvable(path));
+  }
   const live = resolver(path);
   if (live !== void 0 && live !== null) return live;
-  return void 0;
+  throw new Error(__pgr_unresolvable(path));
+}
+// The graph handed back holds no pointers: one that names nothing is an error (same message on every host).
+function __pgr_unresolvable(path) {
+  return "resolveAndReturnGraph: cannot resolve the pointer to '" + path + "'";
 }
 function __pgr_process(v, byPath, copies) {
   if (v === null || v === void 0) return v;
@@ -1761,7 +1832,7 @@ function __pgr_process(v, byPath, copies) {
   const ptr = __pgr_pointerPath(v);
   if (ptr !== null) {
     const target = __pgr_resolveTarget(ptr, byPath, __pureResolve);
-    if (target == null) return v;
+    if (target == null) return v; // the root package
     return __pgr_process(target, byPath, copies);
   }
   if (typeof v.__purePath === "string") return v;
@@ -2385,6 +2456,8 @@ function __canonicalPurePath(v) {
 // elementToPath's normalization.
 function __pathOf(v) {
   if (typeof v === "string") return v;
+  // A function passed by reference is a translated arrow tagged with its path (`__lambda`).
+  if (typeof v === "function") return __canonicalPurePath(v) ?? v;
   if (v && typeof v === "object") {
     // Pointers carry their canonical path in `path`; registered elements in
     // __purePath.

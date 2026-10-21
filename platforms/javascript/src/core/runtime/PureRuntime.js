@@ -168,7 +168,13 @@ export class PureRuntime {
         const resolver = this.#runtimeModule ?? this.#registry.modules.find((m) => typeof m.resolveFn === "function");
         const impl = resolver?.resolveFn(path, args.length);
         if (typeof impl !== "function") throw new Error(`no translated function for ${path}/${args.length}`);
-        return impl(...args);
+        // One execution: what `memoize` remembers lasts until the outermost one ends.
+        globalThis.__beginExecution?.();
+        try {
+            return impl(...args);
+        } finally {
+            globalThis.__endExecution?.();
+        }
     }
 
     /** Uninstall this runtime's host object (when it is still the installed one). */

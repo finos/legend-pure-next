@@ -711,12 +711,20 @@ public final class PureRuntime
      */
     public Object execute(Object function, Object... args)
     {
-        Object result = context.executeFunction(function, args);
-        if (result instanceof PureSequence ps && ps.isEmpty())
+        context.beginExecution();
+        try
         {
-            return null;
+            Object result = context.executeFunction(function, args);
+            if (result instanceof PureSequence ps && ps.isEmpty())
+            {
+                return null;
+            }
+            return result;
         }
-        return result;
+        finally
+        {
+            context.endExecution();
+        }
     }
 
     /**

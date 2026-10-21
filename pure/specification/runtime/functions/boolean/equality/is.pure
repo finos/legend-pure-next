@@ -53,6 +53,13 @@ function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsEnum<
     assertFalse($f->eval(|is($x, TestEnum1.SECOND)));
 }
 
+// A string naming an enum value is a String, not that value.
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsStringNamingAnEnumValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertFalse($f->eval(|is('platform::pure::functions::boolean::tests::equalitymodel::TestEnum1.FIRST', TestEnum1.FIRST)));
+    assertFalse($f->eval(|is(TestEnum1.FIRST, 'platform::pure::functions::boolean::tests::equalitymodel::TestEnum1.FIRST')));
+}
+
 function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsNonPrimitive<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let side1 = ^SideClass(stringId='firstSide', intId=1);

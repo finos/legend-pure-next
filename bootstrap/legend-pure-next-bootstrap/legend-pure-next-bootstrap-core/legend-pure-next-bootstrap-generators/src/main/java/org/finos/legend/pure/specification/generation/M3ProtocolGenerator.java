@@ -788,16 +788,10 @@ public class M3ProtocolGenerator
     }
 
     private static final String[] NAME_PREDICATES = {
-            "name",                          // PackageableElement, Class, Enumeration, Profile, etc.
-            "abstractProperty_name",         // AbstractProperty (Property instances)
-            "enumValue",                     // Enum values (AggregationKind_None, etc.)
-            "typeParameter_name",            // TypeParameter
-            "MultiplicityParameter_name",    // MultiplicityParameter
+            "name",                          // every NamedElement: packageable elements, properties, columns, variables, type/multiplicity parameters, enum values
             "ResolvedTypeParameter_name",    // ResolvedTypeParameter
             "ResolvedMultiplicityParameter_name", // ResolvedMultiplicityParameter
-            "VariableExpression_name",       // VariableExpression
             "constraint_name",              // Constraint
-            "Column_name",                  // Column values
             "stereotype_name",              // Stereotype
             "tag_value",                    // Tag
             "PackageableFunction_functionName", // PackageableFunction

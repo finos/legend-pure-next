@@ -111,10 +111,64 @@ public class ValueSpecificationEvaluator
     private final java.util.IdentityHashMap<VariableExpression, Integer> localSlotCache =
             new java.util.IdentityHashMap<>();
 
+    // memoize (lang/eval/memoize.pure): results per (function address, arguments) for the current
+    // execution, and the calls being computed, to report a call that needs its own result.
+    private final Map<MemoKey, ValueSpecification> memo = new java.util.HashMap<>();
+    private final java.util.Set<MemoKey> memoizing = new java.util.HashSet<>();
+    private int executionDepth = 0;
+
     public ValueSpecificationEvaluator(NativeRegistry natives)
     {
         this.natives = natives;
         varStack.push(new Scope());
+    }
+
+    /**
+     * Marks the start of an execution (a top-level evaluation). Executions may nest; memoized
+     * results live until the outermost one ends.
+     */
+    public void beginExecution()
+    {
+        executionDepth++;
+    }
+
+    public void endExecution()
+    {
+        if (--executionDepth == 0)
+        {
+            memo.clear();
+            memoizing.clear();
+        }
+    }
+
+    /**
+     * memoize(f, args): {@code f->eval(args)}, computed once per execution for a given function
+     * (by its address) and arguments (objects by identity, primitives by value, collections
+     * element by element). A failing call caches nothing; a call needing its own result is an error.
+     */
+    public ValueSpecification memoize(ValueSpecification fnVS, List<ValueSpecification> args)
+    {
+        String address = MemoKey.address(_E_ValueSpecification.unwrap(fnVS));
+        MemoKey key = new MemoKey(address, args.stream().map(MemoKey::argument).toList());
+        ValueSpecification cached = memo.get(key);
+        if (cached != null)
+        {
+            return cached;
+        }
+        if (!memoizing.add(key))
+        {
+            throw new RuntimeException("memoize cycle: " + address + " is already being computed for these arguments");
+        }
+        try
+        {
+            ValueSpecification result = executeFunction(fnVS, args);
+            memo.put(key, result);
+            return result;
+        }
+        finally
+        {
+            memoizing.remove(key);
+        }
     }
 
     /**

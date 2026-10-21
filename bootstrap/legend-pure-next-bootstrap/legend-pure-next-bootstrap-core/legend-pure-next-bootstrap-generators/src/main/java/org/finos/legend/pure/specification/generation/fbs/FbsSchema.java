@@ -138,11 +138,13 @@ public final class FbsSchema
     {
         private final String name;
         private final MutableMap<String, String> fieldUnion;
+        private final MutableMap<String, Integer> fieldIds;
 
-        FbsTable(String name, MutableMap<String, String> fieldUnion)
+        FbsTable(String name, MutableMap<String, String> fieldUnion, MutableMap<String, Integer> fieldIds)
         {
             this.name = name;
             this.fieldUnion = fieldUnion;
+            this.fieldIds = fieldIds;
         }
 
         public String name() { return name; }
@@ -150,6 +152,14 @@ public final class FbsSchema
         public String fieldUnionType(String fieldName)
         {
             return fieldUnion.get(fieldName);
+        }
+
+        /**
+         * The field's pinned id ({@code (id: N)}), or null when the schema gives none.
+         */
+        public Integer fieldId(String fieldName)
+        {
+            return fieldIds.get(fieldName);
         }
     }
 

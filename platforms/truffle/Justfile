@@ -216,7 +216,7 @@ spec-pct:
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
         --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
-        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-truffle.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-truffle.json" {{err_filter}}
 
 # Compiles pure/specification/runtime/ from sources via Pure-on-Truffle, filters
 # to test-tagged elements + Package PDOs, registers them as an inmem module on
@@ -326,7 +326,7 @@ spec-pct-inmemory:
         --source-dir {{spec}}/runtime/ui \
         --source-dir {{spec}}/runtime/test \
         --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
-        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-truffle+inMemory.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-truffle+inMemory.json" {{err_filter}}
 
 # Truffle-compiled compiler.pdb goes to {{truffle_out}}/ to keep it separate from the
 # Java-compiled shared/compiler.pdb (filename is derived from module manifest).

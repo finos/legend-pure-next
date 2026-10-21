@@ -243,6 +243,7 @@ function platform::extensions::language::javascript::translation::assertionAndTy
       pair('eval',              evalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('new',               newCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('tryEval',           tryEvalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('memoize',           memoizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('match',             matchCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('pathToElement',     pathToElementCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('unescapePureString', unescapePureStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -2670,6 +2671,14 @@ function platform::extensions::language::javascript::translation::zipCoder(args:
    jsCall(jsId('__zip'), $args->map(a | $a->translateExpression($conv)));
 }
 
+// memoize(f, args...) — `__memoize` evaluates f through `__eval` once per execution for a given
+// function and arguments (lang/eval/memoize.pure).
+function platform::extensions::language::javascript::translation::memoizeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   assert($args->size() >= 1, | 'memoizeCoder expects at least 1 argument (the function)');
+   jsCall(jsId('__memoize'), $args->map(a | $a->translateExpression($conv)));
+}
+
 // tryEval(thunk) — Pure native returns `TryResult<V|m>` with `value` and
 // `failure: Error[0..1]` slots. Wrap the runtime helper which builds the
 // shape so the adapter's liftToPdo can rebuild a TryResult PDO.
@@ -3663,10 +3672,17 @@ function platform::extensions::language::javascript::translation::functionRefToA
               multiplicity = platform::pure::metamodel::multiplicity::PureOne));
         jsArrowExpr($argNames->map(n | jsParam($n)), $coder->toOne()->eval($fakeArgs->cast(@ValueSpecification), $conv));,
       | // No coder. A user-defined function (e.g. a comparator passed by name
-        // to `removeDuplicates`/`contains`) — inline its body as an arrow,
+        // to `removeDuplicates`/`contains`) calls its translated declaration —
+        // the name every direct call site uses. Inlining its body instead never
+        // ended for a function that passes ITSELF by name (`memoize(countDown, ...)`
+        // inside countDown).
+        if ($f->instanceOf(platform::pure::metamodel::function::UserDefinedFunction),
+           | jsArrowExpr($argNames->map(n | jsParam($n)),
+                         jsCall(jsId(jsUdfName($f->cast(@platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>))), $argNames->map(n | jsId($n)))),
+        // Any other function definition with a body — inline it as an arrow,
         // using the function's OWN parameter names so the translated body's
         // `$a`/`$b` references resolve to the arrow params.
-        if ($f->instanceOf(platform::pure::metamodel::function::FunctionDefinition)
+        |if ($f->instanceOf(platform::pure::metamodel::function::FunctionDefinition)
              && $f->cast(@platform::pure::metamodel::function::FunctionDefinition<platform::pure::metamodel::type::Any>).expressionSequence->isNotEmpty(),
            | let fd = $f->cast(@platform::pure::metamodel::function::FunctionDefinition<platform::pure::metamodel::type::Any>);
              let params = $fd.parameters->map(p | jsParam(safeJsName($p.name)));
@@ -3674,7 +3690,7 @@ function platform::extensions::language::javascript::translation::functionRefToA
                 | jsArrowExpr($params, translateExpression($fd.expressionSequence->toOne(), $conv)),
                 | jsArrowBlock($params, $fd.expressionSequence->buildJsFunctionBody($conv)));,
            | // Truly unknown shape — no-arg arrow returning undefined.
-             jsArrowExpr($argNames->map(n | jsParam($n)), jsId('undefined'))));
+             jsArrowExpr($argNames->map(n | jsParam($n)), jsId('undefined')))));
    // Tag the arrow with the function's full path so `funcRef->toRepresentation()`
    // can report it (`__lambda` stashes it as `__purePath`; the arrow stays
    // callable for `funcRef->eval(...)`).
