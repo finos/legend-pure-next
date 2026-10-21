@@ -107,6 +107,10 @@ public final class PureStrings
         {
             return number;
         }
+        if (v instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.PureEnumConstant constant)
+        {
+            return constant.name();
+        }
         if (v instanceof Enum)
         {
             return ((Enum<?>) v).name();

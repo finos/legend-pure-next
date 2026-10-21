@@ -38,6 +38,13 @@ Enum <<test.TestDependency>> platform::pure::functions::meta::tests::enumValues:
     RED, GREEN, BLUE
 }
 
+// Values named like keywords of the languages Pure is translated to, or like what a translation may
+// itself declare on an enumeration.
+Enum <<test.TestDependency>> platform::pure::functions::meta::tests::enumValues::TestKeywordNames
+{
+    default, class, value, name, VALUES
+}
+
 function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEnumValuesReturnsAllInOrder<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(['RED', 'GREEN', 'BLUE'], $f->eval(|TestColor->enumValues().name));
@@ -46,4 +53,35 @@ function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEn
 function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEnumValuesMatchLiterals<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([TestColor.RED, TestColor.GREEN, TestColor.BLUE], $f->eval(|TestColor->enumValues()));
+}
+
+// The enumeration as a value: no host can see which one it is when compiling the call.
+function <<test.TestDependency>> platform::pure::functions::meta::tests::enumValues::valuesOf(e: Enumeration<Any>[1]): platform::pure::metamodel::type::Enum[*]
+{
+    $e->enumValues()
+}
+
+// An enumeration known only at run time has the same values: the instances its literals name.
+function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEnumValuesOfAnEnumerationKnownAtRunTime<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let values = $f->eval(|valuesOf(TestColor));
+    assertIs(TestColor.RED, $values->at(0));
+    assertIs(TestColor.BLUE, $values->at(2));
+    assert($values->at(0)->instanceOf(TestColor));
+}
+
+// Where an enumeration keeps a value — its property's default value — holds that value itself.
+function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEnumValuePropertyDefaultValueIsTheValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertIs(TestColor.GREEN, $f->eval(|TestColor->cast(@Enumeration<Any>).properties->at(1).defaultValue->toOne()->eval()));
+}
+
+// A value's name is the one it was declared with, whatever it is.
+function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEnumValueNamesAreAsDeclared<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(['default', 'class', 'value', 'name', 'VALUES'], $f->eval(|TestKeywordNames->enumValues().name));
+    assertEquals(['default', 'class', 'value', 'name', 'VALUES'], $f->eval(|valuesOf(TestKeywordNames).name));
+    assertEquals('name', $f->eval(|TestKeywordNames.name.name));
+    assertEquals('default', $f->eval(|TestKeywordNames.default.name));
+    assertEquals('class', $f->eval(|TestKeywordNames.class->toString()));
 }

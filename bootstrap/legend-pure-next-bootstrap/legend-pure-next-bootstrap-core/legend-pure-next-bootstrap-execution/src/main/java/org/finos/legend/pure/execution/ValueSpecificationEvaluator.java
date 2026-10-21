@@ -715,7 +715,18 @@ public class ValueSpecificationEvaluator
         // Evaluate the target object (first parameter)
         ValueSpecification targetVs = evaluate(paramSpecs.get(0));
 
-        return accessProperty(targetVs, propertyName, fe._genericType(), fe._multiplicity());
+        return accessProperty(targetVs, propertyName, fe._genericType(), fe._multiplicity(), isEnumValueProperty(prop));
+    }
+
+    /**
+     * Is `prop` one of an enumeration's values (its properties)? Then reading it reads that value, even when
+     * the Enumeration metaclass has a property of the same name: `E.name` is E's value `name`, as the
+     * compiler resolved it (testEnumValueNamesAreAsDeclared).
+     */
+    private static boolean isEnumValueProperty(Object prop)
+    {
+        return prop instanceof platform.pure.metamodel.function.property.Property p
+                && p._owner() instanceof platform.pure.metamodel.type.Enumeration;
     }
 
     /**
@@ -786,7 +797,8 @@ public class ValueSpecificationEvaluator
      */
     private ValueSpecification accessProperty(ValueSpecification targetVs, String propertyName,
                                               GenericType genericType,
-                                              platform.pure.metamodel.multiplicity.Multiplicity multiplicity)
+                                              platform.pure.metamodel.multiplicity.Multiplicity multiplicity,
+                                              boolean enumValue)
     {
         Object target = _E_ValueSpecification.unwrap(targetVs);
 
@@ -797,12 +809,15 @@ public class ValueSpecificationEvaluator
             return _E_ValueSpecification.wrap(propertyValueRaw, genericType, multiplicity, this.natives.resolver());
         }
 
-        // For metamodel objects, use reflection to find _<propertyName>() accessor
+        // For metamodel objects, use reflection to find _<propertyName>() accessor — unless the property is
+        // one of the enumeration's values, which the lookup below answers.
         Object effectiveTarget = target != null ? target : targetVs;
-        Object result = reflectivePropertyGet(effectiveTarget, propertyName);
+        Object result = enumValue && effectiveTarget instanceof platform.pure.metamodel.type.Enumeration
+                ? PROPERTY_NOT_FOUND
+                : reflectivePropertyGet(effectiveTarget, propertyName);
 
         // Fallback: try the ValueSpecification wrapper itself (for genericType, multiplicity)
-        if (result == PROPERTY_NOT_FOUND && effectiveTarget != targetVs)
+        if (result == PROPERTY_NOT_FOUND && effectiveTarget != targetVs && !enumValue)
         {
             result = reflectivePropertyGet(targetVs, propertyName);
         }
@@ -1104,7 +1119,7 @@ public class ValueSpecificationEvaluator
                 {
                     throw new RuntimeException("Property '" + prop._name() + "' requires a target object");
                 }
-                yield accessProperty(args.get(0), prop._name(), prop._genericType(), prop._multiplicity());
+                yield accessProperty(args.get(0), prop._name(), prop._genericType(), prop._multiplicity(), isEnumValueProperty(prop));
             }
             case null -> throw new RuntimeException("Cannot execute null function");
             default -> throw new RuntimeException(
