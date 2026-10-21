@@ -451,7 +451,7 @@ public final class Metadata
     {
         return ENUM_VALUE_OBJECTS.computeIfAbsent(constant, c ->
         {
-            String name = ((java.lang.Enum<?>) c).name();
+            String name = ((PureEnumConstant) c).name();
             for (Object value : enumValues(element(c._purePath())))
             {
                 if (value instanceof LazyObject && name.equals(enumName(value)))
@@ -503,6 +503,14 @@ public final class Metadata
         List<Object> enums = new java.util.ArrayList<>(values.size());
         for (Object value : values)
         {
+            // The generated constant when the enumeration has its Java enum: one object per enum
+            // value, whichever way it was reached (testEnumValuesOfAnEnumerationKnownAtRunTime).
+            Object constant = enumConstant(path(enumeration, "::"), enumName(value instanceof String ? asEnum(value) : value));
+            if (constant != null)
+            {
+                enums.add(constant);
+                continue;
+            }
             Object enumValue = asEnum(value);
             // A PDB stores an enum value as a bare name inside its enumeration,
             // with no classifier of its own — and nothing links it back. This is
@@ -1126,6 +1134,10 @@ public final class Metadata
     /** The name of an enum value: a Java enum constant, a metamodel Enum, or "Enumeration.VALUE". */
     public static String enumName(Object value)
     {
+        if (value instanceof PureEnumConstant constant)
+        {
+            return constant.name();
+        }
         if (value instanceof Enum)
         {
             return ((Enum<?>) value).name();
@@ -1137,6 +1149,54 @@ public final class Metadata
         }
         String text = String.valueOf(value);
         return text.substring(text.lastIndexOf('.') + 1);
+    }
+
+    private static final java.util.Map<String, java.util.Optional<Class<?>>> ENUM_CLASSES = new java.util.concurrent.ConcurrentHashMap<>();
+
+
+    /**
+     * The constant of the class generated for the enumeration at `enumerationPath` whose name (its Pure
+     * name) is `name`, or null when the enumeration has no generated class (one compiled at run time) or
+     * no such value.
+     */
+    @SuppressWarnings("unchecked")
+    public static Object enumConstant(String enumerationPath, String name)
+    {
+        if (enumerationPath == null || name == null)
+        {
+            return null;
+        }
+        Class<?> enumClass = ENUM_CLASSES.computeIfAbsent(enumerationPath, p ->
+        {
+            try
+            {
+                Class<?> c = Class.forName(org.finos.legend.pure.platform.java.execution.Execute.className(p));
+                return PureEnumConstant.class.isAssignableFrom(c) ? java.util.Optional.of(c) : java.util.Optional.empty();
+            }
+            catch (ClassNotFoundException | LinkageError e)
+            {
+                return java.util.Optional.empty();
+            }
+        }).orElse(null);
+        if (enumClass == null)
+        {
+            return null;
+        }
+        try
+        {
+            for (Object constant : (List<Object>) enumClass.getMethod("values").invoke(null))
+            {
+                if (((PureEnumConstant) constant).name().equals(name))
+                {
+                    return constant;
+                }
+            }
+            return null;
+        }
+        catch (ReflectiveOperationException e)
+        {
+            throw new RuntimeException("Cannot read the values of " + enumerationPath + ": " + e.getMessage(), e);
+        }
     }
 
     private static Object asEnum(Object value)

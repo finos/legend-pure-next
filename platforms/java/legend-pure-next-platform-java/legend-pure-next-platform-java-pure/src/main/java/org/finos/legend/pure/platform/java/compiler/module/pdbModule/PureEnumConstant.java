@@ -24,11 +24,11 @@ import org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTyp
 import java.util.List;
 
 /**
- * A constant of a generated Java enum IS a metamodel {@link Enum}: a value of its enumeration, a
+ * A value of a generated enumeration class IS a metamodel {@link Enum}: a value of its enumeration, a
  * NamedElement, an AddressableElement and an AnnotatedElement, so it goes wherever the metamodel says an
  * enum value goes ({@code address(CITY)}, a match arm on Enum, a function taking a NamedElement).
  *
- * <p>The constant holds nothing itself. Its name is {@code java.lang.Enum.name()}; its classifier is its
+ * <p>The constant holds only its name (the one it was declared with, {@code name()}); its classifier is its
  * enumeration; what the PDB records for it (stereotypes, tagged values, source information) is read from
  * the enumeration's metadata value of the same name. An enum value is immutable: the fluent setters and
  * {@code _copy} refuse.</p>
@@ -147,6 +147,6 @@ public interface PureEnumConstant extends PureEnumValue, Enum
 
     private UnsupportedOperationException immutable(String what)
     {
-        return new UnsupportedOperationException("Cannot change " + what + " of the enum value " + _purePath() + "." + ((java.lang.Enum<?>) this).name() + ": an enum value is immutable");
+        return new UnsupportedOperationException("Cannot change " + what + " of the enum value " + _purePath() + "." + name() + ": an enum value is immutable");
     }
 }

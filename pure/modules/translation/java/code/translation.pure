@@ -2150,7 +2150,7 @@ function <<access.private>> platform::extensions::language::java::translation::b
    $conv->runtimeCall('PureBinary', 'toHex', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte()))], javaString());
 }
 
-// `enumValues(E)` — the generated Java enum's constants, in declaration order.
+// `enumValues(E)` — the generated enumeration class's constants, in declaration order.
 function <<access.private>> platform::extensions::language::java::translation::enumValuesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'enumValuesCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
@@ -2161,7 +2161,7 @@ function <<access.private>> platform::extensions::language::java::translation::e
    if ($enumeration->isEmpty(),
       | j_invoke(javaClass($conv->pdbClass('Metadata')), 'enumValues',
                  [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaList()),
-      | j_invoke(javaArrays(), 'asList', [j_invoke($conv->javaEnumType($enumeration->toOne()), 'values', [], javaObject())], javaList()));
+      | j_invoke($conv->javaEnumType($enumeration->toOne()), 'values', [], javaList()));
 }
 
 // `memoize(f, args...)` — `f->eval(args...)` once per execution for a given function and arguments
@@ -3017,7 +3017,9 @@ function <<access.private>> platform::extensions::language::java::translation::d
                  && $unitArg->cast(@FunctionExpression).parametersValues->at(0)->enumerationLiteral()->isNotEmpty();
    if ($literal->size() == 1, | j_string($literal->toOne().name->toOne()),
    |if ($access,              | j_string($unitArg->cast(@FunctionExpression).functionName->toOne()),
-                              | $conv->translateExpression($unitArg)->j_castWithoutChecks(javaClass('java.lang.Enum'))->j_invoke('name', [], javaString())));
+                              | if ($conv.metadataElements,
+                                     | j_invoke(javaClass($conv->pdbClass('Metadata')), 'enumName', [$conv->translateExpression($unitArg)->toObjectCode()], javaString()),
+                                     | $conv->translateExpression($unitArg)->j_castWithoutChecks(javaClass($conv->pdbClass('PureEnumConstant')))->j_invoke('name', [], javaString()))));
 }
 
 
@@ -3656,12 +3658,12 @@ function <<access.private>> platform::extensions::language::java::translation::p
                 // the protocol grammar has an Any of its own, and an
                 // AtomicValue's value — typed by it — is a literal at run time.
                 pair(| $raw->platform::extensions::language::java::translation::platform::isTopType(), | javaObject()),
-                // An enumeration is its generated Java enum; the abstract Enum
-                // (any enum value) is java.lang.Enum.
+                // An enumeration is its generated class; the abstract Enum (any
+                // enum value) is a PureEnumConstant — every generated value is one.
                 pair(| $raw->instanceOf(platform::pure::metamodel::type::Enumeration), | $conv->javaEnumType($raw->cast(@platform::pure::metamodel::type::Enumeration<Any>))),
                 // An enum value is a Java enum constant, or — with metadata — the
                 // metamodel object of an enumeration read from a PDB.
-                pair(| $raw == platform::pure::metamodel::type::Enum,                | if ($conv.metadataElements, | javaObject(), | javaClass('java.lang.Enum'))),
+                pair(| $raw == platform::pure::metamodel::type::Enum,                | if ($conv.metadataElements, | javaObject(), | javaClass($conv->pdbClass('PureEnumConstant')))),
                 // User-defined Pure classes are emitted as plain Java
                 // classes alongside GalleryRunner (see buildSignature's
                 // `extraClasses` walk). Map a Pure Class reference to the
@@ -4098,14 +4100,14 @@ function <<access.private>> platform::extensions::language::java::translation::t
       | $translated,
       | $translated->toObjectCode()->j_castWithoutChecks($viaType->toOne()));
    // Special-case `.type()` which is a generated method, not a field. An enum
-   // value's `name` is Enum.name() — the field is private to java.lang.Enum.
+   // value's `name` is its constant's name(), the name it was declared with.
    let isProperty = $fe.func->isNotEmpty() && $fe.func->toOne()->instanceOf(platform::pure::metamodel::function::property::Property);
    if ($fe.functionName == 'type' && !$isProperty, | $receiver->j_invoke('type', [], javaString()),
    // An enum value is a Java enum constant, or — with metadata — the metamodel
    // object of an enumeration read from a PDB.
    |if ($isEnum && $fe.functionName == 'name' && $conv.metadataElements,
                                                   | j_invoke(javaClass($conv->pdbClass('Metadata')), 'enumName', [$translated->toObjectCode()], javaString()),
-   |if ($isEnum && $fe.functionName == 'name',     | $receiver->j_cast(javaClass('java.lang.Enum'))->j_invoke('name', [], javaString()),
+   |if ($isEnum && $fe.functionName == 'name',     | $receiver->j_cast(javaClass($conv->pdbClass('PureEnumConstant')))->j_invoke('name', [], javaString()),
                                                    | $conv->typedFieldRead($fe, $receiver->j_invoke($fe.functionName->toOne()->platform::extensions::language::java::translation::platform::getterName(), [], javaObject()))
    )));
 }
@@ -4848,7 +4850,7 @@ function <<access.private>> platform::extensions::language::java::translation::m
       ->j_castWithoutChecks($classifier);
 }
 
-// The Java enum generated for a Pure Enumeration (see {@link enumHelperClass}).
+// The Java class generated for a Pure Enumeration (see platformEnum).
 function <<access.private>> platform::extensions::language::java::translation::javaEnumType(conv: Conventions[1], e: platform::pure::metamodel::type::Enumeration<Any>[1]): platform::extensions::language::java::metamodel::Type[1]
 {
    javaClass($e->platform::extensions::language::java::translation::platform::platformTypeName(platform::extensions::language::java::translation::platform::platformRoot()));

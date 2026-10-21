@@ -387,7 +387,7 @@ public final class PdbRuntime
         List<Object> decoded = new ArrayList<>();
         for (Object value : readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_.execute(schema, owner.node, field))
         {
-            Object converted = convert(owner, value);
+            Object converted = convert(owner, property, value);
             if (converted != null)
             {
                 decoded.add(converted);
@@ -396,7 +396,33 @@ public final class PdbRuntime
         return Collections.unmodifiableList(decoded);
     }
 
-    private Object convert(LazyObject owner, Object value)
+    /**
+     * The enum value an AtomicValue's text names, when the AtomicValue is typed by an enumeration: its
+     * generated constant. Null for a String, or for an enumeration without a generated enum.
+     */
+    private static Object atomicEnumValue(LazyObject atomicValue, String text)
+    {
+        for (Object genericType : atomicValue.__values("genericType"))
+        {
+            if (!(genericType instanceof LazyObject))
+            {
+                continue;
+            }
+            for (Object type : ((LazyObject) genericType).__values("type"))
+            {
+                if (type instanceof LazyObject && ((LazyObject) type)._purePath().equals("platform::pure::metamodel::type::Enumeration"))
+                {
+                    // No generated enum (an enumeration compiled at run time): the text stays, and
+                    // enumValues turns it into the value. Reading the enumeration's values here would
+                    // come straight back through this AtomicValue.
+                    return Metadata.enumConstant(Metadata.path(type, "::"), text.substring(text.lastIndexOf('.') + 1));
+                }
+            }
+        }
+        return null;
+    }
+
+    private Object convert(LazyObject owner, String property, Object value)
     {
         if (value instanceof FbsNode node)
         {
@@ -409,6 +435,16 @@ public final class PdbRuntime
                 return wrap(node, owner);
             }
             Object unwrapped = unwrapValueDef_FbsNode_1__Any_1_.execute(node);
+            // An enum value in an AtomicValue is written as its text, "Enumeration.VALUE": the
+            // AtomicValue's type says which it is (testEnumValuePropertyDefaultValueIsTheValue).
+            if ("value".equals(property) && "StringValueDef".equals(node.type()) && owner._purePath().endsWith("::AtomicValue"))
+            {
+                Object enumValue = atomicEnumValue(owner, (String) unwrapped);
+                if (enumValue != null)
+                {
+                    return enumValue;
+                }
+            }
             // A Decimal is stored as its text; the value is a BigDecimal, as
             // everywhere else on the platform (Pure's Decimal is exact).
             return "DecimalValueDef".equals(node.type()) && unwrapped instanceof String

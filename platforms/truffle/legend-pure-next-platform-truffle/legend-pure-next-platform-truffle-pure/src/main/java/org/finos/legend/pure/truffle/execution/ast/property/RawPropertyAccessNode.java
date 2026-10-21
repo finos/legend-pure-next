@@ -35,6 +35,7 @@ public final class RawPropertyAccessNode extends PureNode
     private static final int SLOT_DEFAULT_VALUE = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("defaultValue");
     private static final int SLOT_EXPRESSION_SEQUENCE = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("expressionSequence");
     private static final int SLOT_FUNC = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("func");
+    private static final int SLOT_OWNER = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("owner");
     private static final int SLOT_FUNCTION_NAME = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("functionName");
     private static final int SLOT_NAME = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("name");
     private static final int SLOT_PROPERTIES = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("properties");
@@ -42,6 +43,9 @@ public final class RawPropertyAccessNode extends PureNode
     private static final int SLOT_VALUES = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("values");
     private final Object fe;
     private final boolean isQualifiedProperty;
+    // The call reads one of an enumeration's values (its properties), not a metaclass property of the same
+    // name: `E.name` is E's value `name`, as the compiler resolved it (testEnumValueNamesAreAsDeclared).
+    private final boolean isEnumValueProperty;
     private final String propertyName;
 
     @Children
@@ -69,6 +73,11 @@ public final class RawPropertyAccessNode extends PureNode
         Object func = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_FUNC);
         this.isQualifiedProperty = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(func,
                 "platform::pure::metamodel::function::property::QualifiedProperty");
+        Object owner = func != null && !isQualifiedProperty
+                ? org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(func, SLOT_OWNER)
+                : null;
+        this.isEnumValueProperty = owner != null && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(owner,
+                "platform::pure::metamodel::type::Enumeration");
         if (!isQualifiedProperty)
         {
             Object nameObj = func != null
@@ -118,7 +127,9 @@ public final class RawPropertyAccessNode extends PureNode
             // Enumerations have BOTH metaclass properties (_name, _package,
             // _values, ...) AND enum values (FIRST, SECOND, ...).
             // Resolution order:
-            //   1. metaclass property via reader (handles _name, _package, ...)
+            //   1. metaclass property via reader (handles _name, _package, ...) — skipped when the
+            //      compiler resolved the call to one of the enumeration's values
+            //      (isEnumValueProperty), whose name may also be a metaclass property's
             //   2. `values` traversal (PDB-loaded and dynamically built enums)
             //   3. `properties`-as-defaultValue traversal (newEnumeration path)
             //   4. throw — better than silently returning empty (which is what
@@ -137,7 +148,9 @@ public final class RawPropertyAccessNode extends PureNode
                 // Use executeOrAbsent so we can tell "metaclass property
                 // exists and is empty" (return as-is) from "property doesn't
                 // exist on this enum" (fall through to enum-value lookup).
-                Object viaProp = reader.executeOrAbsent(target, propName);
+                Object viaProp = isEnumValueProperty
+                        ? org.finos.legend.pure.truffle.execution.ast.property.PropertyReadNode.ABSENT
+                        : reader.executeOrAbsent(target, propName);
                 if (viaProp != org.finos.legend.pure.truffle.execution.ast.property.PropertyReadNode.ABSENT)
                 {
                     return viaProp;

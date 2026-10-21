@@ -178,6 +178,10 @@ public final class PureFormat
         {
             return "<" + str(((Map.Entry<?, ?>) v).getKey()) + ", " + str(((Map.Entry<?, ?>) v).getValue()) + ">";
         }
+        if (v instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.PureEnumConstant constant)
+        {
+            return constant.name();
+        }
         if (v instanceof Enum)
         {
             return ((Enum<?>) v).name();
@@ -215,6 +219,10 @@ public final class PureFormat
         if (v.getClass().getSimpleName().equals("PureDate") || v instanceof Temporal)
         {
             return "%" + v;
+        }
+        if (v instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.PureEnumConstant constant)
+        {
+            return constant._purePath() + "." + constant.name();
         }
         if (v instanceof Enum)
         {

@@ -479,11 +479,29 @@ function platform::extensions::language::java::translation::platform::platformTy
 
 function platform::extensions::language::java::translation::platform::platformEnum(e: Enumeration<Any>[1], javaRoot: String[1], conv: platform::extensions::language::java::translation::Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
 {
+   // A final class of singletons, not a Java enum: a Java enum's name() is final and answers the Java
+   // identifier, which cannot be a Pure value named `default` or `class` (testEnumValueNamesAreAsDeclared).
+   // Each constant carries its Pure name; the Java field is its safe name. The class's own members are
+   // `$`-named — no Pure identifier is — so a value called `name` or `VALUES` cannot collide with them.
+   //
    // PureEnumConstant: the constant IS a metamodel Enum (so a NamedElement, an AddressableElement, an
    // AnnotatedElement), answering its metamodel properties through the platform's metadata — its
    // enumeration is its classifier, and the PDB holds its annotations.
-   javaEnum(['public'], $e->platformTypeName($javaRoot))
-      ->addEntries($e->platform::pure::functions::meta::enumValues()->map(v | javaEnumEntry($v.name->toOne()->safeJavaName())))
+   let type   = javaClass($e->platformTypeName($javaRoot));
+   let names  = $e->platform::pure::functions::meta::enumValues()->map(v | $v.name->toOne());
+   let listOf = javaClass('java.util.List');
+   let constants = $names->map(n | javaField(['public', 'static', 'final'], $type, $n->safeJavaName(), j_new($type, [j_string($n)])));
+   let values    = javaField(['private', 'static', 'final'], javaList($type), '$VALUES',
+                             j_invoke($listOf, 'of', $names->map(n | j_field($type, $n->safeJavaName(), $type)), javaList($type)));
+   javaClass(['public', 'final'], $e->platformTypeName($javaRoot))
       ->implements(javaClass($conv->platform::extensions::language::java::translation::pdbClass('PureEnumConstant')))
+      ->addFields($constants->concatenate($values)->concatenate(javaField(['private', 'final'], javaString(), '$name')))
+      ->addConstructor(javaConstructor(['private'], [javaParam(javaString(), '$name')], 'this.$name = $name;'))
+      ->addMethod(javaMethod(['public', 'static'], javaList($type), 'values', [], j_return(j_field($type, '$VALUES', javaList($type)))))
+      ->addMethod(javaMethod(['public', 'static'], $type, 'valueOf', [javaParam(javaString(), '$name')],
+                             'for (' + $type->typeToString() + ' $v : $VALUES)\n{\n    if ($v.$name.equals($name))\n    {\n        return $v;\n    }\n}\n'
+                             + 'throw new IllegalArgumentException("No value " + $name + " in ' + $e->elementToPath() + '");'))
+      ->addMethod(javaMethod(['public'], javaString(), 'name', [], j_return(j_field(j_this($type), '$name', javaString()))))
+      ->addMethod(javaMethod(['public'], javaString(), 'toString', [], j_return(j_field(j_this($type), '$name', javaString()))))
       ->addMethod(javaMethod(['public'], javaString(), '_purePath', [], j_return(j_string($e->elementToPath()))));
 }
