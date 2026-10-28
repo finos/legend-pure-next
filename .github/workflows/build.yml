@@ -1352,16 +1352,24 @@ jobs:
             const add = (f) => (JSON.parse(fs.readFileSync(f, "utf8")).pdbs ?? []).forEach((p) => out.push(p));
             fs.readdirSync("pure/specification").filter((n) => /^language_.*\.json$/.test(n))
               .forEach((n) => add("pure/specification/" + n));
-            fs.readdirSync("pure/extensions", { withFileTypes: true }).filter((e) => e.isDirectory())
+            // An extension is any directory <…>/<name> under pure/extensions holding language_<name>.json,
+            // at any depth — extensions may be grouped (pure/extensions/pure/tds). The same rule as
+            // platforms/javascript/bin/generate-languages.mjs, which is what tells the page to fetch them:
+            // a one-level scan here left tds.pdb out of the site while the page asked for it.
+            const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory() && e.name !== "build")
               .forEach((e) => {
-                const f = "pure/extensions/" + e.name + "/language_" + e.name + ".json";
+                const sub = dir + "/" + e.name;
+                const f = sub + "/language_" + e.name + ".json";
                 if (fs.existsSync(f)) add(f);
+                walk(sub);
               });
+            walk("pure/extensions");
             console.log([...new Set(out)].join("\n"));
           ')
           # Every language extension's pdb, found by glob rather than named, for an extension that
-          # declares no `pdbs` of its own. The -tests companions are left behind — the page runs no tests.
-          for path in pure/extensions/*/build/*.pdb
+          # declares no `pdbs` of its own — grouped ones (pure/extensions/pure/tds) included. The -tests
+          # companions are left behind — the page runs no tests.
+          for path in $(find pure/extensions -path '*/build/*.pdb' -not -path '*/node_modules/*')
           do
             case "$path" in *-tests.pdb) continue ;; esac
             mkdir -p "ide-site/$(dirname "$path")"
