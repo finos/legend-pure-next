@@ -182,7 +182,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::printC
         '\n',
         $c->printAnnotations('  '),
         $c->printTypeVariables('  '),
-        $c.properties->cast(@Any)->map(p | $p->cast(@Property<Nil, Any|*>)->printProperty('  ', $context))->joinStrings(''),
+        $c.properties->map(p | $p->printProperty('  ', $context))->joinStrings(''),
         $c->printQualifiedProperties('  ', $context),
         $c->printConstraints('  ', $context)
     ]->joinStrings('');
@@ -200,7 +200,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::printA
         $assoc.sourceInformation->printSourceInfo(),
         '\n',
         $assoc->printAnnotations('  '),
-        $assoc.properties->cast(@Any)->map(p | $p->cast(@Property<Nil, Any|*>)->printProperty('  ', $context))->joinStrings(''),
+        $assoc.properties->map(p | $p->printProperty('  ', $context))->joinStrings(''),
         $assoc->printQualifiedProperties('  ', $context)
     ]->joinStrings('');
 }

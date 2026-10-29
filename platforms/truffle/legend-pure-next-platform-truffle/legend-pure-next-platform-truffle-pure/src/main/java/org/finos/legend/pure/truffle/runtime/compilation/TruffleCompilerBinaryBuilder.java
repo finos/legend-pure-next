@@ -596,7 +596,7 @@ public final class TruffleCompilerBinaryBuilder
                                  PureRuntime runtime,
                                  MetadataAccess resolver) throws IOException
     {
-        PurePdbArchiveWriter.write(runtime, resolver, elements, manifest, referencedBy, target);
+        PurePdbArchiveWriter.write(runtime, resolver, elements, manifest, referencedBy, target, "Writing " + target.getFileName());
         System.out.println("Written: " + target + " [" + label + ", " + Files.size(target) + " bytes, "
                 + (referencedBy == null ? 0 : referencedBy.size()) + " ref targets, pure-writer]");
     }

@@ -42,6 +42,8 @@ public final class PurePdbArchiveWriter
 {
     private static final String WRITE_ARCHIVE_FN_PATH =
             "platform::pure::compiler::pdb::archive::writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Map_1__Binary_1_";
+    private static final String WRITE_ARCHIVE_WITH_PROGRESS_FN_PATH =
+            "platform::pure::compiler::pdb::archive::writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Map_1__String_1__Binary_1_";
     private static final String REFBY_FROM_LISTS_FN_PATH =
             "platform::pure::compiler::pdb::archive::referencedByFromLists_String_MANY__String_MANY__Map_1_";
 
@@ -60,13 +62,28 @@ public final class PurePdbArchiveWriter
                              java.util.Map<String, java.util.Set<String>> referencedBy,
                              Path target) throws IOException
     {
-        Object writeFn = resolver.getElement(WRITE_ARCHIVE_FN_PATH);
+        write(runtime, resolver, elements, manifest, referencedBy, target, null);
+    }
+
+    /**
+     * @param progressLabel when not null, the writer shows a progress bar with this label while it writes
+     *                      the elements (a CLI compile); null writes silently
+     */
+    public static void write(PureRuntime runtime,
+                             MetadataAccess resolver,
+                             List<Object> elements,
+                             ModuleManifest manifest,
+                             java.util.Map<String, java.util.Set<String>> referencedBy,
+                             Path target,
+                             String progressLabel) throws IOException
+    {
+        Object writeFn = resolver.getElement(progressLabel == null ? WRITE_ARCHIVE_FN_PATH : WRITE_ARCHIVE_WITH_PROGRESS_FN_PATH);
         Object refFn = resolver.getElement(REFBY_FROM_LISTS_FN_PATH);
         if (writeFn == null || refFn == null)
         {
             throw new IllegalStateException(
                     "Self-hosted PDB writer not loaded — compiler.pdb must be among the loaded modules to write archives"
-                            + " (missing " + (writeFn == null ? WRITE_ARCHIVE_FN_PATH : REFBY_FROM_LISTS_FN_PATH) + ")");
+                            + " (missing " + (writeFn == null ? (progressLabel == null ? WRITE_ARCHIVE_FN_PATH : WRITE_ARCHIVE_WITH_PROGRESS_FN_PATH) : REFBY_FROM_LISTS_FN_PATH) + ")");
         }
         // Marshal the reverse index as parallel primitive lists; the Pure
         // adapter rebuilds the Map ('\n' never occurs in element paths).
@@ -85,13 +102,22 @@ public final class PurePdbArchiveWriter
                 new ObjectSequence(joinedCallers.toArray()));
         // The runtime's language extensions write their own element kinds (###Diagram, …); an
         // element neither m3 nor an extension claims fails the write rather than going missing.
-        Object bytesObj = runtime.execute(writeFn,
-                new ObjectSequence(elements.toArray()),
-                runtime.compilerExtensions(),
-                manifest.name(),
-                manifest.packagePattern(),
-                new ObjectSequence(manifest.dependencies().toArray()),
-                refMap);
+        Object bytesObj = progressLabel == null
+                ? runtime.execute(writeFn,
+                        new ObjectSequence(elements.toArray()),
+                        runtime.compilerExtensions(),
+                        manifest.name(),
+                        manifest.packagePattern(),
+                        new ObjectSequence(manifest.dependencies().toArray()),
+                        refMap)
+                : runtime.execute(writeFn,
+                        new ObjectSequence(elements.toArray()),
+                        runtime.compilerExtensions(),
+                        manifest.name(),
+                        manifest.packagePattern(),
+                        new ObjectSequence(manifest.dependencies().toArray()),
+                        refMap,
+                        progressLabel);
         if (target.getParent() != null)
         {
             Files.createDirectories(target.getParent());

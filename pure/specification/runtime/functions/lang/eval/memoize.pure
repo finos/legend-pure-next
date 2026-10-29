@@ -152,7 +152,7 @@ function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoi
 function <<PCT.test>> platform::pure::functions::lang::tests::memoize::testMemoizeOfAPropertyReadsIt<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
-        let firstName = LA_Person.properties->filter(p | $p.name == 'firstName')->toOne()->cast(@Property<LA_Person, String|1>);
+        let firstName = LA_Person.properties->filter(p | $p.name == 'firstName')->toOne();
         assertEquals('Ada', memoize($firstName, ^LA_Person(firstName = 'Ada', lastName = 'Lovelace')));
     ));
 }

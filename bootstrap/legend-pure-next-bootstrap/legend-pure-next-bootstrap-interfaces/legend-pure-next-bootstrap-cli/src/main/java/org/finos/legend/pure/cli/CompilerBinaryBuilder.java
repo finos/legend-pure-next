@@ -285,7 +285,7 @@ public class CompilerBinaryBuilder
         org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection riSection =
                 org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.serialize(referencedBy);
         if (riSection != null) sections.add(riSection);
-        new CompressedArchiveWriter().write(elements, extensions, localModule, manifest, sections, target);
+        new CompressedArchiveWriter().withProgress("    Writing " + target.getFileName()).write(elements, extensions, localModule, manifest, sections, target);
         System.out.println("    Written: " + target + " [" + label + ", " + Files.size(target) + " bytes, "
                 + (referencedBy == null ? 0 : referencedBy.size()) + " ref targets]");
     }

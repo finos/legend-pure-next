@@ -49,3 +49,12 @@ function <<PCT.test>> platform::pure::functions::collection::tests::putAll::test
 
     assertEquals(newMap([pair('key1', 1), pair('key2', -2), pair('key3', 3)]), $f->eval(|newMap([pair('key1', 1), pair('key2', 2)])->putAll(newMap([pair('key2', -2), pair('key3', 3)]))));
 }
+// Replaced keys keep their position in the map's order; new keys are added at the end.
+function <<PCT.test>> platform::pure::functions::collection::tests::putAll::testPutAll_overridesExistingKeepsTheirPosition<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(['key1', 'key2', 'key3'], $f->eval(|newMap([pair('key1', 1), pair('key2', 2)])->putAll([pair('key1', 10), pair('key3', 3)])->keys()));
+    assertEquals([10, 2, 3], $f->eval(|newMap([pair('key1', 1), pair('key2', 2)])->putAll([pair('key1', 10), pair('key3', 3)])->values()));
+
+    assertEquals(['key1', 'key2', 'key3'], $f->eval(|newMap([pair('key1', 1), pair('key2', 2)])->putAll(newMap([pair('key1', 10), pair('key3', 3)]))->keys()));
+    assertEquals([10, 2, 3], $f->eval(|newMap([pair('key1', 1), pair('key2', 2)])->putAll(newMap([pair('key1', 10), pair('key3', 3)]))->values()));
+}

@@ -40,3 +40,9 @@ function <<PCT.test>> platform::pure::functions::collection::tests::put::testPut
 {
     assertEquals(newMap(pair('key1', 1)), $f->eval(|newMap(pair('key1', 0))->put('key1', 1)));
 }
+// A replaced key keeps its position in the map's order; only its value changes.
+function <<PCT.test>> platform::pure::functions::collection::tests::put::testPut_overridesEntryKeepsItsPosition<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(['key1', 'key2', 'key3'], $f->eval(|newMap([pair('key1', 1), pair('key2', 2), pair('key3', 3)])->put('key1', 10)->keys()));
+    assertEquals([10, 2, 3], $f->eval(|newMap([pair('key1', 1), pair('key2', 2), pair('key3', 3)])->put('key1', 10)->values()));
+}

@@ -72,9 +72,20 @@ function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEn
 
 // Where an enumeration keeps a value — its property's default value — holds that value itself. Like any
 // default, it is a function of the object the property belongs to: here the enumeration.
+function <<test.TestDependency>> platform::pure::functions::meta::tests::enumValues::asColor(color: TestColor[1]): TestColor[1]
+{
+    $color
+}
+
 function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEnumValuePropertyDefaultValueIsTheValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(TestColor.GREEN, $f->eval(|TestColor->cast(@Enumeration<Any>).properties->at(1).defaultValue->toOne()->cast(@Function<{Enumeration<Any>[1]->Any[1]}>)->eval(TestColor)));
+    // Enumeration<E>.properties is typed Property<Enumeration<E>, E|1>: the default takes the enumeration and
+    // returns an E, with no cast (asColor takes a TestColor). The `let` makes `.properties` a property read,
+    // not the name of a value.
+    assertIs(TestColor.GREEN, $f->eval(|
+        let colors = TestColor;
+        asColor($colors.properties->at(1).defaultValue->toOne()->eval($colors));
+    ));
 }
 
 // A value's name is the one it was declared with, whatever it is.

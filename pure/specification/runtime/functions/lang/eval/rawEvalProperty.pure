@@ -28,7 +28,7 @@ native function
 // A property of WithDefaults, for an object of it.
 function <<test.TestDependency>> platform::pure::functions::lang::tests::rawEvalProperty::withDefaultsProperty(name:String[1]):platform::pure::metamodel::function::property::Property<WithDefaults,Any|*>[1]
 {
-    WithDefaults.properties->filter(p | $p.name == $name)->toOne()->cast(@platform::pure::metamodel::function::property::Property<WithDefaults,Any|*>)
+    WithDefaults.properties->filter(p | $p.name == $name)->toOne()
 }
 
 function <<PCT.test>> platform::pure::functions::lang::tests::rawEvalProperty::testRawEvalPropertyReturnsTheValueGiven<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]

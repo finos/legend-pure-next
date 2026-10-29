@@ -150,9 +150,9 @@ function goBoth__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
       AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @37:50-37:52
 
 function anyProperty_String_1__String_1__Property_1_(owner:@String@[1], name:@String@[1]):Property<@Nil@, @Any@|*>[1]  ~UserDefinedFunction<{@String@[1], @String@[1]->Property<@Nil@, @Any@|*>[1]}>
-  ArrowInvocation at_T_MANY__Integer_1__T_1_ :#Property<@Nil@, @Any@|*>##[1]#  ~@ArrowInvocation@  @42:18-42:24
-    typeParam T -> #Property<@Nil@, @Any@|*>#
-    DotApplication platform::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @42:7-42:17
+  ArrowInvocation at_T_MANY__Integer_1__T_1_ :#Property<#Pair<?, ?>#, @Any@|*>##[1]#  ~@ArrowInvocation@  @42:18-42:24
+    typeParam T -> #Property<#Pair<?, ?>#, @Any@|*>#
+    DotApplication platform::pure::metamodel::type::Class.properties :#Property<#Pair<?, ?>#, @Any@|*>##[*]#  ~@DotApplication@  @42:7-42:17
       AtomicValue  platform::pure::functions::collection::Pair :#Class<#Pair<?, ?>#>#[1]  ~@AtomicValue@  @42:3-42:6
     AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @42:23-42:23
 
@@ -238,9 +238,9 @@ function goMemoizeDefinedLater__Property_1_():Property<@Any@, @Any@|*>[1]  ~User
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Property<@Any@, @Any@|*>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Property<@Any@, @Any@|*>|?>  @73:74-73:94
 
 function laterProperty_String_1__String_1__Property_1_(owner:@String@[1], name:@String@[1]):Property<@Nil@, @Any@|*>[1]  ~UserDefinedFunction<{@String@[1], @String@[1]->Property<@Nil@, @Any@|*>[1]}>
-  ArrowInvocation at_T_MANY__Integer_1__T_1_ :#Property<@Nil@, @Any@|*>##[1]#  ~@ArrowInvocation@  @78:18-78:24
-    typeParam T -> #Property<@Nil@, @Any@|*>#
-    DotApplication platform::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @78:7-78:17
+  ArrowInvocation at_T_MANY__Integer_1__T_1_ :#Property<#Pair<?, ?>#, @Any@|*>##[1]#  ~@ArrowInvocation@  @78:18-78:24
+    typeParam T -> #Property<#Pair<?, ?>#, @Any@|*>#
+    DotApplication platform::pure::metamodel::type::Class.properties :#Property<#Pair<?, ?>#, @Any@|*>##[*]#  ~@DotApplication@  @78:7-78:17
       AtomicValue  platform::pure::functions::collection::Pair :#Class<#Pair<?, ?>#>#[1]  ~@AtomicValue@  @78:3-78:6
     AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @78:23-78:23
 

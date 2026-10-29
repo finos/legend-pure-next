@@ -20,6 +20,7 @@ import platform.pure.metamodel.valuespecification.CollectionImpl;
 import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.utility.Iterate;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
 import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
@@ -519,9 +520,7 @@ public class CollectionNatives
             ValueSpecification keyVS = args.get(1);
             ValueSpecification valueVS = args.get(2);
             java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(original.getMap());
-            // remove existing structurally-equal key first
-            m.keySet().removeIf(k -> org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(k, keyVS, resolver));
-            m.put(keyVS, valueVS);
+            putKeepingPosition(m, keyVS, valueVS, resolver);
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
         });
 
@@ -595,8 +594,7 @@ public class CollectionNatives
                 DynamicInstance pair = (DynamicInstance) _E_ValueSpecification.unwrap(pairVS);
                 ValueSpecification kVS = _E_ValueSpecification.wrap(pair.get("first"), org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(pair.get("first"), resolver), null, resolver);
                 ValueSpecification vVS = _E_ValueSpecification.wrap(pair.get("second"), org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(pair.get("second"), resolver), null, resolver);
-                m.keySet().removeIf(key -> org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(key, kVS, resolver));
-                m.put(kVS, vVS);
+                putKeepingPosition(m, kVS, vVS, resolver);
             }
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
         });
@@ -609,8 +607,7 @@ public class CollectionNatives
             java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(m1.getMap());
             for (Map.Entry<ValueSpecification, ValueSpecification> e : m2.getMap().entrySet())
             {
-                m.keySet().removeIf(k -> org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(k, e.getKey(), resolver));
-                m.put(e.getKey(), e.getValue());
+                putKeepingPosition(m, e.getKey(), e.getValue(), resolver);
             }
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
         });
@@ -722,6 +719,17 @@ public class CollectionNatives
      * Creates a DynamicInstance representing a Pure Pair with its classifierGenericType
      * built from the actual element types of the two input collections.
      */
+    /**
+     * Sets `key` to `value` in `map`. A key already there (by Pure equality) keeps its position and only its
+     * value changes; a new key goes last (testPut_overridesEntryKeepsItsPosition).
+     */
+    private static void putKeepingPosition(java.util.LinkedHashMap<ValueSpecification, ValueSpecification> map, ValueSpecification key,
+                                           ValueSpecification value, MetadataAccess resolver)
+    {
+        ValueSpecification existing = Iterate.detect(map.keySet(), k -> org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(k, key, resolver));
+        map.put(existing == null ? key : existing, value);
+    }
+
     private static DynamicInstance makePair(ValueSpecification first, ValueSpecification second,
             platform.pure.metamodel.type.generics.GenericType firstGT,
             platform.pure.metamodel.type.generics.GenericType secondGT,

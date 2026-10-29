@@ -31,7 +31,7 @@ import platform::pure::compiler::pdb::generator::*;
 function platform::pure::compiler::pdb::generator::allWriterProperties(cls:Class<Any>[1]):Property<Nil, Any|*>[*]
 {
    let anyCls  = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::type::Any')->cast(@Class<Any>);
-   let anyProps = if($cls == $anyCls, | [], | $anyCls.properties->cast(@Property<Nil, Any|*>));
+   let anyProps = if($cls == $anyCls, | [], | $anyCls.properties);
    let rest = platform::pure::compiler::pdb::generator::hierarchyProperties($cls);
    // dedup by name, first occurrence wins (Any's first, then ancestors, then own);
    // skip <<ProtocolInfo.excluded>> properties (reference hasStereotype 'excluded').
@@ -52,7 +52,7 @@ function platform::pure::compiler::pdb::generator::hierarchyProperties(cls:Class
       ->filter(t:Type[1] | $t->instanceOf(Class) && ($t->cast(@Class<Any>)->elementToPath() != 'platform::pure::metamodel::type::Any'))
       ->map(t:Type[1] | $t->cast(@Class<Any>));
    $parents->map(p | platform::pure::compiler::pdb::generator::hierarchyProperties($p))
-      ->concatenate($cls.properties->cast(@Property<Nil, Any|*>));
+      ->concatenate($cls.properties);
 }
 
 // --- (2) name mapping ----------------------------------------------------------

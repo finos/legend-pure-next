@@ -26,6 +26,7 @@
 
 import platform::pure::functions::binary::*;
 import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::ui::progress::*;
 
 // --- element envelope ---------------------------------------------------------
 
@@ -328,11 +329,26 @@ function platform::pure::compiler::pdb::archive::zipCentralBytes(e:platform::pur
 // section order (extension sections before caller-provided ones).
 function platform::pure::compiler::pdb::archive::archiveEntries(elements:Any[*], extensions:platform::pure::compiler::extension::CompilerExtension[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1]):platform::pure::compiler::pdb::archive::ArchiveEntry[*]
 {
+   platform::pure::compiler::pdb::archive::archiveEntries($elements, $extensions, $moduleName, $packagePattern, $dependencies, $referencedBy, []);
+}
+
+// With a `progressLabel`, a progress bar counts the elements as their blobs are written: what a CLI
+// compile shows while it writes a PDB. Without one nothing is printed, as tests need: they run inside
+// a progress bar of their own.
+function platform::pure::compiler::pdb::archive::archiveEntries(elements:Any[*], extensions:platform::pure::compiler::extension::CompilerExtension[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1], progressLabel:String[0..1]):platform::pure::compiler::pdb::archive::ArchiveEntry[*]
+{
    let infos = platform::pure::compiler::pdb::archive::elementEntryInfos($elements, $extensions);
-   let elementEntries = $infos->map(i |
+   let total = $infos->size();
+   let shown = $progressLabel->isNotEmpty();
+   if($shown, | startProgress($progressLabel->toOne() + ' (' + $total->toString() + ' elements)'), | true);
+   let elementEntries = range(0, $total)->map(n |
+      let i = $infos->at($n);
+      if($shown, | tickProgress($n + 1, $total, $i.path), | true);
       ^platform::pure::compiler::pdb::archive::ArchiveEntry(
          name = platform::pure::compiler::pdb::archive::entryName($i.path, $i.typeName),
-         data = platform::pure::compiler::pdb::archive::elementBytes($i)));
+         data = platform::pure::compiler::pdb::archive::elementBytes($i));
+   );
+   if($shown, | finishProgress(), | true);
    let indexEntry = if($infos->isEmpty(),
       | [],
       | ^platform::pure::compiler::pdb::archive::ArchiveEntry(
@@ -368,6 +384,13 @@ function platform::pure::compiler::pdb::archive::writeArchive(elements:Any[*], e
 {
    platform::pure::compiler::pdb::archive::zipStored(
       platform::pure::compiler::pdb::archive::archiveEntries($elements, $extensions, $moduleName, $packagePattern, $dependencies, $referencedBy));
+}
+
+// Same, with a progress bar labelled `progressLabel` while the elements are written (see archiveEntries).
+function platform::pure::compiler::pdb::archive::writeArchive(elements:Any[*], extensions:platform::pure::compiler::extension::CompilerExtension[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1], progressLabel:String[1]):Binary[1]
+{
+   platform::pure::compiler::pdb::archive::zipStored(
+      platform::pure::compiler::pdb::archive::archiveEntries($elements, $extensions, $moduleName, $packagePattern, $dependencies, $referencedBy, $progressLabel));
 }
 
 // A whole .pdb archive as bytes, without a reverse index.

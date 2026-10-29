@@ -451,6 +451,12 @@ function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaul
     assertEquals('setbla', $f->eval(|^WithDefaults(str = 'set').advanced));
 }
 
+// Class<T>.properties is typed Property<T, Any|*>: a default read through it takes the object, with no cast.
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueReadThroughProperties<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('setbla', $f->eval(|WithDefaults.properties->filter(p | $p.name == 'advanced')->toOne().defaultValue->toOne()->eval(^WithDefaults(str = 'set'))));
+}
+
 function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewExplicitValueOverridesDefault<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(2, $f->eval(|^WithDefaults(value = 2).value));

@@ -1,0 +1,53 @@
+###Pure
+import test::metaclass::*;
+
+Class test::metaclass::Person
+{
+  name: String[1];
+}
+
+Enum test::metaclass::Color
+{
+  RED,
+  GREEN
+}
+
+function test::metaclass::classProperties(): Property<Person, Any|*>[*]
+{
+  Person.properties
+}
+
+function test::metaclass::enumerationProperties(): Property<Enumeration<Color>, Color|1>[*]
+{
+  let colors = Color;
+  $colors.properties;
+}
+
+###CompiledGraph
+class test::metaclass::Person extends Any  ~Class<test::metaclass::Person>  @4:1-7:1
+  property name :@String@[1]  ~Property<test::metaclass::Person, @String@|1>
+
+enumeration test::metaclass::Color extends Enum  ~Enumeration<test::metaclass::Color>  @9:1-13:1
+  property RED  ~Property<Enumeration<test::metaclass::Color>, test::metaclass::Color|1>  = ^test::metaclass::Color(name='RED')  ~lambda:#LambdaFunction<#{Enumeration<test::metaclass::Color>[1]->test::metaclass::Color[1]}#>#  @11:3-11:5
+  property GREEN  ~Property<Enumeration<test::metaclass::Color>, test::metaclass::Color|1>  = ^test::metaclass::Color(name='GREEN')  ~lambda:#LambdaFunction<#{Enumeration<test::metaclass::Color>[1]->test::metaclass::Color[1]}#>#  @12:3-12:7
+
+function test::metaclass::classProperties__Property_MANY_():Property<test::metaclass::Person, @Any@|*>[*]  ~UserDefinedFunction<{->Property<test::metaclass::Person, @Any@|*>[*]}>
+  DotApplication platform::pure::metamodel::type::Class.properties :#Property<test::metaclass::Person, @Any@|*>##[*]#  ~@DotApplication@  @17:9-17:19
+    AtomicValue  test::metaclass::Person :#Class<test::metaclass::Person>#[1]  ~@AtomicValue@  @17:3-17:8
+
+function test::metaclass::enumerationProperties__Property_MANY_():Property<Enumeration<test::metaclass::Color>, test::metaclass::Color|1>[*]  ~UserDefinedFunction<{->Property<Enumeration<test::metaclass::Color>, test::metaclass::Color|1>[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Enumeration<test::metaclass::Color>##[1]#  ~@FunctionInvocation@  @22:3-22:20
+    typeParam T -> #Enumeration<test::metaclass::Color>#
+    mulParam m -> [1]
+    AtomicValue  'colors' :@String@[1]  ~@AtomicValue@  @22:7-22:12
+    AtomicValue  test::metaclass::Color :#Enumeration<test::metaclass::Color>#[1]  ~@AtomicValue@  @22:16-22:20
+  DotApplication platform::pure::metamodel::type::Enumeration.properties :#Property<#Enumeration<test::metaclass::Color>#, test::metaclass::Color|1>##[*]#  ~@DotApplication@  @23:10-23:20
+    Variable colors :#Enumeration<test::metaclass::Color>##[1]#  ~@VariableExpression@  @23:3-23:9
+
+###ReverseIndex
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::metaclass::enumerationProperties__Property_MANY_
+test::metaclass::Color:
+  test::metaclass::enumerationProperties__Property_MANY_
+test::metaclass::Person:
+  test::metaclass::classProperties__Property_MANY_

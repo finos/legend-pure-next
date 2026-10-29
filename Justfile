@@ -326,10 +326,11 @@ _test-all-suites:
     branch_modules()    { j --no-deps modules::language_java::test-all modules::language_javascript::test-all modules::translation_shared::test-all; }
     branch_java()       { j java::test-all; }
     branches="bootstrap truffle javascript modules java"
-    rm -f "$logs"/*.status "$logs"/*.result "$logs/.done"
+    rm -f "$logs"/*.status "$logs"/*.result "$logs"/*.steps "$logs/.done"
     # On a terminal, a live block redrawn every second: one line per lane, with the step it is on and a
-    # bar for that step's (n/total) counter. Otherwise (CI, redirected output) one line every 30s, and
-    # each lane's ✓/✗ as it finishes.
+    # bar for that step's (n/total) counter. Each step a lane finishes is printed above the block, with
+    # its time. Otherwise (CI, redirected output) the finished steps and each lane's ✓/✗ as they happen,
+    # and a status line every 30s.
     live=false; [ -t 1 ] && live=true
     started_all=$SECONDS
     run() {
@@ -344,63 +345,152 @@ _test-all-suites:
         else
             line=$(printf '✗ %dm%02ds  exit %s — test-results/logs/%s.log' $(( took / 60 )) $(( took % 60 )) "$status" "$name")
         fi
-        echo "$line" > "$logs/$name.result"
-        $live || printf '  %-11s %s\n' "$name" "$line"
         echo "$status" > "$logs/$name.status"
+        echo "$line" > "$logs/$name.result"
     }
-    # A lane's state from its log: the last step header ([module::recipe]), then that step's last
-    # progress counter ("37%  (59/155)"), as "step<TAB>n<TAB>total".
-    lane_state() {
-        LC_ALL=C tr '\r' '\n' < "$logs/$1.log" 2>/dev/null | LC_ALL=C awk '
-            match($0, /\[[A-Za-z0-9_-]+(::[A-Za-z0-9_-]+)+\]/) { step = substr($0, RSTART + 1, RLENGTH - 2); n = ""; m = "" }
+    # A lane's log, scanned: every step header ([module::recipe]) in order, one per line, then a last line
+    # "#<TAB>n<TAB>total" with the latest progress counter ("37%  (59/155)") after the last header.
+    lane_scan() {
+        # A lane that has not created its log yet is starting: no steps, no counter.
+        [ -f "$logs/$1.log" ] || { printf '#\t\t\n'; return; }
+        LC_ALL=C tr '\r' '\n' < "$logs/$1.log" | LC_ALL=C awk '
+            match($0, /\[[A-Za-z0-9_-]+(::[A-Za-z0-9_-]+)+\]/) { print substr($0, RSTART + 1, RLENGTH - 2); n = ""; m = "" }
             match($0, /[0-9]+%  \([0-9]+\/[0-9]+\)/) { s = substr($0, RSTART, RLENGTH); sub(/.*\(/, "", s); sub(/\)/, "", s); split(s, a, "/"); n = a[1]; m = a[2] }
-            END { printf "%s\t%s\t%s\n", step, n, m }'
+            END { printf "#\t%s\t%s\n", n, m }'
     }
+    # The previous passing run's steps per lane, "lane<TAB>index<TAB>step<TAB>seconds": the reference for
+    # step counts and time estimates. Kept by `clean`, like builds.json.
+    steps_ref="$(dirname "$logs")/lane-steps.tsv"
+    lane_ref() { [ -f "$steps_ref" ] && awk -F'\t' -v l="$1" '$1 == l { print $2 "\t" $3 "\t" $4 }' "$steps_ref"; }
+    # "total|usual|left" for a lane on its k-th step (named `step`, running for `took` seconds), from its
+    # reference (`ref`, "index<TAB>step<TAB>seconds" lines); all three empty without one.
+    lane_estimate() {
+        printf '%s\n' "$1" | awk -F'\t' -v k="$2" -v step="$3" -v took="$4" '
+            NF == 3 { n++; name[$1] = $2; secs[$1] = $3; if (!($2 in byname)) byname[$2] = $3 }
+            END {
+                if (n == 0) { print "||"; exit }
+                usual = (name[k] == step) ? secs[k] : ((step in byname) ? byname[step] : "")
+                left = (usual == "" || usual + 0 < took + 0) ? 0 : usual - took
+                for (i = k + 1; i <= n; i++) left += secs[i]
+                printf "%s|%s|%s\n", n, usual, left
+            }'
+    }
+    # A running lane's line in the live block: its step number, its step and how long that step has run
+    # against its usual time, a bar for the step's counter, and the time the lane has left.
     lane_line() {
-        local name=$1 tick=$2 step n m width=30 filled bar
-        if [ -f "$logs/$name.result" ]; then
-            printf '  %-11s %s' "$name" "$(cat "$logs/$name.result")"
-            return
-        fi
-        IFS=$'\t' read -r step n m <<< "$(lane_state "$name")"
-        step=${step#"$name"::}
+        local name=$1 tick=$2 step=$3 n=$4 m=$5 took=$6 k=$7 total=$8 usual=$9 left=${10} width=20 filled bar pos time tail
+        pos="$k${total:+/$total}"
+        time="$(duration "$took")${usual:+/~$(duration "$usual")}"
+        tail="${left:+  ~$(duration "$left") left}"
         if [ -n "$m" ] && [ "$m" -gt 0 ]; then
             filled=$(( n * width / m ))
             bar=$(printf '%*s' "$filled" '' | sed 's/ /█/g')$(printf '%*s' $(( width - filled )) '' | sed 's/ /░/g')
-            printf '  %-11s %-28.28s [%s] %5s/%s' "$name" "$step" "$bar" "$n" "$m"
+            printf '  %-11s %-6s %-26.26s %-13s [%s] %5s/%-5s%s' "$name" "$pos" "$step" "$time" "$bar" "$n" "$m" "$tail"
         else
-            printf '  %-11s %-28.28s %s' "$name" "${step:-starting}" "$(echo '|/-\' | cut -c$(( tick % 4 + 1 )))"
+            printf '  %-11s %-6s %-26.26s %-13s %s%s' "$name" "$pos" "${step:-starting}" "$time" "$(echo '|/-\' | cut -c$(( tick % 4 + 1 )))" "$tail"
         fi
     }
-    elapsed() { local t=$(( SECONDS - started_all )); printf '%dm%02ds' $(( t / 60 )) $(( t % 60 )); }
+    duration() { printf '%dm%02ds' $(( $1 / 60 )) $(( $1 % 60 )); }
+    # "  ── title ─────…", 78 columns wide: the live view's section rules.
+    rule() { local r; r=$(printf '%*s' $(( 74 - ${#1} )) '' | sed 's/ /─/g'); printf '  ── %s %s' "$1" "$r"; }
+    elapsed() { duration $(( SECONDS - started_all )); }
+    # One finished step: a line above the live block ("  ✓ lane  step  1m02s"), and a line of this run's
+    # steps for the next run's reference.
+    finish_step() {
+        done_lines="$done_lines$(printf '  %s %-11s %-28s %s' "$1" "$2" "$4" "$(duration "$5")")"$'\n'
+        printf '%s\t%s\t%s\t%s\n' "$2" "$3" "$4" "$5" >> "$logs/$2.steps"
+    }
     progress() {
-        local tick=0 lines=0 b out
+        local tick=0 lines=0 b out done_lines scan steps count k t name step n m mark total usual left most
+        for b in $branches; do printf -v "ref_$b" '%s' "$(lane_ref "$b")"; done
         while :; do
-            if $live; then
-                out=$(printf '  [%s]\n' "$(elapsed)"; for b in $branches; do lane_line "$b" "$tick"; echo; done)
-                [ "$lines" -gt 0 ] && printf '\033[%dA' "$lines"
-                printf '%s\n' "$out" | while IFS= read -r l; do printf '\033[2K%s\n' "$l"; done
-                lines=$(( $(echo $branches | wc -w) + 1 ))
-            elif [ $(( tick % 30 )) -eq 0 ] && [ "$tick" -gt 0 ]; then
-                out=""
-                for b in $branches; do
-                    [ -f "$logs/$b.result" ] && continue
-                    IFS=$'\t' read -r step n m <<< "$(lane_state "$b")"
-                    out="$out · $b ${step#"$b"::}${m:+ $n/$m}"
+            # The run's script is gone (killed outright): stop drawing rather than run on as an orphan.
+            kill -0 "$main_pid" 2>/dev/null || break
+            local finished=false; [ -f "$logs/.done" ] && finished=true
+            out=""; done_lines=""; most=""
+            for b in $branches; do
+                scan=$(lane_scan "$b")
+                steps=$(printf '%s\n' "$scan" | sed '$d')
+                count=$(printf '%s' "$steps" | grep -c '^')
+                IFS=$'\t' read -r _ n m <<< "$(printf '%s\n' "$scan" | tail -n 1)"
+                # k_<lane>: steps seen so far (the k-th is the one running); t_<lane>: when it started.
+                name="k_$b"; k=${!name:-0}; name="t_$b"; t=${!name:-$SECONDS}
+                # Every step before the newest has finished: the running one since t, any seen only now in 0s.
+                while [ "$k" -lt "$count" ]; do
+                    if [ "$k" -gt 0 ]; then
+                        step=$(printf '%s\n' "$steps" | sed -n "${k}p")
+                        finish_step ✓ "$b" "$k" "${step#"$b"::}" $(( SECONDS - t ))
+                        t=$SECONDS
+                    fi
+                    k=$(( k + 1 ))
                 done
-                [ -n "$out" ] && printf '  [%s] %s\n' "$(elapsed)" "${out# · }"
+                printf -v "t_$b" '%s' "$t"
+                printf -v "k_$b" '%s' "$k"
+                # The lane has ended: its last step gets the lane's mark.
+                name="closed_$b"
+                if [ -f "$logs/$b.result" ] && [ -z "${!name:-}" ]; then
+                    printf -v "closed_$b" '%s' 1
+                    if [ "$k" -gt 0 ]; then
+                        mark='✓'; [ "$(cat "$logs/$b.status" 2>/dev/null)" = 0 ] || mark='✗'
+                        step=$(printf '%s\n' "$steps" | sed -n "${k}p")
+                        finish_step "$mark" "$b" "$k" "${step#"$b"::}" $(( SECONDS - t ))
+                    fi
+                    $live || done_lines="$done_lines$(printf '  %-11s %s' "$b" "$(cat "$logs/$b.result")")"$'\n'
+                fi
+                [ -f "$logs/$b.result" ] && { $live && out="$out$(printf '  %-11s %s' "$b" "$(cat "$logs/$b.result")")"$'\n'; continue; }
+                step=$(printf '%s\n' "$steps" | tail -n 1); step=${step#"$b"::}
+                name="ref_$b"
+                IFS='|' read -r total usual left <<< "$(lane_estimate "${!name}" "$k" "$step" $(( SECONDS - t )))"
+                [ -n "$left" ] && { [ -z "$most" ] || [ "$left" -gt "$most" ]; } && most=$left
+                if $live; then
+                    out="$out$(lane_line "$b" "$tick" "$step" "$n" "$m" $(( SECONDS - t )) "$k" "$total" "$usual" "$left")"$'\n'
+                else
+                    out="$out · $b $k${total:+/$total} $step${m:+ $n/$m} ($(duration $(( SECONDS - t )))${left:+, ~$(duration "$left") left})"
+                fi
+            done
+            if $live; then
+                [ "$lines" -gt 0 ] && printf '\033[%dA' "$lines"
+                printf '%s\n%s\n%s' "$done_lines" "$(rule "lanes · $(elapsed)${most:+ · ~$(duration "$most") left}")" "$out" | while IFS= read -r l; do printf '\033[2K%s\n' "$l"; done
+                lines=$(( $(echo $branches | wc -w) + 2 ))
+            else
+                printf '%s' "$done_lines"
+                if [ $(( tick % 30 )) -eq 0 ] && [ "$tick" -gt 0 ] && [ -n "$out" ]; then
+                    printf '  [%s]%s %s\n' "$(elapsed)" "${most:+ ~$(duration "$most") left ·}" "${out# · }"
+                fi
             fi
-            [ -f "$logs/.done" ] && break
+            $finished && break
             sleep 1; tick=$(( tick + 1 ))
         done
     }
-    echo "  running in parallel: $branches  (logs in test-results/logs/)"
+    # Ctrl-C (or a kill) stops the whole run. Background jobs of a script ignore SIGINT, so without this the
+    # lanes, their just/java processes and the display would carry on after the script is gone.
+    main_pid=$$
     pids=""
+    kill_tree() { local c; for c in $(pgrep -P "$1"); do kill_tree "$c"; done; kill "$1" 2>/dev/null; }
+    stop_all() {
+        trap - INT TERM
+        local p
+        for p in $pids ${progress_pid:-}; do kill_tree "$p"; done
+        printf '\n  interrupted\n'
+        exit 130
+    }
+    trap stop_all INT TERM
+    echo "  running in parallel: $branches  (logs in test-results/logs/)"
     for b in $branches; do run "$b" & pids="$pids $!"; done
+    $live && printf '\n%s\n' "$(rule 'finished steps')"
     progress & progress_pid=$!
     wait $pids
     touch "$logs/.done"
     wait "$progress_pid"
+    # This run's steps become the next run's reference for the lanes that passed. A failed lane's list stops
+    # at the failure, so it keeps its previous reference.
+    for b in $branches; do
+        if [ "$(cat "$logs/$b.status" 2>/dev/null)" = 0 ] && [ -f "$logs/$b.steps" ]; then
+            cat "$logs/$b.steps"
+        else
+            lane_ref "$b" | while IFS= read -r l; do printf '%s\t%s\n' "$b" "$l"; done
+        fi
+    done > "$steps_ref.tmp" && mv "$steps_ref.tmp" "$steps_ref"
     failed=""
     for b in $branches; do
         [ "$(cat "$logs/$b.status" 2>/dev/null)" = 0 ] || failed="$failed $b"
@@ -458,7 +548,7 @@ clean: clean-generated bootstrap::clean truffle::clean javascript::clean java::c
     @{{header}} 'clean'
     @{{substep}} 'remove shared/ and test-results/ reports'
     rm -rf {{out}}
-    find {{root}}/test-results -mindepth 1 -maxdepth 1 ! -name history.json ! -name builds.json -exec rm -rf {} + 2>/dev/null || true
+    find {{root}}/test-results -mindepth 1 -maxdepth 1 ! -name history.json ! -name builds.json ! -name lane-steps.tsv -exec rm -rf {} + 2>/dev/null || true
     @{{substep}} 'check that no build output is left'
     left=$(git -C {{root}} ls-files --others --ignored --exclude-standard --directory | grep -E '(^|/)(build|generated|target)/$|dependency-reduced-pom\.xml$|^shared/$' || true); if [ -n "$left" ]; then printf 'clean left build output behind:\n%s\n' "$left" >&2; exit 1; fi
 
