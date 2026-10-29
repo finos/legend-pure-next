@@ -70,7 +70,7 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 default: test
 
 # Build the Java compiler/CLI and stage core.pdb + compiler.pdb into shared/.
-build: (_mvn "skip-tests") stage build-compiler-pdb
+build: (_mvn "skip-tests") stage build-compiler-pdb check-metamodel
 
 # Bootstrap is the root of the dep tree — alias of `build` for symmetry with sub-Justfiles' `build-all`.
 build-all: build
@@ -381,6 +381,19 @@ spec-pdb:
 # The Pure fbs generator (compiler-pure pdb/fbsgen) run over m3 itself must reproduce m3.fbs.
 # m3.fbs stays RdfFbsSchemaGenerator's output (from m3.ttl); this keeps the Pure port of its rules —
 # which generates every language extension's schema — the same rules. Run as part of `just test`.
+# m3's metamodel, and the island test extension's, keep the rules the compiler does not check of an ordinary
+# class (platform::pure::compiler::metamodel::validation): a violation fails the build here, naming the fix.
+# Each extension checks its own metamodel when it compiles it.
+check-metamodel:
+    @{{header}} 'check-metamodel'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "platform::pure::compiler::metamodel::validation::printMetamodelValidation_String_1__Boolean_1_" \
+        --args "platform::pure::metamodel,platform::pure::compiler::test::islands::metamodel" {{err_filter}}
+
 check-fbs-parity:
     #!/usr/bin/env bash
     set -euo pipefail

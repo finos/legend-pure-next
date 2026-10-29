@@ -99,6 +99,14 @@ generate: _depCheck_base-pdbs
         --base-pdb {{shared_out}}/compiler-tests.pdb \
         --source "{{metamodel_stage}}" \
         --output-dir "{{metamodel_stage}}/build" 2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2)
+    {{substep}} 'check-metamodel: the metamodel keeps the rules a compiled class alone does not show'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb "{{metamodel_stage}}/build/diagram.pdb" \
+        --function "platform::pure::compiler::metamodel::validation::printMetamodelValidation_String_1__Boolean_1_" \
+        --args "platform::extensions::pure::diagram::metamodel" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2)
     {{substep}} 'generateProtocol -> generated/protocol.pure'
     mkdir -p "{{gen_dir}}"
     {{pure_bootstrap}} execute \

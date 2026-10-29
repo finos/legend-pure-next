@@ -274,18 +274,10 @@ public final class ClassHandler
                     }
                 }
 
+                // Any multiplicity can have a default: a property not given a value reads its default, and one
+                // given a value, empty included, reads that value (testNewOptionalDefaultSetToEmptyIsEmpty).
                 if (prop._defaultValue() != null)
                 {
-                    // A property with a default value must have lower bound >= 1
-                    if (prop._multiplicity() != null
-                            && _Multiplicity.lowerBound(prop._multiplicity()) < 1)
-                    {
-                        context.addError(new CompilationError(
-                                "Property with a default value cannot have a multiplicity with a lower bound of 0",
-                                prop._sourceInformation()));
-                        return;
-                    }
-
                     platform.pure.metamodel.function.LambdaFunction lambda = prop._defaultValue();
                     if (lambda._expressionSequence() != null && lambda._expressionSequence().notEmpty())
                     {
@@ -323,13 +315,12 @@ public final class ClassHandler
                         platform.pure.metamodel.SourceInformation srcInfo =
                                 prop._sourceInformation();
 
-                        // Type check
+                        // Type check: the default must conform to the property's type, a subtype (Nil, the type
+                        // of an empty default, included) as anywhere else (defaultValue_subtype).
                         if (lastExpr._genericType() != null && _GenericType.type(lastExpr._genericType()) != null
                                 && prop._genericType() != null && _GenericType.type(prop._genericType()) != null)
                         {
-                            platform.pure.metamodel.type.Type defaultType = _GenericType.type(lastExpr._genericType());
-                            platform.pure.metamodel.type.Type propertyType = _GenericType.type(prop._genericType());
-                            if (defaultType != propertyType)
+                            if (!_GenericType.isCompatible(prop._genericType(), lastExpr._genericType(), model))
                             {
                                 context.addError(new CompilationError(
                                         "Default value type mismatch: expected " + _GenericType.print(prop._genericType())

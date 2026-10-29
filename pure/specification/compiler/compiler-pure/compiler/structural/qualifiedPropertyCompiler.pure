@@ -73,8 +73,11 @@ function platform::pure::compiler::structural::qualifiedPropertyCompiler::compil
     let allParams = $thisParam->concatenate($paramAccum.values);
 
     // Compile expression sequence
-    let bodyResult = compileExpressionSequence($qp.expressionSequence, $ctx2, $allParams);
-    let ctx3 = if($bodyResult.context->isNotEmpty(), | $bodyResult.context->toOne(), | $ctx2);
+    // The class's type parameters are in scope in the body (class/qualifiedProperty/qualifiedProperty_typeParameterCast).
+    let bodyResult = compileExpressionSequence($qp.expressionSequence, ^$ctx2(ownerTypeParams = $owner.typeParameters->cast(@TypeParameter)), $allParams);
+    // ...and only there: the next element compiled must not see them.
+    let bodyCtx = if($bodyResult.context->isNotEmpty(), | $bodyResult.context->toOne(), | $ctx2);
+    let ctx3 = ^$bodyCtx(ownerTypeParams = $ctx2.ownerTypeParams);
 
     // Build FunctionType and classifierGenericType
     let functionType = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);

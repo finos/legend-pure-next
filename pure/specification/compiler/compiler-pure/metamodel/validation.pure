@@ -1,0 +1,63 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::metamodel::type::*;
+
+// Rules a metamodel must keep, beyond those the compiler checks of any class: m3's (platform::pure::metamodel)
+// and each extension's. The build checks every metamodel once it is compiled (`check-metamodel`), naming each
+// violation and its fix.
+
+// One message per violation in `classes`; none when they keep every rule.
+function platform::pure::compiler::metamodel::validation::validate(classes:Class<Any>[*]):String[*]
+{
+   $classes->map(c | platform::pure::compiler::metamodel::validation::noDefaultOnOptional($c));
+}
+
+// The same, for every class in `packages` and below.
+function platform::pure::compiler::metamodel::validation::validatePackages(packages:String[*]):String[*]
+{
+   platform::pure::compiler::metamodel::validation::validate($packages
+      ->map(p | platform::pure::compiler::metamodel::validation::classesUnder(platform::pure::functions::meta::pathToElement($p)->cast(@platform::pure::metamodel::Package)))
+      ->removeDuplicates());
+}
+
+function platform::pure::compiler::metamodel::validation::classesUnder(pkg:platform::pure::metamodel::Package[1]):Class<Any>[*]
+{
+   $pkg.children->map(e | $e->match([
+      p : platform::pure::metamodel::Package[1] | platform::pure::compiler::metamodel::validation::classesUnder($p),
+      c : Class<Any>[1] | $c,
+      a : Any[1] | []->cast(@Class<Any>)
+   ]));
+}
+
+// A PDB holds what an object holds, and cannot hold that a property was set to empty: written, an empty
+// property reads back as never set — its default. So a metamodel property with a default must have a value
+// ([1], [1..*]); a user class's may be optional, as its objects are never written to a PDB.
+function platform::pure::compiler::metamodel::validation::noDefaultOnOptional(cls:Class<Any>[1]):String[*]
+{
+   $cls.properties
+      ->filter(p | $p.defaultValue->isNotEmpty()
+                   && platform::pure::compiler::helper::multiplicity::multiplicityLowerBound($p.multiplicity->toOne()) == 0)
+      ->map(p | $cls->elementToPath() + '.' + $p.name->toOne()
+                + ': a metamodel property cannot have a default value on [0..1] or [*] (a PDB cannot record that it was set to empty): make it [1] or [1..*], or drop the default');
+}
+
+// Entry point for `pure-bootstrap execute`: fails, listing every violation, when a metamodel breaks a rule.
+function platform::pure::compiler::metamodel::validation::printMetamodelValidation(packagesCsv:String[1]):Boolean[1]
+{
+   let violations = platform::pure::compiler::metamodel::validation::validatePackages($packagesCsv->split(','));
+   assert($violations->isEmpty(), | 'Metamodel validation failed for ' + $packagesCsv + ':\n  ' + $violations->joinStrings('\n  '));
+   println('Metamodel valid: ' + $packagesCsv);
+   true;
+}

@@ -670,3 +670,31 @@ function <<PCT.test>> platform::pure::functions::lang::tests::copy::testCopyOver
     assertEquals('given', $f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithDefaults(); ^$w(advanced = 'given').advanced;));
     assertEquals('kept', $f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithDefaults(advanced = 'kept'); ^$w(str = 'x').advanced;));
 }
+
+// A copy setting an optional or many property to empty empties it; a copy of an object that set one to empty
+// keeps it empty.
+function <<PCT.test>> platform::pure::functions::lang::tests::copy::testCopySetsAnOptionalDefaultToEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEmpty($f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithOptionalDefaults(); ^$w(maybe = []).maybe;));
+    assertEmpty($f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithOptionalDefaults(); ^$w(many = []).many;));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::copy::testCopyKeepsAnOptionalSetToEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEmpty($f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithOptionalDefaults(maybe = []); ^$w(many = ['z']).maybe;));
+    assertEquals(['a', 'b'], $f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithOptionalDefaults(maybe = []); ^$w().many;));
+}
+
+// A value set at creation, emptied by a copy, is empty: setting a property to empty wins whatever it held.
+function <<PCT.test>> platform::pure::functions::lang::tests::copy::testCopyEmptiesAnOptionalSetToAValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEmpty($f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithOptionalDefaults(maybe = 'x'); ^$w(maybe = []).maybe;));
+    assertEmpty($f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithOptionalDefaults(many = ['x', 'y']); ^$w(many = []).many;));
+}
+
+// Emptied by a copy, then copied again without mentioning it: it stays empty.
+function <<PCT.test>> platform::pure::functions::lang::tests::copy::testCopyKeepsAnOptionalEmptiedByACopy<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEmpty($f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithOptionalDefaults(); let e = ^$w(maybe = []); ^$e(many = ['z']).maybe;));
+    assertEmpty($f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithOptionalDefaults(); let e = ^$w(many = []); ^$e(maybe = 'z').many;));
+}

@@ -14,34 +14,35 @@
 
 // Legacy properties next models differently. The generator (tools/generate-m3.mjs) makes the legacy
 // property <Class>.<property> call meta::pure::bridge::m3::overrides::<Class>_<property>($this) when it
-// is defined here. Each reads the wrapped next object and returns legacy values: wrapped metamodel objects.
+// is defined here, as that property's default. Each reads the next object the legacy object stands for
+// ($this._next, empty for one legacy code built itself) and returns legacy values: adapted metamodel objects.
 
 // ---- naming ----
 
 // Legacy ModelElement.name: whatever next names the object by
 function meta::pure::bridge::m3::overrides::ModelElement_name(this: meta::pure::metamodel::ModelElement[1]): String[0..1]
 {
-   meta::pure::bridge::m3::nameOf($this._next)
+   $this._next->map(n | meta::pure::bridge::m3::nameOf($n))->head()
 }
 
 function meta::pure::bridge::m3::overrides::Type_name(this: meta::pure::metamodel::type::Type[1]): String[0..1]
 {
-   meta::pure::bridge::m3::nameOf($this._next)
+   $this._next->map(n | meta::pure::bridge::m3::nameOf($n))->head()
 }
 
 // A function's name is its signature id (e.g. plus_Integer_1__Integer_1__Integer_1_), as in legacy
 function meta::pure::bridge::m3::overrides::Function_name(this: meta::pure::metamodel::function::Function<Any>[1]): String[0..1]
 {
-   meta::pure::bridge::m3::nameOf($this._next)
+   $this._next->map(n | meta::pure::bridge::m3::nameOf($n))->head()
 }
 
 function meta::pure::bridge::m3::overrides::Function_functionName(this: meta::pure::metamodel::function::Function<Any>[1]): String[0..1]
 {
-   $this._next->match([
+   $this._next->map(n | $n->match([
       f: platform::pure::metamodel::function::PackageableFunction<Any>[1] | $f.functionName,
       p: platform::pure::metamodel::function::property::AbstractProperty<Any>[1] | $p.name,
       a: Any[1] | []
-   ])
+   ]))->head()
 }
 
 function meta::pure::bridge::m3::nameOf(x: Any[1]): String[0..1]
@@ -61,46 +62,46 @@ function meta::pure::bridge::m3::nameOf(x: Any[1]): String[0..1]
 
 function meta::pure::bridge::m3::overrides::GenericType_rawType(this: meta::pure::metamodel::type::generics::GenericType[1]): meta::pure::metamodel::type::Type[0..1]
 {
-   meta::pure::bridge::m3::typeValue($this._next)
+   $this._next->map(n | meta::pure::bridge::m3::typeValue($n))
       ->filter(t | !$t->instanceOf(platform::pure::metamodel::type::generics::TypeParameter))
-      ->map(t | meta::pure::bridge::m3::wrap($t))
+      ->map(t | meta::pure::bridge::m3::adapt($t))
       ->cast(@meta::pure::metamodel::type::Type)
       ->head()
 }
 
 function meta::pure::bridge::m3::overrides::GenericType_typeParameter(this: meta::pure::metamodel::type::generics::GenericType[1]): meta::pure::metamodel::type::generics::TypeParameter[0..1]
 {
-   meta::pure::bridge::m3::typeValue($this._next)
+   $this._next->map(n | meta::pure::bridge::m3::typeValue($n))
       ->filter(t | $t->instanceOf(platform::pure::metamodel::type::generics::TypeParameter))
-      ->map(t | meta::pure::bridge::m3::wrap($t))
+      ->map(t | meta::pure::bridge::m3::adapt($t))
       ->cast(@meta::pure::metamodel::type::generics::TypeParameter)
       ->head()
 }
 
 function meta::pure::bridge::m3::overrides::GenericType_typeArguments(this: meta::pure::metamodel::type::generics::GenericType[1]): meta::pure::metamodel::type::generics::GenericType[*]
 {
-   meta::pure::bridge::m3::genericTypeValue($this._next).typeArguments
-      ->map(g | meta::pure::bridge::m3::wrap($g))
+   $this._next->map(n | meta::pure::bridge::m3::genericTypeValue($n)).typeArguments
+      ->map(g | meta::pure::bridge::m3::adapt($g))
       ->cast(@meta::pure::metamodel::type::generics::GenericType)
 }
 
 function meta::pure::bridge::m3::overrides::GenericType_multiplicityArguments(this: meta::pure::metamodel::type::generics::GenericType[1]): meta::pure::metamodel::multiplicity::Multiplicity[*]
 {
-   meta::pure::bridge::m3::genericTypeValue($this._next).multiplicityArguments
-      ->map(m | meta::pure::bridge::m3::wrap($m))
+   $this._next->map(n | meta::pure::bridge::m3::genericTypeValue($n)).multiplicityArguments
+      ->map(m | meta::pure::bridge::m3::adapt($m))
       ->cast(@meta::pure::metamodel::multiplicity::Multiplicity)
 }
 
 function meta::pure::bridge::m3::overrides::GenericType_typeVariableValues(this: meta::pure::metamodel::type::generics::GenericType[1]): meta::pure::metamodel::valuespecification::ValueSpecification[*]
 {
-   meta::pure::bridge::m3::genericTypeValue($this._next).typeVariableValues
-      ->map(v | meta::pure::bridge::m3::wrap($v))
+   $this._next->map(n | meta::pure::bridge::m3::genericTypeValue($n)).typeVariableValues
+      ->map(v | meta::pure::bridge::m3::adapt($v))
       ->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)
 }
 
 function meta::pure::bridge::m3::overrides::GenericTypeOperation_type(this: meta::pure::metamodel::relation::GenericTypeOperation[1]): platform::pure::metamodel::relation::GenericTypeOperationType[1]
 {
-   $this._next->cast(@platform::pure::metamodel::relation::GenericTypeOperation).operationType
+   $this._next->cast(@platform::pure::metamodel::relation::GenericTypeOperation).operationType->toOne()
 }
 
 // The GenericTypeValue a next generic type is, if it is one (undefined / operation types are not)
@@ -121,38 +122,38 @@ function meta::pure::bridge::m3::typeValue(gt: Any[1]): platform::pure::metamode
 
 function meta::pure::bridge::m3::overrides::Multiplicity_lowerBound(this: meta::pure::metamodel::multiplicity::Multiplicity[1]): meta::pure::metamodel::multiplicity::MultiplicityValue[0..1]
 {
-   $this._next->match([
+   $this._next->map(n | $n->match([
       c: platform::pure::metamodel::multiplicity::ConcreteMultiplicity[1] | $c.lowerBound,
       a: Any[1] | []
-   ])->map(v | meta::pure::bridge::m3::wrap($v))->cast(@meta::pure::metamodel::multiplicity::MultiplicityValue)->head()
+   ]))->map(v | meta::pure::bridge::m3::adapt($v))->cast(@meta::pure::metamodel::multiplicity::MultiplicityValue)->head()
 }
 
 function meta::pure::bridge::m3::overrides::Multiplicity_upperBound(this: meta::pure::metamodel::multiplicity::Multiplicity[1]): meta::pure::metamodel::multiplicity::MultiplicityValue[0..1]
 {
-   $this._next->match([
+   $this._next->map(n | $n->match([
       c: platform::pure::metamodel::multiplicity::ConcreteMultiplicity[1] | $c.upperBound,
       a: Any[1] | []
-   ])->map(v | meta::pure::bridge::m3::wrap($v))->cast(@meta::pure::metamodel::multiplicity::MultiplicityValue)->head()
+   ]))->map(v | meta::pure::bridge::m3::adapt($v))->cast(@meta::pure::metamodel::multiplicity::MultiplicityValue)->head()
 }
 
 function meta::pure::bridge::m3::overrides::Multiplicity_multiplicityParameter(this: meta::pure::metamodel::multiplicity::Multiplicity[1]): String[0..1]
 {
-   $this._next->match([
+   $this._next->map(n | $n->match([
       p: platform::pure::metamodel::multiplicity::MultiplicityParameter[1] | $p.name,
       a: Any[1] | []
-   ])
+   ]))->head()
 }
 
 // ---- values: legacy InstanceValue holds raw values; next splits it into AtomicValue / Collection ----
 
 function meta::pure::bridge::m3::overrides::InstanceValue_values(this: meta::pure::metamodel::valuespecification::InstanceValue[1]): Any[*]
 {
-   meta::pure::bridge::m3::instanceValues($this._next)
+   $this._next->map(n | meta::pure::bridge::m3::instanceValues($n))
 }
 
 function meta::pure::bridge::m3::overrides::NonExecutableValueSpecification_values(this: meta::pure::metamodel::valuespecification::NonExecutableValueSpecification[1]): Any[*]
 {
-   meta::pure::bridge::m3::instanceValues($this._next)
+   $this._next->map(n | meta::pure::bridge::m3::instanceValues($n))
 }
 
 // An atomic value is its value; a collection, its elements' values (nested expressions stay expressions);
@@ -160,10 +161,10 @@ function meta::pure::bridge::m3::overrides::NonExecutableValueSpecification_valu
 function meta::pure::bridge::m3::instanceValues(vs: Any[1]): Any[*]
 {
    $vs->match([
-      a: platform::pure::metamodel::valuespecification::AtomicValue[1] | meta::pure::bridge::m3::wrap($a.value),
+      a: platform::pure::metamodel::valuespecification::AtomicValue[1] | meta::pure::bridge::m3::adapt($a.value),
       c: platform::pure::metamodel::valuespecification::Collection[1] | $c.values->map(v | $v->match([
-            e: platform::pure::metamodel::valuespecification::AtomicValue[1] | meta::pure::bridge::m3::wrap($e.value),
-            o: Any[1] | meta::pure::bridge::m3::wrap($o)
+            e: platform::pure::metamodel::valuespecification::AtomicValue[1] | meta::pure::bridge::m3::adapt($e.value),
+            o: Any[1] | meta::pure::bridge::m3::adapt($o)
          ])),
       o: Any[1] | []
    ])
@@ -171,7 +172,7 @@ function meta::pure::bridge::m3::instanceValues(vs: Any[1]): Any[*]
 
 function meta::pure::bridge::m3::overrides::Enumeration_values(this: meta::pure::metamodel::type::Enumeration<Any>[1]): Any[1..*]
 {
-   $this._next->cast(@platform::pure::metamodel::type::Enumeration<Any>)->platform::pure::functions::meta::enumValues()->toOneMany()
+   $this._next->cast(@platform::pure::metamodel::type::Enumeration<Any>)->toOne()->platform::pure::functions::meta::enumValues()->toOneMany()
 }
 
 // ---- functions ----
@@ -184,14 +185,14 @@ function meta::pure::bridge::m3::overrides::LambdaFunction_openVariables(this: m
 // Legacy id: name(<type>[<multiplicity>],...) over the parameters after $this
 function meta::pure::bridge::m3::overrides::QualifiedProperty_id(this: meta::pure::metamodel::function::property::QualifiedProperty<Any>[1]): String[1]
 {
-   let qp = $this._next->cast(@platform::pure::metamodel::function::property::QualifiedProperty<Any>);
+   let qp = $this._next->cast(@platform::pure::metamodel::function::property::QualifiedProperty<Any>)->toOne();
    $qp.name->toOne() + '(' + $qp.parameters->tail()->map(p | meta::pure::bridge::m3::printGenericType($p.genericType->toOne()) + meta::pure::bridge::m3::printMultiplicity($p.multiplicity->toOne()))->joinStrings(',') + ')';
 }
 
 function meta::pure::bridge::m3::overrides::Property_defaultValue(this: meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]): meta::pure::metamodel::function::property::DefaultValue[0..1]
 {
    $this._next->cast(@platform::pure::metamodel::function::property::Property<Nil, Any|*>).defaultValue
-      ->map(l | ^meta::pure::metamodel::function::property::DefaultValue(functionDefinition = meta::pure::bridge::m3::wrap($l)->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>)))
+      ->map(l | ^meta::pure::metamodel::function::property::DefaultValue(functionDefinition = meta::pure::bridge::m3::adapt($l)->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>)))
       ->head()
 }
 
@@ -199,7 +200,7 @@ function meta::pure::bridge::m3::overrides::Property_defaultValue(this: meta::pu
 
 function meta::pure::bridge::m3::overrides::Annotation_profile(this: meta::pure::metamodel::extension::Annotation[1]): meta::pure::metamodel::extension::Profile[1]
 {
-   meta::pure::bridge::m3::wrap($this._next->match([
+   meta::pure::bridge::m3::adapt($this._next->toOne()->match([
       s: platform::pure::metamodel::extension::Stereotype[1] | $s.profile,
       t: platform::pure::metamodel::extension::Tag[1] | $t.profile
    ]))->cast(@meta::pure::metamodel::extension::Profile)
@@ -207,7 +208,7 @@ function meta::pure::bridge::m3::overrides::Annotation_profile(this: meta::pure:
 
 function meta::pure::bridge::m3::overrides::Annotation_value(this: meta::pure::metamodel::extension::Annotation[1]): String[1]
 {
-   $this._next->match([
+   $this._next->toOne()->match([
       s: platform::pure::metamodel::extension::Stereotype[1] | $s.value,
       t: platform::pure::metamodel::extension::Tag[1] | $t.value
    ])

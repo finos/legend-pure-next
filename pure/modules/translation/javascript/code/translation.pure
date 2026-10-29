@@ -68,6 +68,10 @@ Class platform::extensions::language::javascript::translation::TypeVarBinding
    // the multiplicity. Empty when the witness's multiplicity is a concrete
    // multiplicity ([1], [*], [1..*], …) rather than a parameter.
    mulParamName : String[0..1];
+   // When set, the witness is an object of a generic class and the type parameter is its class's: the
+   // type is the witness's type argument at this index (T -> String for a Box<T> built as Box<String>),
+   // read by a default's or a qualified property's cast(@T) (testNewDefaultValueBindsTheClassTypeParameters).
+   typeArgumentIndex : Integer[0..1];
 }
 
 // Coder groups split out of defaultConvention's `newMap([...])` literal so
@@ -2080,6 +2084,19 @@ function platform::extensions::language::javascript::translation::isToManyMult(m
    );
 }
 
+// Return `conv` with the type parameters of `cls` witnessed by `thisName`, the object a default or a
+// qualified property is computed for: each is that object's type argument at its index. Witnesses `conv`
+// already has (a qualified property's own function-level ones) win.
+function platform::extensions::language::javascript::translation::withClassTypeParamWitness(conv: Convention[1], cls: platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>[1], thisName: String[1]): Convention[1]
+{
+   let witness = range(0, $cls.typeParameters->size())->map(i |
+      pair($cls.typeParameters->at($i).name->toOne(),
+           ^TypeVarBinding(witnessVar = $thisName, isCollection = false, typeArgumentIndex = $i)));
+   if ($witness->isEmpty(), | $conv,
+      | let existing = if ($conv.typeVarWitness->isEmpty(), | [], | $conv.typeVarWitness->toOne()->keyValues());
+        ^$conv(typeVarWitness = newMap($witness->concatenate($existing))););
+}
+
 // Return `conv` with its `typeVarWitness` set from a function's parameters:
 // each param whose declared type IS a type parameter `T` witnesses `T`, so a
 // `cast(@T)` in the body resolves T off that param's runtime value.
@@ -2291,8 +2308,13 @@ function platform::extensions::language::javascript::translation::emitConstraint
                                        | $t->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>).generalizations,
                                        | $t->cast(@platform::pure::metamodel::type::PrimitiveType).generalizations);
              let owner = $path->split('::')->last()->toOne();
+             // a class's own constraints read its type parameters off the object they check
+             // (testNewConstraintBindsTheClassTypeParameters)
+             let ownConv = if ($isClass,
+                              | $conv->withClassTypeParamWitness($t->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>), safeJsName('this')),
+                              | $conv);
              let ownStmts = range(0, $constraints->size())->map(i |
-                emitOneConstraintCheck($constraints->at($i), $i, $owner, $typeVars, $siteTypeVarValues, $conv)
+                emitOneConstraintCheck($constraints->at($i), $i, $owner, $typeVars, $siteTypeVarValues, $ownConv)
              );
              let inheritedStmts = $generalizations->map(g |
                 let general    = $g.general;
@@ -2390,7 +2412,10 @@ function platform::extensions::language::javascript::translation::castTypeParamE
       | let b = $binding->toOne();
         // __commonType is collection-safe (single witness -> its own type), so use
         // it for any witness multiplicity (scalar T[1], sequence T[*], or param T[m]).
-        jsCall(jsId('__cast'), [$src, jsCall(jsId('__commonType'), [jsId($b.witnessVar)])]););
+        if ($b.typeArgumentIndex->isNotEmpty(),
+           | jsCall(jsId('__castToTypeArgument'), [$src, jsId($b.witnessVar), jsNumLit($b.typeArgumentIndex->toOne()->toString())]),
+           | jsCall(jsId('__cast'), [$src, jsCall(jsId('__commonType'), [jsId($b.witnessVar)])]));
+   );
 }
 
 function platform::extensions::language::javascript::translation::castResolvedExpr(t: platform::pure::metamodel::type::Type[1], src: Expression[1], conv: Convention[1]): Expression[1]
@@ -4312,7 +4337,7 @@ function platform::extensions::language::javascript::translation::defaultAccesso
    conv: Convention[1]): platform::extensions::language::javascript::metamodel::ClassMember[*]
 {
    let name = $p.name->toOne();
-   let compute = $p.defaultValue->toOne()->translatePureValueToTs($conv);
+   let compute = $p.defaultValue->toOne()->translatePureValueToTs($conv->withClassTypeParamWitness($cls, safeJsName('this')));
    [
       jsGetter($name, jsBlock([jsReturn(jsCall(jsId('__default'), [jsThis(), jsStrLit($cls->elementToPath()), jsStrLit($name), $compute]))]))
          ->cast(@platform::extensions::language::javascript::metamodel::ClassMember),
@@ -4435,15 +4460,18 @@ function platform::extensions::language::javascript::translation::translateQpEnt
    let qpParams = $qpFn.parameters->map(p | jsParam(safeJsName($p.name)));
    let qpBody   = $qpFn.expressionSequence;
    let receiverName = safeJsName($qpFn.parameters->at(0).name);
+   // its class's type parameters are the receiver's type arguments (testQualifiedPropertyBindsTheClassTypeParameters)
+   let owner = $q.owner->filter(o | $o->instanceOf(platform::pure::metamodel::type::Class))->map(o | $o->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>));
+   let bodyConv = if ($owner->isEmpty(), | $conv, | $conv->withClassTypeParamWitness($owner->toOne(), $receiverName));
    let tvBindings = range(0, $typeVars->size())->map(i |
       jsLet(safeJsName($typeVars->at($i).name->toOne()),
             jsCall(jsId('__readTypeVar'), [jsId($receiverName), jsNumLit($i->toString())]))
          ->cast(@platform::extensions::language::javascript::metamodel::Statement)
    );
    let qpArrow  = if ($tvBindings->isEmpty() && $qpBody->size() == 1,
-                       | jsArrowExpr($qpParams, translateExpression($qpBody->toOne(), $conv)),
+                       | jsArrowExpr($qpParams, translateExpression($qpBody->toOne(), $bodyConv)),
                        | jsArrowBlock($qpParams,
-                            jsBlock($tvBindings->concatenate($qpBody->buildJsFunctionBody($conv).statements))));
+                            jsBlock($tvBindings->concatenate($qpBody->buildJsFunctionBody($bodyConv).statements))));
    jsObject([jsEntry('name', jsStrLit($qpName)),
              jsEntry('eval', $qpArrow)]);
 }

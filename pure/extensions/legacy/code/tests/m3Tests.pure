@@ -40,12 +40,12 @@ function meta::pure::bridge::tests::model::adults(people: meta::pure::bridge::te
 
 function <<platform::pure::profiles::test.TestDependency>> meta::pure::bridge::tests::legacyClass(c: platform::pure::metamodel::type::Class<Any>[1]): meta::pure::metamodel::type::Class<Any>[1]
 {
-   meta::pure::bridge::m3::wrap($c)->cast(@meta::pure::metamodel::type::Class<Any>)
+   meta::pure::bridge::m3::adapt($c)->cast(@meta::pure::metamodel::type::Class<Any>)
 }
 
 function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testAClassWrapsAsTheLegacyClass(): Boolean[1]
 {
-   let c = meta::pure::bridge::m3::wrap(meta::pure::bridge::tests::model::Person);
+   let c = meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person);
    assert($c->instanceOf(meta::pure::metamodel::type::Class));
    assert($c->instanceOf(meta::pure::metamodel::type::Type));
    assert($c->instanceOf(meta::pure::metamodel::PackageableElement));
@@ -59,8 +59,8 @@ function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::test
 
 function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testPrimitivesAndUserInstancesAreNotWrapped(): Boolean[1]
 {
-   assertEquals(1, meta::pure::bridge::m3::wrap(1));
-   assertEquals('a', meta::pure::bridge::m3::wrap('a'));
+   assertEquals(1, meta::pure::bridge::m3::adapt(1));
+   assertEquals('a', meta::pure::bridge::m3::adapt('a'));
 }
 
 function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testPropertiesNamesAndRawTypes(): Boolean[1]
@@ -72,7 +72,7 @@ function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::test
 
 function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testATypeParameterIsNotARawType(): Boolean[1]
 {
-   let gt = meta::pure::bridge::m3::wrap(platform::pure::metamodel::type::Class.properties->filter(p | $p.name == 'typeVariables')->toOne().classifierGenericType->toOne())->cast(@meta::pure::metamodel::type::generics::GenericType);
+   let gt = meta::pure::bridge::m3::adapt(platform::pure::metamodel::type::Class.properties->filter(p | $p.name == 'typeVariables')->toOne().classifierGenericType->toOne())->cast(@meta::pure::metamodel::type::generics::GenericType);
    let owner = $gt.typeArguments->at(0);
    assertEquals('Class', $owner.rawType->toOne().name);
    assertEquals('T', $owner.typeArguments->toOne().typeParameter->toOne().name);
@@ -90,7 +90,7 @@ function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::test
 
 function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testEnumerationValues(): Boolean[1]
 {
-   let kind = meta::pure::bridge::m3::wrap(meta::pure::bridge::tests::model::Kind)->cast(@meta::pure::metamodel::type::Enumeration<Any>);
+   let kind = meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Kind)->cast(@meta::pure::metamodel::type::Enumeration<Any>);
    assertEquals(['EMPLOYEE', 'CONTRACTOR'], $kind.values->map(v | $v->toString()));
 }
 
@@ -103,7 +103,7 @@ function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::test
 
 function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testAFunctionBodyReadsAsLegacyExpressions(): Boolean[1]
 {
-   let f = meta::pure::bridge::m3::wrap(meta::pure::bridge::tests::model::adults_Person_MANY__String_MANY_)->cast(@meta::pure::metamodel::function::ConcreteFunctionDefinition<Any>);
+   let f = meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::adults_Person_MANY__String_MANY_)->cast(@meta::pure::metamodel::function::ConcreteFunctionDefinition<Any>);
    assertEquals('adults_Person_MANY__String_MANY_', $f.name);
    assertEquals('adults', $f.functionName);
    let map = $f.expressionSequence->toOne()->cast(@meta::pure::metamodel::valuespecification::SimpleFunctionExpression);
@@ -117,7 +117,33 @@ function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::test
 
 function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testInstanceValueOfACollection(): Boolean[1]
 {
-   let f = meta::pure::bridge::m3::wrap({|[1, 2, 3]})->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+   let f = meta::pure::bridge::m3::adapt({|[1, 2, 3]})->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
    let iv = $f.expressionSequence->toOne()->cast(@meta::pure::metamodel::valuespecification::InstanceValue);
    assertEquals([1, 2, 3], $iv.values);
+}
+
+// adapt is memoized: a next object always stands as the same legacy object, however it is reached.
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testAdaptingTwiceGivesTheSameObject(): Boolean[1]
+{
+   assert(meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person)->is(meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person)));
+   let first = meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Person).properties->at(0);
+   assert($first->is(meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Person).properties->at(0)));
+}
+
+// Legacy code builds metamodel objects itself: one with no next object holds what it is given.
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testALegacyObjectCanBeBuilt(): Boolean[1]
+{
+   let c = ^meta::pure::metamodel::type::Class<Any>(name = 'Built');
+   assertEquals('Built', $c.name);
+   assertEmpty($c.properties);
+}
+
+// A copy holds what it sets, and still computes the rest from its next object.
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testACopyChangesOnlyWhatItSets(): Boolean[1]
+{
+   let c = meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Person);
+   let renamed = ^$c(name = 'Renamed');
+   assertEquals('Renamed', $renamed.name);
+   assertEquals(['name', 'nickNames', 'kind'], $renamed.properties.name);
+   assertEquals('Person', $c.name);
 }

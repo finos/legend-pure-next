@@ -2787,6 +2787,16 @@ function __cast(value, targetPath) {
   if (vtPath && __metadataSubtypeOf(targetPath, vtPath)) return value;
   throw new Error("Cast exception: " + __castLeaf(vtPath) + " cannot be cast to " + __castLeaf(targetPath));
 }
+// cast(@T) where T is a type parameter of `owner`'s class: T is owner's type argument at `index` (String for
+// a Box<T> built as Box<String>). An object built with the raw class binds nothing: the value passes, as a
+// cast to a type parameter with no witness does.
+function __castToTypeArgument(value, owner, index) {
+  const cgt = owner !== void 0 && owner !== null && typeof owner === "object" ? owner.classifierGenericType : void 0;
+  const arg = cgt ? __asArr(cgt.typeArguments)[index] : void 0;
+  const type = arg ? arg.type : void 0;
+  const path = type ? type.__purePath ?? type.path : void 0;
+  return path === void 0 ? value : __cast(value, path);
+}
 const __resolveCache = {};
 const __OPT_CGT_PREFIX = "platform::pure::metamodel::type::generics::optimization::GenericType_";
 const __OPT_DEFAULTS = {

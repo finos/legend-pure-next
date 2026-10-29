@@ -76,6 +76,9 @@ Class platform::extensions::language::java::translation::TypeVarWitness
 {
    parameter    : String[1];
    mulParameter : String[0..1];
+   // When set, the parameter is an object of a generic class (a default's or a qualified property's
+   // `$this`), and the type parameter is its type argument at this index (testNewDefaultValueBindsTheClassTypeParameters).
+   typeArgumentIndex : Integer[0..1];
 }
 
 Class platform::extensions::language::java::translation::FunctionSignature
@@ -3110,12 +3113,35 @@ function <<access.private>> platform::extensions::language::java::translation::v
 // The parameters that witness type parameters, by the name of the parameter they
 // witness. A parameter declared `T[m]` witnesses both T and m; the first such
 // parameter wins, as the call site binds them all to the same thing.
+// A parameter typed by a type parameter (`x: T[1]`) witnesses it first; one whose type has it as a type
+// argument (`this: Box<T>[1]`) only when no parameter is typed by it.
 function <<access.private>> platform::extensions::language::java::translation::witnessesOfTypeParameters(parameters: platform::pure::metamodel::valuespecification::VariableExpression[*]): Map<String, TypeVarWitness>[0..1]
 {
-   let witnesses = $parameters->map(p | $p->witnessOfParameter())->filter(w | $w->isNotEmpty());
+   let direct    = $parameters->map(p | $p->witnessOfParameter())->filter(w | $w->isNotEmpty());
+   let arguments = $parameters->map(p | $p->witnessesAsTypeArguments())->filter(w | !$direct.first->contains($w.first));
+   let witnesses = $direct->concatenate($arguments);
    if ($witnesses->isEmpty(),
       | []->cast(@Map<String, TypeVarWitness>),
       | newMap($witnesses));
+}
+
+// The type parameters among a parameter's type arguments: T in `this: Box<T>[1]` is that object's type
+// argument 0.
+function <<access.private>> platform::extensions::language::java::translation::witnessesAsTypeArguments(parameter: platform::pure::metamodel::valuespecification::VariableExpression[1]): Pair<String, TypeVarWitness>[*]
+{
+   let gt = $parameter.genericType;
+   let arguments = $gt->match([
+      v: platform::pure::metamodel::type::generics::GenericTypeValue[1] | $v.typeArguments,
+      o: platform::pure::metamodel::type::generics::GenericType[*]      | []->cast(@platform::pure::metamodel::type::generics::GenericType)
+   ]);
+   range(0, $arguments->size())->map(i |
+      let raw = $arguments->at($i)->rawType();
+      if ($raw->isEmpty() || !$raw->toOne()->instanceOf(platform::pure::metamodel::type::generics::TypeParameter),
+         | []->cast(@Pair<String, TypeVarWitness>),
+         | pair($raw->toOne()->cast(@platform::pure::metamodel::type::generics::TypeParameter).name->toOne(),
+                ^TypeVarWitness(parameter = $parameter.name->platform::extensions::language::java::translation::safeJavaName(),
+                                typeArgumentIndex = $i)));
+   );
 }
 
 function <<access.private>> platform::extensions::language::java::translation::witnessOfParameter(parameter: platform::pure::metamodel::valuespecification::VariableExpression[1]): Pair<String, TypeVarWitness>[0..1]
@@ -3171,10 +3197,13 @@ function <<access.private>> platform::extensions::language::java::translation::w
    let bindsMul  = $witness.mulParameter->isNotEmpty()
                    && !$fe.multiplicity->instanceOf(platform::pure::metamodel::multiplicity::ConcreteMultiplicity)
                    && $fe.multiplicity->cast(@platform::pure::metamodel::multiplicity::MultiplicityParameter).name == $witness.mulParameter;
-   if ($bindsMul,
+   if ($witness.typeArgumentIndex->isNotEmpty(),
+      | j_invoke($metadata, 'castTo', [$value->toObjectCode(),
+                 j_invoke($metadata, 'witnessTypeArgument', [$witnessed, j_int($witness.typeArgumentIndex->toOne())], javaObject())], javaObject()),
+   |if ($bindsMul,
       | j_invoke($metadata, 'castToWitness', [$value->toObjectCode(), $witnessed], javaObject()),
       | j_invoke($metadata, 'castTo', [$value->toObjectCode(),
-                 j_invoke($metadata, 'witnessType', [$witnessed], javaObject())], javaObject()));
+                 j_invoke($metadata, 'witnessType', [$witnessed], javaObject())], javaObject())));
 }
 
 // `cast(@P(8))` where P carries constraints: each is checked on the value, with
@@ -4206,9 +4235,16 @@ function <<access.private>> platform::extensions::language::java::translation::w
                         j_declare($conv->pureTypeToJavaType($variables->at($i).genericType, $variables->at($i).multiplicity)->toBoxed(),
                                   $variables->at($i).name->platform::extensions::language::java::translation::safeJavaName(),
                                   $conv->translateExpression($typeVariableValues->at($i))));
+   // and its type parameters to the type arguments it was built with: they are read off `this_`
+   // (testNewConstraintBindsTheClassTypeParameters)
+   let parameters = $pureClass->map(c | $c.typeParameters);
+   let witnesses  = range($parameters->size())->map(i |
+                       pair($parameters->at($i).name->toOne(), ^TypeVarWitness(parameter = 'this_', typeArgumentIndex = $i)));
+   let existing   = if ($conv.typeVarWitness->isEmpty(), | [], | $conv.typeVarWitness->toOne()->keyValues()->filter(w | !$witnesses.first->contains($w.first)));
+   let classConv  = if ($witnesses->isEmpty(), | $conv, | ^$conv(typeVarWitness = newMap($witnesses->concatenate($existing))));
    if ($constraints->isEmpty() || !$conv.metadataElements || $bindings->size() != $variables->size(),
       | $built,
-      | $conv->constraintChecksBound($built, $constraints, $pureClass->toOne(), $fe, $bindings));
+      | $classConv->constraintChecksBound($built, $constraints, $pureClass->toOne(), $fe, $bindings));
 }
 
 // `new XImpl()._classifierGenericType(new GenericTypeValueImpl()._type(<the class>))`
@@ -4847,7 +4883,9 @@ function <<access.private>> platform::extensions::language::java::translation::q
                 j_invoke(javaClass($conv->pdbClass('Metadata')), 'typeVariable',
                          [j_variable(javaObject(), 'this'), j_string($v.name->toOne())], javaObject())
                    ->j_castWithoutChecks($conv->pureTypeToJavaType($v.genericType, $v.multiplicity)->toBoxed())));
-   let attempt  = tryEval(| let raw = $conv->buildJavaBodyReturning($qp.expressionSequence->toOneMany(), $qp.multiplicity->holdsManyValues());
+   // its class's type parameters are the receiver's type arguments (testQualifiedPropertyBindsTheClassTypeParameters)
+   let bodyConv = ^$conv(typeVarWitness = $qp.parameters->witnessesOfTypeParameters());
+   let attempt  = tryEval(| let raw = $bodyConv->buildJavaBodyReturning($qp.expressionSequence->toOneMany(), $qp.multiplicity->holdsManyValues());
                             if ($qp.multiplicity->instanceOf(platform::pure::metamodel::multiplicity::ConcreteMultiplicity),
                                | $raw->returningType($returnType, $conv),
                                | $raw->returningNormalized($conv)););
@@ -5185,7 +5223,10 @@ function <<access.private>> platform::extensions::language::java::translation::b
    );
 
    assert($f.expressionSequence->size() >= 1, | 'buildSignature: empty expressionSequence');
-   let bodyStatements = $conv->buildJavaBody($f.expressionSequence->toOneMany());
+   // cast(@T) in the body resolves T off the parameter that witnesses it: a default's lambda, say, reads
+   // its class's type parameters off `$this` (testNewDefaultValueBindsTheClassTypeParameters).
+   let bodyConv = if ($conv.typeVarWitness->isEmpty(), | ^$conv(typeVarWitness = $f.parameters->witnessesOfTypeParameters()), | $conv);
+   let bodyStatements = $bodyConv->buildJavaBody($f.expressionSequence->toOneMany());
 
    let javaCls = javaClass(['public'], $conv.basePackageName + '.' + $className);
    let javaMtd = javaMethod(['public', 'static'], $returnType, 'execute', $jParams, $bodyStatements);

@@ -63,6 +63,7 @@ public final class PureContext
     private static final int SLOT_START_LINE = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("startLine");
     private static final int SLOT_TYPE_VARIABLE_VALUES = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("typeVariableValues");
     private static final int SLOT_TYPE_VARIABLES = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("typeVariables");
+    private static final int SLOT_TYPE_PARAMETERS = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("typeParameters");
     private static final int SLOT_VALUE = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("value");
     private static final int SLOT_MULTIPLICITY = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("multiplicity");
     private static final int SLOT_LOWER_BOUND = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("lowerBound");
@@ -626,6 +627,43 @@ public final class PureContext
         }
     }
 
+    /**
+     * The class's type parameters bound to `target`'s type arguments (T -> String for a Box<T> built as
+     * Box<String>): what a default or a qualified property computed for `target` casts against, as a generic
+     * function's body does against its arguments' types (testNewDefaultValueBindsTheClassTypeParameters).
+     * Empty when the class has none, or the object was built with the raw class.
+     */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    public static java.util.Map<String, Object> classTypeParameterBindings(Object target)
+    {
+        // a primitive value (a constrained primitive's constraint is checked on one) has no type arguments
+        if (!(target instanceof PureDynamicObject))
+        {
+            return java.util.Map.of();
+        }
+        Object cgt = getClassifierGenericType(target);
+        Object owner = cgt == null ? null : org.finos.legend.pure.truffle.compiler.helper._GenericType.type(cgt);
+        Object paramsObj = owner == null ? null : org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(owner, SLOT_TYPE_PARAMETERS);
+        org.finos.legend.pure.truffle.execution.types.PureSequence args = cgt == null ? null : org.finos.legend.pure.truffle.compiler.helper._GenericType.typeArguments(cgt);
+        int count = paramsObj instanceof org.finos.legend.pure.truffle.execution.types.PureSequence ps && args != null ? Math.min(ps.size(), args.size()) : 0;
+        if (count == 0)
+        {
+            return java.util.Map.of();
+        }
+        org.finos.legend.pure.truffle.execution.types.PureSequence params = (org.finos.legend.pure.truffle.execution.types.PureSequence) paramsObj;
+        java.util.Map<String, Object> bindings = new java.util.HashMap<>();
+        org.eclipse.collections.impl.list.Interval.zeroTo(count - 1).each(i ->
+        {
+            Object name = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(params.getBoxed(i), SLOT_NAME);
+            Object argType = args.getBoxed(i) == null ? null : org.finos.legend.pure.truffle.compiler.helper._GenericType.type(args.getBoxed(i));
+            if (name instanceof String n && argType != null)
+            {
+                bindings.put(n, argType);
+            }
+        });
+        return bindings;
+    }
+
     private static Object getClassifierGenericType(Object target)
     {
         if (target == null)
@@ -1072,12 +1110,21 @@ public final class PureContext
         {
             throw new RuntimeException("default value cycle: " + classPath + "." + property + " is already being computed for this object");
         }
+        java.util.Map<String, Object> typeBindings = classTypeParameterBindings(object);
+        if (!typeBindings.isEmpty())
+        {
+            pushFunctionTypeVarBindings(typeBindings);
+        }
         try
         {
             return org.finos.legend.pure.truffle.execution.natives.lang.EvalNode.dispatch(this, lambda, new Object[]{object}, null);
         }
         finally
         {
+            if (!typeBindings.isEmpty())
+            {
+                popFunctionTypeVarBindings();
+            }
             computing.remove(property);
             if (computing.isEmpty())
             {

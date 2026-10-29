@@ -770,6 +770,22 @@ public final class Metadata
         return witness == null ? null : type(witness);
     }
 
+    /**
+     * `cast(@T)` where T is a type parameter of the witness's class (a default's or a qualified property's
+     * `$this`): its type argument at `index`, String for a Box<T> built as Box<String>. Null, so no check,
+     * when the object was built with the raw class, or there is no metadata to name types.
+     */
+    public static Object witnessTypeArgument(Object witness, int index)
+    {
+        if (runtimeOrNull() == null || witness == null)
+        {
+            return null;
+        }
+        Object classifier = first(values(witness, "classifierGenericType"));
+        List<Object> arguments = classifier == null ? Lists.fixedSize.empty() : values(classifier, "typeArguments");
+        return index < arguments.size() ? typeOf(arguments.get(index)) : null;
+    }
+
     /** `value` when every one of its values is a `type`, or the error Pure gives. */
     public static Object castTo(Object value, Object type)
     {

@@ -1,0 +1,40 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::compiler::metamodel::validation::*;
+import platform::pure::compiler::test::metamodel::validation::model::*;
+
+function <<test.Test>> platform::pure::compiler::test::metamodel::validation::testOptionalDefaultIsRejected():Boolean[1]
+{
+   assertEquals(['platform::pure::compiler::test::metamodel::validation::model::OptionalDefault.label: a metamodel property cannot have a default value on [0..1] or [*] (a PDB cannot record that it was set to empty): make it [1] or [1..*], or drop the default'],
+                validate(OptionalDefault));
+}
+
+function <<test.Test>> platform::pure::compiler::test::metamodel::validation::testManyDefaultIsRejected():Boolean[1]
+{
+   assertEquals(['platform::pure::compiler::test::metamodel::validation::model::ManyDefault.tags: a metamodel property cannot have a default value on [0..1] or [*] (a PDB cannot record that it was set to empty): make it [1] or [1..*], or drop the default'],
+                validate(ManyDefault));
+}
+
+function <<test.Test>> platform::pure::compiler::test::metamodel::validation::testRequiredDefaultIsValid():Boolean[1]
+{
+   assertEmpty(validate(RequiredDefault));
+}
+
+// The metamodels the PDBs are written from: m3's, and the island test extension's.
+function <<test.Test>> platform::pure::compiler::test::metamodel::validation::testTheMetamodelsAreValid():Boolean[1]
+{
+   assertEmpty(validatePackages('platform::pure::metamodel'));
+   assertEmpty(validatePackages('platform::pure::compiler::test::islands::metamodel'));
+}

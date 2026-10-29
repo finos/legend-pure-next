@@ -1147,19 +1147,50 @@ public class ValueSpecificationEvaluator
         for (int i = 0; i < n; i++)
         {
             VariableExpression p = params.get(i);
-            if (p == null || p._genericType() == null) continue;
-            platform.pure.metamodel.type.Type pType = _GenericType.type(p._genericType());
-            if (!(pType instanceof platform.pure.metamodel.type.generics.TypeParameter tp)) continue;
-            String tvName = tp._name();
-            if (tvName == null || tvName.isEmpty()) continue;
             ValueSpecification a = args.get(i);
-            if (a == null || a._genericType() == null) continue;
-            platform.pure.metamodel.type.Type resolved = _GenericType.type(a._genericType());
-            if (resolved == null) continue;
+            if (p == null || p._genericType() == null || a == null || a._genericType() == null) continue;
             if (bindings == null) bindings = new java.util.HashMap<>(n);
-            bindings.put(tvName, resolved);
+            bindTypeVariables(p._genericType(), a._genericType(), bindings);
         }
         return bindings;
+    }
+
+    /**
+     * Binds the type parameters in a declared type to what stands in their place in the actual type: T in
+     * `x: T[1]` to the argument's type, and T in `b: Box<T>[1]` — a default's or a qualified property's
+     * `this` — to the argument's type argument, when the argument's type is that same raw type
+     * (testNewDefaultValueBindsTheClassTypeParameters).
+     */
+    private static void bindTypeVariables(platform.pure.metamodel.type.generics.GenericType declared,
+                                          platform.pure.metamodel.type.generics.GenericType actual,
+                                          java.util.Map<String, Object> bindings)
+    {
+        if (declared == null || actual == null)
+        {
+            return;
+        }
+        platform.pure.metamodel.type.Type declaredType = _GenericType.type(declared);
+        platform.pure.metamodel.type.Type actualType = _GenericType.type(actual);
+        if (declaredType == null || actualType == null)
+        {
+            return;
+        }
+        if (declaredType instanceof platform.pure.metamodel.type.generics.TypeParameter tp)
+        {
+            if (tp._name() != null && !tp._name().isEmpty())
+            {
+                bindings.put(tp._name(), actualType);
+            }
+            return;
+        }
+        if (declaredType != actualType
+                || !(declared instanceof platform.pure.metamodel.type.generics.GenericTypeValue d)
+                || !(actual instanceof platform.pure.metamodel.type.generics.GenericTypeValue av)
+                || d._typeArguments() == null || av._typeArguments() == null)
+        {
+            return;
+        }
+        d._typeArguments().zip(av._typeArguments()).forEach(pair -> bindTypeVariables(pair.getOne(), pair.getTwo(), bindings));
     }
 
     /**

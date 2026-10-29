@@ -377,6 +377,34 @@ public final class CastNode extends PureNode
                                                    MetadataAccess resolver,
                                                    RawLambdaCallNode constraintCallNode)
     {
+        // A constraint is checked with the class's type parameters bound to the object's type arguments, so
+        // cast(@T) in it checks against them (testNewConstraintBindsTheClassTypeParameters).
+        java.util.Map<String, Object> classTypeBindings = org.finos.legend.pure.truffle.execution.PureContext.classTypeParameterBindings(value);
+        org.finos.legend.pure.truffle.execution.PureContext ctx = classTypeBindings.isEmpty() ? null : org.finos.legend.pure.truffle.execution.PureLanguage.get(null);
+        if (ctx != null)
+        {
+            ctx.pushFunctionTypeVarBindings(classTypeBindings);
+        }
+        try
+        {
+            checkConstraintsOnType(type, targetGT, value, resolver, constraintCallNode);
+        }
+        finally
+        {
+            if (ctx != null)
+            {
+                ctx.popFunctionTypeVarBindings();
+            }
+        }
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static void checkConstraintsOnType(Object type,
+                                                   Object targetGT,
+                                                   Object value,
+                                                   MetadataAccess resolver,
+                                                   RawLambdaCallNode constraintCallNode)
+    {
         Object constraintsObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(type, SLOT_CONSTRAINTS);
         if (!(constraintsObj instanceof org.finos.legend.pure.truffle.execution.types.PureSequence constraints) || constraints.isEmpty())
         {
