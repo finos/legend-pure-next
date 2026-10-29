@@ -379,7 +379,7 @@ public final class CastNode extends PureNode
     {
         // A constraint is checked with the class's type parameters bound to the object's type arguments, so
         // cast(@T) in it checks against them (testNewConstraintBindsTheClassTypeParameters).
-        java.util.Map<String, Object> classTypeBindings = org.finos.legend.pure.truffle.execution.PureContext.classTypeParameterBindings(value);
+        java.util.Map<String, Object> classTypeBindings = org.finos.legend.pure.truffle.execution.PureContext.classTypeParameterBindings(value, type);
         org.finos.legend.pure.truffle.execution.PureContext ctx = classTypeBindings.isEmpty() ? null : org.finos.legend.pure.truffle.execution.PureLanguage.get(null);
         if (ctx != null)
         {

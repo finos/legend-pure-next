@@ -34,6 +34,7 @@ import org.finos.legend.pure.truffle.compiler.module.ModuleRegistry;
 import org.eclipse.collections.impl.factory.HashingStrategyMaps;
 import org.eclipse.collections.impl.factory.HashingStrategySets;
 import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.factory.Sets;
 import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.map.MutableMap;
@@ -64,6 +65,9 @@ public final class PureContext
     private static final int SLOT_TYPE_VARIABLE_VALUES = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("typeVariableValues");
     private static final int SLOT_TYPE_VARIABLES = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("typeVariables");
     private static final int SLOT_TYPE_PARAMETERS = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("typeParameters");
+    private static final int SLOT_GENERALIZATIONS = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("generalizations");
+    private static final int SLOT_GENERAL = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("general");
+    private static final int SLOT_GENERIC_TYPE = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("genericType");
     private static final int SLOT_VALUE = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("value");
     private static final int SLOT_MULTIPLICITY = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("multiplicity");
     private static final int SLOT_LOWER_BOUND = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("lowerBound");
@@ -628,40 +632,81 @@ public final class PureContext
     }
 
     /**
-     * The class's type parameters bound to `target`'s type arguments (T -> String for a Box<T> built as
-     * Box<String>): what a default or a qualified property computed for `target` casts against, as a generic
-     * function's body does against its arguments' types (testNewDefaultValueBindsTheClassTypeParameters).
-     * Empty when the class has none, or the object was built with the raw class.
+     * The type parameters of `declaringClass` — where a default, a qualified property or a constraint is
+     * defined — bound as `target`'s type arguments bind them: T -> String for a Box<T> built as Box<String>,
+     * and through its generalizations for a subclass, T -> String for a StringBox (extends Box<String>). What
+     * a cast(@T) in it checks against, as a generic function's body does against its arguments' types
+     * (testNewDefaultValueBindsTheClassTypeParameters, testNewInheritedDefaultValueBindsTheParentTypeParameters).
+     * Empty when nothing binds them: a raw class, or a primitive value (a constrained primitive's).
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public static java.util.Map<String, Object> classTypeParameterBindings(Object target)
+    public static java.util.Map<String, Object> classTypeParameterBindings(Object target, Object declaringClass)
     {
-        // a primitive value (a constrained primitive's constraint is checked on one) has no type arguments
-        if (!(target instanceof PureDynamicObject))
+        Object cgt = target instanceof PureDynamicObject ? getClassifierGenericType(target) : null;
+        Object type = cgt == null ? null : org.finos.legend.pure.truffle.compiler.helper._GenericType.type(cgt);
+        if (type == null)
         {
             return java.util.Map.of();
         }
-        Object cgt = getClassifierGenericType(target);
-        Object owner = cgt == null ? null : org.finos.legend.pure.truffle.compiler.helper._GenericType.type(cgt);
-        Object paramsObj = owner == null ? null : org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(owner, SLOT_TYPE_PARAMETERS);
-        org.finos.legend.pure.truffle.execution.types.PureSequence args = cgt == null ? null : org.finos.legend.pure.truffle.compiler.helper._GenericType.typeArguments(cgt);
-        int count = paramsObj instanceof org.finos.legend.pure.truffle.execution.types.PureSequence ps && args != null ? Math.min(ps.size(), args.size()) : 0;
-        if (count == 0)
+        ListIterable<Object> values = slotValues(org.finos.legend.pure.truffle.compiler.helper._GenericType.typeArguments(cgt))
+                .collect(org.finos.legend.pure.truffle.compiler.helper._GenericType::type);
+        java.util.Map<String, Object> bindings = bindingsAs(type, values, declaringClass == null ? type : declaringClass);
+        return bindings == null ? java.util.Map.of() : bindings;
+    }
+
+    // `type`'s type parameters bound to `values`, seen as its ancestor `ancestor`: walked up its
+    // generalizations, each parent's type arguments read through the bindings below it (Box<U> under a
+    // RenamedBox<Integer> is Box<Integer>). Null when `ancestor` is not one of its supertypes.
+    private static java.util.Map<String, Object> bindingsAs(Object type, ListIterable<Object> values, Object ancestor)
+    {
+        MutableMap<String, Object> own = Maps.mutable.empty();
+        slotValues(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(type, SLOT_TYPE_PARAMETERS)).zip(values).each(pair ->
         {
-            return java.util.Map.of();
-        }
-        org.finos.legend.pure.truffle.execution.types.PureSequence params = (org.finos.legend.pure.truffle.execution.types.PureSequence) paramsObj;
-        java.util.Map<String, Object> bindings = new java.util.HashMap<>();
-        org.eclipse.collections.impl.list.Interval.zeroTo(count - 1).each(i ->
-        {
-            Object name = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(params.getBoxed(i), SLOT_NAME);
-            Object argType = args.getBoxed(i) == null ? null : org.finos.legend.pure.truffle.compiler.helper._GenericType.type(args.getBoxed(i));
-            if (name instanceof String n && argType != null)
+            Object name = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(pair.getOne(), SLOT_NAME);
+            if (name instanceof String n && pair.getTwo() != null)
             {
-                bindings.put(n, argType);
+                own.put(n, pair.getTwo());
             }
         });
-        return bindings;
+        if (type == ancestor)
+        {
+            return own;
+        }
+        return slotValues(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(type, SLOT_GENERALIZATIONS)).asLazy()
+                .collect(g ->
+                {
+                    Object general = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(g, SLOT_GENERAL);
+                    Object parent = general == null ? null : org.finos.legend.pure.truffle.compiler.helper._GenericType.type(general);
+                    if (parent == null)
+                    {
+                        return null;
+                    }
+                    ListIterable<Object> parentValues = slotValues(org.finos.legend.pure.truffle.compiler.helper._GenericType.typeArguments(general))
+                            .collect(a -> PureContext.throughBindings(org.finos.legend.pure.truffle.compiler.helper._GenericType.type(a), own));
+                    return bindingsAs(parent, parentValues, ancestor);
+                })
+                .detect(java.util.Objects::nonNull);
+    }
+
+    // A parent's type argument as the bindings below it read it: one of the subclass's own type parameters
+    // is what it is bound to; any other type is itself.
+    private static Object throughBindings(Object argumentType, java.util.Map<String, Object> bindings)
+    {
+        String path = argumentType == null ? null : org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeOf(argumentType);
+        if (path != null && path.endsWith("TypeParameter"))
+        {
+            Object name = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(argumentType, SLOT_NAME);
+            return name instanceof String n ? bindings.get(n) : null;
+        }
+        return argumentType;
+    }
+
+    // The class a default or a qualified property is defined on: the type of its `this` parameter.
+    public static Object thisParameterClass(Object function)
+    {
+        Object first = slotValues(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(function, SLOT_PARAMETERS)).getFirst();
+        Object gt = first == null ? null : org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(first, SLOT_GENERIC_TYPE);
+        return gt == null ? null : org.finos.legend.pure.truffle.compiler.helper._GenericType.type(gt);
     }
 
     private static Object getClassifierGenericType(Object target)
@@ -738,6 +783,10 @@ public final class PureContext
                         mayBindTypeVars, plan.paramIndices, plan.tvNames,
                         plan.mulParamIndices, plan.mvNames,
                         shapePlan.upperBounds, shapePlan.lowerBounds);
+                if (mayBindTypeVars)
+                {
+                    root.setDeclaringClass(thisParameterClass(fd));
+                }
                 cf.setCallTarget(root.getCallTarget());
             }
         }
@@ -1110,7 +1159,7 @@ public final class PureContext
         {
             throw new RuntimeException("default value cycle: " + classPath + "." + property + " is already being computed for this object");
         }
-        java.util.Map<String, Object> typeBindings = classTypeParameterBindings(object);
+        java.util.Map<String, Object> typeBindings = classTypeParameterBindings(object, thisParameterClass(lambda));
         if (!typeBindings.isEmpty())
         {
             pushFunctionTypeVarBindings(typeBindings);

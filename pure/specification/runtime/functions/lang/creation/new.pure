@@ -548,3 +548,67 @@ function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewConstr
     assertEquals('x', $f->eval(|^ConstrainedBox<String>(value = 'x').value));
     assertError(|$f->eval(|^ConstrainedBox<Integer>(value = 'x')), 'Cast exception: String cannot be cast to Integer');
 }
+
+// What a class inherits from a generic parent — a default, a qualified property, a constraint — reads the
+// parent's type parameters as the object's type arguments bind them through its generalizations: a
+// StringBox (extends GenericDefault<String>) binds T to String; a RenamedBox<U> (extends GenericDefault<U>)
+// built as RenamedBox<Integer> binds T to Integer.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::StringBox extends GenericDefault<String>
+{
+}
+
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::RenamedBox<U> extends GenericDefault<U>
+{
+}
+
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::StringConstrainedBox extends ConstrainedBox<String>
+{
+}
+
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::RenamedConstrainedBox<U> extends ConstrainedBox<U>
+{
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewInheritedDefaultValueBindsTheParentTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('x', $f->eval(|^StringBox(value = 'x').typed));
+    assertError(|$f->eval(|^StringBox(value = 1).typed), 'Cast exception: Integer cannot be cast to String');
+    assertEquals(1, $f->eval(|^RenamedBox<Integer>(value = 1).typed));
+    assertError(|$f->eval(|^RenamedBox<Integer>(value = 'x').typed), 'Cast exception: String cannot be cast to Integer');
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testInheritedQualifiedPropertyBindsTheParentTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('x', $f->eval(|^StringBox(value = 'x').typedQualified));
+    assertError(|$f->eval(|^StringBox(value = 1).typedQualified), 'Cast exception: Integer cannot be cast to String');
+    assertEquals(1, $f->eval(|^RenamedBox<Integer>(value = 1).typedQualified));
+    assertError(|$f->eval(|^RenamedBox<Integer>(value = 'x').typedQualified), 'Cast exception: String cannot be cast to Integer');
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewInheritedConstraintBindsTheParentTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('x', $f->eval(|^StringConstrainedBox(value = 'x').value));
+    assertError(|$f->eval(|^StringConstrainedBox(value = 1)), 'Cast exception: Integer cannot be cast to String');
+    assertEquals(1, $f->eval(|^RenamedConstrainedBox<Integer>(value = 1).value));
+    assertError(|$f->eval(|^RenamedConstrainedBox<Integer>(value = 'x')), 'Cast exception: String cannot be cast to Integer');
+}
+
+// Building an object checks the constraints of its class and of every class it extends.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::Counted
+[
+    positive: $this.count > 0
+]
+{
+    count: Integer[1];
+}
+
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::NamedCounted extends Counted
+{
+    name: String[1];
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewChecksInheritedConstraints<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(1, $f->eval(|^NamedCounted(count = 1, name = 'a').count));
+    assertError(|$f->eval(|^NamedCounted(count = 0, name = 'a')), 'Constraint :[positive] violated in the Class Counted');
+}

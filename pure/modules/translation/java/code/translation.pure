@@ -76,9 +76,12 @@ Class platform::extensions::language::java::translation::TypeVarWitness
 {
    parameter    : String[1];
    mulParameter : String[0..1];
-   // When set, the parameter is an object of a generic class (a default's or a qualified property's
-   // `$this`), and the type parameter is its type argument at this index (testNewDefaultValueBindsTheClassTypeParameters).
-   typeArgumentIndex : Integer[0..1];
+   // When set, the parameter is an object of a generic class (a default's, a qualified property's or a
+   // constraint's `$this`), and the type parameter stands for this class's parameter `classParameter`: the
+   // type the object's type arguments bind it to, through its generalizations for a subclass
+   // (testNewDefaultValueBindsTheClassTypeParameters, testNewInheritedDefaultValueBindsTheParentTypeParameters).
+   declaringClass : String[0..1];
+   classParameter : String[0..1];
 }
 
 Class platform::extensions::language::java::translation::FunctionSignature
@@ -3134,13 +3137,19 @@ function <<access.private>> platform::extensions::language::java::translation::w
       v: platform::pure::metamodel::type::generics::GenericTypeValue[1] | $v.typeArguments,
       o: platform::pure::metamodel::type::generics::GenericType[*]      | []->cast(@platform::pure::metamodel::type::generics::GenericType)
    ]);
-   range(0, $arguments->size())->map(i |
-      let raw = $arguments->at($i)->rawType();
-      if ($raw->isEmpty() || !$raw->toOne()->instanceOf(platform::pure::metamodel::type::generics::TypeParameter),
-         | []->cast(@Pair<String, TypeVarWitness>),
-         | pair($raw->toOne()->cast(@platform::pure::metamodel::type::generics::TypeParameter).name->toOne(),
-                ^TypeVarWitness(parameter = $parameter.name->platform::extensions::language::java::translation::safeJavaName(),
-                                typeArgumentIndex = $i)));
+   let declaring = $gt->rawType()->filter(t | $t->instanceOf(platform::pure::metamodel::type::Class))
+                      ->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>);
+   if ($declaring->isEmpty(), | []->cast(@Pair<String, TypeVarWitness>), |
+      let classParameters = $declaring->toOne().typeParameters;
+      range(0, if ($arguments->size() < $classParameters->size(), | $arguments->size(), | $classParameters->size()))->map(i |
+         let raw = $arguments->at($i)->rawType();
+         if ($raw->isEmpty() || !$raw->toOne()->instanceOf(platform::pure::metamodel::type::generics::TypeParameter),
+            | []->cast(@Pair<String, TypeVarWitness>),
+            | pair($raw->toOne()->cast(@platform::pure::metamodel::type::generics::TypeParameter).name->toOne(),
+                   ^TypeVarWitness(parameter = $parameter.name->platform::extensions::language::java::translation::safeJavaName(),
+                                   declaringClass = $declaring->toOne()->elementToPath(),
+                                   classParameter = $classParameters->at($i).name)));
+      );
    );
 }
 
@@ -3197,9 +3206,9 @@ function <<access.private>> platform::extensions::language::java::translation::w
    let bindsMul  = $witness.mulParameter->isNotEmpty()
                    && !$fe.multiplicity->instanceOf(platform::pure::metamodel::multiplicity::ConcreteMultiplicity)
                    && $fe.multiplicity->cast(@platform::pure::metamodel::multiplicity::MultiplicityParameter).name == $witness.mulParameter;
-   if ($witness.typeArgumentIndex->isNotEmpty(),
+   if ($witness.declaringClass->isNotEmpty(),
       | j_invoke($metadata, 'castTo', [$value->toObjectCode(),
-                 j_invoke($metadata, 'witnessTypeArgument', [$witnessed, j_int($witness.typeArgumentIndex->toOne())], javaObject())], javaObject()),
+                 j_invoke($metadata, 'witnessClassTypeParameter', [$witnessed, j_string($witness.declaringClass->toOne()), j_string($witness.classParameter->toOne())], javaObject())], javaObject()),
    |if ($bindsMul,
       | j_invoke($metadata, 'castToWitness', [$value->toObjectCode(), $witnessed], javaObject()),
       | j_invoke($metadata, 'castTo', [$value->toObjectCode(),
@@ -4224,27 +4233,47 @@ function <<access.private>> platform::extensions::language::java::translation::n
    $conv->withClassConstraints($built, $pureClass, $fe, $typeVarValues);
 }
 
-// A class may constrain its instances (`[wx(~function:$this.text->size() < $x)]`):
-// the checks run on what was just built, with `$this` bound to it and the
-// class's type variables to the values it was built with.
+// A class may constrain its instances (`[wx(~function:$this.text->size() < $x)]`), and so may the classes
+// it extends: the checks run on what was just built, with `$this` bound to it, the class's type variables
+// to the values it was built with, and each constraint's type parameters — its own class's — to what the
+// object's type arguments bind them to (testNewInheritedConstraintBindsTheParentTypeParameters). An
+// ancestor whose constraints read type variables is not checked: nothing here gives them values.
 function <<access.private>> platform::extensions::language::java::translation::withClassConstraints(conv: Conventions[1], built: Code[1], pureClass: platform::pure::metamodel::type::Class<Any>[*], fe: FunctionExpression[1], typeVariableValues: ValueSpecification[*]): Code[1]
 {
-   let constraints = $pureClass->cast(@platform::pure::metamodel::type::Type)->constraintsOf();
    let variables   = $pureClass->map(c | $c.typeVariables);
    let bindings    = range($variables->size())->filter(i | $i < $typeVariableValues->size())->map(i |
                         j_declare($conv->pureTypeToJavaType($variables->at($i).genericType, $variables->at($i).multiplicity)->toBoxed(),
                                   $variables->at($i).name->platform::extensions::language::java::translation::safeJavaName(),
                                   $conv->translateExpression($typeVariableValues->at($i))));
-   // and its type parameters to the type arguments it was built with: they are read off `this_`
-   // (testNewConstraintBindsTheClassTypeParameters)
-   let parameters = $pureClass->map(c | $c.typeParameters);
-   let witnesses  = range($parameters->size())->map(i |
-                       pair($parameters->at($i).name->toOne(), ^TypeVarWitness(parameter = 'this_', typeArgumentIndex = $i)));
-   let existing   = if ($conv.typeVarWitness->isEmpty(), | [], | $conv.typeVarWitness->toOne()->keyValues()->filter(w | !$witnesses.first->contains($w.first)));
-   let classConv  = if ($witnesses->isEmpty(), | $conv, | ^$conv(typeVarWitness = newMap($witnesses->concatenate($existing))));
-   if ($constraints->isEmpty() || !$conv.metadataElements || $bindings->size() != $variables->size(),
+   let ancestors   = $pureClass->map(c | $c->platform::extensions::language::java::translation::ancestorClasses())
+                        ->filter(a | $a.typeVariables->isEmpty() && $a.constraints->isNotEmpty());
+   if ($pureClass->isEmpty() || !$conv.metadataElements || $bindings->size() != $variables->size(),
       | $built,
-      | $classConv->constraintChecksBound($built, $constraints, $pureClass->toOne(), $fe, $bindings));
+      | let own = if ($pureClass->toOne().constraints->isEmpty(),
+                     | $built,
+                     | $conv->classTypeParameterWitnesses($pureClass->toOne())->constraintChecksBound($built, $pureClass->toOne().constraints, $pureClass->toOne(), $fe, $bindings));
+        $ancestors->fold({a, code | $conv->classTypeParameterWitnesses($a)->constraintChecksBound($code, $a.constraints, $a, $fe, [])}, $own);
+   );
+}
+
+// `conv` with the type parameters of `cls` read off `this_`, the object its constraints check.
+function <<access.private>> platform::extensions::language::java::translation::classTypeParameterWitnesses(conv: Conventions[1], cls: platform::pure::metamodel::type::Class<Any>[1]): Conventions[1]
+{
+   let witnesses = $cls.typeParameters->map(p |
+                      pair($p.name->toOne(), ^TypeVarWitness(parameter = 'this_', declaringClass = $cls->elementToPath(), classParameter = $p.name)));
+   let existing  = if ($conv.typeVarWitness->isEmpty(), | [], | $conv.typeVarWitness->toOne()->keyValues()->filter(w | !$witnesses.first->contains($w.first)));
+   if ($witnesses->isEmpty(), | $conv, | ^$conv(typeVarWitness = newMap($witnesses->concatenate($existing))));
+}
+
+// The classes `cls` extends, directly or not, each once (Any excluded).
+function <<access.private>> platform::extensions::language::java::translation::ancestorClasses(cls: platform::pure::metamodel::type::Class<Any>[1]): platform::pure::metamodel::type::Class<Any>[*]
+{
+   $cls.generalizations
+      ->map(g | $g.general->rawType())
+      ->filter(t | $t->instanceOf(platform::pure::metamodel::type::Class) && $t != platform::pure::metamodel::type::Any)
+      ->cast(@platform::pure::metamodel::type::Class<Any>)
+      ->map(p | $p->concatenate($p->platform::extensions::language::java::translation::ancestorClasses()))
+      ->removeDuplicates();
 }
 
 // `new XImpl()._classifierGenericType(new GenericTypeValueImpl()._type(<the class>))`

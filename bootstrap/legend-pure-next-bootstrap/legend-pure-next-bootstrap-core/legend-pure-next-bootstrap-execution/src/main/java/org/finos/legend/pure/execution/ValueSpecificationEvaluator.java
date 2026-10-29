@@ -1158,12 +1158,13 @@ public class ValueSpecificationEvaluator
     /**
      * Binds the type parameters in a declared type to what stands in their place in the actual type: T in
      * `x: T[1]` to the argument's type, and T in `b: Box<T>[1]` — a default's or a qualified property's
-     * `this` — to the argument's type argument, when the argument's type is that same raw type
-     * (testNewDefaultValueBindsTheClassTypeParameters).
+     * `this` — to the argument's type argument, seen as that raw type when it is a subtype: a StringBox
+     * (extends Box<String>) binds T to String (testNewDefaultValueBindsTheClassTypeParameters,
+     * testNewInheritedDefaultValueBindsTheParentTypeParameters).
      */
-    private static void bindTypeVariables(platform.pure.metamodel.type.generics.GenericType declared,
-                                          platform.pure.metamodel.type.generics.GenericType actual,
-                                          java.util.Map<String, Object> bindings)
+    private void bindTypeVariables(platform.pure.metamodel.type.generics.GenericType declared,
+                                   platform.pure.metamodel.type.generics.GenericType actual,
+                                   java.util.Map<String, Object> bindings)
     {
         if (declared == null || actual == null)
         {
@@ -1183,14 +1184,42 @@ public class ValueSpecificationEvaluator
             }
             return;
         }
-        if (declaredType != actualType
-                || !(declared instanceof platform.pure.metamodel.type.generics.GenericTypeValue d)
-                || !(actual instanceof platform.pure.metamodel.type.generics.GenericTypeValue av)
+        platform.pure.metamodel.type.generics.GenericType seen = declaredType == actualType ? actual : asAncestor(actual, declaredType);
+        if (!(declared instanceof platform.pure.metamodel.type.generics.GenericTypeValue d)
+                || !(seen instanceof platform.pure.metamodel.type.generics.GenericTypeValue av)
                 || d._typeArguments() == null || av._typeArguments() == null)
         {
             return;
         }
         d._typeArguments().zip(av._typeArguments()).forEach(pair -> bindTypeVariables(pair.getOne(), pair.getTwo(), bindings));
+    }
+
+    /**
+     * `actual` seen as its ancestor `ancestor`: a StringBox as Box<String>, a RenamedBox<Integer> (extends
+     * Box<U>) as Box<Integer> — its generalizations walked up, each parent's type arguments made concrete with
+     * the ones below. Null when `ancestor` is not one of its supertypes.
+     */
+    private platform.pure.metamodel.type.generics.GenericType asAncestor(platform.pure.metamodel.type.generics.GenericType actual,
+                                                                       platform.pure.metamodel.type.Type ancestor)
+    {
+        platform.pure.metamodel.type.Type type = actual == null ? null : _GenericType.type(actual);
+        if (type == ancestor)
+        {
+            return actual;
+        }
+        if (!(type instanceof platform.pure.metamodel.type.Class cls) || cls._generalizations() == null)
+        {
+            return null;
+        }
+        org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding typeBindings =
+                org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
+        if (cls._typeParameters() != null && actual instanceof platform.pure.metamodel.type.generics.GenericTypeValue v && v._typeArguments() != null)
+        {
+            cls._typeParameters().zip(v._typeArguments()).forEach(pair -> typeBindings.addTypeBinding(pair.getOne(), pair.getTwo()));
+        }
+        return cls._generalizations().asLazy()
+                .collect(g -> asAncestor(_GenericType.makeAsConcreteAsPossible(g._general(), typeBindings, this.natives.resolver()), ancestor))
+                .detect(java.util.Objects::nonNull);
     }
 
     /**

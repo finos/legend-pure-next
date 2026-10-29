@@ -2787,15 +2787,42 @@ function __cast(value, targetPath) {
   if (vtPath && __metadataSubtypeOf(targetPath, vtPath)) return value;
   throw new Error("Cast exception: " + __castLeaf(vtPath) + " cannot be cast to " + __castLeaf(targetPath));
 }
-// cast(@T) where T is a type parameter of `owner`'s class: T is owner's type argument at `index` (String for
-// a Box<T> built as Box<String>). An object built with the raw class binds nothing: the value passes, as a
-// cast to a type parameter with no witness does.
-function __castToTypeArgument(value, owner, index) {
+// cast(@T) in a default, a qualified property or a constraint of the class `declaringPath`, computed for
+// `owner`: T is what owner's type arguments bind it to — String for a Box<T> built as Box<String>, and
+// through its generalizations for a subclass, String for a StringBox (extends Box<String>). An object
+// built with a raw class binds nothing: the value passes, as a cast to a type parameter with no witness does.
+function __castToClassTypeParameter(value, owner, declaringPath, name) {
   const cgt = owner !== void 0 && owner !== null && typeof owner === "object" ? owner.classifierGenericType : void 0;
-  const arg = cgt ? __asArr(cgt.typeArguments)[index] : void 0;
-  const type = arg ? arg.type : void 0;
-  const path = type ? type.__purePath ?? type.path : void 0;
+  const typePath = cgt ? __typePath(cgt.type) : void 0;
+  const bindings = typePath ? __classTypeBindingsAs(typePath, __asArr(cgt.typeArguments).map((a) => __typePath(a.type)), declaringPath) : void 0;
+  const path = bindings ? bindings.get(name) : void 0;
   return path === void 0 ? value : __cast(value, path);
+}
+function __typePath(t) {
+  return t ? t.__purePath ?? t.path : void 0;
+}
+// The type parameters of the class `typePath` bound to `values` (type paths), seen as its ancestor
+// `ancestorPath`: walked up its generalizations, each parent's type arguments read through the bindings
+// below it (Box<U> under a RenamedBox<Integer> is Box<Integer>). Undefined when it is not an ancestor.
+function __classTypeBindingsAs(typePath, values, ancestorPath) {
+  const cls = __pureResolve(typePath);
+  if (cls === void 0 || cls === null) return void 0;
+  const own = new Map();
+  __asArr(cls.typeParameters).forEach((p, i) => { if (values[i] !== void 0) own.set(p.name, values[i]); });
+  if (typePath === ancestorPath) return own;
+  return __asArr(cls.generalizations)
+    .map((g) => {
+      const general = g.general;
+      const parentPath = general ? __typePath(general.type) : void 0;
+      if (parentPath === void 0) return void 0;
+      const parentValues = __asArr(general.typeArguments).map((a) => {
+        const t = a.type;
+        const isParameter = t && String(__pureTypeOf(t) ?? "").endsWith("TypeParameter");
+        return isParameter ? own.get(t.name) : __typePath(t);
+      });
+      return __classTypeBindingsAs(parentPath, parentValues, ancestorPath);
+    })
+    .find((b) => b !== void 0);
 }
 const __resolveCache = {};
 const __OPT_CGT_PREFIX = "platform::pure::metamodel::type::generics::optimization::GenericType_";

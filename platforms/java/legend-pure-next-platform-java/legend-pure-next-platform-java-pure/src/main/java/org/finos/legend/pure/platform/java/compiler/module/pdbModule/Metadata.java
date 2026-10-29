@@ -771,19 +771,71 @@ public final class Metadata
     }
 
     /**
-     * `cast(@T)` where T is a type parameter of the witness's class (a default's or a qualified property's
-     * `$this`): its type argument at `index`, String for a Box<T> built as Box<String>. Null, so no check,
-     * when the object was built with the raw class, or there is no metadata to name types.
+     * `cast(@T)` in a default, a qualified property or a constraint of the class `declaringPath`, where T stands
+     * for its parameter `name`, computed for `witness`: what the witness's type arguments bind it to, String
+     * for a Box<T> built as Box<String>, and through its generalizations for a subclass, String for a StringBox
+     * (extends Box<String>). Null, so no check, when nothing binds it (a raw class), or there is no metadata.
      */
-    public static Object witnessTypeArgument(Object witness, int index)
+    public static Object witnessClassTypeParameter(Object witness, String declaringPath, String name)
     {
         if (runtimeOrNull() == null || witness == null)
         {
             return null;
         }
         Object classifier = first(values(witness, "classifierGenericType"));
-        List<Object> arguments = classifier == null ? Lists.fixedSize.empty() : values(classifier, "typeArguments");
-        return index < arguments.size() ? typeOf(arguments.get(index)) : null;
+        Object type = classifier == null ? null : typeOf(classifier);
+        if (type == null)
+        {
+            return null;
+        }
+        java.util.Map<String, Object> bindings = classBindingsAs(type, ListAdapter.adapt(values(classifier, "typeArguments")).collect(Metadata::typeOf), declaringPath);
+        return bindings == null ? null : bindings.get(name);
+    }
+
+    // `type`'s type parameters bound to `bound`, seen as its ancestor `ancestorPath`: walked up its
+    // generalizations, each parent's type arguments read through the bindings below it (Box<U> under a
+    // RenamedBox<Integer> is Box<Integer>). Null when it is not an ancestor.
+    private static java.util.Map<String, Object> classBindingsAs(Object type, org.eclipse.collections.api.list.ListIterable<Object> bound, String ancestorPath)
+    {
+        MutableMap<String, Object> own = Maps.mutable.empty();
+        ListAdapter.adapt(values(type, "typeParameters")).zip(bound).each(pair ->
+        {
+            Object parameterName = first(values(pair.getOne(), "name"));
+            if (parameterName instanceof String n && pair.getTwo() != null)
+            {
+                own.put(n, pair.getTwo());
+            }
+        });
+        if (ancestorPath.equals(path(type, "::")))
+        {
+            return own;
+        }
+        return ListAdapter.adapt(values(type, "generalizations")).asLazy()
+                .collect(g ->
+                {
+                    Object general = first(values(g, "general"));
+                    Object parent = general == null ? null : typeOf(general);
+                    if (parent == null)
+                    {
+                        return null;
+                    }
+                    org.eclipse.collections.api.list.ListIterable<Object> parentBound = ListAdapter.adapt(values(general, "typeArguments"))
+                            .collect(a -> Metadata.throughBindings(typeOf(a), own));
+                    return classBindingsAs(parent, parentBound, ancestorPath);
+                })
+                .detect(java.util.Objects::nonNull);
+    }
+
+    // A parent's type argument as the bindings below it read it: one of the subclass's own type parameters
+    // is what it is bound to; any other type is itself.
+    private static Object throughBindings(Object argumentType, java.util.Map<String, Object> bindings)
+    {
+        if (argumentType instanceof LazyObject lazy && lazy._purePath().endsWith("TypeParameter"))
+        {
+            Object parameterName = first(lazy.__values("name"));
+            return parameterName instanceof String n ? bindings.get(n) : null;
+        }
+        return argumentType;
     }
 
     /** `value` when every one of its values is a `type`, or the error Pure gives. */

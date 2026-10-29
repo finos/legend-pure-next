@@ -68,10 +68,11 @@ Class platform::extensions::language::javascript::translation::TypeVarBinding
    // the multiplicity. Empty when the witness's multiplicity is a concrete
    // multiplicity ([1], [*], [1..*], …) rather than a parameter.
    mulParamName : String[0..1];
-   // When set, the witness is an object of a generic class and the type parameter is its class's: the
-   // type is the witness's type argument at this index (T -> String for a Box<T> built as Box<String>),
-   // read by a default's or a qualified property's cast(@T) (testNewDefaultValueBindsTheClassTypeParameters).
-   typeArgumentIndex : Integer[0..1];
+   // When set, the witness is an object of a generic class, and the type parameter is this class's — the
+   // one a default, a qualified property or a constraint is defined on: the type is what the witness's type
+   // arguments bind it to, through its generalizations for a subclass (testNewDefaultValueBindsTheClassTypeParameters,
+   // testNewInheritedDefaultValueBindsTheParentTypeParameters).
+   declaringClass : String[0..1];
 }
 
 // Coder groups split out of defaultConvention's `newMap([...])` literal so
@@ -2089,9 +2090,9 @@ function platform::extensions::language::javascript::translation::isToManyMult(m
 // already has (a qualified property's own function-level ones) win.
 function platform::extensions::language::javascript::translation::withClassTypeParamWitness(conv: Convention[1], cls: platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>[1], thisName: String[1]): Convention[1]
 {
-   let witness = range(0, $cls.typeParameters->size())->map(i |
-      pair($cls.typeParameters->at($i).name->toOne(),
-           ^TypeVarBinding(witnessVar = $thisName, isCollection = false, typeArgumentIndex = $i)));
+   let witness = $cls.typeParameters->map(p |
+      pair($p.name->toOne(),
+           ^TypeVarBinding(witnessVar = $thisName, isCollection = false, declaringClass = $cls->elementToPath())));
    if ($witness->isEmpty(), | $conv,
       | let existing = if ($conv.typeVarWitness->isEmpty(), | [], | $conv.typeVarWitness->toOne()->keyValues());
         ^$conv(typeVarWitness = newMap($witness->concatenate($existing))););
@@ -2412,8 +2413,8 @@ function platform::extensions::language::javascript::translation::castTypeParamE
       | let b = $binding->toOne();
         // __commonType is collection-safe (single witness -> its own type), so use
         // it for any witness multiplicity (scalar T[1], sequence T[*], or param T[m]).
-        if ($b.typeArgumentIndex->isNotEmpty(),
-           | jsCall(jsId('__castToTypeArgument'), [$src, jsId($b.witnessVar), jsNumLit($b.typeArgumentIndex->toOne()->toString())]),
+        if ($b.declaringClass->isNotEmpty(),
+           | jsCall(jsId('__castToClassTypeParameter'), [$src, jsId($b.witnessVar), jsStrLit($b.declaringClass->toOne()), jsStrLit($tp.name->toOne())]),
            | jsCall(jsId('__cast'), [$src, jsCall(jsId('__commonType'), [jsId($b.witnessVar)])]));
    );
 }
@@ -4337,7 +4338,9 @@ function platform::extensions::language::javascript::translation::defaultAccesso
    conv: Convention[1]): platform::extensions::language::javascript::metamodel::ClassMember[*]
 {
    let name = $p.name->toOne();
-   let compute = $p.defaultValue->toOne()->translatePureValueToTs($conv->withClassTypeParamWitness($cls, safeJsName('this')));
+   // an inherited default reads the type parameters of the class that declares it
+   let declaring = $p.owner->filter(o | $o->instanceOf(platform::pure::metamodel::type::Class))->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>);
+   let compute = $p.defaultValue->toOne()->translatePureValueToTs($conv->withClassTypeParamWitness(if ($declaring->isEmpty(), | $cls, | $declaring->toOne()), safeJsName('this')));
    [
       jsGetter($name, jsBlock([jsReturn(jsCall(jsId('__default'), [jsThis(), jsStrLit($cls->elementToPath()), jsStrLit($name), $compute]))]))
          ->cast(@platform::extensions::language::javascript::metamodel::ClassMember),

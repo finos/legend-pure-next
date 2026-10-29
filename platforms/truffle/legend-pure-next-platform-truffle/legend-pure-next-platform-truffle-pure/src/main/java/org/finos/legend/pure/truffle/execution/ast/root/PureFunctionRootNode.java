@@ -68,6 +68,10 @@ public final class PureFunctionRootNode extends RootNode
     @CompilationFinal
     private final boolean mayBindTypeVars;
 
+    // A qualified property's class, whose type parameters its body binds (see PureContext.classTypeParameterBindings).
+    @CompilationFinal
+    private Object declaringClass;
+
     /**
      * Parallel arrays computed at compile time: {@code funcTypeVarArgIdx[i]}
      * is the parameter index whose declared type is the TypeParameter named
@@ -162,6 +166,11 @@ public final class PureFunctionRootNode extends RootNode
         return rootSourceSection;
     }
 
+    public void setDeclaringClass(Object declaringClass)
+    {
+        this.declaringClass = declaringClass;
+    }
+
     @Override
     @ExplodeLoop
     public Object execute(VirtualFrame frame)
@@ -202,7 +211,7 @@ public final class PureFunctionRootNode extends RootNode
         if (mayBindTypeVars && arguments.length > 0 && arguments[0] != null)
         {
             PureContext.bindQpTypeVariablesStatic(arguments[0], frame, layout);
-            classTypeBindings = PureContext.classTypeParameterBindings(arguments[0]);
+            classTypeBindings = PureContext.classTypeParameterBindings(arguments[0], declaringClass);
         }
 
         // Function-level `<T>` and `<T|m>` bindings: build name→resolved-Type
