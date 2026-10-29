@@ -80,6 +80,10 @@ public final class LangNodeFactories
         registry.register("eval_Function_1__T_n__U_p__W_q__V_m_",
                 (args, gt, mul, fe) -> new EvalNode(args));
 
+        // rawEvalProperty(property, object) : the values the object holds for the property, never its default
+        registry.register("rawEvalProperty_Property_1__T_1__V_MANY_",
+                (args, gt, mul, fe) -> new RawEvalPropertyNode(args));
+
         // memoize(f, args...) : f->eval(args...), once per execution for a given function and arguments
         registry.register("memoize_AddressableFunction_1__T_n__V_m_",
                 (args, gt, mul, fe) -> new MemoizeNode(args));

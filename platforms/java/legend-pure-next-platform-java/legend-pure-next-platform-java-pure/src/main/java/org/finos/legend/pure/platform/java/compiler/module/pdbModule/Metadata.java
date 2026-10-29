@@ -15,6 +15,16 @@
 
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
+import org.eclipse.collections.impl.factory.HashingStrategyMaps;
+import org.eclipse.collections.impl.factory.HashingStrategySets;
+import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.factory.Maps;
+import org.eclipse.collections.api.factory.Sets;
+import org.eclipse.collections.api.map.MutableMap;
+import org.eclipse.collections.api.set.MutableSet;
+import org.eclipse.collections.impl.block.factory.HashingStrategies;
+import org.eclipse.collections.impl.list.mutable.ListAdapter;
+
 import java.util.List;
 
 /**
@@ -1149,6 +1159,115 @@ public final class Metadata
         }
         String text = String.valueOf(value);
         return text.substring(text.lastIndexOf('.') + 1);
+    }
+
+    // A class's default value per property (inherited ones included), Optional.empty() for none.
+    private static final MutableMap<String, java.util.Optional<Object>> DEFAULT_VALUES = Maps.mutable.empty();
+    // The defaults being computed, per object: one met again is a default that needs its own value.
+    private static final MutableMap<LazyObject, MutableSet<String>> COMPUTING_DEFAULTS = HashingStrategyMaps.mutable.of(HashingStrategies.identityStrategy());
+    // Set while a class's metadata is read to find a default: those reads must not apply defaults themselves.
+    private static final ThreadLocal<Boolean> FINDING_DEFAULT = ThreadLocal.withInitial(() -> false);
+
+    /** rawEvalProperty(property, object): what the object holds for the property, never its default. */
+    public static Object rawEvalProperty(Object property, Object object)
+    {
+        Object name = values(property, "name").isEmpty() ? null : values(property, "name").get(0);
+        if (!(object instanceof LazyObject lazy) || !(name instanceof String n))
+        {
+            return Lists.fixedSize.empty();
+        }
+        return lazy.__storedValues(n);
+    }
+
+    /**
+     * The value of `object`'s never-set property `property` from its class's default (a function of the
+     * object, {Owner[1]->V[1]}, called with it), or null when the class gives the property none. A default
+     * that needs its own value is an error (testNewDefaultValueCycleIsAnError).
+     */
+    static List<Object> defaultValue(LazyObject object, String property)
+    {
+        if (runtime == null || FINDING_DEFAULT.get())
+        {
+            return null;
+        }
+        String classPath = object._purePath();
+        Object lambda = defaultValueOf(classPath, property);
+        if (lambda == null)
+        {
+            return null;
+        }
+        MutableSet<String> computing;
+        synchronized (COMPUTING_DEFAULTS)
+        {
+            computing = COMPUTING_DEFAULTS.getIfAbsentPut(object, Sets.mutable::empty);
+            if (!computing.add(property))
+            {
+                throw new RuntimeException("default value cycle: " + classPath + "." + property + " is already being computed for this object");
+            }
+        }
+        try
+        {
+            Object result = invoke(lambda, Lists.fixedSize.with(object));
+            return result == null ? Lists.fixedSize.empty() : result instanceof List<?> list ? Lists.immutable.<Object>withAll(list).castToList() : Lists.fixedSize.with(result);
+        }
+        finally
+        {
+            synchronized (COMPUTING_DEFAULTS)
+            {
+                computing.remove(property);
+                if (computing.isEmpty())
+                {
+                    COMPUTING_DEFAULTS.remove(object);
+                }
+            }
+        }
+    }
+
+    private static Object defaultValueOf(String classPath, String property)
+    {
+        String key = classPath + "." + property;
+        synchronized (DEFAULT_VALUES)
+        {
+            java.util.Optional<Object> known = DEFAULT_VALUES.get(key);
+            if (known != null)
+            {
+                return known.orElse(null);
+            }
+        }
+        Object found;
+        FINDING_DEFAULT.set(true);
+        try
+        {
+            found = findDefaultValue(lenientElement(classPath), property, HashingStrategySets.mutable.of(HashingStrategies.identityStrategy()));
+        }
+        finally
+        {
+            FINDING_DEFAULT.set(false);
+        }
+        synchronized (DEFAULT_VALUES)
+        {
+            DEFAULT_VALUES.put(key, java.util.Optional.ofNullable(found));
+        }
+        return found;
+    }
+
+    private static Object findDefaultValue(Object type, String property, MutableSet<Object> seen)
+    {
+        if (!(type instanceof LazyObject cls) || !seen.add(type))
+        {
+            return null;
+        }
+        java.util.Optional<Object> declared = ListAdapter.adapt(cls.__values("properties"))
+                .detectOptional(p -> p instanceof LazyObject prop && property.equals(first(prop.__values("name"))));
+        if (declared.isPresent())
+        {
+            return first(((LazyObject) declared.get()).__values("defaultValue"));
+        }
+        return ListAdapter.adapt(cls.__values("generalizations"))
+                .asLazy()
+                .collect(g -> g instanceof LazyObject lg ? first(lg.__values("general")) : null)
+                .collect(general -> general instanceof LazyObject lgt ? findDefaultValue(first(lgt.__values("type")), property, seen) : null)
+                .detectIfNone(java.util.Objects::nonNull, () -> null);
     }
 
     private static final java.util.Map<String, java.util.Optional<Class<?>>> ENUM_CLASSES = new java.util.concurrent.ConcurrentHashMap<>();

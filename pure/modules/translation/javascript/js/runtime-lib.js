@@ -1385,6 +1385,40 @@ function __memoize(fn, ...args) {
     __memoizing.delete(key);
   }
 }
+// A property's default value, read on an object that never set it (the translator's prototype getter):
+// `compute` called with the object. Never stored. A default that needs its own value is an error.
+const __computingDefaults = new WeakMap();
+function __default(obj, classPath, name, compute) {
+  let computing = __computingDefaults.get(obj);
+  if (computing === void 0) {
+    computing = new Set();
+    __computingDefaults.set(obj, computing);
+  }
+  if (computing.has(name)) throw new Error("default value cycle: " + classPath + "." + name + " is already being computed for this object");
+  computing.add(name);
+  try {
+    return compute(obj);
+  } finally {
+    computing.delete(name);
+  }
+}
+// rawEvalProperty(property, object): what the object holds — an own field — never the default a read
+// computes through the class's prototype getter (see __default).
+function __rawEvalProperty(property, object) {
+  const name = __pdo(property).name;
+  const o = __pdo(object);
+  if (o === null || o === void 0 || typeof o !== "object") return [];
+  if (Object.prototype.hasOwnProperty.call(o, name)) return o[name] === void 0 ? [] : o[name];
+  for (let p = Object.getPrototypeOf(o); p !== null; p = Object.getPrototypeOf(p)) {
+    const d = Object.getOwnPropertyDescriptor(p, name);
+    if (d !== void 0) return typeof d.get === "function" ? [] : (o[name] === void 0 ? [] : o[name]);
+  }
+  return o[name] === void 0 ? [] : o[name];
+}
+// A value set on a property that has a default: an own field, which shadows the prototype getter.
+function __defineOwn(obj, name, value) {
+  Object.defineProperty(obj, name, { value, writable: true, enumerable: true, configurable: true });
+}
 function __tryEval(thunk) {
   try {
     return __newOf("platform$pure$functions$lang$TryResult", {

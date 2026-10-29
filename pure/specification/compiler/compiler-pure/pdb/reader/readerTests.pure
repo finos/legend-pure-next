@@ -48,6 +48,26 @@ function platform::pure::compiler::pdb::reader::tests::testSchema():platform::pu
       'table AncestorRef {',
       '    depth: int (id: 0);',
       '}',
+      'table PropertyDef {',
+      '    classifier_generic_type: ClassifierGenericTypePropertyUnion (id: 1);',
+      '    source_information: SourceInformationDef (id: 2);',
+      '    tagged_values: [TaggedValueDef] (id: 3);',
+      '    stereotypes: [PointerRef] (id: 4);',
+      '    owner: PointerRef (id: 5);',
+      '    name: string (id: 6);',
+      '    generic_type: GenericTypePropertyUnion (id: 8);',
+      '    multiplicity: MultiplicityPropertyUnion (id: 10);',
+      '    aggregation: string (id: 11);',
+      '    default_value: LambdaFunctionDef (id: 12);',
+      '}',
+      'table TypeParameterDef {',
+      '    classifier_generic_type: ClassifierGenericTypePropertyUnion (id: 1);',
+      '    source_information: SourceInformationDef (id: 2);',
+      '    generalizations: [GeneralizationDef] (id: 3);',
+      '    name: string (id: 4);',
+      '    owner: PointerRef (id: 5);',
+      '    contravariant: bool (id: 6);',
+      '}',
       'table PackageDef {',
       '    classifier_generic_type: ClassifierGenericTypePropertyUnion (id: 1);',
       '    source_information: SourceInformationDef (id: 2);',
@@ -315,4 +335,58 @@ function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testGoldenC
    let b = platform::pure::compiler::pdb::reader::rootNode(platform::pure::compiler::pdb::reader::tests::extensionValueBytes(9), 'ExtensionValueDef');
    assertEquals(['v.end_line: 3 in the Pure archive, 9 in the golden'], platform::pure::compiler::test::pdb::compareNode($s, $a, $b, 'v'));
    assertEmpty(platform::pure::compiler::test::pdb::compareNode($s, $a, platform::pure::compiler::pdb::reader::rootNode(platform::pure::compiler::pdb::reader::tests::extensionValueBytes(3), 'ExtensionValueDef'), 'v'));
+}
+
+// A property the object was not given is written as absent, even when it has a default: the PDB records
+// what the object holds, and a reader computes the default when the property is read. Property.aggregation
+// (default None in m3) is a string field, so its absence is visible.
+function <<test.TestDependency>> platform::pure::compiler::pdb::reader::tests::writeTestProperty(prop:Property<Nil,Any|*>[1]):platform::pure::compiler::pdb::reader::FbsNode[1]
+{
+   let r     = platform::pure::compiler::pdb::writerHelper::evalGenWrite('writeProperty_Builder_1__Property_1__Any_MANY__BuilderAndOffset_1_', platform::pure::compiler::pdb::fbb::newBuilder(), $prop, []);
+   let bytes = $r.builder->platform::pure::compiler::pdb::fbb::finish($r.offset)->platform::pure::compiler::pdb::fbb::result();
+   platform::pure::compiler::pdb::reader::rootNode($bytes, 'PropertyDef');
+}
+
+function <<test.TestDependency>> platform::pure::compiler::pdb::reader::tests::testProperty(aggregation:platform::pure::metamodel::function::property::AggregationKind[0..1]):Property<Nil,Any|*>[1]
+{
+   let anchor = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                   type = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::function::property::Property')->cast(@Class<Any>));
+   let base   = ^Property<Nil,Any|*>(name = 'p', classifierGenericType = $anchor,
+                   owner = ^platform::pure::metamodel::pointer::ClassPointer<Any>(path = 'test::C'),
+                   genericType = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = ^platform::pure::metamodel::pointer::ClassPointer<Any>(path = 'test::D')),
+                   multiplicity = PureOne);
+   if($aggregation->isEmpty(), | $base, | ^$base(aggregation = $aggregation->toOne()));
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testUnsetDefaultedPropertyIsWrittenAbsent():Boolean[1]
+{
+   let s    = platform::pure::compiler::pdb::reader::tests::testSchema();
+   let prop = platform::pure::compiler::pdb::reader::tests::testProperty([]);
+   assertEquals(platform::pure::metamodel::function::property::AggregationKind.None, $prop.aggregation);
+   let node = platform::pure::compiler::pdb::reader::tests::writeTestProperty($prop);
+   assertEquals('p', platform::pure::compiler::pdb::reader::readField($s, $node, 'name'));
+   assert(platform::pure::compiler::pdb::reader::readField($s, $node, 'aggregation')->isEmpty());
+}
+
+// One the object was given is written, the default's value included.
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testSetDefaultedPropertyIsWritten():Boolean[1]
+{
+   let s = platform::pure::compiler::pdb::reader::tests::testSchema();
+   assertEquals('Composite', platform::pure::compiler::pdb::reader::readField($s,
+      platform::pure::compiler::pdb::reader::tests::writeTestProperty(platform::pure::compiler::pdb::reader::tests::testProperty(platform::pure::metamodel::function::property::AggregationKind.Composite)), 'aggregation'));
+   assertEquals('None', platform::pure::compiler::pdb::reader::readField($s,
+      platform::pure::compiler::pdb::reader::tests::writeTestProperty(platform::pure::compiler::pdb::reader::tests::testProperty(platform::pure::metamodel::function::property::AggregationKind.None)), 'aggregation'));
+}
+
+// A defaulted boolean: absent and false are the same bytes in a FlatBuffer (a scalar at its default is not
+// written), and both read as the default — TypeParameter.contravariant reads false either way.
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testUnsetDefaultedBooleanReadsItsDefault():Boolean[1]
+{
+   let s     = platform::pure::compiler::pdb::reader::tests::testSchema();
+   let tp    = ^platform::pure::metamodel::type::generics::TypeParameter(name = 'T');
+   assertEquals(false, $tp.contravariant);
+   let r     = platform::pure::compiler::pdb::writerHelper::evalGenWrite('writeTypeParameter_Builder_1__TypeParameter_1__Any_MANY__BuilderAndOffset_1_', platform::pure::compiler::pdb::fbb::newBuilder(), $tp, []);
+   let bytes = $r.builder->platform::pure::compiler::pdb::fbb::finish($r.offset)->platform::pure::compiler::pdb::fbb::result();
+   let node  = platform::pure::compiler::pdb::reader::rootNode($bytes, 'TypeParameterDef');
+   assertEquals(false, platform::pure::compiler::pdb::reader::readField($s, $node, 'contravariant'));
 }

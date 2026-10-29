@@ -440,7 +440,11 @@ function platform::pure::compiler::pdb::generator::emitClass(target:WriterTarget
 
    // Semantic validations first (reference order): declared-[1]/[1..*] null checks,
    // then the FunctionExpression unresolved-`func` check ('~' parent-ref chains exempt).
-   let validations = $plans->map(p | emitValidation($p, $props->at($p.idx), $clsName))->joinStrings('');
+   // A property with a default (m3: Property.aggregation, TypeParameter.contravariant) is written as what the
+   // object HOLDS — rawEvalProperty, never the default a read computes — and may be unset: the field is then
+   // left out, and a reader computes the default when the property is read (testUnsetDefaultedPropertyIsWrittenAbsent).
+   let defaulted = $props->filter(p | $p.defaultValue->isNotEmpty());
+   let validations = $plans->filter(p | !$defaulted->contains($props->at($p.idx)))->map(p | emitValidation($p, $props->at($p.idx), $clsName))->joinStrings('');
    let funcCheck = if(allSuperClasses($cls).name->contains('FunctionExpression'),
       | '   if($obj.func->isEmpty() && ($obj.functionName != \'~\'), | fail(\'Validation error: Property func on resolved ' + $clsName + ' is null (functionName=\' + $obj.functionName->joinStrings(\'\') + \') - compile-pure left an unresolved call: \' + platform::pure::compiler::pdb::writerHelper::pointerPath($obj) + platform::pure::compiler::pdb::writerHelper::sourceInfo($obj)), | true);\n',
       | '');
@@ -459,7 +463,9 @@ function platform::pure::compiler::pdb::generator::emitClass(target:WriterTarget
       | $adds,
       | ^EmitAcc(prev = '$tV', code = $adds.code +
            '   let tV = if($rV.offset == 0, | ' + $adds.prev + ', | ' + $adds.prev + '->platform::pure::compiler::pdb::fbb::addFieldScalar(' + ($valuePlan.id->toOne() - 1)->toString() + ', $rV.typeByte, 0, 1)->platform::pure::compiler::pdb::fbb::addFieldOffset(' + $valuePlan.id->toOne()->toString() + ', $rV.offset));\n'));
-   let body = $withValueAdd.code + '   ' + $withValueAdd.prev + '->platform::pure::compiler::pdb::fbb::endObject();\n';
+   let reads = $withValueAdd.code + '   ' + $withValueAdd.prev + '->platform::pure::compiler::pdb::fbb::endObject();\n';
+   let storedLets = $defaulted->map(p | '   let stored_' + $p.name->toOne() + ' = platform::pure::compiler::pdb::writerHelper::stored($obj, \'' + $p.owner->toOne()->cast(@PackageableElement)->elementToPath() + '\', \'' + $p.name->toOne() + '\')->cast(@' + $p.genericType->toOne()->rawType()->toOne()->cast(@PackageableElement)->elementToPath() + ');\n')->joinStrings('');
+   let body = $storedLets + $defaulted->fold({p, code | ['->', ',', ')', ' ', ';']->fold({x, c | $c->replace('$obj.' + $p.name->toOne() + $x, '$stored_' + $p.name->toOne() + $x)}, $code)}, $reads);
 
    'function ' + $target.ns + '::write' + $clsName + '(b:platform::pure::compiler::pdb::fbb::Builder[1], obj:' + $objType + '[1], stack:Any[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]\n' +
    '{\n' +

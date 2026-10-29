@@ -326,23 +326,81 @@ _test-all-suites:
     branch_modules()    { j --no-deps modules::language_java::test-all modules::language_javascript::test-all modules::translation_shared::test-all; }
     branch_java()       { j java::test-all; }
     branches="bootstrap truffle javascript modules java"
+    rm -f "$logs"/*.status "$logs"/*.result "$logs/.done"
+    # On a terminal, a live block redrawn every second: one line per lane, with the step it is on and a
+    # bar for that step's (n/total) counter. Otherwise (CI, redirected output) one line every 30s, and
+    # each lane's ✓/✗ as it finishes.
+    live=false; [ -t 1 ] && live=true
+    started_all=$SECONDS
     run() {
-        local name=$1 started=$SECONDS status
+        local name=$1 started=$SECONDS status line
         {{build_step}} start "test-all/$name"
         "branch_$name" > "$logs/$name.log" 2>&1
         status=$?
         local took=$(( SECONDS - started ))
         if [ "$status" -eq 0 ]; then
             {{build_step}} end "test-all/$name"
-            printf '  ✓ %-11s %dm%02ds\n' "$name" $(( took / 60 )) $(( took % 60 ))
+            line=$(printf '✓ %dm%02ds' $(( took / 60 )) $(( took % 60 )))
         else
-            printf '  ✗ %-11s %dm%02ds  exit %s — test-results/logs/%s.log\n' "$name" $(( took / 60 )) $(( took % 60 )) "$status" "$name"
+            line=$(printf '✗ %dm%02ds  exit %s — test-results/logs/%s.log' $(( took / 60 )) $(( took % 60 )) "$status" "$name")
         fi
+        echo "$line" > "$logs/$name.result"
+        $live || printf '  %-11s %s\n' "$name" "$line"
         echo "$status" > "$logs/$name.status"
     }
+    # A lane's state from its log: the last step header ([module::recipe]), then that step's last
+    # progress counter ("37%  (59/155)"), as "step<TAB>n<TAB>total".
+    lane_state() {
+        LC_ALL=C tr '\r' '\n' < "$logs/$1.log" 2>/dev/null | LC_ALL=C awk '
+            match($0, /\[[A-Za-z0-9_-]+(::[A-Za-z0-9_-]+)+\]/) { step = substr($0, RSTART + 1, RLENGTH - 2); n = ""; m = "" }
+            match($0, /[0-9]+%  \([0-9]+\/[0-9]+\)/) { s = substr($0, RSTART, RLENGTH); sub(/.*\(/, "", s); sub(/\)/, "", s); split(s, a, "/"); n = a[1]; m = a[2] }
+            END { printf "%s\t%s\t%s\n", step, n, m }'
+    }
+    lane_line() {
+        local name=$1 tick=$2 step n m width=30 filled bar
+        if [ -f "$logs/$name.result" ]; then
+            printf '  %-11s %s' "$name" "$(cat "$logs/$name.result")"
+            return
+        fi
+        IFS=$'\t' read -r step n m <<< "$(lane_state "$name")"
+        step=${step#"$name"::}
+        if [ -n "$m" ] && [ "$m" -gt 0 ]; then
+            filled=$(( n * width / m ))
+            bar=$(printf '%*s' "$filled" '' | sed 's/ /█/g')$(printf '%*s' $(( width - filled )) '' | sed 's/ /░/g')
+            printf '  %-11s %-28.28s [%s] %5s/%s' "$name" "$step" "$bar" "$n" "$m"
+        else
+            printf '  %-11s %-28.28s %s' "$name" "${step:-starting}" "$(echo '|/-\' | cut -c$(( tick % 4 + 1 )))"
+        fi
+    }
+    elapsed() { local t=$(( SECONDS - started_all )); printf '%dm%02ds' $(( t / 60 )) $(( t % 60 )); }
+    progress() {
+        local tick=0 lines=0 b out
+        while :; do
+            if $live; then
+                out=$(printf '  [%s]\n' "$(elapsed)"; for b in $branches; do lane_line "$b" "$tick"; echo; done)
+                [ "$lines" -gt 0 ] && printf '\033[%dA' "$lines"
+                printf '%s\n' "$out" | while IFS= read -r l; do printf '\033[2K%s\n' "$l"; done
+                lines=$(( $(echo $branches | wc -w) + 1 ))
+            elif [ $(( tick % 30 )) -eq 0 ] && [ "$tick" -gt 0 ]; then
+                out=""
+                for b in $branches; do
+                    [ -f "$logs/$b.result" ] && continue
+                    IFS=$'\t' read -r step n m <<< "$(lane_state "$b")"
+                    out="$out · $b ${step#"$b"::}${m:+ $n/$m}"
+                done
+                [ -n "$out" ] && printf '  [%s] %s\n' "$(elapsed)" "${out# · }"
+            fi
+            [ -f "$logs/.done" ] && break
+            sleep 1; tick=$(( tick + 1 ))
+        done
+    }
     echo "  running in parallel: $branches  (logs in test-results/logs/)"
-    for b in $branches; do run "$b" & done
-    wait
+    pids=""
+    for b in $branches; do run "$b" & pids="$pids $!"; done
+    progress & progress_pid=$!
+    wait $pids
+    touch "$logs/.done"
+    wait "$progress_pid"
     failed=""
     for b in $branches; do
         [ "$(cat "$logs/$b.status" 2>/dev/null)" = 0 ] || failed="$failed $b"

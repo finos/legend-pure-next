@@ -1,0 +1,301 @@
+###Pure
+native function apply<T,V|m>(f: AddressableFunction<{T[1]->V[m]}>[1], a: T[1]): V[m];
+native function apply2<T,U,V|m>(f: AddressableFunction<{T[1],U[1]->V[m]}>[1], a: T[1], b: U[1]): V[m];
+
+function measure(s: String[1]): Integer[1]
+{
+  1
+}
+
+function go(): Integer[1]
+{
+  apply(measure_String_1__Integer_1_, 'a')
+}
+
+function pair2(a: String[1], b: String[1]): Pair<String, String>[1]
+{
+  ^Pair<String, String>(first = $a, second = $b)
+}
+
+function wrap(s: String[1]): Pair<String, String>[1]
+{
+  ^Pair<String, String>(first = $s, second = $s)
+}
+
+function goTwoArguments(): Integer[1]
+{
+  apply2(plus_String_1__String_1__String_1_, 'a', 'b')->length()
+}
+
+function goGenericResult(): String[1]
+{
+  apply(wrap_String_1__Pair_1_, 'a').first
+}
+
+function goBoth(): String[1]
+{
+  apply2(pair2_String_1__String_1__Pair_1_, 'a', 'b').second
+}
+
+function anyProperty(owner: String[1], name: String[1]): Property<Nil, Any|*>[1]
+{
+  Pair.properties->at(0)
+}
+
+function goNilAndManyArguments(): Property<Nil, Any|*>[1]
+{
+  apply2(anyProperty_String_1__String_1__Property_1_, 'a', 'b')
+}
+
+function goMemoize(): String[1]
+{
+  memoize(pair2_String_1__String_1__Pair_1_, 'a', 'b').first
+}
+
+function goMemoizeNilAndManyArguments(): Property<Nil, Any|*>[1]
+{
+  memoize(anyProperty_String_1__String_1__Property_1_, 'a', 'b')
+}
+
+function goMemoizeThenCast(): Property<Any, Any|*>[1]
+{
+  memoize(anyProperty_String_1__String_1__Property_1_, 'a', 'b')->cast(@Property<Any, Any|*>)
+}
+
+function goApplyThenCast(): Property<Any, Any|*>[1]
+{
+  apply2(anyProperty_String_1__String_1__Property_1_, 'a', 'b')->cast(@Property<Any, Any|*>)
+}
+
+// The function passed by reference is defined after its use.
+function goMemoizeDefinedLater(): Property<Any, Any|*>[1]
+{
+  memoize(laterProperty_String_1__String_1__Property_1_, 'a', 'b')->cast(@Property<Any, Any|*>)
+}
+
+function laterProperty(owner: String[1], name: String[1]): Property<Nil, Any|*>[1]
+{
+  Pair.properties->at(0)
+}
+
+###CompiledGraph
+native function apply_AddressableFunction_1__T_1__V_m_(f:AddressableFunction<{T~apply_AddressableFunction_1__T_1__V_m_[1]->V~apply_AddressableFunction_1__T_1__V_m_[m]}>[1], a:T~apply_AddressableFunction_1__T_1__V_m_[1]):V~apply_AddressableFunction_1__T_1__V_m_[m]  ~NativeFunction<{AddressableFunction<{T~apply_AddressableFunction_1__T_1__V_m_[1]->V~apply_AddressableFunction_1__T_1__V_m_[m]}>[1], T~apply_AddressableFunction_1__T_1__V_m_[1]->V~apply_AddressableFunction_1__T_1__V_m_[m]}>
+
+native function apply2_AddressableFunction_1__T_1__U_1__V_m_(f:AddressableFunction<{T~apply2_AddressableFunction_1__T_1__U_1__V_m_[1], U~apply2_AddressableFunction_1__T_1__U_1__V_m_[1]->V~apply2_AddressableFunction_1__T_1__U_1__V_m_[m]}>[1], a:T~apply2_AddressableFunction_1__T_1__U_1__V_m_[1], b:U~apply2_AddressableFunction_1__T_1__U_1__V_m_[1]):V~apply2_AddressableFunction_1__T_1__U_1__V_m_[m]  ~NativeFunction<{AddressableFunction<{T~apply2_AddressableFunction_1__T_1__U_1__V_m_[1], U~apply2_AddressableFunction_1__T_1__U_1__V_m_[1]->V~apply2_AddressableFunction_1__T_1__U_1__V_m_[m]}>[1], T~apply2_AddressableFunction_1__T_1__U_1__V_m_[1], U~apply2_AddressableFunction_1__T_1__U_1__V_m_[1]->V~apply2_AddressableFunction_1__T_1__U_1__V_m_[m]}>
+
+function measure_String_1__Integer_1_(s:@String@[1]):@Integer@[1]  ~UserDefinedFunction<{@String@[1]->@Integer@[1]}>
+  AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @7:3-7:3
+
+function go__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
+  FunctionInvocation apply_AddressableFunction_1__T_1__V_m_ :#Integer##[1]#  ~@FunctionInvocation@  @12:3-12:42
+    typeParam T -> #String#
+    typeParam V -> @Integer@
+    mulParam m -> [1]
+    AtomicValue  measure_String_1__Integer_1_ :#UserDefinedFunction<{@String@[1]->@Integer@[1]}>#[1]  ~@AtomicValue@  @12:9-12:36
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @12:39-12:41
+
+function pair2_String_1__String_1__Pair_1_(a:@String@[1], b:@String@[1]):Pair<@String@, @String@>[1]  ~UserDefinedFunction<{@String@[1], @String@[1]->Pair<@String@, @String@>[1]}>
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#Pair<@String@, @String@>##[1]#  ~@FunctionInvocation@  @17:3-17:48
+    typeParam T -> Pair<@String@, @String@>
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Pair<@String@, @String@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Pair<@String@, @String@>|1>  @17:3-17:48
+    Collection :#KeyExpression#[2]  ~@Collection@  @17:3-17:48
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @17:25-17:34
+        AtomicValue  'first' :@String@[1]  ~@AtomicValue@  @17:25-17:34
+        Variable a :#String##[1]#  ~@VariableExpression@  @17:33-17:34
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @17:37-17:47
+        AtomicValue  'second' :@String@[1]  ~@AtomicValue@  @17:37-17:47
+        Variable b :#String##[1]#  ~@VariableExpression@  @17:46-17:47
+
+function wrap_String_1__Pair_1_(s:@String@[1]):Pair<@String@, @String@>[1]  ~UserDefinedFunction<{@String@[1]->Pair<@String@, @String@>[1]}>
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#Pair<@String@, @String@>##[1]#  ~@FunctionInvocation@  @22:3-22:48
+    typeParam T -> Pair<@String@, @String@>
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Pair<@String@, @String@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Pair<@String@, @String@>|1>  @22:3-22:48
+    Collection :#KeyExpression#[2]  ~@Collection@  @22:3-22:48
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:25-22:34
+        AtomicValue  'first' :@String@[1]  ~@AtomicValue@  @22:25-22:34
+        Variable s :#String##[1]#  ~@VariableExpression@  @22:33-22:34
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:37-22:47
+        AtomicValue  'second' :@String@[1]  ~@AtomicValue@  @22:37-22:47
+        Variable s :#String##[1]#  ~@VariableExpression@  @22:46-22:47
+
+function goTwoArguments__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
+  ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @27:55-27:64
+    FunctionInvocation apply2_AddressableFunction_1__T_1__U_1__V_m_ :#String##[1]#  ~@FunctionInvocation@  @27:3-27:54
+      typeParam T -> #String#
+      typeParam U -> #String#
+      typeParam V -> @String@
+      mulParam m -> [1]
+      AtomicValue  platform::pure::functions::string::plus_String_1__String_1__String_1_ :#NativeFunction<{@String@[1], @String@[1]->@String@[1]}>#[1]  ~@AtomicValue@  @27:10-27:43
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @27:46-27:48
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @27:51-27:53
+
+function goGenericResult__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
+  DotApplication platform::pure::functions::collection::Pair.first :#String##[1]#  ~@DotApplication@  @32:37-32:42
+    FunctionInvocation apply_AddressableFunction_1__T_1__V_m_ :#Pair<@String@, @String@>##[1]#  ~@FunctionInvocation@  @32:3-32:36
+      typeParam T -> #String#
+      typeParam V -> Pair<@String@, @String@>
+      mulParam m -> [1]
+      AtomicValue  wrap_String_1__Pair_1_ :#UserDefinedFunction<{@String@[1]->Pair<@String@, @String@>[1]}>#[1]  ~@AtomicValue@  @32:9-32:30
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @32:33-32:35
+
+function goBoth__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
+  DotApplication platform::pure::functions::collection::Pair.second :#String##[1]#  ~@DotApplication@  @37:54-37:60
+    FunctionInvocation apply2_AddressableFunction_1__T_1__U_1__V_m_ :#Pair<@String@, @String@>##[1]#  ~@FunctionInvocation@  @37:3-37:53
+      typeParam T -> #String#
+      typeParam U -> #String#
+      typeParam V -> Pair<@String@, @String@>
+      mulParam m -> [1]
+      AtomicValue  pair2_String_1__String_1__Pair_1_ :#UserDefinedFunction<{@String@[1], @String@[1]->Pair<@String@, @String@>[1]}>#[1]  ~@AtomicValue@  @37:10-37:42
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @37:45-37:47
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @37:50-37:52
+
+function anyProperty_String_1__String_1__Property_1_(owner:@String@[1], name:@String@[1]):Property<@Nil@, @Any@|*>[1]  ~UserDefinedFunction<{@String@[1], @String@[1]->Property<@Nil@, @Any@|*>[1]}>
+  ArrowInvocation at_T_MANY__Integer_1__T_1_ :#Property<@Nil@, @Any@|*>##[1]#  ~@ArrowInvocation@  @42:18-42:24
+    typeParam T -> #Property<@Nil@, @Any@|*>#
+    DotApplication platform::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @42:7-42:17
+      AtomicValue  platform::pure::functions::collection::Pair :#Class<#Pair<?, ?>#>#[1]  ~@AtomicValue@  @42:3-42:6
+    AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @42:23-42:23
+
+function goNilAndManyArguments__Property_1_():Property<@Nil@, @Any@|*>[1]  ~UserDefinedFunction<{->Property<@Nil@, @Any@|*>[1]}>
+  FunctionInvocation apply2_AddressableFunction_1__T_1__U_1__V_m_ :#Property<@Nil@, @Any@|*>##[1]#  ~@FunctionInvocation@  @47:3-47:63
+    typeParam T -> #String#
+    typeParam U -> #String#
+    typeParam V -> Property<@Nil@, @Any@|*>
+    mulParam m -> [1]
+    AtomicValue  anyProperty_String_1__String_1__Property_1_ :#UserDefinedFunction<{@String@[1], @String@[1]->Property<@Nil@, @Any@|*>[1]}>#[1]  ~@AtomicValue@  @47:10-47:52
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @47:55-47:57
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @47:60-47:62
+
+function goMemoize__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
+  DotApplication platform::pure::functions::collection::Pair.first :#String##[1]#  ~@DotApplication@  @52:55-52:60
+    FunctionInvocation memoize_AddressableFunction_1__T_n__U_o__V_m_ :#Pair<@String@, @String@>##[1]#  ~@FunctionInvocation@  @52:3-52:54
+      typeParam T -> #String#
+      typeParam U -> #String#
+      typeParam V -> Pair<@String@, @String@>
+      mulParam m -> [1]
+      mulParam n -> #[1]#
+      mulParam o -> #[1]#
+      AtomicValue  pair2_String_1__String_1__Pair_1_ :#UserDefinedFunction<{@String@[1], @String@[1]->Pair<@String@, @String@>[1]}>#[1]  ~@AtomicValue@  @52:11-52:43
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @52:46-52:48
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @52:51-52:53
+
+function goMemoizeNilAndManyArguments__Property_1_():Property<@Nil@, @Any@|*>[1]  ~UserDefinedFunction<{->Property<@Nil@, @Any@|*>[1]}>
+  FunctionInvocation memoize_AddressableFunction_1__T_n__U_o__V_m_ :#Property<@Nil@, @Any@|*>##[1]#  ~@FunctionInvocation@  @57:3-57:64
+    typeParam T -> #String#
+    typeParam U -> #String#
+    typeParam V -> Property<@Nil@, @Any@|*>
+    mulParam m -> [1]
+    mulParam n -> #[1]#
+    mulParam o -> #[1]#
+    AtomicValue  anyProperty_String_1__String_1__Property_1_ :#UserDefinedFunction<{@String@[1], @String@[1]->Property<@Nil@, @Any@|*>[1]}>#[1]  ~@AtomicValue@  @57:11-57:53
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @57:56-57:58
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @57:61-57:63
+
+function goMemoizeThenCast__Property_1_():Property<@Any@, @Any@|*>[1]  ~UserDefinedFunction<{->Property<@Any@, @Any@|*>[1]}>
+  ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Property<@Any@, @Any@|*>##[1]#  ~@ArrowInvocation@  @62:65-62:93
+    typeParam T -> Property<@Any@, @Any@|*>
+    mulParam m -> #[1]#
+    FunctionInvocation memoize_AddressableFunction_1__T_n__U_o__V_m_ :#Property<@Nil@, @Any@|*>##[1]#  ~@FunctionInvocation@  @62:3-62:64
+      typeParam T -> #String#
+      typeParam U -> #String#
+      typeParam V -> Property<@Nil@, @Any@|*>
+      mulParam m -> [1]
+      mulParam n -> #[1]#
+      mulParam o -> #[1]#
+      AtomicValue  anyProperty_String_1__String_1__Property_1_ :#UserDefinedFunction<{@String@[1], @String@[1]->Property<@Nil@, @Any@|*>[1]}>#[1]  ~@AtomicValue@  @62:11-62:53
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @62:56-62:58
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @62:61-62:63
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Property<@Any@, @Any@|*>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Property<@Any@, @Any@|*>|?>  @62:72-62:92
+
+function goApplyThenCast__Property_1_():Property<@Any@, @Any@|*>[1]  ~UserDefinedFunction<{->Property<@Any@, @Any@|*>[1]}>
+  ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Property<@Any@, @Any@|*>##[1]#  ~@ArrowInvocation@  @67:64-67:92
+    typeParam T -> Property<@Any@, @Any@|*>
+    mulParam m -> #[1]#
+    FunctionInvocation apply2_AddressableFunction_1__T_1__U_1__V_m_ :#Property<@Nil@, @Any@|*>##[1]#  ~@FunctionInvocation@  @67:3-67:63
+      typeParam T -> #String#
+      typeParam U -> #String#
+      typeParam V -> Property<@Nil@, @Any@|*>
+      mulParam m -> [1]
+      AtomicValue  anyProperty_String_1__String_1__Property_1_ :#UserDefinedFunction<{@String@[1], @String@[1]->Property<@Nil@, @Any@|*>[1]}>#[1]  ~@AtomicValue@  @67:10-67:52
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @67:55-67:57
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @67:60-67:62
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Property<@Any@, @Any@|*>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Property<@Any@, @Any@|*>|?>  @67:71-67:91
+
+function goMemoizeDefinedLater__Property_1_():Property<@Any@, @Any@|*>[1]  ~UserDefinedFunction<{->Property<@Any@, @Any@|*>[1]}>
+  ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Property<@Any@, @Any@|*>##[1]#  ~@ArrowInvocation@  @73:67-73:95
+    typeParam T -> Property<@Any@, @Any@|*>
+    mulParam m -> #[1]#
+    FunctionInvocation memoize_AddressableFunction_1__T_n__U_o__V_m_ :#Property<@Nil@, @Any@|*>##[1]#  ~@FunctionInvocation@  @73:3-73:66
+      typeParam T -> #String#
+      typeParam U -> #String#
+      typeParam V -> Property<@Nil@, @Any@|*>
+      mulParam m -> [1]
+      mulParam n -> #[1]#
+      mulParam o -> #[1]#
+      AtomicValue  laterProperty_String_1__String_1__Property_1_ :#UserDefinedFunction<{@String@[1], @String@[1]->Property<@Nil@, @Any@|*>[1]}>#[1]  ~@AtomicValue@  @73:11-73:55
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @73:58-73:60
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @73:63-73:65
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Property<@Any@, @Any@|*>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Property<@Any@, @Any@|*>|?>  @73:74-73:94
+
+function laterProperty_String_1__String_1__Property_1_(owner:@String@[1], name:@String@[1]):Property<@Nil@, @Any@|*>[1]  ~UserDefinedFunction<{@String@[1], @String@[1]->Property<@Nil@, @Any@|*>[1]}>
+  ArrowInvocation at_T_MANY__Integer_1__T_1_ :#Property<@Nil@, @Any@|*>##[1]#  ~@ArrowInvocation@  @78:18-78:24
+    typeParam T -> #Property<@Nil@, @Any@|*>#
+    DotApplication platform::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @78:7-78:17
+      AtomicValue  platform::pure::functions::collection::Pair :#Class<#Pair<?, ?>#>#[1]  ~@AtomicValue@  @78:3-78:6
+    AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @78:23-78:23
+
+###ReverseIndex
+anyProperty_String_1__String_1__Property_1_:
+  goApplyThenCast__Property_1_
+  goMemoizeNilAndManyArguments__Property_1_
+  goMemoizeThenCast__Property_1_
+  goNilAndManyArguments__Property_1_
+apply2_AddressableFunction_1__T_1__U_1__V_m_:
+  goApplyThenCast__Property_1_
+  goBoth__String_1_
+  goNilAndManyArguments__Property_1_
+  goTwoArguments__Integer_1_
+apply_AddressableFunction_1__T_1__V_m_:
+  goGenericResult__String_1_
+  go__Integer_1_
+laterProperty_String_1__String_1__Property_1_:
+  goMemoizeDefinedLater__Property_1_
+measure_String_1__Integer_1_:
+  go__Integer_1_
+pair2_String_1__String_1__Pair_1_:
+  goBoth__String_1_
+  goMemoize__String_1_
+platform::pure::functions::collection::Pair:
+  anyProperty_String_1__String_1__Property_1_
+  laterProperty_String_1__String_1__Property_1_
+  pair2_String_1__String_1__Pair_1_
+  wrap_String_1__Pair_1_
+platform::pure::functions::collection::Pair.first:
+  goGenericResult__String_1_
+  goMemoize__String_1_
+platform::pure::functions::collection::Pair.second:
+  goBoth__String_1_
+platform::pure::functions::collection::at_T_MANY__Integer_1__T_1_:
+  anyProperty_String_1__String_1__Property_1_
+  laterProperty_String_1__String_1__Property_1_
+platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+  goApplyThenCast__Property_1_
+  goMemoizeDefinedLater__Property_1_
+  goMemoizeThenCast__Property_1_
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  pair2_String_1__String_1__Pair_1_
+  wrap_String_1__Pair_1_
+platform::pure::functions::lang::memoize_AddressableFunction_1__T_n__U_o__V_m_:
+  goMemoizeDefinedLater__Property_1_
+  goMemoizeNilAndManyArguments__Property_1_
+  goMemoizeThenCast__Property_1_
+  goMemoize__String_1_
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  pair2_String_1__String_1__Pair_1_
+  wrap_String_1__Pair_1_
+platform::pure::functions::string::length_String_1__Integer_1_:
+  goTwoArguments__Integer_1_
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
+  goTwoArguments__Integer_1_
+wrap_String_1__Pair_1_:
+  goGenericResult__String_1_

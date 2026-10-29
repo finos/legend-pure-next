@@ -70,10 +70,11 @@ function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEn
     assert($values->at(0)->instanceOf(TestColor));
 }
 
-// Where an enumeration keeps a value — its property's default value — holds that value itself.
+// Where an enumeration keeps a value — its property's default value — holds that value itself. Like any
+// default, it is a function of the object the property belongs to: here the enumeration.
 function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEnumValuePropertyDefaultValueIsTheValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(TestColor.GREEN, $f->eval(|TestColor->cast(@Enumeration<Any>).properties->at(1).defaultValue->toOne()->eval()));
+    assertIs(TestColor.GREEN, $f->eval(|TestColor->cast(@Enumeration<Any>).properties->at(1).defaultValue->toOne()->cast(@Function<{Enumeration<Any>[1]->Any[1]}>)->eval(TestColor)));
 }
 
 // A value's name is the one it was declared with, whatever it is.

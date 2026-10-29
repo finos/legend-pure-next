@@ -243,6 +243,7 @@ function platform::extensions::language::java::translation::conventionsFor(baseP
          pair('datePart',          datePartCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('tryEval',           tryEvalCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('memoize',           memoizeCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('rawEvalProperty',   rawEvalPropertyCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('enumValues',        enumValuesCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('fromJson',          fromJsonCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('toJson',            toJsonCoder_FunctionExpression_1__Conventions_1__Code_1_),
@@ -2162,6 +2163,20 @@ function <<access.private>> platform::extensions::language::java::translation::e
       | j_invoke(javaClass($conv->pdbClass('Metadata')), 'enumValues',
                  [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaList()),
       | j_invoke($conv->javaEnumType($enumeration->toOne()), 'values', [], javaList()));
+}
+
+// `rawEvalProperty(property, object)` — what the object holds for the property, never its default
+// (Metadata.rawEvalProperty, lang/eval/rawEvalProperty.pure). Objects are platform objects, so it needs
+// the platform's metadata.
+function <<access.private>> platform::extensions::language::java::translation::rawEvalPropertyCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'rawEvalPropertyCoder expects 2 arguments (the property, the object)');
+   assert($conv.metadataElements, | 'rawEvalProperty needs the platform\'s metadata');
+   let type = $conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed();
+   j_invoke(javaClass($conv->pdbClass('Metadata')), 'rawEvalProperty',
+            [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode(),
+             $conv->translateExpression($fe.parametersValues->at(1))->toObjectCode()], javaObject())
+      ->fitToType($type, $conv);
 }
 
 // `memoize(f, args...)` — `f->eval(args...)` once per execution for a given function and arguments

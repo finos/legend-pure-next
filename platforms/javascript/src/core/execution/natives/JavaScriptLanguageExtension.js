@@ -102,10 +102,9 @@ function createHostJsNatives(evalJs, memModule = null) {
     const CONVENTION = TRANSLATION + "conventionForRoot_FunctionDefinition_1__Convention_1_";
     const TRANSLATE = TRANSLATION + "translateFunctionDef_FunctionDefinition_1__Convention_1__SourceFile_1_";
     const SERIALIZE = "platform::extensions::language::javascript::serialization::serialize_SourceFile_1__String_1_";
+    // Its parameters are translated with it, so arguments pass straight through — a property's default
+    // value read from metadata is one, called with the object it belongs to.
     const evaluateFunctionDefinition = (fn, args) => {
-        if (args.length !== 0) {
-            throw new Error(`evaluate: a function definition built at run time takes no arguments on this host (got ${args.length})`);
-        }
         const resolve = (path, arity) => {
             const f = memModule && memModule.resolveFn(path, arity);
             if (typeof f !== "function") throw new Error(`evaluate: translator function ${path} is not loaded`);
@@ -115,7 +114,7 @@ function createHostJsNatives(evalJs, memModule = null) {
         const exprs = Array.isArray(fn.expressionSequence) ? fn.expressionSequence : [fn.expressionSequence];
         const last = exprs[exprs.length - 1];
         const ctx = globalThis.__jsCompile(source);
-        return globalThis.__jsExecute(ctx, "execute", [], last && last.genericType, last && last.multiplicity, [fn]);
+        return globalThis.__jsExecute(ctx, "execute", args, last && last.genericType, last && last.multiplicity, [fn]);
     };
 
     const execute = (ctx, fnName, args, _pureReturnType, _pureMultiplicity, graph) => {

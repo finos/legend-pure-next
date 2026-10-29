@@ -70,10 +70,13 @@ function platform::pure::compiler::elements::buildEnumerationSkeleton(name:Strin
     let enumGT = ^UserDefinedGenericType(type = $enumPtr->cast(@Type));
 
     // Step 5 — one Property per value, each carrying a default-value lambda
-    // that returns the matching Enum instance.
+    // that returns the matching Enum instance. Like every default it takes the
+    // object the property belongs to — here the enumeration — as `this`
+    // (Property.defaultValue is {Owner[1]->V[1]}); the value does not use it.
     let properties = $valueNames->map(valueName |
         let enumInstance = ^Enum(name = $valueName, classifierGenericType = $enumGT);
-        let ft = ^FunctionType(returnType = $enumGT, returnMultiplicity = PureOne);
+        let thisVar = ^VariableExpression(name = 'this', genericType = $cgt, multiplicity = PureOne);
+        let ft = ^FunctionType(parameters = $thisVar, returnType = $enumGT, returnMultiplicity = PureOne);
         let ftGT = ^InferredGenericType(type = $ft);
         let lambdaCGT = ^InferredGenericType(type = LambdaFunction, typeArguments = [$ftGT]);
         let atomicValue = ^AtomicValue(
@@ -83,6 +86,7 @@ function platform::pure::compiler::elements::buildEnumerationSkeleton(name:Strin
         );
         let lambda = ^LambdaFunction<Any>(
             classifierGenericType = $lambdaCGT,
+            parameters = $thisVar,
             expressionSequence = [$atomicValue]
         );
         let propCGT = ^UserDefinedGenericType(

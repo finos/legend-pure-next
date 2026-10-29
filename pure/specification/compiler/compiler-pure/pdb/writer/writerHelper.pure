@@ -300,6 +300,21 @@ function platform::pure::compiler::pdb::writerHelper::isDecimalTyped(gt:Any[0..1
 // Ports of the reference writer's hand-written pointerPath/sourceInfo used in
 // validation messages, and the two semantic checks the reference emits.
 
+// What `obj` holds for its class `ownerPath`'s property `name`: rawEvalProperty, never the default a read
+// would compute. The property is looked up once per execution (memoize): Property objects are written by
+// the thousand.
+function platform::pure::compiler::pdb::writerHelper::stored(obj:Any[1], ownerPath:String[1], name:String[1]):Any[*]
+{
+   memoize(platform::pure::compiler::pdb::writerHelper::propertyNamed_String_1__String_1__Property_1_, $ownerPath, $name)
+      ->cast(@Property<Any,Any|*>)
+      ->rawEvalProperty($obj)
+}
+
+function platform::pure::compiler::pdb::writerHelper::propertyNamed(ownerPath:String[1], name:String[1]):Property<Nil,Any|*>[1]
+{
+   $ownerPath->pathToElement()->cast(@Class<Any>).properties->filter(p | $p.name == $name)->toOne()
+}
+
 function platform::pure::compiler::pdb::writerHelper::pointerPath(obj:Any[1]):String[1]
 {
    $obj->match([

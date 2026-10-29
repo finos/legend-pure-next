@@ -571,6 +571,13 @@ public class M3BootstrapReader
                 prop._aggregation((platform.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(aggEnum, "None"));
             }
 
+            // Wire the default value: a function of the owning object, {Owner[1]->V[1]}
+            Statement dvStmt = getM3Statement(model, res, "prop_defaultValue");
+            if (dvStmt != null && dvStmt.getObject().isResource())
+            {
+                prop._defaultValue(buildDefaultValue(model, dvStmt.getObject().asResource(), index));
+            }
+
             // Wire stereotypes (e.g., ProtocolInfo.inferred, ProtocolInfo.excluded)
             org.apache.jena.rdf.model.Property stereotypesPred = model.getProperty(M3_NS + "stereotypes");
             MutableList<Stereotype> stereotypes = Lists.mutable.empty();
@@ -835,8 +842,18 @@ public class M3BootstrapReader
                         ._type(atomicValueType);
                 avCGT._classifierGenericType(buildUdgtAnchor(index));
 
-                // Create a lambda whose body is the AtomicValue wrapping the Enum
+                // Create a lambda whose body is the AtomicValue wrapping the Enum. Like every default it
+                // takes the object the property belongs to — the enumeration — as `this`.
+                UserDefinedGenericType veCGT = new UserDefinedGenericTypeImpl()
+                        ._type((Type) index.get("platform::pure::metamodel::valuespecification::VariableExpression"));
+                veCGT._classifierGenericType(buildUdgtAnchor(index));
+                VariableExpressionImpl thisVar = new VariableExpressionImpl();
+                thisVar._classifierGenericType(veCGT);
+                thisVar._name("this");
+                thisVar._genericType(enumerationOfE);
+                thisVar._multiplicity(pureOne);
                 LambdaFunctionImpl defaultValueLambda = new LambdaFunctionImpl();
+                defaultValueLambda._parameters(Lists.mutable.with(thisVar));
                 defaultValueLambda._classifierGenericType(lambdaCGT);
                 defaultValueLambda._expressionSequence(Lists.mutable.with(
                         new AtomicValueImpl()
@@ -889,6 +906,104 @@ public class M3BootstrapReader
     // =========================================================================
     // Helpers
     // =========================================================================
+
+    /**
+     * A property's default value as m3.ttl writes it: a LambdaFunction taking the owning object as `this`,
+     * whose body is one AtomicValue — a literal ([ :data "false" ]) or an enum value (:AggregationKind_None).
+     */
+    private static LambdaFunctionImpl buildDefaultValue(Model model, Resource lambdaRes, MutableMap<String, PackageableElement> index)
+    {
+        LambdaFunctionImpl lambda = new LambdaFunctionImpl();
+        lambda._parameters(listM3Statements(model, lambdaRes, "FunctionWithParameters_parameters")
+                .select(s -> s.getObject().isResource())
+                .collect(s -> buildDefaultValueParameter(model, s.getObject().asResource(), index)));
+        Statement cgtStmt = getM3Statement(model, lambdaRes, "classifierGenericType");
+        if (cgtStmt != null && cgtStmt.getObject().isResource())
+        {
+            lambda._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+        }
+        lambda._expressionSequence(listM3Statements(model, lambdaRes, "expressionSequence")
+                .select(s -> s.getObject().isResource())
+                .collect(s -> buildDefaultValueBody(model, s.getObject().asResource(), index)));
+        return lambda;
+    }
+
+    /** A default value's parameter: the owning object, `this`. */
+    private static platform.pure.metamodel.valuespecification.VariableExpression buildDefaultValueParameter(Model model, Resource paramRes, MutableMap<String, PackageableElement> index)
+    {
+        VariableExpressionImpl ve = new VariableExpressionImpl();
+        ve._name(getName(model, paramRes));
+        Statement gtStmt = getM3Statement(model, paramRes, "ValueSpecification_genericType");
+        if (gtStmt != null && gtStmt.getObject().isResource())
+        {
+            ve._genericType(buildGenericType(model, gtStmt.getObject().asResource(), index));
+        }
+        Statement mulStmt = getM3Statement(model, paramRes, "ValueSpecification_multiplicity");
+        if (mulStmt != null && mulStmt.getObject().isResource())
+        {
+            ve._multiplicity(lookupMultiplicity(mulStmt.getObject().asResource(), index));
+        }
+        Statement veCgtStmt = getM3Statement(model, paramRes, "classifierGenericType");
+        if (veCgtStmt != null && veCgtStmt.getObject().isResource())
+        {
+            ve._classifierGenericType(buildGenericType(model, veCgtStmt.getObject().asResource(), index));
+        }
+        return ve;
+    }
+
+    /** A default value's body: one AtomicValue holding the value. */
+    private static platform.pure.metamodel.valuespecification.ValueSpecification buildDefaultValueBody(Model model, Resource avRes, MutableMap<String, PackageableElement> index)
+    {
+        UserDefinedGenericType avCGT = new UserDefinedGenericTypeImpl()
+                ._type((Type) index.get("platform::pure::metamodel::valuespecification::AtomicValue"));
+        avCGT._classifierGenericType(buildUdgtAnchor(index));
+        AtomicValueImpl av = new AtomicValueImpl()._classifierGenericType(avCGT);
+        platform.pure.metamodel.type.generics.GenericTypeValue gt = null;
+        Statement gtStmt = getM3Statement(model, avRes, "ValueSpecification_genericType");
+        if (gtStmt != null && gtStmt.getObject().isResource())
+        {
+            gt = buildGenericType(model, gtStmt.getObject().asResource(), index);
+            av._genericType(gt);
+        }
+        Statement mulStmt = getM3Statement(model, avRes, "ValueSpecification_multiplicity");
+        if (mulStmt != null && mulStmt.getObject().isResource())
+        {
+            av._multiplicity(lookupMultiplicity(mulStmt.getObject().asResource(), index));
+        }
+        Statement valueStmt = getM3Statement(model, avRes, "AtomicValue_value");
+        if (valueStmt != null && valueStmt.getObject().isResource())
+        {
+            av._value(defaultValueLiteral(model, valueStmt.getObject().asResource(), gt, index));
+        }
+        return av;
+    }
+
+    /** An AtomicValue's value in m3.ttl: a [ :data ... ] literal typed by `gt`, or an enum value of the enumeration `gt` names. */
+    private static Object defaultValueLiteral(Model model, Resource valueRes, platform.pure.metamodel.type.generics.GenericTypeValue gt, MutableMap<String, PackageableElement> index)
+    {
+        Statement dataStmt = getM3Statement(model, valueRes, "data");
+        Object type = gt == null ? null : gt._type();
+        if (dataStmt != null && dataStmt.getObject().isLiteral())
+        {
+            String data = dataStmt.getObject().asLiteral().getString();
+            String typeName = type instanceof PackageableElement pe ? pe._name() : "";
+            return switch (typeName)
+            {
+                case "Boolean" -> Boolean.parseBoolean(data);
+                case "Integer" -> Long.parseLong(data);
+                case "Float" -> Double.parseDouble(data);
+                default -> data;
+            };
+        }
+        String name = getName(model, valueRes);
+        if (name == null && valueRes.getURI() != null)
+        {
+            name = valueRes.getURI().substring(valueRes.getURI().lastIndexOf('_') + 1);
+        }
+        return type instanceof platform.pure.metamodel.type.Enumeration enumeration
+                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(enumeration, name)
+                : null;
+    }
 
     private static String getName(Model model, Resource res)
     {

@@ -68,7 +68,7 @@ class test::Other extends Any  ~Class<test::Other>  @25:1-28:1
 class test::MyClass extends Any  ~Class<test::MyClass>  @30:1-35:1
   property maybeValue :test::Other[0..1]  ~Property<test::MyClass, test::Other|0..1>
   property value :test::Other[1]  ~Property<test::MyClass, test::Other|1>
-    defaultValue Lambda()  ~#LambdaFunction<#{->#test::Other##[1]#}#>#
+    defaultValue Lambda(this:test::MyClass[1])  ~#LambdaFunction<#{test::MyClass[1]->#test::Other##[1]#}#>#
       FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#test::Other##[1]#  ~@FunctionInvocation@  @33:21-33:28
         typeParam T -> test::Other
         TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Other|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Other|1>  @33:21-33:28

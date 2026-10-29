@@ -654,3 +654,19 @@ function <<PCT.test>> platform::pure::functions::lang::tests::copy::testChainedC
         );
     ));
 }
+
+// A copy holds what was set — on the original or in the copy — and computes every other property from
+// its default, against the copy itself. Reading the original first changes nothing: a computed default is
+// not something the object holds.
+function <<PCT.test>> platform::pure::functions::lang::tests::copy::testCopyKeepsDefaultValues<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(1, $f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithDefaults(); ^$w(str = 'x').value;));
+    assertEquals('xbla', $f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithDefaults(); ^$w(str = 'x').advanced;));
+    assertEquals('xbla', $f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithDefaults(); assertEquals('okbla', $w.advanced); ^$w(str = 'x').advanced;));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::copy::testCopyOverridesDefaultValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('given', $f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithDefaults(); ^$w(advanced = 'given').advanced;));
+    assertEquals('kept', $f->eval(|let w = ^platform::pure::functions::lang::tests::new::WithDefaults(advanced = 'kept'); ^$w(str = 'x').advanced;));
+}

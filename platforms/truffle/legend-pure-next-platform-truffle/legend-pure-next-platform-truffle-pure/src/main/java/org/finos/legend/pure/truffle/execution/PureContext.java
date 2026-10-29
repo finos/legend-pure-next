@@ -31,6 +31,16 @@ import org.finos.legend.pure.truffle.execution.ast.root.RawLambdaRootNode;
 import org.finos.legend.pure.truffle.compiler.module.Module;
 import org.finos.legend.pure.truffle.compiler.module.ModuleRegistry;
 
+import org.eclipse.collections.impl.factory.HashingStrategyMaps;
+import org.eclipse.collections.impl.factory.HashingStrategySets;
+import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.factory.Sets;
+import org.eclipse.collections.api.list.ListIterable;
+import org.eclipse.collections.api.map.MutableMap;
+import org.eclipse.collections.api.set.MutableSet;
+import org.eclipse.collections.impl.block.factory.HashingStrategies;
+import org.eclipse.collections.impl.map.mutable.ConcurrentHashMap;
+
 import java.util.ArrayDeque;
 import java.util.WeakHashMap;
 
@@ -991,6 +1001,88 @@ public final class PureContext
         finally
         {
             memoizing.remove(key);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Default values
+    // ---------------------------------------------------------------
+
+    // A class's default value per property (inherited ones included), Optional.empty() for none.
+    private final MutableMap<String, java.util.Optional<Object>> defaultValues = ConcurrentHashMap.newMap();
+    // The defaults being computed, per object: one met again is a default that needs its own value.
+    private final MutableMap<Object, MutableSet<String>> computingDefaults = HashingStrategyMaps.mutable.of(HashingStrategies.identityStrategy());
+
+    /** The default value (a LambdaFunction {Owner[1]->V[1]}) of `classPath`'s property `property`, or null. */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    public Object defaultValueOf(String classPath, String property)
+    {
+        return defaultValues.getIfAbsentPut(classPath + "." + property, () ->
+                java.util.Optional.ofNullable(findDefaultValue(resolver.getElement(classPath), property, HashingStrategySets.mutable.of(HashingStrategies.identityStrategy())))).orElse(null);
+    }
+
+    private static ListIterable<Object> slotValues(Object value)
+    {
+        if (value == null)
+        {
+            return Lists.immutable.empty();
+        }
+        return value instanceof org.finos.legend.pure.truffle.execution.types.PureSequence ps
+                ? Lists.immutable.with(ps.toBoxedArray())
+                : Lists.immutable.with(value);
+    }
+
+    private Object findDefaultValue(Object type, String property, MutableSet<Object> seen)
+    {
+        if (type == null || !seen.add(type))
+        {
+            return null;
+        }
+        java.util.Optional<Object> declared = slotValues(org.finos.legend.pure.truffle.compiler.helper._Any.read(type, "properties"))
+                .detectOptional(p -> property.equals(org.finos.legend.pure.truffle.compiler.helper._Any.read(p, "name")));
+        if (declared.isPresent())
+        {
+            Object dv = org.finos.legend.pure.truffle.compiler.helper._Any.read(declared.get(), "defaultValue");
+            return dv instanceof org.finos.legend.pure.truffle.execution.types.PureSequence ps && ps.isEmpty() ? null : dv;
+        }
+        return slotValues(org.finos.legend.pure.truffle.compiler.helper._Any.read(type, "generalizations"))
+                .asLazy()
+                .collect(g -> org.finos.legend.pure.truffle.compiler.helper._Any.read(g, "general"))
+                .collect(general -> findDefaultValue(general == null ? null : org.finos.legend.pure.truffle.compiler.helper._Any.read(general, "type"), property, seen))
+                .detectIfNone(java.util.Objects::nonNull, () -> null);
+    }
+
+    /**
+     * The default value of `object`'s unset property `property`: its default called with the object (a default
+     * is a function of the object it is read on), or EMPTY when the property has none. Never stored — a copy
+     * holds only what was set (testCopyKeepsDefaultValues). A default that needs its own value is an error
+     * (testNewDefaultValueCycleIsAnError).
+     */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    public Object defaultValue(Object object, String property)
+    {
+        String classPath = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeOf(object);
+        Object lambda = classPath == null ? null : defaultValueOf(classPath, property);
+        if (lambda == null)
+        {
+            return org.finos.legend.pure.truffle.execution.types.PureSequence.EMPTY;
+        }
+        MutableSet<String> computing = computingDefaults.getIfAbsentPut(object, Sets.mutable::empty);
+        if (!computing.add(property))
+        {
+            throw new RuntimeException("default value cycle: " + classPath + "." + property + " is already being computed for this object");
+        }
+        try
+        {
+            return org.finos.legend.pure.truffle.execution.natives.lang.EvalNode.dispatch(this, lambda, new Object[]{object}, null);
+        }
+        finally
+        {
+            computing.remove(property);
+            if (computing.isEmpty())
+            {
+                computingDefaults.remove(object);
+            }
         }
     }
 }

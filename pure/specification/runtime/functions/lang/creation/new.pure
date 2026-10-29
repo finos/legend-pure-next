@@ -426,3 +426,61 @@ function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewHolder
         );
     ));
 }
+
+// Default values: what a property holds when the object does not set it. A default is computed when the
+// property is read, with `$this` the object read, so it may depend on the object's other properties — and
+// may reach the object itself.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::WithDefaults
+{
+    value: Integer[1] = 1;
+    str: String[1] = 'ok';
+    advanced: String[1] = $this.str + 'bla';
+    self: WithDefaults[1] = $this;
+    boom: String[1] = []->cast(@String)->toOne('default evaluated');
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewAppliesDefaultValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(1, $f->eval(|^WithDefaults().value));
+    assertEquals('ok', $f->eval(|^WithDefaults().str));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueReadsThis<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('okbla', $f->eval(|^WithDefaults().advanced));
+    assertEquals('setbla', $f->eval(|^WithDefaults(str = 'set').advanced));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewExplicitValueOverridesDefault<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(2, $f->eval(|^WithDefaults(value = 2).value));
+    assertEquals('given', $f->eval(|^WithDefaults(advanced = 'given').advanced));
+}
+
+// Computed when read, not when the object is built: building succeeds, and only reading the property
+// evaluates its default.
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueIsComputedWhenRead<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('ok', $f->eval(|^WithDefaults().str));
+    assertError(|$f->eval(|^WithDefaults().boom), 'default evaluated');
+}
+
+// A default may reach the object it belongs to: the cycle closes on that same object.
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueClosesACycle<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|let w = ^WithDefaults(); $w->is($w.self.self);));
+}
+
+// Defaults that need each other's value: reading one evaluates the other, which needs the first again.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::WithCyclicDefaults
+{
+    a: String[1] = $this.b;
+    b: String[1] = $this.a;
+}
+
+// A default that needs its own value is an error — reading on would never end.
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueCycleIsAnError<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertError(|$f->eval(|^WithCyclicDefaults().a), 'default value cycle: platform::pure::functions::lang::tests::new::WithCyclicDefaults.a is already being computed for this object');
+    assertEquals('given', $f->eval(|^WithCyclicDefaults(b = 'given').a));
+}

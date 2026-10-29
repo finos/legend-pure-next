@@ -144,7 +144,9 @@ function platform::pure::compiler::structural::propertyCompiler::resolveProperty
                     );
                     let dvResolvedCtx = $resolveResult.context;
                     let ctx2 = ^$dvResolvedCtx(currentElementPath = $savedDvPath);
-                    let resolvedLambda = platform::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification)));
+                    // A default is a function of the object it is read on: `this` is its parameter, so its
+                    // type is {Owner[1]->V[1]} (Property.defaultValue in m3) and a host calls it with the object.
+                    let resolvedLambda = platform::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(parameters = $thisVar, expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification)));
                     let resolvedProp = ^$prop(defaultValue = $resolvedLambda);
                     // Validate type and multiplicity of the resolved default value
                     let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);

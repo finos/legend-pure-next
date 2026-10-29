@@ -176,51 +176,22 @@ function platform::pure::compiler::structural::valueSpecificationCompiler::compi
                   );
             );,
         pp:platform::pure::protocol::grammar::Package_Pointer[1] |
-            let resolvedR = $ctx->resolveElementR($pp.value);
-            let resolved = $resolvedR.value;
-            let ctxR = $resolvedR.context;
-            if($resolved->isEmpty(),
-                | // Defer the "element can't be found" error to pass 3 (atomicValueResolver).
-                  // Mirrors Java: pass 2 keeps the Package_Pointer as the AtomicValue's value
-                  // so pass 3 can re-attempt resolution INSIDE a candidate trial. When the
-                  // surrounding function call has multiple candidates and they all fail, the
-                  // resolver's snapshot/rollback discards these errors — they only stick if no
-                  // other failure swallows them. Without this deferral, ~27 cascade errors fire
-                  // permanently in pass 2 for prohibited-functions lists in language/java.
-                  ^ValueCompileResult(
-                      values = [^AtomicValue(
-                          value = $pp,
-                          genericType = ^CompilerNotSetGenericType(),
-                          multiplicity = ^CompilerNotSetMultiplicity(),
-                          sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
-                      )],
-                      openVariables = [],
-                      context = $ctxR
-                  );,
-                | let element = $resolved->toOne();
-                  // Use classifierGenericType if available (includes FunctionType type args for functions)
-                  // Otherwise fall back to InferredGenericType(element->type()) — mirrors Java where Package_Pointer gt=NotSet
-                  // and pass-3 resolveAtomicValue refreshes it from the map
-                  let elementCGT = $element->cast(@Any).classifierGenericType;
-                  let elementGT = if($elementCGT->isNotEmpty(), | asInferredGenericType($elementCGT->toOne()), | buildInferredGenericType($element->type()));
-                  // Wrap the cross-element reference as a TempCompilerPointer
-                  // subtype so the AtomicValue.value slot stays identity-stable
-                  // across compile-pure's three passes — pass-1 skeletons would
-                  // otherwise freeze into the consumer body and diverge from
-                  // pass-2/3 winners at runtime. {@code toElementPointer}
-                  // dispatches per PE subtype (Class, Enumeration, Primitive,
-                  // Association, Profile, Package, PackageableFunction).
-                  let embeddedValue = $element->cast(@platform::pure::metamodel::PackageableElement)->toElementPointer();
-                  ^ValueCompileResult(
-                      values = [^AtomicValue(
-                          value = $embeddedValue,
-                          genericType = $elementGT,
-                          multiplicity = PureOne,
-                          sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
-                      )],
-                      openVariables = [],
-                      context = $ctxR
-                  );
+            // Mirrors Java ValueSpecificationCompiler.compileAtomicValue: pass 2 keeps the
+            // grammar Package_Pointer, untyped. Pass 3 (atomicValueResolver) looks the element
+            // up and types the reference from its classifierGenericType, once every signature
+            // is compiled — a function defined later in the source is still a pass-1 skeleton
+            // here (functionApplication/generics/functionReferenceAsAddressableFunction).
+            // Resolving in pass 3 also puts the "element can't be found" error inside the
+            // surrounding call's candidate trial, which rolls it back when the candidate fails.
+            ^ValueCompileResult(
+                values = [^AtomicValue(
+                    value = $pp,
+                    genericType = ^CompilerNotSetGenericType(),
+                    multiplicity = PureOne,
+                    sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
+                )],
+                openVariables = [],
+                context = $ctx
             );,
         any:Any[1] |
             let parserGT = $a.genericType->toOne()->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue);

@@ -788,6 +788,80 @@ public class ValueSpecificationEvaluator
         return staticQP;
     }
 
+    /**
+     * rawEvalProperty(property, object): what the object holds for the property — its stored values, empty
+     * when it was not given any — never a computed default.
+     */
+    public ValueSpecification rawEvalProperty(ValueSpecification propertyVs, ValueSpecification objectVs,
+                                              GenericType genericType, platform.pure.metamodel.multiplicity.Multiplicity multiplicity)
+    {
+        Object property = _E_ValueSpecification.unwrap(propertyVs);
+        String name = ((platform.pure.metamodel.function.property.Property) property)._name();
+        Object object = _E_ValueSpecification.unwrap(objectVs);
+        Object stored;
+        if (object instanceof DynamicInstance di)
+        {
+            stored = di.hasProperty(name) ? di.get(name) : null;
+        }
+        else
+        {
+            // A metamodel object: its accessor returns what it holds (they apply no defaults).
+            Object read = object == null ? PROPERTY_NOT_FOUND : reflectivePropertyGet(object, name);
+            stored = read == PROPERTY_NOT_FOUND ? null : read;
+        }
+        return _E_ValueSpecification.wrap(stored == null ? org.eclipse.collections.api.factory.Lists.mutable.empty() : stored,
+                genericType, multiplicity, this.natives.resolver());
+    }
+
+    /** The default value of `className`'s property `propertyName`, inherited ones included, or null. */
+    private platform.pure.metamodel.function.LambdaFunction defaultValueOf(String className, String propertyName)
+    {
+        Object element = this.natives.resolver().getElement(className);
+        if (!(element instanceof platform.pure.metamodel.type.Class))
+        {
+            return null;
+        }
+        return _Type.linearize((platform.pure.metamodel.type.Type) element, this.natives.resolver())
+                .asLazy()
+                .selectInstancesOf(platform.pure.metamodel.type.Class.class)
+                .select(cls -> cls._properties() != null)
+                .flatCollect(platform.pure.metamodel.type.Class::_properties)
+                .detectOptional(property -> propertyName.equals(property._name()))
+                .map(property -> property._defaultValue() instanceof platform.pure.metamodel.function.LambdaFunction lambda ? lambda : null)
+                .orElse(null);
+    }
+
+    // The defaults being computed, per object: one met again is a default that needs its own value.
+    private final org.eclipse.collections.api.map.MutableMap<Object, org.eclipse.collections.api.set.MutableSet<String>> computingDefaults =
+            org.eclipse.collections.impl.factory.HashingStrategyMaps.mutable.of(org.eclipse.collections.impl.block.factory.HashingStrategies.identityStrategy());
+
+    /**
+     * A default value, computed for the object `di` (`thisVs`): the default is a function of that object
+     * ({Owner[1]->V[1]}), so it is called with it. A default that needs its own value is an error
+     * (testNewDefaultValueCycleIsAnError).
+     */
+    private ValueSpecification evaluateDefaultValue(platform.pure.metamodel.function.LambdaFunction defaultValue, Object object,
+                                                    String classPath, String propertyName, ValueSpecification thisVs)
+    {
+        org.eclipse.collections.api.set.MutableSet<String> computing = computingDefaults.getIfAbsentPut(object, org.eclipse.collections.api.factory.Sets.mutable::empty);
+        if (!computing.add(propertyName))
+        {
+            throw new RuntimeException("default value cycle: " + classPath + "." + propertyName + " is already being computed for this object");
+        }
+        try
+        {
+            return evaluateFunctionDefinition(defaultValue, org.eclipse.collections.api.factory.Lists.mutable.with(thisVs));
+        }
+        finally
+        {
+            computing.remove(propertyName);
+            if (computing.isEmpty())
+            {
+                computingDefaults.remove(object);
+            }
+        }
+    }
+
     private static final Object PROPERTY_NOT_FOUND = new Object();
     private static final Map<Class<?>, Map<String, Method>> METHOD_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -805,6 +879,16 @@ public class ValueSpecificationEvaluator
         // DynamicInstance (from 'new' function) — property access via map
         if (target instanceof DynamicInstance di)
         {
+            // An unset property with a default value: the default, computed now against this object.
+            // Never stored — a copy holds only what was set, and recomputes (testCopyKeepsDefaultValues).
+            if (!di.hasProperty(propertyName) && !"classifierGenericType".equals(propertyName))
+            {
+                platform.pure.metamodel.function.LambdaFunction defaultValue = defaultValueOf(di.getClassPath(), propertyName);
+                if (defaultValue != null)
+                {
+                    return evaluateDefaultValue(defaultValue, di, di.getClassPath(), propertyName, targetVs);
+                }
+            }
             Object propertyValueRaw = "classifierGenericType".equals(propertyName) ? di.getClassifierGenericType() : di.get(propertyName);
             return _E_ValueSpecification.wrap(propertyValueRaw, genericType, multiplicity, this.natives.resolver());
         }
@@ -836,6 +920,21 @@ public class ValueSpecificationEvaluator
                         result = av._value();
                     }
                 }
+            }
+        }
+
+        // A metamodel object that holds nothing for the property: its class's default, if any, computed now —
+        // as for any object (testUnsetDefaultedPropertyIsWrittenAbsent reads TypeParameter.contravariant).
+        if ((result == null || (result instanceof java.util.Collection<?> c && c.isEmpty()))
+                && effectiveTarget instanceof platform.pure.metamodel.type.Any metamodelObject
+                && metamodelObject._classifierGenericType() != null
+                && _GenericType.type(metamodelObject._classifierGenericType()) instanceof platform.pure.metamodel.PackageableElement ownerType)
+        {
+            String classPath = org.finos.legend.pure.execution.natives.meta.ElementPathNatives.elementToPathString(ownerType, "::");
+            platform.pure.metamodel.function.LambdaFunction defaultValue = defaultValueOf(classPath, propertyName);
+            if (defaultValue != null)
+            {
+                return evaluateDefaultValue(defaultValue, metamodelObject, classPath, propertyName, targetVs);
             }
         }
 

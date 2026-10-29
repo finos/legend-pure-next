@@ -105,6 +105,11 @@ public class LangNatives
             eval.executeFunction(args.get(0), args.subList(1, args.size()))
         );
 
+        // rawEvalProperty(property, object) : the values the object holds for the property, never its default
+        natives.put("rawEvalProperty_Property_1__T_1__V_MANY_", (args, eval, genericType, multiplicity) ->
+            eval.rawEvalProperty(args.get(0), args.get(1), genericType, multiplicity)
+        );
+
         // memoize(f, args...) : f->eval(args...), once per execution for a given function and arguments
         NativeImpl memoize = (args, eval, genericType, multiplicity) -> eval.memoize(args.get(0), args.subList(1, args.size()));
         natives.put("memoize_AddressableFunction_1__T_n__V_m_", memoize);

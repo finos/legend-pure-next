@@ -68,7 +68,7 @@ public final class DirectPropertyAccessNode extends PureNode
         if (target instanceof PureDynamicObject pdo)
         {
             Object v = pdo.readSlot(slot);
-            return v == null ? PureSequence.EMPTY : v;
+            return v == null ? defaultOrEmpty(pdo) : v;
         }
         return slowPath(target);
     }
@@ -86,7 +86,7 @@ public final class DirectPropertyAccessNode extends PureNode
             if (inner instanceof PureDynamicObject pdo)
             {
                 Object v = pdo.readSlot(slot);
-                return v == null ? PureSequence.EMPTY : v;
+                return v == null ? defaultOrEmpty(pdo) : v;
             }
             target = inner;
         }
@@ -96,5 +96,12 @@ public final class DirectPropertyAccessNode extends PureNode
             return v == null || v == PropertyAccessor.ABSENT ? PureSequence.EMPTY : v;
         }
         return PureSequence.EMPTY;
+    }
+
+    /** An unset property: its default value, computed for the object now, or EMPTY when it has none. */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private Object defaultOrEmpty(PureDynamicObject object)
+    {
+        return org.finos.legend.pure.truffle.execution.PureLanguage.get(this).defaultValue(object, propertyName);
     }
 }

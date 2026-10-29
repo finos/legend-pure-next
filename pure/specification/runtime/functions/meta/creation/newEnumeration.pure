@@ -27,9 +27,9 @@ import platform::pure::functions::meta::tests::model::*;
 // newClass's pattern: self-referencing CGT (Enumeration<self>) and uses `~.~`
 // (parent reference) to wire children back at the outer enumeration.
 //
-// Each value becomes a Property whose defaultValue lambda returns a fresh
-// Enum instance whose classifierGenericType points back at the new
-// enumeration. The Enum is built via `new(GenericType[1])` so its CGT can
+// Each value becomes a Property whose defaultValue lambda — taking the
+// enumeration as `this`, like every default — returns a fresh Enum instance
+// whose classifierGenericType points back at the new enumeration. The Enum is built via `new(GenericType[1])` so its CGT can
 // be set to the in-progress enumeration (the `^Enum(...)` form would reject
 // the override since the proposed type isn't the system-derived `Enum`).
 function <<PCT.function>> platform::pure::functions::meta::creation::newEnumeration(name:String[1], package:Package[1], valueNames:String[*]):Enumeration<Any>[1]
@@ -82,7 +82,17 @@ function <<PCT.function>> platform::pure::functions::meta::creation::newEnumerat
                 multiplicity = PureOne,
                 aggregation = AggregationKind.None,
                 genericType = ^UserDefinedGenericType(type = ~.~.~),
-                defaultValue = ^LambdaFunction<{->Any[1]}>(
+                // Like every default, a function of the object the property belongs to: `this` is
+                // the enumeration (Enumeration<self> — six levels out from the inner type argument).
+                defaultValue = ^LambdaFunction<{Enumeration<Any>[1]->Any[1]}>(
+                    parameters = ^VariableExpression(
+                        name = 'this',
+                        genericType = ^UserDefinedGenericType(
+                            type = Enumeration,
+                            typeArguments = ^UserDefinedGenericType(type = ~.~.~.~.~.~)
+                        ),
+                        multiplicity = PureOne
+                    ),
                     expressionSequence = ^AtomicValue(
                         value = $namedEnum->cast(@platform::pure::metamodel::type::Any),
                         genericType = ^UserDefinedGenericType(type = ~.~.~.~.~),

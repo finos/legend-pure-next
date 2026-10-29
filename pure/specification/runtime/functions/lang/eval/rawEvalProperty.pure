@@ -1,0 +1,57 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::test::pct::*;
+import platform::pure::functions::lang::tests::new::*;
+
+// What an object holds for a property: the values it was given, empty when it was given none. Unlike a
+// read (`$o.p`), it never computes the property's default — so it tells a value the object holds from one
+// it would only compute, which is what a writer of the object (a PDB, say) must record.
+native function
+    <<PCT.function>>
+    {
+        doc.doc='The values the object holds for the property, without computing a default: empty when the object was not given the property.'
+    }
+    platform::pure::functions::lang::rawEvalProperty<T,V|m>(property:platform::pure::metamodel::function::property::Property<T,V|m>[1], object:T[1]):V[*];
+
+// A property of WithDefaults, for an object of it.
+function <<test.TestDependency>> platform::pure::functions::lang::tests::rawEvalProperty::withDefaultsProperty(name:String[1]):platform::pure::metamodel::function::property::Property<WithDefaults,Any|*>[1]
+{
+    WithDefaults.properties->filter(p | $p.name == $name)->toOne()->cast(@platform::pure::metamodel::function::property::Property<WithDefaults,Any|*>)
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::rawEvalProperty::testRawEvalPropertyReturnsTheValueGiven<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('set', $f->eval(|platform::pure::functions::lang::tests::rawEvalProperty::withDefaultsProperty('str')->rawEvalProperty(^WithDefaults(str = 'set'))));
+}
+
+// A property the object was not given is empty — its default is what a read computes, not what the object holds.
+function <<PCT.test>> platform::pure::functions::lang::tests::rawEvalProperty::testRawEvalPropertyIgnoresTheDefault<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEmpty($f->eval(|platform::pure::functions::lang::tests::rawEvalProperty::withDefaultsProperty('str')->rawEvalProperty(^WithDefaults())));
+    assertEquals('ok', $f->eval(|^WithDefaults().str));
+}
+
+// It never evaluates a default: one that fails when computed is simply empty here.
+function <<PCT.test>> platform::pure::functions::lang::tests::rawEvalProperty::testRawEvalPropertyDoesNotEvaluateTheDefault<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEmpty($f->eval(|platform::pure::functions::lang::tests::rawEvalProperty::withDefaultsProperty('boom')->rawEvalProperty(^WithDefaults())));
+}
+
+// A copy holds what the original held: given values, and nothing for the rest.
+function <<PCT.test>> platform::pure::functions::lang::tests::rawEvalProperty::testRawEvalPropertyOnACopy<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('x', $f->eval(|let w = ^WithDefaults(); platform::pure::functions::lang::tests::rawEvalProperty::withDefaultsProperty('str')->rawEvalProperty(^$w(str = 'x'));));
+    assertEmpty($f->eval(|let w = ^WithDefaults(); $w.advanced; platform::pure::functions::lang::tests::rawEvalProperty::withDefaultsProperty('advanced')->rawEvalProperty(^$w(str = 'x'));));
+}

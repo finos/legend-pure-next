@@ -68,9 +68,13 @@ public final class PropertyReadNode extends Node
         if (boundName != null && target instanceof PureDynamicObject pdo)
         {
             Object v = pdo.readSlot(boundSlot);
-            return v == null ? PureSequence.EMPTY : v;
+            return v == null ? defaultOrEmpty(pdo, boundName) : v;
         }
         Object result = executeOrAbsent(target, propName);
+        if (result == null && target instanceof PureDynamicObject pdo)
+        {
+            return defaultOrEmpty(pdo, boundName != null ? boundName : propName);
+        }
         return result == ABSENT || result == null ? PureSequence.EMPTY : result;
     }
 
@@ -103,5 +107,12 @@ public final class PropertyReadNode extends Node
             return pa.readProperty(name);
         }
         return ABSENT;
+    }
+
+    /** An unset property: its default value, computed for the object now, or EMPTY when it has none. */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static Object defaultOrEmpty(PureDynamicObject object, String property)
+    {
+        return org.finos.legend.pure.truffle.execution.PureLanguage.get(null).defaultValue(object, property);
     }
 }

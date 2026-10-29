@@ -244,6 +244,7 @@ function platform::extensions::language::javascript::translation::assertionAndTy
       pair('new',               newCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('tryEval',           tryEvalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('memoize',           memoizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('rawEvalProperty',   rawEvalPropertyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('match',             matchCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('pathToElement',     pathToElementCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('unescapePureString', unescapePureStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -2671,6 +2672,14 @@ function platform::extensions::language::javascript::translation::zipCoder(args:
    jsCall(jsId('__zip'), $args->map(a | $a->translateExpression($conv)));
 }
 
+// rawEvalProperty(property, object) — what the object holds for the property, never its default
+// (`__rawEvalProperty`, lang/eval/rawEvalProperty.pure).
+function platform::extensions::language::javascript::translation::rawEvalPropertyCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   assert($args->size() == 2, | 'rawEvalPropertyCoder expects 2 arguments (the property, the object)');
+   jsCall(jsId('__rawEvalProperty'), $args->map(a | $a->translateExpression($conv)));
+}
+
 // memoize(f, args...) — `__memoize` evaluates f through `__eval` once per execution for a given
 // function and arguments (lang/eval/memoize.pure).
 function platform::extensions::language::javascript::translation::memoizeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -4279,6 +4288,39 @@ function platform::extensions::language::javascript::translation::allPropertyNam
    $direct->concatenate($supers->map(s | $s->allPropertyNames()))->removeDuplicates();
 }
 
+// The properties of `cls` that have a default value, inherited ones included — the most specific
+// declaration of each name.
+function platform::extensions::language::javascript::translation::defaultedProperties(
+   cls: platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>[1]): platform::pure::metamodel::function::property::Property<Nil,Any|*>[*]
+{
+   let direct = $cls.properties->filter(p | $p.defaultValue->isNotEmpty());
+   let supers = $cls.generalizations
+      ->map(g | $g.general->platform::pure::metamodel::type::rawType())
+      ->filter(ty | $ty->isNotEmpty() && $ty->toOne()->instanceOf(platform::pure::metamodel::type::Class))
+      ->map(ty | $ty->toOne()->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>));
+   let inherited = $supers->map(s | $s->defaultedProperties())->filter(p | !$direct.name->contains($p.name->toOne()));
+   $direct->concatenate($inherited);
+}
+
+// A property with a default value: an object that never set it reads the default, computed then
+// against the object (a default is a function of it, {Owner[1]->V[1]}). It lives on the prototype as
+// a getter, so a value the object holds — an own field, which the setter defines — shadows it, and a
+// copy, which copies own fields only, computes its own (testCopyKeepsDefaultValues).
+function platform::extensions::language::javascript::translation::defaultAccessors(
+   cls: platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>[1],
+   p: platform::pure::metamodel::function::property::Property<Nil,Any|*>[1],
+   conv: Convention[1]): platform::extensions::language::javascript::metamodel::ClassMember[*]
+{
+   let name = $p.name->toOne();
+   let compute = $p.defaultValue->toOne()->translatePureValueToTs($conv);
+   [
+      jsGetter($name, jsBlock([jsReturn(jsCall(jsId('__default'), [jsThis(), jsStrLit($cls->elementToPath()), jsStrLit($name), $compute]))]))
+         ->cast(@platform::extensions::language::javascript::metamodel::ClassMember),
+      jsSetter($name, jsParam('value'), jsBlock([jsExprStmt(jsCall(jsId('__defineOwn'), [jsThis(), jsStrLit($name), jsId('value')]))]))
+         ->cast(@platform::extensions::language::javascript::metamodel::ClassMember)
+   ];
+}
+
 // The accessor for one property: `_<name>()` reads the slot, `_<name>(value)` writes it and returns
 // the receiver.
 //
@@ -4340,7 +4382,8 @@ function platform::extensions::language::javascript::translation::translateClass
    // Prototype methods say the same thing without the cost: they declare every property the class
    // holds and put not one key on an instance.
    let accessors = $cls->allPropertyNames()
-      ->map(n | propertyAccessor($n)->cast(@platform::extensions::language::javascript::metamodel::ClassMember));
+      ->map(n | propertyAccessor($n)->cast(@platform::extensions::language::javascript::metamodel::ClassMember))
+      ->concatenate($cls->defaultedProperties()->map(p | $cls->defaultAccessors($p, $conv)));
    // GUARDED, and not exported. A top-level `class X {}` is a global LEXICAL binding when a host
    // runs the file through `vm.runInThisContext` (which is how the lean parser host loads generated
    // modules, after stripping `export `), so the same class arriving twice in one process is a hard

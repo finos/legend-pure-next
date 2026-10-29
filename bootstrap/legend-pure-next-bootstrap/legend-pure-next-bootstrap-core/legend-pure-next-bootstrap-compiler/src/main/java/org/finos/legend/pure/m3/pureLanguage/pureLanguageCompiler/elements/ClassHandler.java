@@ -307,6 +307,9 @@ public final class ClassHandler
                         {
                             // Resolve expression sequence through the third-pass compiler
                             lambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(lambda._expressionSequence(), model, context));
+                            // A default is a function of the object it is read on: `this` is its parameter, so
+                            // its type is {Owner[1]->V[1]} (Property.defaultValue in m3).
+                            lambda._parameters(Lists.mutable.with(thisVar));
                             // Set the classifierGenericType on the lambda now that its body is resolved
                             lambda._classifierGenericType(_Lambda.getLambdaClassifierGenericType(model, lambda));
                         }
