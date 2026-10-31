@@ -1,0 +1,84 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+import test::*;
+
+// A value of the caller's multiplicity parameter (Z[y], from an eval) given to an overloaded function twice: the
+// first call's overload resolution must leave the second's value as it is (Z[y], not Z[*]).
+Class test::LType
+{
+}
+
+function test::check(instance: Any[1], type: LType[1]): Boolean[1]
+{
+  true
+}
+
+function test::check(instance: Any[1], type: String[1]): Boolean[1]
+{
+  true
+}
+
+function test::overloadedTwice<Z|y>(f: Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]): Boolean[1]
+{
+  check($f->eval(|1), ^LType());
+  check($f->eval(|1), ^LType());
+}
+
+###CompiledGraph
+class test::LType extends Any  ~Class<test::LType>  @20:1-22:1
+
+function test::check_Any_1__LType_1__Boolean_1_(instance:@Any@[1], type:test::LType[1]):@Boolean@[1]  ~UserDefinedFunction<{@Any@[1], test::LType[1]->@Boolean@[1]}>
+  AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @26:3-26:6
+
+function test::check_Any_1__String_1__Boolean_1_(instance:@Any@[1], type:@String@[1]):@Boolean@[1]  ~UserDefinedFunction<{@Any@[1], @String@[1]->@Boolean@[1]}>
+  AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @31:3-31:6
+
+function test::overloadedTwice_Function_1__Boolean_1_(f:Function<{Function<{->Z~test::overloadedTwice_Function_1__Boolean_1_[y~test::overloadedTwice_Function_1__Boolean_1_]}>[1]->Z~test::overloadedTwice_Function_1__Boolean_1_[y~test::overloadedTwice_Function_1__Boolean_1_]}>[1]):@Boolean@[1]  ~UserDefinedFunction<{Function<{Function<{->Z~test::overloadedTwice_Function_1__Boolean_1_[y~test::overloadedTwice_Function_1__Boolean_1_]}>[1]->Z~test::overloadedTwice_Function_1__Boolean_1_[y~test::overloadedTwice_Function_1__Boolean_1_]}>[1]->@Boolean@[1]}>
+  FunctionInvocation test::check_Any_1__LType_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @36:3-36:31
+    ArrowInvocation eval_Function_1__T_n__V_m_ :#Integer##[1]#  ~@ArrowInvocation@  @36:11-36:20
+      typeParam T -> #Function<#{->#Integer##[*]#}#>#
+      typeParam V -> @Integer@
+      mulParam m -> [1]
+      mulParam n -> #[1]#
+      Variable f :#Function<{Function<{->Z~test::overloadedTwice_Function_1__Boolean_1_[y~test::overloadedTwice_Function_1__Boolean_1_]}>[1]->Z~test::overloadedTwice_Function_1__Boolean_1_[y~test::overloadedTwice_Function_1__Boolean_1_]}>##[1]#  ~@VariableExpression@  @36:9-36:10
+      Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @36:18-36:19
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @36:19-36:19
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#test::LType##[1]#  ~@FunctionInvocation@  @36:23-36:30
+      typeParam T -> test::LType
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::LType|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::LType|1>  @36:23-36:30
+  FunctionInvocation test::check_Any_1__LType_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @37:3-37:31
+    ArrowInvocation eval_Function_1__T_n__V_m_ :#Integer##[1]#  ~@ArrowInvocation@  @37:11-37:20
+      typeParam T -> #Function<#{->#Integer##[*]#}#>#
+      typeParam V -> @Integer@
+      mulParam m -> [1]
+      mulParam n -> #[1]#
+      Variable f :#Function<{Function<{->Z~test::overloadedTwice_Function_1__Boolean_1_[y~test::overloadedTwice_Function_1__Boolean_1_]}>[1]->Z~test::overloadedTwice_Function_1__Boolean_1_[y~test::overloadedTwice_Function_1__Boolean_1_]}>##[1]#  ~@VariableExpression@  @37:9-37:10
+      Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @37:18-37:19
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @37:19-37:19
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#test::LType##[1]#  ~@FunctionInvocation@  @37:23-37:30
+      typeParam T -> test::LType
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::LType|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::LType|1>  @37:23-37:30
+
+###ReverseIndex
+platform::pure::functions::lang::eval_Function_1__T_n__V_m_:
+  test::overloadedTwice_Function_1__Boolean_1_
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_:
+  test::overloadedTwice_Function_1__Boolean_1_
+test::LType:
+  test::check_Any_1__LType_1__Boolean_1_
+  test::overloadedTwice_Function_1__Boolean_1_
+test::check_Any_1__LType_1__Boolean_1_:
+  test::overloadedTwice_Function_1__Boolean_1_

@@ -20,7 +20,8 @@
 //
 // For each module wanted, after those it depends on (as legend-engine's definition files say):
 //   - its sources, through the preprocessor (a documentation literal is its doc tag), in <out>/staged/<module>/;
-//   - its module.json in <out>/<module>/, where the loader writes its placed sources (code/);
+//   - its module.json in <out>/<module>/, where the loader writes its placed sources (code/); its tests
+//     depend on next's and on its dependencies' tests;
 // and in <out>:
 //   - plan.txt, what the loader follows: legacy's default imports (the coreImport group of legacy's
 //     m3.pure), next's (TopLevelCompiler.DEFAULT_IMPORTS), where next's and the bridge's sources are, the
@@ -142,7 +143,8 @@ for (const m of order)
    }
    fs.mkdirSync(dir, { recursive: true });
    fs.writeFileSync(path.join(dir, 'module.json'),
-      `${JSON.stringify({ name: m.name, packagePattern: m.pattern, dependencies: ['core', 'compiler', 'tds', 'legacy', ...m.dependencies] }, null, 2)}\n`);
+      `${JSON.stringify({ name: m.name, packagePattern: m.pattern, dependencies: ['core', 'compiler', 'tds', 'legacy', ...m.dependencies],
+         testDependencies: ['core-tests', ...m.dependencies.map((d) => `${d}-tests`)] }, null, 2)}\n`);
    plan.push(`module ${m.name} ${staged} ${path.join(dir, 'code')}`);
    const natives = path.join(root, 'natives', `${m.name}.pure`);
    if (fs.existsSync(natives)) plan.push(`natives ${m.name} ${natives}`);

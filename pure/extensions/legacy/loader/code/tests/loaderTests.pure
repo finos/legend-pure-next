@@ -43,6 +43,9 @@ function <<test.TestDependency>> meta::pure::bridge::loader::tests::context(): C
          'meta::pure::metamodel::type::new', 'meta::pure::metamodel::type::new#2',
          'meta::pure::metamodel::type::run', 'meta::pure::metamodel::type::run#1']),
       legacyFunctionIds = set(['meta::pure::metamodel::type::genericType_Any_MANY__GenericType_1_', 'a::g__Integer_1_']),
+      legacyFunctionParameters = newMap([]->cast(@Pair<String, List<String>>)),
+      nextPackages = set(['platform::pure::test::pct', 'platform::pure::profiles', 'platform::pure::metamodel::type', 'platform::pure::metamodel::function', 'platform::pure::metamodel',
+         'platform::pure::functions::lang', 'platform::pure::functions::date', 'platform::pure::functions::meta', 'platform::pure::functions::asserts', 'platform::pure::functions::collection', 'platform::pure::functions::relation']),
       legacySignatures = newMap([pair('meta::pure::metamodel::type::genericType#1', ^List<String>(values = '(Any[*])')),
          pair('meta::pure::metamodel::type::run#1', ^List<String>(values = '(legacy:Function[1])'))]),
       nextDefaultSignatures = set(['genericType(Any[*])', 'run(Function[1])', 'isIt(Any[1], Class[1])', 'hour(DateTime[1])', 'toOne(_[*])', 'map(_[*], Function[1])']),
@@ -290,8 +293,8 @@ function <<test.Test>> meta::pure::bridge::loader::tests::testAnIntegerBeyond64B
 function <<test.Test>> meta::pure::bridge::loader::tests::testALegacyMetamodelObjectBuiltWithNextObjectsAdaptsThem(): Boolean[1]
 {
    let printed = placed('function a::f(c: Any[1]): Any[*]\n{\n  [^Class(generalizations = $c, name = \'n\'), ^a::Sub(generalizations = [$c])]\n}\n');
-   assert($printed->contains('^meta::pure::metamodel::type::Class(generalizations=$c->map(x|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::Class<Any>), name=\'n\')'), | $printed);
-   assert($printed->contains('^a::Sub(generalizations=[$c]->map(x|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::Class<Any>))'), | $printed);
+   assert($printed->contains('^meta::pure::metamodel::type::Class(generalizations=$c->map(x: Any[1]|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::Class<Any>), name=\'n\')'), | $printed);
+   assert($printed->contains('^a::Sub(generalizations=[$c]->map(x: Any[1]|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::Class<Any>))'), | $printed);
 }
 
 function <<test.Test>> meta::pure::bridge::loader::tests::testAMetamodelElementLegacyCodeNamesIsLegacy(): Boolean[1]
@@ -314,7 +317,7 @@ function <<test.Test>> meta::pure::bridge::loader::tests::testWhatNextsFunctions
    let printed = placed('function a::f(): Any[*]\n{\n  [1->genericTypeOf(), platform::pure::functions::meta::genericTypeOf(1), 1->generalizationsOf()]\n}\n');
    assert($printed->contains('meta::pure::bridge::m3::adapt(1->genericTypeOf())->cast(@meta::pure::metamodel::type::generics::GenericType)'), | $printed);
    assert($printed->contains('meta::pure::bridge::m3::adapt(platform::pure::functions::meta::genericTypeOf(1))->cast(@meta::pure::metamodel::type::generics::GenericType)'), | $printed);
-   assert($printed->contains('1->generalizationsOf()->map(x|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::Class<Any>)'), | $printed);
+   assert($printed->contains('1->generalizationsOf()->map(x: Any[1]|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::Class<Any>)'), | $printed);
 }
 
 function <<test.Test>> meta::pure::bridge::loader::tests::testANextFunctionTakingMetamodelObjectsHasALegacyTypedAdapter(): Boolean[1]
@@ -458,4 +461,73 @@ function <<test.Test>> meta::pure::bridge::loader::tests::testTheParametersLegac
 {
    let file = platform::pure::functions::meta::parse('test', 'function a::f(): Any[*]\n{\n  [1->to(@Integer), a::toMany(1, @String, \'k\'), {|1->other(2)}]\n}\n');
    assertEquals(['to#2#1', 'toMany#3#1'], $file->typeWitnesses());
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAGrammarFunctionNextDefinesIsNextsButANativeNextLacksIsKept(): Boolean[1]
+{
+   let base = context();
+   let withNew = ^$base(next = newMap($base.next->keys()->concatenate('platform::pure::functions::lang::new')->map(k | pair($k, true))));
+   let printed = placed(platform::pure::functions::meta::parse('test',
+         'native function meta::pure::functions::lang::new<T>(class: Class<T>[1], id: String[1]): T[1];\n'
+         + 'function meta::pure::functions::lang::new<T>(class: Class<T>[1], id: String[1], other: String[1]): T[1]\n{\n  []->toOne()\n}\n'), $withNew)
+      ->platform::pure::functions::printer::protocol::printProtocolFile();
+   assert($printed->contains('function meta::pure::functions::lang::new<T>(class: meta::pure::metamodel::type::Class<T>[1], id: String[1]): T[1]\n{\n  []->toOne(\'not bridged: meta::pure::functions::lang::new\')'), | $printed);
+   assert(!$printed->contains('other: String[1]'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAFunctionReturningALegacyFunctionHasItsResultAdapted(): Boolean[1]
+{
+   let printed = placed('function a::all(): meta::pure::metamodel::function::Function<Any>[*]\n{\n  [a::one__Integer_1_]\n}\n'
+      + 'function a::one(): Integer[1]\n{\n  1\n}\n');
+   assert($printed->contains('->map(x: Any[1]|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::function::Function<Any>)'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAValueGivenWhereALegacyFunctionIsDeclaredIsAdapted(): Boolean[1]
+{
+   let base = context();
+   let withFirst = ^$base(legacyFunctionParameters = newMap([pair('a::first#1', ^List<String>(values = '(legacy:LambdaFunction[1])')), pair('a::run#1', ^List<String>(values = '(-)'))]));
+   let printed = placed(platform::pure::functions::meta::parse('test',
+         'function a::use(): Integer[1]\n{\n  {x: Integer[1]|$x}->a::first() + {x: Integer[1]|$x}->a::run()\n}\n'), $withFirst)
+      ->platform::pure::functions::printer::protocol::printProtocolFile();
+   assert($printed->contains('meta::pure::bridge::m3::adapt(x: Integer[1]|$x)->cast(@meta::pure::metamodel::function::LambdaFunction<Any>)->a::first()'), | $printed);
+   assert($printed->contains(' + {x: Integer[1]|$x}->a::run()'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAPrimitiveNameIsThePrimitiveWhatEverAnImportFinds(): Boolean[1]
+{
+   let base = context();
+   let withDatatype = ^$base(legacy = newMap($base.legacy->keys()->concatenate('a::datatype::Integer')->map(k | pair($k, true))),
+      next = newMap($base.next->keys()->concatenate('platform::pure::metamodel::type::primitives::Integer')->map(k | pair($k, true))));
+   let printed = placed(platform::pure::functions::meta::parse('test',
+         'import a::datatype::*;\nfunction a::one(i: Integer[1]): Integer[1]\n{\n  $i\n}\nfunction a::two(s: String[1]): Integer[0]\n{\n  []\n}\n'), $withDatatype)
+      ->platform::pure::functions::printer::protocol::printProtocolFile();
+   // next's path where the import finds one too (next would find both), the simple name where it does not
+   assert($printed->contains('function a::one(i: platform::pure::metamodel::type::primitives::Integer[1]): platform::pure::metamodel::type::primitives::Integer[1]'), | $printed);
+   assert($printed->contains('function a::two(s: String[1])'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testANativeReturningNothingIsAStubFailingThenReturningNothing(): Boolean[1]
+{
+   let printed = placed('native function a::drop(s: String[1]): Nil[0];\n');
+   assert($printed->contains('function a::drop(s: String[1]): Nil[0]\n{\n  []->toOne(\'not bridged: a::drop\');\n  [];\n}'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAFunctionReturningALegacyMetamodelObjectHasItsResultAdapted(): Boolean[1]
+{
+   let printed = placed('function a::kind(): meta::pure::metamodel::type::Class<Any>[1]\n{\n  a::Person\n}\n');
+   assert($printed->contains('meta::pure::bridge::m3::adapt(a::Person)->cast(@meta::pure::metamodel::type::Class<Any>)'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAFunctionTypeIsNotALegacyFunctionClassHoweverItIsNamed(): Boolean[1]
+{
+   let f = platform::pure::functions::meta::parse('test', 'function a::f(g: meta::pure::metamodel::function::Function<{String[1]->String[1]}>[1], h: Function<Any>[1], l: meta::pure::metamodel::function::LambdaFunction<Any>[*], s: String[1]): Any[*]\n{\n  []\n}\n')
+      ->declared()->cast(@platform::pure::protocol::grammar::function::PackageableFunction)->toOne();
+   assertEquals('(-, legacy:Function[1], legacy:LambdaFunction[*], -)', $f->functionClassSignature(context()));
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAnImportOfAPackageOnlyNextsTestsHaveBringsInNoCounterpart(): Boolean[1]
+{
+   let printed = placed('import meta::pure::functions::lang::tests::letFn::*;\nfunction a::f(): String[1]\n{\n  \'x\'\n}\n');
+   assert($printed->contains('import meta::pure::functions::lang::tests::letFn::*;'), | $printed);
+   assert(!$printed->contains('import platform::pure::functions::lang::tests::letFn::*;'), | $printed);
 }

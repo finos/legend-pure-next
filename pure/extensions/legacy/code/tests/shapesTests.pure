@@ -1,0 +1,63 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Where legacy's compiler builds another graph than next's for the same source, navigation gives legacy's.
+
+function <<test.Test>> meta::pure::bridge::tests::shapes::testAnEnumLiteralIsLegacysExtractEnumValue(): Boolean[1]
+{
+   let f = {p: meta::pure::bridge::tests::model::Person[1] | $p.kind == meta::pure::bridge::tests::model::Kind.EMPLOYEE};
+   let equal = meta::pure::bridge::m3::adapt($f)->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>).expressionSequence->toOne()
+      ->cast(@meta::pure::metamodel::valuespecification::SimpleFunctionExpression);
+   let literal = $equal.parametersValues->at(1)->cast(@meta::pure::metamodel::valuespecification::SimpleFunctionExpression);
+   assertEquals('extractEnumValue', $literal.functionName);
+   assertEquals('extractEnumValue_Enumeration_1__String_1__T_1_', $literal.func->cast(@meta::pure::metamodel::function::NativeFunction<Any>).name);
+   let args = $literal.parametersValues->cast(@meta::pure::metamodel::valuespecification::InstanceValue);
+   assertEquals(2, $args->size());
+   assert($args->at(0).values->toOne()->is(meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Kind)));
+   assertEquals('EMPLOYEE', $args->at(1).values->toOne());
+   assert($literal.genericType.rawType->toOne()->is(meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Kind)));
+}
+
+function <<test.TestDependency>> meta::pure::bridge::tests::shapes::firstExpression(f: platform::pure::metamodel::function::FunctionDefinition<Any>[1]): meta::pure::metamodel::valuespecification::SimpleFunctionExpression[1]
+{
+   meta::pure::bridge::m3::adapt($f)->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>).expressionSequence->toOne()
+      ->cast(@meta::pure::metamodel::valuespecification::SimpleFunctionExpression)
+}
+
+function <<test.Test>> meta::pure::bridge::tests::shapes::testAPropertyAccessIsNamedByItsPropertyName(): Boolean[1]
+{
+   let access = {p: meta::pure::bridge::tests::model::Person[1] | $p.name}->meta::pure::bridge::tests::shapes::firstExpression();
+   assertEmpty($access.functionName);
+   assertEquals('name', $access.propertyName.values->toOne());
+   assert($access.propertyName.genericType.rawType->toOne()->is(meta::pure::bridge::m3::adapt(String)));
+   assertEmpty($access.qualifiedPropertyName);
+   assertEmpty($access.originalMilestonedProperty);
+   assertEmpty($access.originalMilestonedPropertyParametersValues);
+}
+
+function <<test.Test>> meta::pure::bridge::tests::shapes::testAQualifiedPropertyCallIsNamedByItsQualifiedPropertyName(): Boolean[1]
+{
+   let call = {f: meta::pure::bridge::tests::model::Firm[1] | $f.employeeByName('a')}->meta::pure::bridge::tests::shapes::firstExpression();
+   assertEmpty($call.functionName);
+   assertEmpty($call.propertyName);
+   assertEquals('employeeByName', $call.qualifiedPropertyName.values->toOne());
+}
+
+function <<test.Test>> meta::pure::bridge::tests::shapes::testAFunctionCallIsNamedByItsFunctionName(): Boolean[1]
+{
+   let call = {p: meta::pure::bridge::tests::model::Person[1] | $p.name->toUpper()}->meta::pure::bridge::tests::shapes::firstExpression();
+   assertEquals('toUpper', $call.functionName);
+   assertEmpty($call.propertyName);
+   assertEmpty($call.qualifiedPropertyName);
+}

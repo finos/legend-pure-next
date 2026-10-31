@@ -797,7 +797,8 @@ public final class PureContext
             // every retry into a misleading "No CallTarget" instead of the
             // real failure below.
             functionCache.remove(fd);
-            throw new RuntimeException("Failed to compile: " + getFunctionName(fd), e);
+            // the cause's message too: a lambda has no name, and runners report only the message
+            throw new RuntimeException("Failed to compile: " + getFunctionName(fd) + (e.getMessage() == null ? "" : " (" + e.getMessage() + ")"), e);
         }
         return cf;
     }

@@ -34,8 +34,19 @@ Class platform::pure::compiler::resolution::functionDefinitionResolver::ResolveA
 
 function platform::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:ValueSpecification[*], params:VariableExpression[*], context:CompilerContext[1]):ResolveResult[1]
 {
+    resolveExpressionSequence($specs, $params, $context, false)
+}
+
+// A body's statements, those of a function or a qualified property (ownersBody) each with no binding of its
+// owner's parameters but its own: what one statement binds them to is not the next one's — mirrors Java
+// FunctionDefinitionResolver.resolveAndValidate.
+function platform::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:ValueSpecification[*], params:VariableExpression[*], context:CompilerContext[1], ownersBody:Boolean[1]):ResolveResult[1]
+{
     let result = $specs->fold({spec, acc |
-        let r = resolveValueSpecification($spec, $acc.scope, $acc.context);
+        let accContext = if($ownersBody,
+            | ^$acc.context(enclosingOwnerBinding = $acc.context.enclosingOwnerBinding->map(b | ^$b(typeBindings = newMap([]->cast(@Pair<String,List<GenericType>>)), multiplicityBindings = newMap([]->cast(@Pair<String,List<Multiplicity>>))))),
+            | $acc.context);
+        let r = resolveValueSpecification($spec, $acc.scope, $accContext);
         let resolved = if($r.value->isEmpty(), | $spec, | $r.value->toOne());
         let ctx2 = $spec->match([
             fi:FunctionApplication[1] |

@@ -356,7 +356,8 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
                             let path = $en->cast(@PackageableElement)->elementToPath();
                             let resolvedOwner = $context->resolveElement($path)->toOne()->cast(@Enumeration<Any>);
                             let ctxR = $context->recordReference($resolvedOwner->cast(@PackageableElement)->elementToPath());
-                            let foundProp = findProperty($resolvedOwner, $functionName, $context);
+                            // An enum value's properties are Enum's: the enumeration's own are its values (E.v, above) — mirrors Java
+                            let foundProp = platform::pure::compiler::helper::class::findInheritedProperty($resolvedOwner.generalizations, $functionName, $context);
                             if($foundProp->isEmpty(),
                                 | ^CompilerResult<ValueSpecification>(
                                       value = ^$dot(parametersValues = $resolvedParams->cast(@ValueSpecification)),

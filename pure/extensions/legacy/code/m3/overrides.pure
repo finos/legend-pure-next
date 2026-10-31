@@ -285,3 +285,50 @@ function meta::pure::bridge::m3::printMultiplicity(m: platform::pure::metamodel:
       o: Any[1] | '?'
    ]) + ']'
 }
+
+// ---- function expressions: how legacy names a call ----
+
+// Legacy names a call by its function's name, and a property or qualified-property access by the
+// property's instead (propertyName, qualifiedPropertyName), with no function name.
+function meta::pure::bridge::m3::overrides::FunctionExpression_functionName(this: meta::pure::metamodel::valuespecification::FunctionExpression[1]): String[0..1]
+{
+   $this._next->cast(@platform::pure::metamodel::valuespecification::FunctionExpression)
+      ->filter(n | $n.func->match([p: platform::pure::metamodel::function::property::AbstractProperty<Any>[1] | false, o: Any[*] | true]))
+      ->map(n | $n.functionName)
+      ->head()
+}
+
+function meta::pure::bridge::m3::overrides::FunctionExpression_propertyName(this: meta::pure::metamodel::valuespecification::FunctionExpression[1]): meta::pure::metamodel::valuespecification::InstanceValue[0..1]
+{
+   $this._next->cast(@platform::pure::metamodel::valuespecification::FunctionExpression)
+      ->filter(n | $n.func->match([p: platform::pure::metamodel::function::property::Property<Any, Any|*>[1] | true, o: Any[*] | false]))
+      ->map(n | meta::pure::bridge::m3::overrides::nameValue($n.functionName))
+      ->head()
+}
+
+function meta::pure::bridge::m3::overrides::FunctionExpression_qualifiedPropertyName(this: meta::pure::metamodel::valuespecification::FunctionExpression[1]): meta::pure::metamodel::valuespecification::InstanceValue[0..1]
+{
+   $this._next->cast(@platform::pure::metamodel::valuespecification::FunctionExpression)
+      ->filter(n | $n.func->match([q: platform::pure::metamodel::function::property::QualifiedProperty<Any>[1] | true, o: Any[*] | false]))
+      ->map(n | meta::pure::bridge::m3::overrides::nameValue($n.functionName))
+      ->head()
+}
+
+// The name a property access carries, as legacy's compiler builds it: a one-string instance value.
+function meta::pure::bridge::m3::overrides::nameValue(name: String[1]): meta::pure::metamodel::valuespecification::InstanceValue[1]
+{
+   ^meta::pure::metamodel::valuespecification::InstanceValue(values = $name,
+      genericType = ^meta::pure::metamodel::type::generics::GenericType(rawType = meta::pure::bridge::m3::adapt(String)->cast(@meta::pure::metamodel::type::Type)),
+      multiplicity = meta::pure::bridge::m3::adapt(platform::pure::metamodel::multiplicity::PureOne)->cast(@meta::pure::metamodel::multiplicity::Multiplicity))
+}
+
+// Next has no milestoning: no call is the rewrite of a milestoned property's.
+function meta::pure::bridge::m3::overrides::FunctionExpression_originalMilestonedProperty(this: meta::pure::metamodel::valuespecification::FunctionExpression[1]): meta::pure::metamodel::function::Function<Any>[0..1]
+{
+   []
+}
+
+function meta::pure::bridge::m3::overrides::FunctionExpression_originalMilestonedPropertyParametersValues(this: meta::pure::metamodel::valuespecification::FunctionExpression[1]): meta::pure::metamodel::valuespecification::ValueSpecification[*]
+{
+   []
+}

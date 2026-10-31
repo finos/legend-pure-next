@@ -771,9 +771,13 @@ public class _GenericType
                     MutableList<GenericType> boundTypes = bindings.typeBindings().get(name);
                     if (boundTypes != null && boundTypes.notEmpty())
                     {
-                        yield boundTypes.size() == 1
-                                ? boundTypes.getFirst()
-                                : findCommonGenericType(Lists.mutable.withAll(boundTypes), model);
+                        // a type parameter it is bound to tells nothing of it: the others do (V bound to K and to
+                        // Pair2<String, Integer> is Pair2<String, Integer>, not their common Pair2)
+                        MutableList<GenericType> informative = boundTypes.reject(b -> b instanceof GenericTypeValue bv && bv._type() instanceof TypeParameter);
+                        MutableList<GenericType> used = informative.isEmpty() ? boundTypes : informative;
+                        yield used.size() == 1
+                                ? used.getFirst()
+                                : findCommonGenericType(Lists.mutable.withAll(used), model);
                     }
                     yield genericType; // unresolved — return as-is
                 }

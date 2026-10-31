@@ -929,9 +929,12 @@ function platform::pure::compiler::helper::genericType::makeAsConcreteAsPossible
                 | $gtv.type->toOne()->match([
                       tp : TypeParameter[1] |
                           let boundTypes = $bindings.typeBindings->get($tp.name);
+                          // a type parameter it is bound to tells nothing of it: the others do — mirrors Java
+                          let informative = $boundTypes.values->filter(b | !$b->match([g: GenericTypeValue[1] | $g.type->match([t: TypeParameter[1] | true, o: Any[*] | false]), o: Any[1] | false]));
+                          let used = if($informative->isEmpty(), | $boundTypes.values, | $informative);
                           if([pair(| $boundTypes->isEmpty(), | $genericType),
-                              pair(| $boundTypes->toOne().values->size() == 1, | $boundTypes->toOne().values->at(0))],
-                             | let common = findCommonGenericType($boundTypes->toOne().values, $context);
+                              pair(| $used->size() == 1, | $used->at(0))],
+                             | let common = findCommonGenericType($used, $context);
                                if($common->isEmpty(), | $genericType, | $common->toOne());
                           );,
                       ft : FunctionType[1] |

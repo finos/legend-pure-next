@@ -1,0 +1,1 @@
+{"name":"legacy_usecases_functionValues","pattern":"(usecases::functionValues)(::.*)?","dependencies":["platform","legacy_usecases_reflection"]}

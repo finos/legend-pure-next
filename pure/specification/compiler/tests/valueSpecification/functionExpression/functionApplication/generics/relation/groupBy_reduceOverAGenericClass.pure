@@ -1,0 +1,105 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+import test::*;
+
+// A groupBy whose reduce takes a generic class (Pair2<T, U>[*]) the map builds: the reduce's parameter is
+// Pair2<String, Integer>, its T String, and so the new column.
+Class test::Pair2<T,U>
+{
+  a: T[0..1];
+  b: U[0..1];
+}
+
+native function test::pair2<T,U>(a: T[0..1], b: U[0..1]): Pair2<T, U>[1];
+
+native function test::firstA<T,U>(v: Pair2<T, U>[*]): T[0..1];
+
+native function test::groupBy<T,Z,K,V,R>(r: Relation<T>[1], cols: ColSpecArray<Z⊆T>[1], agg: AggColSpecArray<{T[1]->K[0..1]}, {K[*]->V[0..1]}, R>[1]): Relation<Z+R>[1];
+
+function test::f(rel: Relation<(grp:Integer, name:String, n:Integer)>[1]): Relation<(grp:Integer, newCol:String[0..1])>[1]
+{
+  $rel->groupBy(~[grp], ~[newCol : x|pair2($x.name, $x.n) : y|$y->firstA()])
+}
+
+###CompiledGraph
+class test::Pair2 extends Any  ~Class<test::Pair2<T~test::Pair2, U~test::Pair2>>  @20:1-24:1
+  property a :T~test::Pair2[0..1]  ~Property<test::Pair2<T~test::Pair2, U~test::Pair2>, T~test::Pair2|0..1>
+  property b :U~test::Pair2[0..1]  ~Property<test::Pair2<T~test::Pair2, U~test::Pair2>, U~test::Pair2|0..1>
+
+native function test::pair2_T_$0_1$__U_$0_1$__Pair2_1_(a:T~test::pair2_T_$0_1$__U_$0_1$__Pair2_1_[0..1], b:U~test::pair2_T_$0_1$__U_$0_1$__Pair2_1_[0..1]):test::Pair2<T~test::pair2_T_$0_1$__U_$0_1$__Pair2_1_, U~test::pair2_T_$0_1$__U_$0_1$__Pair2_1_>[1]  ~NativeFunction<{T~test::pair2_T_$0_1$__U_$0_1$__Pair2_1_[0..1], U~test::pair2_T_$0_1$__U_$0_1$__Pair2_1_[0..1]->test::Pair2<T~test::pair2_T_$0_1$__U_$0_1$__Pair2_1_, U~test::pair2_T_$0_1$__U_$0_1$__Pair2_1_>[1]}>
+
+native function test::firstA_Pair2_MANY__T_$0_1$_(v:test::Pair2<T~test::firstA_Pair2_MANY__T_$0_1$_, U~test::firstA_Pair2_MANY__T_$0_1$_>[*]):T~test::firstA_Pair2_MANY__T_$0_1$_[0..1]  ~NativeFunction<{test::Pair2<T~test::firstA_Pair2_MANY__T_$0_1$_, U~test::firstA_Pair2_MANY__T_$0_1$_>[*]->T~test::firstA_Pair2_MANY__T_$0_1$_[0..1]}>
+
+native function test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_(r:Relation<T~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_>[1], cols:ColSpecArray<Z~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_⊆T~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_>[1], agg:AggColSpecArray<{T~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_[1]->K~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_[0..1]}, {K~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_[*]->V~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_[0..1]}, R~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_>[1]):Relation<Z~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_+R~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_>[1], ColSpecArray<Z~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_⊆T~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_>[1], AggColSpecArray<{T~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_[1]->K~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_[0..1]}, {K~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_[*]->V~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_[0..1]}, R~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_>[1]->Relation<Z~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_+R~test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_>[1]}>
+
+function test::f_Relation_1__Relation_1_(rel:Relation<(grp:@Integer@[1], name:@String@[1], n:@Integer@[1])>[1]):Relation<(grp:@Integer@[1], newCol:@String@[0..1])>[1]  ~UserDefinedFunction<{Relation<(grp:@Integer@[1], name:@String@[1], n:@Integer@[1])>[1]->Relation<(grp:@Integer@[1], newCol:@String@[0..1])>[1]}>
+  ArrowInvocation test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_ :#Relation<#(grp:@Integer@[1], newCol:#String##[0..1]#)#>##[1]#  ~@ArrowInvocation@  @34:7-34:76
+    typeParam K -> #Any#
+    typeParam R -> #(newCol:#String##[0..1]#)#
+    typeParam T -> #(grp:#Integer##[1]#, name:#String##[1]#, n:#Integer##[1]#)#
+    typeParam V -> @Any@
+    typeParam Z -> #(grp:@Integer@[1])#
+    Variable rel :#Relation<(grp:@Integer@[1], name:@String@[1], n:@Integer@[1])>##[1]#  ~@VariableExpression@  @34:3-34:6
+    FunctionInvocation colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_ :#ColSpecArray<#(grp:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @34:17-34:22
+      typeParam T -> #(grp:@Integer@[1])#
+      Collection :#String#[1]  ~@Collection@
+        AtomicValue  'grp' :@String@[1]  ~@AtomicValue@  @34:19-34:21
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(grp:@Integer@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+    FunctionInvocation aggColSpecArray_AggColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpecArray_1_ :#AggColSpecArray<#{#(grp:#Integer##[1]#, name:#String##[1]#, n:#Integer##[1]#)#[1]->@Any@[0..1]}#, {@Nil@[*]->@Any@[0..1]}, #(newCol:#String##[0..1]#)#>##[1]#  ~@FunctionInvocation@  @34:25-34:75
+      typeParam K -> #String#
+      typeParam P -> #(newCol:#String##[0..1]#)#
+      typeParam T -> #(newCol:#String##[0..1]#)#
+      typeParam U -> #(grp:#Integer##[1]#, name:#String##[1]#, n:#Integer##[1]#)#
+      typeParam V -> #test::Pair2#
+      Collection :#AggColSpec<#{#(grp:#Integer##[1]#, name:#String##[1]#, n:#Integer##[1]#)#[1]->#test::Pair2#[0..1]}#, #{#test::Pair2#[*]->#String#[0..1]}#, #(newCol:#String##[0..1]#)#>#[1]  ~@Collection@
+        FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(grp:#Integer##[1]#, name:#String##[1]#, n:#Integer##[1]#)#[1]->#test::Pair2#[0..1]}#, #{#test::Pair2#[*]->#String#[0..1]}#, #(newCol:#String##[0..1]#)#>##[1]#  ~@FunctionInvocation@  @34:27-34:74
+          typeParam K -> #String#
+          typeParam T -> #(newCol:#String##[0..1]#)#
+          typeParam U -> #(grp:#Integer##[1]#, name:#String##[1]#, n:#Integer##[1]#)#
+          typeParam V -> #test::Pair2#
+          Lambda(x:#(grp:@Integer@[1], name:@String@[1], n:@Integer@[1])##[1]#) :#LambdaFunction<#{#(grp:@Integer@[1], name:@String@[1], n:@Integer@[1])##[1]#->#test::Pair2<#String#, #Integer#>##[1]#}#>#[1]  ~@AtomicValue@  @34:36-34:57
+            FunctionInvocation test::pair2_T_$0_1$__U_$0_1$__Pair2_1_ :#test::Pair2<#String#, #Integer#>##[1]#  ~@FunctionInvocation@  @34:38-34:57
+              typeParam T -> #String#
+              typeParam U -> #Integer#
+              DotApplication name :#String##[1]#  ~@DotApplication@  @34:46-34:50
+                Variable x :#(grp:@Integer@[1], name:@String@[1], n:@Integer@[1])##[1]#  ~@VariableExpression@  @34:44-34:45
+              DotApplication n :#Integer##[1]#  ~@DotApplication@  @34:55-34:56
+                Variable x :#(grp:@Integer@[1], name:@String@[1], n:@Integer@[1])##[1]#  ~@VariableExpression@  @34:53-34:54
+          Lambda(y:#test::Pair2<#String#, #Integer#>##[*]#) :#LambdaFunction<#{#test::Pair2<#String#, #Integer#>##[*]#->#String##[0..1]#}#>#[1]  ~@AtomicValue@  @34:61-34:74
+            ArrowInvocation test::firstA_Pair2_MANY__T_$0_1$_ :#String##[0..1]#  ~@ArrowInvocation@  @34:65-34:74
+              typeParam T -> #String#
+              typeParam U -> #Integer#
+              Variable y :#test::Pair2<#String#, #Integer#>##[*]#  ~@VariableExpression@  @34:63-34:64
+          AtomicValue  'newCol' :@String@[1]  ~@AtomicValue@  @34:27-34:32
+          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(newCol:#String##[0..1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(newCol:#String##[0..1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+
+###ReverseIndex
+platform::pure::functions::relation::aggColSpecArray_AggColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpecArray_1_:
+  test::f_Relation_1__Relation_1_
+platform::pure::functions::relation::aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_:
+  test::f_Relation_1__Relation_1_
+platform::pure::functions::relation::colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_:
+  test::f_Relation_1__Relation_1_
+test::Pair2:
+  test::firstA_Pair2_MANY__T_$0_1$_
+  test::pair2_T_$0_1$__U_$0_1$__Pair2_1_
+test::firstA_Pair2_MANY__T_$0_1$_:
+  test::f_Relation_1__Relation_1_
+test::groupBy_Relation_1__ColSpecArray_1__AggColSpecArray_1__Relation_1_:
+  test::f_Relation_1__Relation_1_
+test::pair2_T_$0_1$__U_$0_1$__Pair2_1_:
+  test::f_Relation_1__Relation_1_

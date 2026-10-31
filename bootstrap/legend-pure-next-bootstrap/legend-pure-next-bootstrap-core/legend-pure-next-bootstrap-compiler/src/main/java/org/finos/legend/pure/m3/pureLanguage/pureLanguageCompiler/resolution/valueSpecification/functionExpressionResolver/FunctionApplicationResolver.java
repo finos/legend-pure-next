@@ -223,12 +223,9 @@ public class FunctionApplicationResolver
      */
     private static MutableList<FunctionIndexEntry> fittingKinds(MutableList<FunctionIndexEntry> candidates, MutableList<ValueSpecification> args, MetadataAccess model)
     {
-        MutableList<FunctionIndexEntry> fitting = candidates.select(c ->
-        {
-            MutableList<VariableExpression> params = c.functionType()._parameters();
-            return org.eclipse.collections.impl.list.primitive.IntInterval.zeroTo(Math.min(params.size(), args.size()) - 1)
-                    .allSatisfy(i -> kindFits(params.get(i)._genericType(), args.get(i)._genericType(), model));
-        });
+        // each parameter with its argument (zip stops at the shorter: no argument, nothing to compare)
+        MutableList<FunctionIndexEntry> fitting = candidates.select(c -> c.functionType()._parameters().zip(args)
+                .allSatisfy(pair -> kindFits(pair.getOne()._genericType(), pair.getTwo()._genericType(), model)));
         return fitting.isEmpty() ? candidates : fitting;
     }
 

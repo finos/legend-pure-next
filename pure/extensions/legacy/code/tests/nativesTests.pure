@@ -1,0 +1,127 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The legacy m3 over next objects: legacy navigation, as legend-pure code writes it, reads the next graph.
+
+// Legacy natives over legacy's views, answered by next's.
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testInstanceOfAViewOfAType(): Boolean[1]
+{
+   let person = ^meta::pure::bridge::tests::model::Person(name = 'a', kind = meta::pure::bridge::tests::model::Kind.EMPLOYEE);
+   assert($person->meta::pure::functions::meta::instanceOf(meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person)->cast(@meta::pure::metamodel::type::Type)));
+   assertFalse($person->meta::pure::functions::meta::instanceOf(meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Firm)->cast(@meta::pure::metamodel::type::Type)));
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testAViewIsAnInstanceOfLegacysMetamodelClass(): Boolean[1]
+{
+   let view = meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person);
+   assert($view->meta::pure::functions::meta::instanceOf(meta::pure::bridge::m3::adapt(meta::pure::metamodel::type::Class)->cast(@meta::pure::metamodel::type::Type)));
+   assertFalse($view->meta::pure::functions::meta::instanceOf(meta::pure::bridge::m3::adapt(meta::pure::metamodel::type::Enumeration)->cast(@meta::pure::metamodel::type::Type)));
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testGenericTypeIsLegacysView(): Boolean[1]
+{
+   let person = ^meta::pure::bridge::tests::model::Person(name = 'a', kind = meta::pure::bridge::tests::model::Kind.EMPLOYEE);
+   let gt = $person->meta::pure::functions::meta::genericType();
+   assertEquals('Person', $gt.rawType->toOne().name->toOne());
+   assert($gt.rawType->toOne() == meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person));
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testEnumValuesOfAView(): Boolean[1]
+{
+   let kind = meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Kind)->cast(@meta::pure::metamodel::type::Enumeration<meta::pure::bridge::tests::model::Kind>);
+   assertEquals([meta::pure::bridge::tests::model::Kind.EMPLOYEE, meta::pure::bridge::tests::model::Kind.CONTRACTOR], $kind->meta::pure::functions::meta::enumValues());
+}
+
+Profile meta::pure::bridge::tests::model::marks
+{
+   stereotypes: [key];
+   tags: [label];
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testStereotypeOfAView(): Boolean[1]
+{
+   let profile = meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::marks)->cast(@meta::pure::metamodel::extension::Profile);
+   let key = $profile->meta::pure::functions::meta::stereotype('key');
+   assertEquals('key', $key.value);
+   assert($key.profile == $profile);
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testTagOfAView(): Boolean[1]
+{
+   let profile = meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::marks)->cast(@meta::pure::metamodel::extension::Profile);
+   let label = $profile->meta::pure::functions::meta::tag('label');
+   assertEquals('label', $label.value);
+   assert($label.profile == $profile);
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testElementToPathOfAView(): Boolean[1]
+{
+   let person = meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person)->cast(@meta::pure::metamodel::PackageableElement);
+   assertEquals('meta::pure::bridge::tests::model::Person', $person->meta::pure::functions::meta::elementToPath('::', false));
+   assertEquals('Root$meta$pure$bridge$tests$model$Person', $person->meta::pure::functions::meta::elementToPath('$', true));
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testDynamicNewFromAViewOfAClass(): Boolean[1]
+{
+   let person = meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person)->cast(@meta::pure::metamodel::type::Class<Any>);
+   let made = $person->meta::pure::functions::lang::dynamicNew([
+         ^meta::pure::functions::lang::KeyValue(key = 'name', value = 'ada'),
+         ^meta::pure::functions::lang::KeyValue(key = 'nickNames', value = ['a', 'al']),
+         ^meta::pure::functions::lang::KeyValue(key = 'kind', value = meta::pure::bridge::tests::model::Kind.EMPLOYEE)])
+      ->cast(@meta::pure::bridge::tests::model::Person);
+   assertEquals('ada', $made.name);
+   assertEquals(['a', 'al'], $made.nickNames);
+   assertEquals(meta::pure::bridge::tests::model::Kind.EMPLOYEE, $made.kind);
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testDynamicNewFromAViewOfAGenericType(): Boolean[1]
+{
+   let gt = ^meta::pure::bridge::tests::model::Person(name = 'x', kind = meta::pure::bridge::tests::model::Kind.EMPLOYEE)->meta::pure::functions::meta::genericType();
+   let made = $gt->meta::pure::functions::lang::dynamicNew([
+         ^meta::pure::functions::lang::KeyValue(key = 'name', value = 'bob'),
+         ^meta::pure::functions::lang::KeyValue(key = 'kind', value = meta::pure::bridge::tests::model::Kind.CONTRACTOR)])
+      ->cast(@meta::pure::bridge::tests::model::Person);
+   assertEquals('bob', $made.name);
+   assertEquals(meta::pure::bridge::tests::model::Kind.CONTRACTOR, $made.kind);
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testEqIsIdentityForObjectsValueForPrimitives(): Boolean[1]
+{
+   assert(meta::pure::functions::boolean::eq(meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person), meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person)));
+   assertFalse(meta::pure::functions::boolean::eq(meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person), meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Firm)));
+   assert(meta::pure::functions::boolean::eq('a' + 'b', 'ab'));
+   assert(meta::pure::functions::boolean::eq(1 + 1, 2));
+   assertFalse(meta::pure::functions::boolean::eq(
+      ^meta::pure::bridge::tests::model::Person(name = 'a', kind = meta::pure::bridge::tests::model::Kind.EMPLOYEE),
+      ^meta::pure::bridge::tests::model::Person(name = 'a', kind = meta::pure::bridge::tests::model::Kind.EMPLOYEE)));
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testEvaluateAQualifiedPropertyOfAView(): Boolean[1]
+{
+   let ada = ^meta::pure::bridge::tests::model::Person(name = 'ada', kind = meta::pure::bridge::tests::model::Kind.EMPLOYEE);
+   let firm = ^meta::pure::bridge::tests::model::Firm(legalName = 'f', employees = [$ada]);
+   let byName = meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Firm)->cast(@meta::pure::metamodel::type::Class<Any>).qualifiedProperties->toOne();
+   assertEquals($ada, $byName->meta::pure::functions::lang::evaluate([list($firm), list('ada')]));
+   assertEmpty($byName->meta::pure::functions::lang::evaluate([list($firm), list('bob')]));
+}
+
+function <<test.Test>> meta::pure::bridge::tests::natives::testToStringOfAViewOfAnElementIsItsName(): Boolean[1]
+{
+   assertEquals('Kind', meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Kind)->meta::pure::functions::string::toString());
+   assertEquals('Person', meta::pure::bridge::m3::adapt(meta::pure::bridge::tests::model::Person)->meta::pure::functions::string::toString());
+   assertEquals('EMPLOYEE', meta::pure::bridge::tests::model::Kind.EMPLOYEE->meta::pure::functions::string::toString());
+   assertEquals('12', 12->meta::pure::functions::string::toString());
+   assertEquals('a', 'a'->meta::pure::functions::string::toString());
+}

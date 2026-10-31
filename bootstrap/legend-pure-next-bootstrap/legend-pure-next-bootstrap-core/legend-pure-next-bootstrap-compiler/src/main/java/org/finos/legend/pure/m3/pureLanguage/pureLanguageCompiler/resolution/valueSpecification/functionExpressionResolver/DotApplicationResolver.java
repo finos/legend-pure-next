@@ -308,7 +308,10 @@ public final class DotApplicationResolver
             // Simple property: only match when no additional params (just the receiver)
             if (paramCount == 1)
             {
-                Property matchedProp = _Class.findProperty(po, functionName);
+                // An enum value's properties are Enum's: the enumeration's own are its values (E.v, above)
+                Property matchedProp = ownerType instanceof Enumeration enumeration
+                        ? _Class.findPropertyInGeneralizations(enumeration, functionName)
+                        : _Class.findProperty(po, functionName);
                 if (matchedProp != null)
                 {
                     Function resolved = _Property.resolveProperty(matchedProp, receiver._genericType(), model);

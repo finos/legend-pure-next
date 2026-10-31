@@ -139,7 +139,8 @@ function platform::pure::compiler::structural::qualifiedPropertyCompiler::compil
               let resolveResult = platform::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
                   $qp.expressionSequence,
                   $qp.parameters->concatenate($extraScope),
-                  $scopedCtx
+                  $scopedCtx,
+                  true
               );
               let ctx1Raw = $resolveResult.context;
               // Restore the caller path before yielding back to the outer fold —

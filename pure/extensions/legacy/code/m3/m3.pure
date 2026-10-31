@@ -136,11 +136,6 @@ Class meta::pure::metamodel::type::Enumeration<E> extends meta::pure::metamodel:
    values : E[1..*] = meta::pure::bridge::m3::overrides::Enumeration_values($this)->cast(@E);
 }
 
-Class meta::pure::metamodel::type::Enum extends meta::pure::metamodel::extension::AnnotatedElement
-{
-   name : String[1] = $this._next->cast(@platform::pure::metamodel::type::Enum).name->toOne();
-}
-
 Class meta::pure::metamodel::type::ElementOverride extends meta::pure::bridge::Wrapper
 {
 }
@@ -266,11 +261,11 @@ Class meta::pure::metamodel::valuespecification::FunctionExpression extends meta
    func : meta::pure::metamodel::function::Function<platform::pure::metamodel::type::Any>[1] = $this._next->cast(@platform::pure::metamodel::valuespecification::FunctionExpression).func->map(x | meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::function::Function<platform::pure::metamodel::type::Any>)->toOne();
    importGroup : meta::pure::metamodel::import::ImportGroup[1] = []->toOne('not bridged: FunctionExpression.importGroup');
    parametersValues : meta::pure::metamodel::valuespecification::ValueSpecification[*] = $this._next->cast(@platform::pure::metamodel::valuespecification::FunctionExpression).parametersValues->map(x | meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::valuespecification::ValueSpecification);
-   functionName : String[0..1] = $this._next->cast(@platform::pure::metamodel::valuespecification::FunctionExpression).functionName;
-   propertyName : meta::pure::metamodel::valuespecification::InstanceValue[0..1] = []->toOne('not bridged: FunctionExpression.propertyName');
-   qualifiedPropertyName : meta::pure::metamodel::valuespecification::InstanceValue[0..1] = []->toOne('not bridged: FunctionExpression.qualifiedPropertyName');
-   originalMilestonedProperty : meta::pure::metamodel::function::Function<platform::pure::metamodel::type::Any>[0..1] = []->toOne('not bridged: FunctionExpression.originalMilestonedProperty');
-   originalMilestonedPropertyParametersValues : meta::pure::metamodel::valuespecification::ValueSpecification[*] = []->toOne('not bridged: FunctionExpression.originalMilestonedPropertyParametersValues');
+   functionName : String[0..1] = meta::pure::bridge::m3::overrides::FunctionExpression_functionName($this);
+   propertyName : meta::pure::metamodel::valuespecification::InstanceValue[0..1] = meta::pure::bridge::m3::overrides::FunctionExpression_propertyName($this);
+   qualifiedPropertyName : meta::pure::metamodel::valuespecification::InstanceValue[0..1] = meta::pure::bridge::m3::overrides::FunctionExpression_qualifiedPropertyName($this);
+   originalMilestonedProperty : meta::pure::metamodel::function::Function<platform::pure::metamodel::type::Any>[0..1] = meta::pure::bridge::m3::overrides::FunctionExpression_originalMilestonedProperty($this);
+   originalMilestonedPropertyParametersValues : meta::pure::metamodel::valuespecification::ValueSpecification[*] = meta::pure::bridge::m3::overrides::FunctionExpression_originalMilestonedPropertyParametersValues($this);
    resolvedTypeParameters : meta::pure::metamodel::type::generics::GenericType[*] = $this._next->cast(@platform::pure::metamodel::valuespecification::FunctionExpression).resolvedTypeParameters->map(x | meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::generics::GenericType);
    resolvedMultiplicityParameters : meta::pure::metamodel::multiplicity::Multiplicity[*] = $this._next->cast(@platform::pure::metamodel::valuespecification::FunctionExpression).resolvedMultiplicityParameters->map(x | meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::multiplicity::Multiplicity);
 }
@@ -350,7 +345,7 @@ Class meta::pure::metamodel::import::EnumStub
 {
    enumeration : meta::pure::metamodel::type::Enumeration<platform::pure::metamodel::type::Any>[1];
    enumName : String[1];
-   resolvedEnum : meta::pure::metamodel::type::Enum[0..1];
+   resolvedEnum : platform::pure::metamodel::type::Enum[0..1];
 }
 
 Class meta::pure::metamodel::relationship::Association extends meta::pure::metamodel::PropertyOwner
@@ -513,11 +508,13 @@ function meta::pure::bridge::m3::adapt(x: Any[1]): Any[1]
    memoize(meta::pure::bridge::m3::newAdapter_Any_1__Any_1_, $x)
 }
 
-// A new legacy object for a next object: of the legacy class of its most specific next class. Values next
-// and legacy share (primitives, enumeration values, instances of user classes) are returned as they are.
+// A new legacy object for a next object: legacy's subgraph where legacy builds another one (shapes.pure), else
+// of the legacy class of its most specific next class. Values next and legacy share (primitives, enumeration
+// values, instances of user classes) are returned as they are.
 function meta::pure::bridge::m3::newAdapter(x: Any[1]): Any[1]
 {
-   $x->match([
+   let shaped = meta::pure::bridge::m3::shapes::legacyShape($x);
+   if($shaped->isNotEmpty(), | $shaped->toOne(), | $x->match([
       n: platform::pure::metamodel::type::Class<Any>[1] | ^meta::pure::metamodel::type::Class<Any>(_next = $n),
       n: platform::pure::metamodel::function::UserDefinedFunction<Any>[1] | ^meta::pure::metamodel::function::ConcreteFunctionDefinition<Any>(_next = $n),
       n: platform::pure::metamodel::function::NativeFunction<Any>[1] | ^meta::pure::metamodel::function::NativeFunction<Any>(_next = $n),
@@ -534,7 +531,6 @@ function meta::pure::bridge::m3::newAdapter(x: Any[1]): Any[1]
       n: platform::pure::metamodel::Package[1] | ^meta::pure::metamodel::Package(_next = $n),
       n: platform::pure::metamodel::extension::Profile[1] | ^meta::pure::metamodel::extension::Profile(_next = $n),
       n: platform::pure::metamodel::PackageableElement[1] | ^meta::pure::metamodel::PackageableElement(_next = $n),
-      n: platform::pure::metamodel::type::Enum[1] | ^meta::pure::metamodel::type::Enum(_next = $n),
       n: platform::pure::metamodel::type::generics::InferredGenericType[1] | ^meta::pure::metamodel::type::generics::InferredGenericType(_next = $n),
       n: platform::pure::metamodel::type::ConstraintsGetterOverride[1] | ^meta::pure::metamodel::type::ConstraintsGetterOverride(_next = $n),
       n: platform::pure::metamodel::function::LambdaFunction<Any>[1] | ^meta::pure::metamodel::function::LambdaFunction<Any>(_next = $n),
@@ -574,7 +570,7 @@ function meta::pure::bridge::m3::newAdapter(x: Any[1]): Any[1]
       n: platform::pure::metamodel::testable::Test[1] | ^meta::pure::metamodel::testable::Test(_next = $n),
       n: platform::pure::metamodel::testable::Testable[1] | ^meta::pure::metamodel::testable::Testable(_next = $n),
       a: Any[1] | $a
-   ])
+   ]));
 }
 
 // The next object a legacy object stands for; any other value, or a legacy object built without one, is

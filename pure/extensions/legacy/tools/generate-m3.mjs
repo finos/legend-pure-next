@@ -323,14 +323,16 @@ function ${ADAPT}(x: Any[1]): Any[1]
    memoize(${NEW_ADAPTER}_Any_1__Any_1_, $x)
 }
 
-// A new legacy object for a next object: of the legacy class of its most specific next class. Values next
-// and legacy share (primitives, enumeration values, instances of user classes) are returned as they are.
+// A new legacy object for a next object: legacy's subgraph where legacy builds another one (shapes.pure), else
+// of the legacy class of its most specific next class. Values next and legacy share (primitives, enumeration
+// values, instances of user classes) are returned as they are.
 function ${NEW_ADAPTER}(x: Any[1]): Any[1]
 {
-   $x->match([
+   let shaped = ${BRIDGE}::m3::shapes::legacyShape($x);
+   if($shaped->isNotEmpty(), | $shaped->toOne(), | $x->match([
 ${branches.map((b) => b.text).join(',\n')},
       a: Any[1] | $a
-   ])
+   ]));
 }`;
 }
 
@@ -356,6 +358,16 @@ const header = `// Copyright 2020 Goldman Sachs (legend-pure m3, from which this
 `;
 fs.writeFileSync(outFile, `${header}\n${emitWrapper()}\n\n${classes.join('\n\n')}\n\n${emitAdapt()}\n\n${emitUnwrap()}\n`);
 
+// Every legacy property has a value, but those m3-mapping.json lists as pending.
+const pending = new Set(JSON.parse(fs.readFileSync(path.join(here, 'm3-mapping.json'), 'utf8')).pendingProperties ?? []);
+const unlisted = stats.stubbed.filter((k) => !pending.has(k));
+const answered = [...pending].filter((k) => !stats.stubbed.includes(k));
+if (unlisted.length || answered.length)
+{
+   if (unlisted.length) console.error(`legacy properties with no value: ${unlisted.join(', ')} — give each an override in code/m3/overrides.pure`);
+   if (answered.length) console.error(`pending legacy properties that now have a value: ${answered.join(', ')} — take them off m3-mapping.json's pendingProperties`);
+   process.exit(1);
+}
 console.log(`wrote ${path.relative(process.cwd(), outFile)}: ${classes.length} classes`);
 console.log(`  properties: ${stats.direct.length} delegated, ${stats.overridden.length} overridden, ${stats.stubbed.length} not bridged`);
 if (process.argv.includes('--verbose')) console.log(`  not bridged: ${stats.stubbed.join(', ')}`);

@@ -1,0 +1,125 @@
+###Pure
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::import::*;
+import meta::pure::functions::date::*;
+import meta::pure::functions::string::*;
+import meta::pure::functions::collection::*;
+import meta::pure::functions::meta::*;
+import meta::pure::functions::constraints::*;
+import meta::pure::functions::lang::*;
+import meta::pure::functions::boolean::*;
+import meta::pure::functions::tools::*;
+import meta::pure::functions::relation::*;
+import meta::pure::functions::io::*;
+import meta::pure::functions::math::*;
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::test::*;
+import meta::pure::functions::multiplicity::*;
+import meta::pure::router::*;
+import meta::pure::service::*;
+import meta::pure::tds::*;
+import meta::pure::tools::*;
+import meta::pure::profiles::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::import::*;
+import platform::pure::functions::date::*;
+import platform::pure::functions::string::*;
+import platform::pure::functions::collection::*;
+import platform::pure::functions::meta::*;
+import platform::pure::functions::constraints::*;
+import platform::pure::functions::lang::*;
+import platform::pure::functions::boolean::*;
+import platform::pure::functions::tools::*;
+import platform::pure::functions::relation::*;
+import platform::pure::functions::io::*;
+import platform::pure::functions::math::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::test::*;
+import platform::pure::functions::multiplicity::*;
+import platform::pure::router::*;
+import platform::pure::service::*;
+import platform::pure::tds::*;
+import platform::pure::tools::*;
+import platform::pure::profiles::*;
+import meta::pure::metamodel::legacyAdapters::*;
+import meta::pure::metamodel::type::legacyAdapters::*;
+import meta::pure::metamodel::type::generics::legacyAdapters::*;
+import meta::pure::metamodel::relationship::legacyAdapters::*;
+import meta::pure::metamodel::valuespecification::legacyAdapters::*;
+import meta::pure::metamodel::multiplicity::legacyAdapters::*;
+import meta::pure::metamodel::function::legacyAdapters::*;
+import meta::pure::metamodel::function::property::legacyAdapters::*;
+import meta::pure::metamodel::extension::legacyAdapters::*;
+import meta::pure::metamodel::import::legacyAdapters::*;
+import meta::pure::functions::date::legacyAdapters::*;
+import meta::pure::functions::string::legacyAdapters::*;
+import meta::pure::functions::collection::legacyAdapters::*;
+import meta::pure::functions::meta::legacyAdapters::*;
+import meta::pure::functions::constraints::legacyAdapters::*;
+import meta::pure::functions::lang::legacyAdapters::*;
+import meta::pure::functions::boolean::legacyAdapters::*;
+import meta::pure::functions::tools::legacyAdapters::*;
+import meta::pure::functions::relation::legacyAdapters::*;
+import meta::pure::functions::io::legacyAdapters::*;
+import meta::pure::functions::math::legacyAdapters::*;
+import meta::pure::functions::asserts::legacyAdapters::*;
+import meta::pure::functions::test::legacyAdapters::*;
+import meta::pure::functions::multiplicity::legacyAdapters::*;
+import meta::pure::router::legacyAdapters::*;
+import meta::pure::service::legacyAdapters::*;
+import meta::pure::tds::legacyAdapters::*;
+import meta::pure::tools::legacyAdapters::*;
+import meta::pure::profiles::legacyAdapters::*;
+
+function usecases::functionValues::writers(): meta::pure::metamodel::function::Function<Any>[*]
+{
+  [usecases::reflection::toJson_Any_1__String_1_, usecases::reflection::objectToJson_Any_1__String_1_]->map(x: Any[1]|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::function::Function<Any>)
+}
+
+function <<test.Test>> usecases::functionValues::testFunctionReferences(): Boolean[1]
+{
+  assertEquals(['toJson', 'objectToJson'], usecases::functionValues::writers()->map(f|$f->cast(@meta::pure::metamodel::function::ConcreteFunctionDefinition<Any>).functionName->toOne()));
+  assertEquals('"x"', usecases::functionValues::writers()->at(0)->cast(@platform::pure::metamodel::function::Function<{Any[1]->String[1]}>)->eval('x'));
+}
+
+function usecases::functionValues::firstStep(f: meta::pure::metamodel::function::FunctionDefinition<Any>[1]): meta::pure::metamodel::valuespecification::SimpleFunctionExpression[1]
+{
+  meta::pure::bridge::m3::adapt($f.expressionSequence->evaluateAndDeactivate()->toOne()->cast(@meta::pure::metamodel::valuespecification::SimpleFunctionExpression))->cast(@meta::pure::metamodel::valuespecification::SimpleFunctionExpression)
+}
+
+function <<test.Test>> usecases::functionValues::testALambdaAsAPlainFunctionDefinition(): Boolean[1]
+{
+  let call = meta::pure::bridge::m3::adapt(p: usecases::reflection::Person[1]|$p.firstName->toUpper())->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>)->usecases::functionValues::firstStep();
+  assertEquals('toUpper', $call.functionName);
+}
+
+function usecases::functionValues::all<T>(xs: T[*]): T[*]
+{
+  $xs
+}
+
+function usecases::functionValues::generics(): meta::pure::metamodel::function::Function<Any>[*]
+{
+  usecases::functionValues::all_T_MANY__T_MANY_->map(x: Any[1]|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::function::Function<Any>)
+}
+
+function <<test.Test>> usecases::functionValues::testAGenericFunctionReference(): Boolean[1]
+{
+  assertEquals(['all'], usecases::functionValues::generics()->map(f|$f->cast(@meta::pure::metamodel::function::ConcreteFunctionDefinition<Any>).functionName->toOne()))
+}

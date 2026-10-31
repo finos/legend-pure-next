@@ -1,0 +1,49 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Legacy's graph where its compiler builds another one than next's for the same source. adapt() asks here
+// first: a next node legacy builds otherwise is given legacy's subgraph for it, made of legacy objects holding
+// what they are given (no next object behind them); any other node is the view of its class (newAdapter).
+
+function meta::pure::bridge::m3::shapes::legacyShape(x: Any[1]): Any[0..1]
+{
+   $x->match([
+      d: platform::pure::metamodel::valuespecification::DotApplication[1] | $d->meta::pure::bridge::m3::shapes::enumLiteral(),
+      a: Any[1] | []
+   ])
+}
+
+// `E.v` — next: a dot named v on the enumeration; legacy: extractEnumValue(E, 'v').
+function meta::pure::bridge::m3::shapes::enumLiteral(d: platform::pure::metamodel::valuespecification::DotApplication[1]): Any[0..1]
+{
+   let enumeration = $d.parametersValues->match([
+      a: platform::pure::metamodel::valuespecification::AtomicValue[1] | $a.value->match([e: platform::pure::metamodel::type::Enumeration<Any>[1] | $e, o: Any[1] | []]),
+      o: Any[*] | []
+   ]);
+   if($enumeration->isEmpty(),
+      | [],
+      | let receiver = $d.parametersValues->toOne();
+        let one = meta::pure::bridge::m3::adapt($d.multiplicity)->cast(@meta::pure::metamodel::multiplicity::Multiplicity);
+        ^meta::pure::metamodel::valuespecification::SimpleFunctionExpression(
+           functionName = 'extractEnumValue',
+           func = ^meta::pure::metamodel::function::NativeFunction<Any>(name = 'extractEnumValue_Enumeration_1__String_1__T_1_', functionName = 'extractEnumValue'),
+           parametersValues = [
+              ^meta::pure::metamodel::valuespecification::InstanceValue(values = meta::pure::bridge::m3::adapt($enumeration->toOne()),
+                 genericType = meta::pure::bridge::m3::adapt($receiver.genericType)->cast(@meta::pure::metamodel::type::generics::GenericType), multiplicity = $one),
+              ^meta::pure::metamodel::valuespecification::InstanceValue(values = $d.functionName,
+                 genericType = ^meta::pure::metamodel::type::generics::GenericType(rawType = meta::pure::bridge::m3::adapt(String)->cast(@meta::pure::metamodel::type::Type)), multiplicity = $one)],
+           genericType = meta::pure::bridge::m3::adapt($d.genericType)->cast(@meta::pure::metamodel::type::generics::GenericType),
+           multiplicity = $one);
+   );
+}

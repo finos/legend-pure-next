@@ -53,6 +53,8 @@ Class meta::pure::bridge::loader::Context
    has: Map<String, Boolean>[1];
    // the paths of next's elements and functions
    next: Map<String, Boolean>[1];
+   // the packages next's elements (not its tests) are in: those a legacy import's counterpart is
+   nextPackages: Map<String, Boolean>[1];
    // next's profiles, by path, and their stereotypes and tags (path.value)
    nextProfiles: Map<String, Boolean>[1];
    // the paths of legacy's elements and functions (path, path#arity), and its functions' ids: the bridge's,
@@ -62,6 +64,8 @@ Class meta::pure::bridge::loader::Context
    legacyFunctionIds: Map<String, Boolean>[1];
    // legacy functions' signatures (signature()), by path#arity; next's that its imports find, as name(signature)
    legacySignatures: Map<String, List<String>>[1];
+   // legacy functions' parameters as the values given to them are adapted (functionClassSignature()), by path#arity
+   legacyFunctionParameters: Map<String, List<String>>[1];
    nextDefaultSignatures: Map<String, Boolean>[1];
    // next's functions' signatures, as path(signature)
    nextSignatures: Map<String, Boolean>[1];
@@ -164,8 +168,8 @@ function meta::pure::bridge::loader::renamed(path: String[1], context: Context[1
 // a legacy element answers to, that element's path; otherwise as it is, for next's imports to resolve.
 function meta::pure::bridge::loader::referenced(name: String[1], imports: String[*], context: Context[1]): String[1]
 {
-   if($name->contains('::'),
-      | $name->renamed($context),
+   if($name->contains('::') || legacyPrimitives()->contains($name),
+      | if($name->contains('::'), | $name->renamed($context), | $name->primitive($imports, $context)),
       | let legacy = $imports->map(i | $i + '::' + $name)->filter(p | $context.nexts->get($p)->isNotEmpty())->map(p | $context.nexts->get($p)->toOne())
            ->concatenate($imports->map(i | $i + '::' + $name)->filter(p | $context.legacy->get($p)->isNotEmpty()))
            ->concatenate($imports->map(i | $i + '::' + $name)->filter(p | $context.legacyFunctionIds->get($p)->isNotEmpty()));
@@ -173,6 +177,20 @@ function meta::pure::bridge::loader::referenced(name: String[1], imports: String
         let nextFunction = if($name->contains('_'), | $context.nextDefaultFunctions->get($name), | []);
         if($legacy->isNotEmpty(), | $legacy->at(0), | if($nextFunction->isNotEmpty(), | $nextFunction->toOne(), | $name));
    );
+}
+
+// Legacy's root-level elements, its primitive types (legend-pure's m3.pure): a simple name of one means it,
+// whatever an import finds (meta::relational::metamodel::datatype::Integer, ...).
+// Where an import of the section finds an element of that name too, next's path: next would find both.
+function meta::pure::bridge::loader::primitive(name: String[1], imports: String[*], context: Context[1]): String[1]
+{
+   let nextPath = 'platform::pure::metamodel::type::primitives::' + $name;
+   if($imports->exists(i | $context.legacy->get($i + '::' + $name)->isNotEmpty()) && $context.next->get($nextPath)->isNotEmpty(), | $nextPath, | $name);
+}
+
+function meta::pure::bridge::loader::legacyPrimitives(): String[*]
+{
+   ['String', 'Boolean', 'Byte', 'Number', 'Integer', 'StrictTime', 'Date', 'StrictDate', 'DateTime', 'LatestDate', 'Float', 'Decimal']
 }
 
 // The path of the profile a section importing `imports` means by `name`: a legacy one first, then next's.
@@ -228,6 +246,86 @@ function meta::pure::bridge::loader::withLegacyArguments(f: platform::pure::prot
            | ^$f(parametersValues = $f.parametersValues->at(0)->asLegacyReceiver($imports, $context)->concatenate($f.parametersValues->drop(1)->map(v | $v->asLegacyValue($imports, $context)))),
            | $f),
       | ^$f(parametersValues = $f.parametersValues->map(v | $v->asLegacyValue($imports, $context))));
+}
+
+// A call to a legacy function with each value it is given where a legacy function class is declared
+// (Function<Any>, FunctionDefinition<Any>, ...: legacy's view, which legacy code navigates) adapted: a lambda or
+// a function reference is next's. Where every overload declares the same one, and not a simple name next's
+// function also answers (overloading tells them apart: a lambda goes to next's); adapt leaves a legacy object
+// as it is. A function type (Function<{...}>) is next's: what is given there is run, not navigated.
+function meta::pure::bridge::loader::withLegacyFunctionArguments(f: platform::pure::protocol::grammar::valuespecification::FunctionExpression[1], imports: String[*], context: Context[1]): platform::pure::protocol::grammar::valuespecification::FunctionExpression[1]
+{
+   let arity = '#' + $f.parametersValues->size()->toString();
+   if($f->instanceOf(platform::pure::protocol::grammar::valuespecification::DotApplication) || grammarCalls()->contains($f.functionName) || $f.parametersValues->isEmpty()
+         || (!$f.functionName->contains('::') && $context.nextDefaultFunctions->get($f.functionName + $arity)->isNotEmpty()), | $f, |
+      let overloads = if($f.functionName->contains('::'), | $f.functionName, | $imports->map(i | $i + '::' + $f.functionName))
+         ->map(p | $context.legacyFunctionParameters->get($p + $arity)->map(l | $l.values));
+      ^$f(parametersValues = range(0, $f.parametersValues->size())->map(i |
+         let declared = $overloads->map(o | $o->signatureTypes()->at($i))->removeDuplicates();
+         let value = $f.parametersValues->at($i);
+         let class = if($declared->size() == 1 && $declared->toOne()->startsWith('legacy:'),
+                        | $declared->toOne()->substring(7, $declared->toOne()->indexOf('['))->legacyFunctionClass($context),
+                        | []);
+         if($class->isEmpty(), | $value, | $value->adapted($class->toOne() + '<Any>' + $declared->toOne()->substring($declared->toOne()->indexOf('['))));
+      ));
+   );
+}
+
+// A function returning a legacy metamodel class (Function<Any>, Class<T>, Type, ...) with its result adapted:
+// what it returns may be next's — a function reference, a lambda, a class named as a value; adapt leaves a
+// legacy object as it is.
+function meta::pure::bridge::loader::withLegacyFunctionResult(f: platform::pure::protocol::grammar::function::UserDefinedFunction[1], context: Context[1]): platform::pure::protocol::grammar::function::UserDefinedFunction[1]
+{
+   let legacyClass = $f.returnGenericType->match([
+      v: platform::pure::protocol::grammar::type::generics::GenericTypeValue[1] | !$v->isFunctionType() && $v.type->match([
+         t: platform::pure::protocol::grammar::type::Type_Pointer[1] | $context.wraps->get($t.value)->isNotEmpty(),
+         o: Any[1] | false
+      ]),
+      o: Any[*] | false
+   ]);
+   if(!$legacyClass || $f.expressionSequence->isEmpty(), | $f, |
+      let last = $f.expressionSequence->size() - 1;
+      ^$f(expressionSequence = $f.expressionSequence->take($last)
+         ->concatenate($f.expressionSequence->at($last)->adapted(printGenericType($f.returnGenericType->toOne()) + printMultiplicity($f.returnMultiplicity->toOne()))));
+   );
+}
+
+// A function's parameters as the values given to them are adapted: '(p1, ...)', a plain legacy function class
+// (Function<Any>, LambdaFunction<Any>, ...: legacy's view, its simple name in a legacy source the legacy one)
+// as legacy:Name[m], anything else as -. A function type is next's, however it is named.
+function meta::pure::bridge::loader::functionClassSignature(f: platform::pure::protocol::grammar::function::PackageableFunction[1], context: Context[1]): String[1]
+{
+   $f.parameters->map(p | $p.genericType->toOne()->match([
+         v: platform::pure::protocol::grammar::type::generics::GenericTypeValue[1] | if($v->isFunctionType(), | '-', | $v.type->match([
+            t: platform::pure::protocol::grammar::type::Type_Pointer[1] |
+               let name = $t.value->split('::')->last()->toOne();
+               let functionClass = if($t.value->contains('::'),
+                                      | $context.wraps->get($t.value)->filter(n | $n->isNextFunctionClass())->isNotEmpty(),
+                                      | $name->legacyFunctionClass($context)->isNotEmpty());
+               if($functionClass, | 'legacy:' + $name + printMultiplicity($p.multiplicity->toOne()), | '-');,
+            o: Any[1] | '-'
+         ])),
+         o: Any[1] | '-'
+      ]))
+      ->joinStrings('(', ', ', ')')
+}
+
+// The legacy function class (Function, FunctionDefinition, LambdaFunction, ...: one wrapping a next function
+// class, not a property) of a simple name.
+function meta::pure::bridge::loader::legacyFunctionClass(name: String[1], context: Context[1]): String[0..1]
+{
+   $context.wraps->keyValues()->filter(p | $p.second->isNextFunctionClass() && $p.first->split('::')->last()->toOne() == $name)->map(p | $p.first)->head()
+}
+
+function meta::pure::bridge::loader::isNextFunctionClass(path: String[1]): Boolean[1]
+{
+   $path->startsWith('platform::pure::metamodel::function::') && !$path->contains('::property::')
+}
+
+// The parameter types of a signature '(T1[m1], T2[m2], ...)'.
+function meta::pure::bridge::loader::signatureTypes(signature: String[1]): String[*]
+{
+   $signature->substring(1, $signature->length() - 1)->split(', ')
 }
 
 // A read (x.p) or assignment (^C(p = v), ^$x(p = v)) of a property renamed, with its new name.
@@ -320,12 +418,13 @@ function meta::pure::bridge::loader::withLegacyResult(f: platform::pure::protoco
 }
 
 // A value adapted to a legacy type ('path<args>[m]'): meta::pure::bridge::m3::adapt, which leaves a legacy
-// object as it is.
+// object as it is. Its elements are taken as Any: the value's type may not be one a lambda can be typed by
+// (a generic function's reference).
 function meta::pure::bridge::loader::adapted(v: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1], type: String[1]): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    let many = !$type->endsWith('[1]');
    platform::pure::functions::meta::parse('adapted', 'function adapted::f(): Any[*]\n{\n  '
-      + if($many, | '$__value->map(x|meta::pure::bridge::m3::adapt($x))', | 'meta::pure::bridge::m3::adapt($__value)')
+      + if($many, | '$__value->map(x: Any[1]|meta::pure::bridge::m3::adapt($x))', | 'meta::pure::bridge::m3::adapt($__value)')
       + '->cast(@' + $type->substring(0, $type->lastIndexOf('[')) + ')\n}\n')
       ->declared()->cast(@platform::pure::protocol::grammar::function::UserDefinedFunction)->toOne().expressionSequence->toOne()
       ->substituted($v);
@@ -514,15 +613,18 @@ function meta::pure::bridge::loader::placed(section: platform::pure::protocol::S
          a: Any[1] | $a
       ]),
       post = x: Any[1] | $x->match([
-         f: platform::pure::protocol::grammar::valuespecification::FunctionExpression[1] | $f->withRenamedProperty($context)->withLegacyArguments($imports, $context)->withLegacyResult($imports, $context)->anysPropertyRead(),
+         f: platform::pure::protocol::grammar::valuespecification::FunctionExpression[1] | $f->withRenamedProperty($context)->withLegacyArguments($imports, $context)->withLegacyFunctionArguments($imports, $context)->withLegacyResult($imports, $context)->anysPropertyRead(),
          p: platform::pure::protocol::grammar::function::property::Property[1] | if($context.renamedProperties->get($p.name)->isEmpty(), | $p, | ^$p(name = $context.renamedProperties->get($p.name)->toOne())),
          c: platform::pure::protocol::grammar::valuespecification::Collection[1] | ^$c(values = $c.values->map(v | $v->asLegacyValue($imports, $context))),
          i: platform::pure::protocol::grammar::valuespecification::Island[1] | $i->withRenamedTdsTypes($imports, $context),
          a: Any[1] | $a
       ])
    );
+   // a native's stub fails when called: its result is not adapted
+   let stubs = $section.elements->filter(e | $e->instanceOf(platform::pure::protocol::grammar::function::NativeFunction))->map(e | $e.name);
    ^$section(
-      imports = $imports->concatenate($imports->map(i | $i->asNext()))->concatenate($imports->map(i | $i + '::' + adapters()))->removeDuplicates()->map(i | $i + '::*'),
+      // with the counterpart of each import next's elements are in (not one only next's tests have: legacy's are kept)
+      imports = $imports->concatenate($imports->map(i | $i->asNext())->filter(n | $context.nextPackages->get($n)->isNotEmpty()))->concatenate($imports->map(i | $i + '::' + adapters()))->removeDuplicates()->map(i | $i + '::*'),
       elements = $section.elements
          ->map(e | $e->withTypeParameters($context))
          ->filter(e | !$context->hasElement($e) && $context.setAside->get($e->path())->isEmpty())
@@ -533,7 +635,9 @@ function meta::pure::bridge::loader::placed(section: platform::pure::protocol::S
          ->map(e | rewrite($e, $rewrite))
          ->map(e | $e->match([
                f: platform::pure::protocol::grammar::function::UserDefinedFunction[1] | ^$f(expressionSequence = $f.expressionSequence->unshadowed($f.parameters.name, [])
-                  ->reflected($f.parameters->map(p | $p->functionTyped($context)), $context)),
+                  ->reflected($f.parameters->map(p | $p->functionTyped($context)), $context))->match([
+                     u: platform::pure::protocol::grammar::function::UserDefinedFunction[1] | if($stubs->contains($u.name), | $u, | $u->withLegacyFunctionResult($context))
+                  ]),
                a: Any[1] | $a
             ]))
          ->cast(@platform::pure::protocol::grammar::PackageableElement)
@@ -1028,7 +1132,9 @@ function meta::pure::bridge::loader::mentions(v: platform::pure::protocol::gramm
 // A native as a function failing when called.
 function meta::pure::bridge::loader::stubbed(native: platform::pure::protocol::grammar::function::NativeFunction[1]): platform::pure::protocol::grammar::function::UserDefinedFunction[1]
 {
-   let template = platform::pure::functions::meta::parse('stub', 'function stub::f(): Any[*]\n{\n  []->toOne(\'not bridged: ' + $native->path() + '\')\n}\n')
+   // one returning nothing ([0]) fails, then returns nothing
+   let nothing = $native.returnMultiplicity->map(m | printMultiplicity($m))->contains('[0]');
+   let template = platform::pure::functions::meta::parse('stub', 'function stub::f(): Any[*]\n{\n  []->toOne(\'not bridged: ' + $native->path() + '\')' + if($nothing, | ';\n  [];', | '') + '\n}\n')
       ->declared()->cast(@platform::pure::protocol::grammar::function::UserDefinedFunction)->toOne();
    ^platform::pure::protocol::grammar::function::UserDefinedFunction(
       name = $native.name,
@@ -1145,7 +1251,7 @@ function meta::pure::bridge::loader::context(lines: String[*], sources: SourceFi
       ->filter(f | $f.package->isNotEmpty() && $nextImports->contains($f.package.value->toOne()));
    let wraps = newMap($lines->planned('wraps')->map(w | pair($w->split(' ')->at(0), $w->split(' ')->at(1))));
    let signing = ^Context(imports = [], nextImports = [], has = set([]), next = set([]), nextProfiles = set([]), legacy = set([]), legacyFunctions = set([]),
-      legacyFunctionIds = set([]), legacySignatures = newMap([]->cast(@Pair<String, List<String>>)), nextDefaultSignatures = set([]),
+      legacyFunctionIds = set([]), legacySignatures = newMap([]->cast(@Pair<String, List<String>>)), legacyFunctionParameters = newMap([]->cast(@Pair<String, List<String>>)), nextPackages = set([]), nextDefaultSignatures = set([]),
       nextDefaultFunctions = newMap([]->cast(@Pair<String, String>)), wraps = $wraps, nextSignatures = set([]), legacyProperties = newMap([]->cast(@Pair<String, String>)), keptLegacyClasses = set([]), setAside = set([]), nexts = newMap([]->cast(@Pair<String, String>)),
       renamedProperties = newMap([]->cast(@Pair<String, String>)), typeWitnesses = set([]),
       elementTypes = newMap([]->cast(@Pair<String, String>)), nextReturns = newMap([]->cast(@Pair<String, String>)));
@@ -1158,11 +1264,12 @@ function meta::pure::bridge::loader::context(lines: String[*], sources: SourceFi
       legacy = set([]),
       legacyFunctions = set([]),
       legacyFunctionIds = set([]),
-      legacySignatures = newMap([]->cast(@Pair<String, List<String>>)),
+      legacySignatures = newMap([]->cast(@Pair<String, List<String>>)), legacyFunctionParameters = newMap([]->cast(@Pair<String, List<String>>)), nextPackages = set([]),
       nextDefaultSignatures = set($nextFunctions->map(f | $f.functionName->toOne() + $f->signature(false, $signing))),
       nextSignatures = set($next->filter(e | $e->instanceOf(platform::pure::protocol::grammar::function::PackageableFunction))
          ->cast(@platform::pure::protocol::grammar::function::PackageableFunction)->map(f | $f->path() + $f->signature(false, $signing))),
       wraps = $wraps,
+      nextPackages = set($next->map(e | $e.package->map(p | $p.value))->removeDuplicates()),
       legacyProperties = newMap([]->cast(@Pair<String, String>)),
       keptLegacyClasses = set($sources.file->map(f | $f->declared())->classesRicherThanNexts($next)),
       typeWitnesses = set($sources.file->map(f | $f->typeWitnesses())),
@@ -1197,6 +1304,8 @@ function meta::pure::bridge::loader::context(lines: String[*], sources: SourceFi
       legacyFunctionIds = set($legacy->filter(e | $e->instanceOf(platform::pure::protocol::grammar::function::PackageableFunction))->map(e | $e.package->map(p | $p.value + '::')->joinStrings('') + $e.name)),
       legacySignatures = newMap($legacyFunctions->map(f | $f->key())->removeDuplicates()
          ->map(k | pair($k, ^List<String>(values = $legacyFunctions->filter(f | $f->key() == $k)->map(f | $f->signature(true, $base)))))),
+      legacyFunctionParameters = newMap($legacyFunctions->map(f | $f->key())->removeDuplicates()
+         ->map(k | pair($k, ^List<String>(values = $legacyFunctions->filter(f | $f->key() == $k)->map(f | $f->functionClassSignature($base)))))),
       nextDefaultSignatures = $base.nextDefaultSignatures
    );
 }
@@ -1257,10 +1366,12 @@ function meta::pure::bridge::loader::hasElement(context: Context[1], e: platform
       f: platform::pure::protocol::grammar::function::PackageableFunction[1] | $context.nextSignatures->get($f->path()->asNext() + $f->signature(true, $context))->isNotEmpty(),
       a: platform::pure::protocol::grammar::PackageableElement[1] | $context.has->get($a->key()->asNext())->isNotEmpty()
    ]);
-   // a function the grammar calls that next defines too is next's, whatever legacy's parameters
+   // a function the grammar calls that next defines too is next's, whatever legacy's parameters; not a native,
+   // whose stub legacy code calls with parameters next has no function for (new(Class<T>[1], String[1]))
    let grammarsNexts = $e->match([
       f: platform::pure::protocol::grammar::function::PackageableFunction[1] |
-         grammarCalls()->contains($f.functionName->toOne()) && $context.next->get($f->path()->asNext())->isNotEmpty(),
+         !$f->instanceOf(platform::pure::protocol::grammar::function::NativeFunction)
+            && grammarCalls()->contains($f.functionName->toOne()) && $context.next->get($f->path()->asNext())->isNotEmpty(),
       a: platform::pure::protocol::grammar::PackageableElement[1] | false
    ]);
    $context.nexts->get($e->path())->isNotEmpty() || $grammarsNexts || $context.keptLegacyClasses->get($e->key())->isEmpty() && ($context.has->get($e->key())->isNotEmpty()

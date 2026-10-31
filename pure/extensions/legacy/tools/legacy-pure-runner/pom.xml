@@ -1,0 +1,9 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>local</groupId><artifactId>legacy-pure-runner</artifactId><version>1</version>
+  <!-- legend-pure pinned as the Justfile pins it; its jars are fetched into build/legacy-pure-runner/lib -->
+  <dependencies>
+    <dependency><groupId>org.finos.legend.pure</groupId><artifactId>legend-pure-runtime-java-engine-interpreted</artifactId><version>5.110.0</version></dependency>
+    <dependency><groupId>org.finos.legend.pure</groupId><artifactId>legend-pure-m3-core</artifactId><version>5.110.0</version></dependency>
+  </dependencies>
+</project>
