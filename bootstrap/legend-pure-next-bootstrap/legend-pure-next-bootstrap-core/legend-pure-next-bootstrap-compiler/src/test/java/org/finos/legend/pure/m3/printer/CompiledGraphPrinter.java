@@ -52,6 +52,7 @@ import platform.pure.metamodel.type.generics.ResolvedTypeParameter;
 import platform.pure.metamodel.type.generics.UserDefinedGenericType;
 import platform.pure.metamodel.valuespecification.AtomicValue;
 import platform.pure.metamodel.valuespecification.Collection;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
 import platform.pure.metamodel.valuespecification.FunctionExpression;
 import platform.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import platform.pure.metamodel.valuespecification.ValueSpecification;
@@ -600,6 +601,16 @@ public final class CompiledGraphPrinter
                 sb.append(prop._name());
             }
         }
+        else if (fe._func() instanceof Column col)
+        {
+            // a relation column read: the column itself, not just the dot's name, so one that lost it shows;
+            // and it is the receiver's relation type's column, the very object, or the graph is not the real one
+            sb.append("column ").append(col._name());
+            if (!isReceiversColumn(fe, col))
+            {
+                sb.append(" (not the receiver's)");
+            }
+        }
         else if (fe._functionName() != null)
         {
             sb.append(fe._functionName());
@@ -735,6 +746,15 @@ public final class CompiledGraphPrinter
     // -----------------------------------------------------------------------
     // Type / multiplicity helpers
     // -----------------------------------------------------------------------
+
+    private static boolean isReceiversColumn(FunctionExpression fe, Column col)
+    {
+        ValueSpecification receiver = fe._parametersValues() == null || fe._parametersValues().isEmpty() ? null : fe._parametersValues().getFirst();
+        return receiver != null
+                && receiver._genericType() instanceof GenericTypeValue gtv
+                && gtv._type() instanceof platform.pure.metamodel.relation.RelationType rt
+                && rt._columns().anySatisfy(c -> c == col);
+    }
 
     static String printType(GenericType gt)
     {

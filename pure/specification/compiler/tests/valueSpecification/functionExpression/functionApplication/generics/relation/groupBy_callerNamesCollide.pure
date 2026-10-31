@@ -51,7 +51,7 @@ function f_Relation_1__Any_MANY_(rel:Relation<(val:@Integer@[1], str:@String@[1]
       typeParam U -> #(val:#Integer##[1]#, str:#String##[1]#)#
       typeParam V -> #Integer#
       Lambda(x:#(val:@Integer@[1], str:@String@[1])##[1]#) :#LambdaFunction<#{#(val:@Integer@[1], str:@String@[1])##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @26:33-26:40
-        DotApplication val :#Integer##[1]#  ~@DotApplication@  @26:37-26:40
+        DotApplication column val :#Integer##[1]#  ~@DotApplication@  @26:37-26:40
           Variable x :#(val:@Integer@[1], str:@String@[1])##[1]#  ~@VariableExpression@  @26:35-26:36
       Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @26:44-26:56
         ArrowInvocation total_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @26:48-26:56

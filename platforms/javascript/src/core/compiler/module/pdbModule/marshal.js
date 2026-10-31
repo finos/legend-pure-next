@@ -251,12 +251,29 @@ export function marshal(sx, v, stack = []) {
             if (v.type === "AtomicValueDef" && typeof out.value === "string") {
                 out.value = rehydrateAtomicEnum(out.value, out.genericType);
             }
+            if (out.func !== undefined) out.func = receiversColumn(out);
         } finally {
             stack.pop();
         }
         return classify(out, v.type);
     }
     return v;
+}
+
+// A column read ($row.col) as a PDB holds it: its column is written inline (a relation type's column has
+// no address), and read back as the column of that name in the receiver's relation type — the object the
+// compiler resolved the read to. Mirrors the JVM readers' ColumnReads.
+const COLUMN = "platform::pure::metamodel::relation::Column";
+function receiversColumn(read) {
+    const func = read.func;
+    const t = func && func.classifierGenericType && func.classifierGenericType.type;
+    const path = t && (typeof t.__purePath === "string" ? t.__purePath : typeof t.path === "string" ? t.path : undefined);
+    if (path !== COLUMN) return func;
+    const receiver = [].concat(read.parametersValues ?? [])[0];
+    const type = receiver && receiver.genericType && receiver.genericType.type;
+    const column = (type ? [].concat(type.columns ?? []) : []).find((c) => c && c.name === func.name);
+    if (!column) throw new Error(`PDB reader: the column read '${func.name}' has no column of that name in its receiver's relation type`);
+    return column;
 }
 
 // One field of an inline node, mirroring the writer's elision rules: elided

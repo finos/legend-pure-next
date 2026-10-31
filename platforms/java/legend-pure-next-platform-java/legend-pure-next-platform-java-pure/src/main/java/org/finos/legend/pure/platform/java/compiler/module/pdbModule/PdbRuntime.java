@@ -33,6 +33,7 @@ import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.table_FbsSchem
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.eclipse.collections.impl.factory.Lists;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -390,10 +391,44 @@ public final class PdbRuntime
             Object converted = convert(owner, property, value);
             if (converted != null)
             {
-                decoded.add(converted);
+                // a column read's column is written inline: read back as its receiver's own
+                decoded.add("func".equals(property) ? receiversColumn(owner, converted) : converted);
             }
         }
         return Collections.unmodifiableList(decoded);
+    }
+
+    private static final String COLUMN = "platform::pure::metamodel::relation::Column";
+
+    /**
+     * A column read ({@code $row.col}) as a PDB holds it: its column is written inline (a relation type's
+     * column has no address), and read back as the column of that name in the receiver's relation type — the
+     * object the compiler resolved the read to. Mirrors the other readers' ColumnReads.
+     */
+    private static Object receiversColumn(LazyObject read, Object func)
+    {
+        if (!(func instanceof LazyObject column) || !COLUMN.equals(column._purePath()))
+        {
+            return func;
+        }
+        Object name = first(column.__values("name"));
+        Object receiver = first(read.__values("parametersValues"));
+        Object genericType = receiver instanceof LazyObject r ? first(r.__values("genericType")) : null;
+        Object type = genericType instanceof LazyObject g ? first(g.__values("type")) : null;
+        if (type instanceof LazyObject t)
+        {
+            Object found = Lists.adapt(t.__values("columns")).detect(c -> c instanceof LazyObject lc && name != null && name.equals(first(lc.__values("name"))));
+            if (found != null)
+            {
+                return found;
+            }
+        }
+        throw new IllegalStateException("PDB reader: the column read '" + name + "' has no column of that name in its receiver's relation type");
+    }
+
+    private static Object first(List<Object> values)
+    {
+        return values.isEmpty() ? null : values.get(0);
     }
 
     /**

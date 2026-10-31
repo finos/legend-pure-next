@@ -565,7 +565,9 @@ public final class GenericFbDecoder
                     case TABLE_SCALAR, UNION_SCALAR ->
                     {
                         Object node = one(raw);
-                        yield node == null ? null : marshalNode(node, fb, resolver, parent);
+                        Object value = node == null ? null : marshalNode(node, fb, resolver, parent);
+                        // a column read's column is written inline: read back as its receiver's own
+                        yield "func".equals(pureProperty) ? ColumnReads.receiversColumn(parent, value) : value;
                     }
                     case PRIM_VECTOR -> toSequence(list(raw).toArray());
                     case STRING_VECTOR -> toSequence(list(raw).stream()

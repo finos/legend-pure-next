@@ -1,0 +1,29 @@
+// Copyright 2023 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+import platform::pure::metamodel::relation::*;
+import platform::pure::test::pct::*;
+import platform::pure::metamodel::valuespecification::*;
+
+// A column read ($row.col) reads its receiver's column: the column of that name in the receiver's relation
+// type, the very object, wherever the function was read from (a PDB included).
+function <<PCT.test>> platform::pure::functions::relation::tests::columnRead::testAColumnReadIsItsReceiversColumn<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let read = {r: (a:Integer, b:String)[1] | $r.b};
+    let expression = $read.expressionSequence->at(0)->cast(@FunctionExpression);
+    let receiversColumn = $expression.parametersValues->at(0).genericType->cast(@platform::pure::metamodel::type::generics::GenericTypeValue).type->cast(@RelationType<Any>).columns->filter(c | $c.name == 'b')->toOne();
+    // checked here, where the function was read: what a translator rebuilds of captured metamodel objects is a copy
+    let isTheReceiversColumn = $expression.func->toOne()->is($receiversColumn);
+    assert($f->eval(| $isTheReceiversColumn));
+}

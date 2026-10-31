@@ -131,13 +131,9 @@ function platform::pure::compiler::pdb::writerHelper::pointerKindAndSegs(v:Any[1
       s   : Stereotype[1]                    | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 3, segs = [$s.profile->toOne()->fullPath(), $s.value->toOne()]),
       t   : Tag[1]                           | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 4, segs = [$t.profile->toOne()->fullPath(), $t.value->toOne()]),
       pe  : platform::pure::metamodel::PackageableElement[1] | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [$pe->fullPath()]),
-      // Live relation column whose owner is a RelationType (not packageable):
-      // unresolvable either way, but the segment must be deterministic and
-      // platform-independent — toString would differ between the JVM
-      // interpreter and the JS runtime. Mirrors the reference writer's
-      // explicit Column arm (column name).
-      col : platform::pure::metamodel::relation::Column<Nil, Any|*>[1] | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [if($col.name->isEmpty(), | $col->toString(), | $col.name->toOne())]),
-      a   : Any[1]                           | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [$a->toString()])
+      // Nothing addresses it (a relation column is written inline, where its slot allows): writing anything
+      // would lose it, and the reader would never know — mirrors the Java writer.
+      a   : Any[1]                           | fail('PDB writer: cannot write a pointer to a ' + $a->type()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()); ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = []);
    ]);
 }
 

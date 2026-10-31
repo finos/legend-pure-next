@@ -1331,6 +1331,7 @@
 # --- Function ---
 
 :Function a :Class ;
+    :taggedValues [ a :TaggedValue ; :classifierGenericType :GenericType_platform_pure_metamodel_extension_TaggedValue ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "Column,LambdaFunction" ] ] ;
     :stereotypes :platform_pure_profiles_typemodifiers_abstract ;
     :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "Function" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Function ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_TypeParameter ; :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "T" ] ] ] ] ] ;
@@ -1765,7 +1766,7 @@
     :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "func" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_platform_pure_metamodel_valuespecification_FunctionExpression [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Function ; :typeArguments :GenericType_platform_pure_metamodel_type_Any ] ) ; :multiplicityArguments :ZeroOne ] ;
     :owner :FunctionExpression ;
-    :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_maybePointer ;
     :genericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Function ; :typeArguments :GenericType_platform_pure_metamodel_type_Any ] ;
     :multiplicity :ZeroOne .
 

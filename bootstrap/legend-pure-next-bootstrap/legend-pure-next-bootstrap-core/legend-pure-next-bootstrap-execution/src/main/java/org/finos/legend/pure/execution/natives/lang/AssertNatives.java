@@ -63,7 +63,6 @@ public class AssertNatives
             try
             {
                 eval.executeFunction(args.get(0), List.of());
-                throw new PureAssertionError("Expected error with message containing: '" + expectedMessage + "' but no error was thrown");
             }
             catch (Exception e)
             {
@@ -76,6 +75,8 @@ public class AssertNatives
                 }
                 return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
             }
+            // outside the try: this failure is not the error the function was expected to raise
+            throw new PureAssertionError("Expected error with message containing: '" + expectedMessage + "' but no error was thrown");
         });
 
         // assertEqual(Any[*], Any[*]) : Boolean[1]

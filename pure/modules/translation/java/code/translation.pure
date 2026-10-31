@@ -3588,10 +3588,14 @@ function platform::extensions::language::java::translation::pureTypeToJavaType(c
    // PackageableElement, which it is not. It erases to Object anyway.
    |if ($rawOpt->toOne()->instanceOf(platform::pure::metamodel::type::generics::TypeParameter),
       | $conv->pureTypeToJavaTypeResolved($rawOpt->toOne(), $mult),
+   // A relation type (a row, `(a:Integer, b:String)`) has no path either: it is anonymous, structural. It
+   // erases to Object, as the values of a type parameter do.
+   |if ($rawOpt->toOne()->instanceOf(platform::pure::metamodel::relation::RelationType),
+      | if ($mult->holdsManyValues(), | javaList(), | javaObject()),
    |if ($rawOpt->toOne()->elementToPath()->startsWith('platform::pure::metamodel::function::') && !$mult->holdsManyValues(),
       | $g->javaFunctionalInterfaceFor(),
       | $conv->pureTypeToJavaTypeResolved($rawOpt->toOne(), $mult)
-   )));
+   ))));
 }
 
 // A single function value (LambdaFunction, Function, ...) as the raw
@@ -3887,9 +3891,12 @@ function <<access.private>> platform::extensions::language::java::translation::t
    // A qualified property is called, not read: its arguments would be dropped by
    // the property-access fallback (`$p.fullName(true)` → `p.fullName()`).
    let isQualified = $fe.func->isNotEmpty() && $fe.func->toOne()->instanceOf(platform::pure::metamodel::function::property::QualifiedProperty);
+   // A relation column read ($row.col): the row's value in that column.
+   let isColumn = $fe.func->isNotEmpty() && $fe.func->toOne()->instanceOf(platform::pure::metamodel::relation::Column);
    // Every Pure call passes through here, so this is the one place the call's
    // source position has to be recorded — see withPureSource.
    let code = if ($isProperty, | $conv->translatePropertyAccess($fe),
+   |if ($isColumn, | $conv->runtimeCall('PureRelations', 'columnValue', [$conv->translateExpression($fe.parametersValues->at(0)), j_string($fe.func->toOne()->cast(@platform::pure::metamodel::relation::Column<Nil, Any|*>).name->toOne())], javaObject()),
    |if ($isQualified, | $conv->translateQualifiedPropertyCall($fe),
    |if ($coderOpt->isNotEmpty(),
       | $coderOpt->toOne()->eval($fe, $conv),
@@ -3906,7 +3913,7 @@ function <<access.private>> platform::extensions::language::java::translation::t
                   | fail('No coder for Pure function: ' + $fe.functionName); j_null();
               )
         ))
-   ));
+   )));
    $code->platform::extensions::language::java::translation::withPureSource($fe.sourceInformation);
 }
 

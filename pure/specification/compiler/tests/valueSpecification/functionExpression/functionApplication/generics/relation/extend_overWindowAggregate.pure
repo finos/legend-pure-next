@@ -59,7 +59,7 @@ function f_Relation_1__Any_MANY_(rel:Relation<(id:@Integer@[1], grp:@Integer@[1]
         typeParam U -> #(id:#Integer##[1]#, grp:#Integer##[1]#)#
         typeParam V -> #Integer#
         Lambda(p:#Relation<#(id:#Integer##[1]#, grp:#Integer##[1]#)#>##[1]#, w:#Window<#(id:#Integer##[1]#, grp:#Integer##[1]#)#>##[1]#, r:#(id:#Integer##[1]#, grp:#Integer##[1]#)##[1]#) :#LambdaFunction<#{#Relation<#(id:#Integer##[1]#, grp:#Integer##[1]#)#>##[1]#, #Window<#(id:#Integer##[1]#, grp:#Integer##[1]#)#>##[1]#, #(id:#Integer##[1]#, grp:#Integer##[1]#)##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @29:38-29:52
-          DotApplication id :#Integer##[1]#  ~@DotApplication@  @29:49-29:51
+          DotApplication column id :#Integer##[1]#  ~@DotApplication@  @29:49-29:51
             Variable r :#(id:#Integer##[1]#, grp:#Integer##[1]#)##[1]#  ~@VariableExpression@  @29:47-29:48
         Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @29:56-29:68
           ArrowInvocation total_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @29:60-29:68
@@ -68,7 +68,7 @@ function f_Relation_1__Any_MANY_(rel:Relation<(id:@Integer@[1], grp:@Integer@[1]
         TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(newCol:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
     Lambda(x:#(id:#Integer##[1]#, grp:#Integer##[1]#, newCol:#Integer##[1]#)##[1]#) :#LambdaFunction<#{#(id:#Integer##[1]#, grp:#Integer##[1]#, newCol:#Integer##[1]#)##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @29:79-29:93
       FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @29:83-29:93
-        DotApplication newCol :#Integer##[1]#  ~@DotApplication@  @29:83-29:89
+        DotApplication column newCol :#Integer##[1]#  ~@DotApplication@  @29:83-29:89
           Variable x :#(id:#Integer##[1]#, grp:#Integer##[1]#, newCol:#Integer##[1]#)##[1]#  ~@VariableExpression@  @29:81-29:82
         AtomicValue  9 :@Integer@[1]  ~@AtomicValue@  @29:93-29:93
 

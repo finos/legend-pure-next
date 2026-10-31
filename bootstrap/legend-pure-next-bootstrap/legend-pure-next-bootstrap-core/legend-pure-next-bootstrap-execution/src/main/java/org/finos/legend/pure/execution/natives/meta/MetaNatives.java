@@ -1163,14 +1163,19 @@ public class MetaNatives
         validateConstraintsOnType(type, targetGT, value, eval, resolver);
         if (type._generalizations() != null)
         {
-            for (var gen : type._generalizations())
+            // Each parent as the object's type arguments bind it: a RenamedBox<Integer> (extends Box<U>) checks
+            // Box's constraints as Box<Integer> — its parameters made concrete with the ones below, as defaults are.
+            org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding typeBindings =
+                    org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
+            if (type instanceof platform.pure.metamodel.type.Class cls && cls._typeParameters() != null
+                    && targetGT instanceof platform.pure.metamodel.type.generics.GenericTypeValue v && v._typeArguments() != null)
             {
-                if (gen._general() != null && _GenericType.type(gen._general()) != null)
-                {
-                    platform.pure.metamodel.type.Type superType = _GenericType.type(gen._general());
-                    validateConstraints(superType, gen._general(), value, eval, resolver);
-                }
+                cls._typeParameters().zip(v._typeArguments()).forEach(pair -> typeBindings.addTypeBinding(pair.getOne(), pair.getTwo()));
             }
+            type._generalizations()
+                    .select(gen -> gen._general() != null && _GenericType.type(gen._general()) != null)
+                    .forEach(gen -> validateConstraints(_GenericType.type(gen._general()),
+                            _GenericType.makeAsConcreteAsPossible(gen._general(), typeBindings, resolver), value, eval, resolver));
         }
     }
 

@@ -74,9 +74,9 @@ function test::f_Relation_1__Relation_1_(rel:Relation<(grp:@Integer@[1], name:@S
             FunctionInvocation test::pair2_T_$0_1$__U_$0_1$__Pair2_1_ :#test::Pair2<#String#, #Integer#>##[1]#  ~@FunctionInvocation@  @34:38-34:57
               typeParam T -> #String#
               typeParam U -> #Integer#
-              DotApplication name :#String##[1]#  ~@DotApplication@  @34:46-34:50
+              DotApplication column name :#String##[1]#  ~@DotApplication@  @34:46-34:50
                 Variable x :#(grp:@Integer@[1], name:@String@[1], n:@Integer@[1])##[1]#  ~@VariableExpression@  @34:44-34:45
-              DotApplication n :#Integer##[1]#  ~@DotApplication@  @34:55-34:56
+              DotApplication column n :#Integer##[1]#  ~@DotApplication@  @34:55-34:56
                 Variable x :#(grp:@Integer@[1], name:@String@[1], n:@Integer@[1])##[1]#  ~@VariableExpression@  @34:53-34:54
           Lambda(y:#test::Pair2<#String#, #Integer#>##[*]#) :#LambdaFunction<#{#test::Pair2<#String#, #Integer#>##[*]#->#String##[0..1]#}#>#[1]  ~@AtomicValue@  @34:61-34:74
             ArrowInvocation test::firstA_Pair2_MANY__T_$0_1$_ :#String##[0..1]#  ~@ArrowInvocation@  @34:65-34:74

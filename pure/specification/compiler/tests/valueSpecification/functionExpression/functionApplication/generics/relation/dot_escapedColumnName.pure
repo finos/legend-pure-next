@@ -23,9 +23,9 @@ function f(row: (val:Integer, '\'a\'':String, 'b c':Integer)[1]): Any[*]
 ###CompiledGraph
 function f_UNKNOWN_1__Any_MANY_(row:(val:@Integer@[1], 'a':@String@[1], b c:@Integer@[1])[1]):@Any@[*]  ~UserDefinedFunction<{(val:@Integer@[1], 'a':@String@[1], b c:@Integer@[1])[1]->@Any@[*]}>
   Collection :#Any#[2]  ~@Collection@  @20:3-20:28
-    DotApplication 'a' :#String##[1]#  ~@DotApplication@  @20:8-20:15
+    DotApplication column 'a' :#String##[1]#  ~@DotApplication@  @20:8-20:15
       Variable row :#(val:@Integer@[1], 'a':@String@[1], b c:@Integer@[1])##[1]#  ~@VariableExpression@  @20:4-20:7
-    DotApplication b c :#Integer##[1]#  ~@DotApplication@  @20:22-20:27
+    DotApplication column b c :#Integer##[1]#  ~@DotApplication@  @20:22-20:27
       Variable row :#(val:@Integer@[1], 'a':@String@[1], b c:@Integer@[1])##[1]#  ~@VariableExpression@  @20:18-20:21
 
 ###ReverseIndex
