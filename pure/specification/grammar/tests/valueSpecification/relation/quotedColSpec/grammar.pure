@@ -1,0 +1,10 @@
+###Pure
+// A column spec's name, quoted ('…') when it is not an identifier, is the name without its quotes, as a
+// relation type column's is.
+function protocol::quotedColSpecs(): Any[*]
+{
+  ~'other kind';
+  ~'other kind' : String;
+  ~['a b', c];
+  ~'a b' : x|1;
+}

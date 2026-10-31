@@ -1,0 +1,5 @@
+# Legacy elements that are next's at another path: a reference to one is next's, its legacy definition dropped
+# (loader/code/loader.pure, Context.nexts). '<legacy path> <next path>', '# ...' a reason.
+
+# the window a window function gets ({p, w, r | ...}), which next's compiler builds as next's
+meta::pure::functions::relation::_Window platform::pure::functions::relation::Window

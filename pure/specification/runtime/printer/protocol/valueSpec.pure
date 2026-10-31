@@ -130,14 +130,10 @@ function platform::pure::functions::printer::protocol::printStringLiteral(s: Str
         // that the source had `'''` on its own opening line. Re-add the
         // leading `\n` in that case so the printed form matches.
         | '\'\'\'' + if ($s->endsWith('\n'), | '\n', | '') + $s + '\'\'\'',
-        | '\'' + escapeStringLiteral($s) + '\''
+        // The parser keeps a literal as written, its escapes intact (the compilers unescape it), so
+        // it is printed as it is.
+        | '\'' + $s + '\''
     );
-}
-
-// Pure source uses backslash escapes for `'` and `\` inside `'...'` literals.
-function platform::pure::functions::printer::protocol::escapeStringLiteral(s: String[1]): String[1]
-{
-    $s->replace('\\', '\\\\')->replace('\'', '\\\'');
 }
 
 function platform::pure::functions::printer::protocol::printCollection(c: platform::pure::protocol::grammar::valuespecification::Collection[1]): String[1]
@@ -158,10 +154,10 @@ function platform::pure::functions::printer::protocol::printFunctionInvocation(f
         pair(| isNotEqualPattern($name, $fi.parametersValues),| printNotEqualSugar($fi.parametersValues->at(0))),
         pair(| isUnaryNotOperator($name) && $arity == 1,      | '!' + printNotOperand($fi.parametersValues->at(0))),
         pair(| $name == 'minus' && $arity == 1,               | '-' + printNotOperand($fi.parametersValues->at(0))),
-        pair(| $name == 'new' && $arity >= 1,                 | printNewSugar($fi)),
+        pair(| isNewSugar($name, $fi.parametersValues),       | printNewSugar($fi)),
         pair(| $name == 'copy' && $arity == 2,                | printCopySugar($fi)),
         pair(| isAllSugar($name) && $arity >= 1,              | printAllSugar($name, $fi)),
-        pair(| $name == 'range' && $arity <= 3,               | printRangeSugar($fi)),
+        pair(| isRangeSugar($name, $fi.parametersValues),     | printRangeSugar($fi)),
         pair(| isColSpecSugar($name),                         | printColSpecSugar($name, $fi))],
        | $fi.parametersValues->map(p | printValueSpec($p))->joinStrings($name + '(', ', ', ')'));
 }
@@ -173,7 +169,17 @@ function platform::pure::functions::printer::protocol::printLetSugar(fi: platfor
     let nameArg = $fi.parametersValues->at(0);
     let valArg = $fi.parametersValues->at(1);
     let varName = $nameArg->cast(@platform::pure::protocol::grammar::valuespecification::AtomicValue).value->toOne()->cast(@String);
-    'let ' + $varName + ' = ' + printValueSpec($valArg);
+    // A lambda's body reads statements up to its closing brace: without one, the statements after the
+    // let would be read into it.
+    let value = $valArg->match([
+        a: platform::pure::protocol::grammar::valuespecification::AtomicValue[1] |
+            $a.value->match([
+                l: platform::pure::protocol::grammar::function::LambdaFunction[1] | printLambdaFunction($l, true),
+                any: Any[1] | printValueSpec($valArg)
+            ]),
+        any: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1] | printValueSpec($valArg)
+    ]);
+    'let ' + $varName + ' = ' + $value;
 }
 
 // Infix operator allow-list — names that parser emits as FunctionInvocation
@@ -311,6 +317,13 @@ function platform::pure::functions::printer::protocol::printNewSugar(fi: platfor
     '^' + printNewTarget($typeArg) + $keyExprs->map(keyExpr | printKeyExpression($keyExpr))->joinStrings('(', ', ', ')');
 }
 
+// `^Type(...)` is a `new` call whose first argument is the type (a GenericTypeAndMultiplicityHolder);
+// a `new` called with any other first argument, `new($class, 'id')`, is printed as the call it is.
+function platform::pure::functions::printer::protocol::isNewSugar(name: String[1], params: platform::pure::protocol::grammar::valuespecification::ValueSpecification[*]): Boolean[1]
+{
+    $name == 'new' && $params->isNotEmpty() && $params->at(0)->instanceOf(platform::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder);
+}
+
 // The first arg of a `new` call carries the constructor target. It may be:
 //   * a GenericTypeAndMultiplicityHolder (`@Class[1]`) — emit `pkg::Class`
 //   * any other VS — emit `$expr` / `expr()` for copy targets like `^$x(...)`.
@@ -344,6 +357,15 @@ function platform::pure::functions::printer::protocol::printAllSugar(name: Strin
 // `[:stop]`, `[start:stop]`, `[start:stop:step]` — the sliceExpression
 // grammar rule's sugar (the rule name follows the Python-slice-looking
 // syntax; the semantics are range).
+// `[a:b:c]` reads its bounds as the grammar's `expression`, which has no infix operators: a range of
+// anything but literals and variables is printed as the `range(...)` call it is.
+function platform::pure::functions::printer::protocol::isRangeSugar(name: String[1], params: platform::pure::protocol::grammar::valuespecification::ValueSpecification[*]): Boolean[1]
+{
+    $name == 'range' && $params->size() <= 3 && $params->forAll(p |
+        $p->instanceOf(platform::pure::protocol::grammar::valuespecification::AtomicValue)
+        || $p->instanceOf(platform::pure::protocol::grammar::valuespecification::VariableExpression));
+}
+
 function platform::pure::functions::printer::protocol::printRangeSugar(fi: platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): String[1]
 {
     let parts = $fi.parametersValues->map(p | printValueSpec($p));
@@ -368,8 +390,8 @@ function platform::pure::functions::printer::protocol::printColSpecSugar(name: S
 {
     let params = $fi.parametersValues;
     if([pair(| $name == 'colSpec',                                                | '~' + printColSpecBody($params)),
-        pair(| $name == 'funcColSpec' || $name == 'funcColSpec2',                 | '~' + extractAtomicString($params->at(1)) + ' : ' + printValueSpec($params->at(0))),
-        pair(| $name == 'aggColSpec' || $name == 'aggColSpec2',                   | '~' + extractAtomicString($params->at(2)) + ' : ' + printValueSpec($params->at(0)) + ' : ' + printValueSpec($params->at(1))),
+        pair(| $name == 'funcColSpec' || $name == 'funcColSpec2',                 | '~' + printColumnName(extractAtomicString($params->at(1))) + ' : ' + printValueSpec($params->at(0))),
+        pair(| $name == 'aggColSpec' || $name == 'aggColSpec2',                   | '~' + printColumnName(extractAtomicString($params->at(2))) + ' : ' + printValueSpec($params->at(0)) + ' : ' + printValueSpec($params->at(1))),
         pair(| $name == 'colSpecArray',                                           | printColSpecArraySugar($params)),
         pair(| $name == 'funcColSpecArray' || $name == 'funcColSpecArray2',       | printFuncColSpecArraySugar($params)),
         pair(| $name == 'aggColSpecArray' || $name == 'aggColSpecArray2',         | printAggColSpecArraySugar($params))],
@@ -383,8 +405,8 @@ function platform::pure::functions::printer::protocol::printColSpecBody(params: 
 {
     let nameStr = extractAtomicString($params->at(0));
     if ($params->size() < 2,
-        | $nameStr,
-        | $nameStr + extractColSpecTypeSuffix($params->at(1))
+        | printColumnName($nameStr),
+        | printColumnName($nameStr) + extractColSpecTypeSuffix($params->at(1))
     );
 }
 
@@ -444,11 +466,11 @@ function platform::pure::functions::printer::protocol::colSpecArrayEntry(nameVal
     let nameStr = extractAtomicString($nameVal);
     let matching = $cols->filter(c | !$c.name->isEmpty() && $c.name->toOne() == $nameStr);
     if ($matching->isEmpty(),
-        | $nameStr,
+        | printColumnName($nameStr),
         | let col = $matching->at(0);
           let gt = if ($col.genericType->isEmpty(), | '', | ' : ' + printGenericType($col.genericType->toOne()));
           let mul = if ($col.multiplicity->isEmpty(), | '', | printMultiplicity($col.multiplicity->toOne()));
-          $nameStr + $gt + $mul;
+          printColumnName($nameStr) + $gt + $mul;
     );
 }
 
@@ -489,7 +511,7 @@ function platform::pure::functions::printer::protocol::innerFuncColSpecEntry(e: 
     $e->match([
         fi: platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
             if ($fi.parametersValues->size() >= 2,
-                | extractAtomicString($fi.parametersValues->at(1)) + ' : ' + printValueSpec($fi.parametersValues->at(0)),
+                | printColumnName(extractAtomicString($fi.parametersValues->at(1))) + ' : ' + printValueSpec($fi.parametersValues->at(0)),
                 | printValueSpec($e);
             ),
         any: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1] | printValueSpec($any)
@@ -508,7 +530,7 @@ function platform::pure::functions::printer::protocol::innerAggColSpecEntry(e: p
     $e->match([
         fi: platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
             if ($fi.parametersValues->size() >= 3,
-                | extractAtomicString($fi.parametersValues->at(2)) + ' : ' + printValueSpec($fi.parametersValues->at(0)) + ' : ' + printValueSpec($fi.parametersValues->at(1)),
+                | printColumnName(extractAtomicString($fi.parametersValues->at(2))) + ' : ' + printValueSpec($fi.parametersValues->at(0)) + ' : ' + printValueSpec($fi.parametersValues->at(1)),
                 | printValueSpec($e);
             ),
         any: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1] | printValueSpec($any)
@@ -539,10 +561,12 @@ function platform::pure::functions::printer::protocol::printKeyExpression(keyExp
 
 function platform::pure::functions::printer::protocol::printKeyExpressionInvocation(fi: platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): String[1]
 {
-    if ($fi.functionName == 'keyExpression' && $fi.parametersValues->size() == 2,
+    // A third parameter, true, is the parser's mark of `+=` (append).
+    if ($fi.functionName == 'keyExpression' && ($fi.parametersValues->size() == 2 || $fi.parametersValues->size() == 3),
         | let kAtom = $fi.parametersValues->at(0)->cast(@platform::pure::protocol::grammar::valuespecification::AtomicValue);
           let k = $kAtom.value->toOne()->cast(@String);
-          $k + '=' + printValueSpec($fi.parametersValues->at(1));,
+          let op = if ($fi.parametersValues->size() == 3, | '+=', | '=');
+          $k + $op + printValueSpec($fi.parametersValues->at(1));,
         | $fi.parametersValues->map(p | printValueSpec($p))->joinStrings($fi.functionName + '(', ', ', ')')
     );
 }
@@ -569,7 +593,16 @@ function platform::pure::functions::printer::protocol::printArrowReceiver(v: pla
               || ($fi.functionName == 'minus' && $fi.parametersValues->size() == 1),
         any: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1] | false
     ]);
-    if ($needsParens, | '(' + printValueSpec($v) + ')', | printValueSpec($v));
+    // A lambda's body reads up to its closing brace: without one, `x|$x->f()` reads the call into the body.
+    let lambda = $v->match([
+        a: platform::pure::protocol::grammar::valuespecification::AtomicValue[1] | $a.value->match([
+            l: platform::pure::protocol::grammar::function::LambdaFunction[1] | $l,
+            o: Any[1] | []
+        ]),
+        any: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1] | []
+    ]);
+    if ($lambda->isNotEmpty(), | printLambdaFunction($lambda->toOne(), true),
+        | if ($needsParens, | '(' + printValueSpec($v) + ')', | printValueSpec($v)));
 }
 
 // `receiver.name` for simple property access; `receiver.name(args)` when
@@ -609,9 +642,18 @@ function platform::pure::functions::printer::protocol::printGenericTypeAndMultip
 // accepts both forms but the corpus uses the bare form whenever possible).
 function platform::pure::functions::printer::protocol::printLambdaFunction(l: platform::pure::protocol::grammar::function::LambdaFunction[1]): String[1]
 {
+    printLambdaFunction($l, false);
+}
+
+// `braced`: in braces even when its one parameter would allow `x|...`.
+function platform::pure::functions::printer::protocol::printLambdaFunction(l: platform::pure::protocol::grammar::function::LambdaFunction[1], braced: Boolean[1]): String[1]
+{
     let params = $l.parameters->map(p | printLambdaParameter($p))->joinStrings(', ');
-    let body = $l.expressionSequence->map(b | printValueSpec($b))->joinStrings('; ');
-    if ($l.parameters->size() == 1,
+    // Several statements each end with `;` (the grammar's codeBlock), and need the braces even with
+    // one parameter: `x|a; b;` would end the lambda at the first `;`.
+    let several = $l.expressionSequence->size() > 1;
+    let body = $l.expressionSequence->map(b | printValueSpec($b) + if ($several, | ';', | ''))->joinStrings(' ');
+    if ($l.parameters->size() == 1 && !$several && !$braced,
         | $params + '|' + $body,
         | '{' + $params + '|' + $body + '}'
     );

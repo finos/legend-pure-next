@@ -150,7 +150,7 @@ function platform::pure::compiler::structural::genericTypeCompiler::compileGener
             let ftParamAccum = $ft.parameters->fold({fp, acc |
                 let fpType = $fp.genericType->toOne()->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue);
                 let fpGtResult = $fpType->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext);
-                let fpMult = $fp.multiplicity->toOne()->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+                let fpMult = $fp.multiplicity->toOne()->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($acc.context);
                 ^$acc(
                     values += ^VariableExpression(
                         // Anonymous params in `Function<{X[1]->Y[1]}>` have no
@@ -164,7 +164,7 @@ function platform::pure::compiler::structural::genericTypeCompiler::compileGener
                 );
             }, ^CompilerListResult<VariableExpression>(context = $context));
             let ftReturnGT = $ft.returnType->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ftParamAccum.context, $packagePath, $typeParameters, '', $ownerContext);
-            let ftReturnMul = $ft.returnMultiplicity->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+            let ftReturnMul = $ft.returnMultiplicity->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($ftParamAccum.context);
             let functionType = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);
             let compiledFT = ^$functionType(
                 parameters = $ftParamAccum.values,
@@ -197,14 +197,7 @@ function platform::pure::compiler::structural::genericTypeCompiler::compileGener
     // Compile multiplicity arguments — mirrors Java line 86
     // Resolve multiplicity parameters against ownerMulParams (matches Java MultiplicityCompiler.resolveOrCreateMultiplicityParameter)
     let mulArgs = $protocolGT.multiplicityArguments->map(m |
-        let compiled = $m->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
-        if($compiled->instanceOf(MultiplicityParameter),
-            | let mp = $compiled->cast(@MultiplicityParameter);
-              let fromOwner = $typeArgResult.context.ownerMulParams->filter(p | $p.name == $mp.name);
-              if($fromOwner->isNotEmpty(), | $fromOwner->toOne(), | $mp);,
-            | $compiled
-        );
-    );
+        $m->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($typeArgResult.context));
 
     // Compile type variable values (e.g., Varchar(200)) — mirrors Java line 87
     let typeVarValues = $protocolGT.typeVariableValues->map(tvv | $tvv->platform::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification($typeArgResult.context, [])).values->cast(@ValueSpecification);

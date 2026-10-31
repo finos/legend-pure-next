@@ -37,6 +37,28 @@ function <<PCT.test>> platform::pure::functions::collection::tests::map::testMap
     assertEquals(['Smith', 'Doe', 'Branche'], $f->eval(|$people->map(p | $p.lastName)));
 }
 
+// map over one value ([m] bound to [1]) is that one value, of its own class: a match arm taking one value of
+// a subclass of the type it is declared takes it.
+function <<PCT.test>> platform::pure::functions::collection::tests::map::testMapOneValueKeepsItsClass<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let shape = ^M_Circle(radius = 2)->cast(@M_Shape);
+    assertEquals('circle', $f->eval(|$shape->map(s | $s->platform::pure::functions::collection::tests::map::sameShape())->match([c: M_Circle[1] | 'circle', s: M_Shape[1] | 'shape'])));
+}
+
+Class platform::pure::functions::collection::tests::map::M_Shape
+{
+}
+
+Class platform::pure::functions::collection::tests::map::M_Circle extends platform::pure::functions::collection::tests::map::M_Shape
+{
+    radius: Integer[1];
+}
+
+function <<test.TestDependency>> platform::pure::functions::collection::tests::map::sameShape(s: M_Shape[1]): M_Shape[1]
+{
+    $s->match([x: M_Shape[1] | $x])
+}
+
 function <<PCT.test>> platform::pure::functions::collection::tests::map::testMapRelationshipFromOneToOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let address = ^M_Address(name='Paris, FR', type=M_GeographicEntityType.CITY);

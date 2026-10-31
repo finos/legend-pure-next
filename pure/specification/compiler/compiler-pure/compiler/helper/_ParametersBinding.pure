@@ -94,9 +94,26 @@ function platform::pure::compiler::helper::parametersBinding::ownersMatch(a:Any[
     )
 }
 
+// Routed by owner, as addTypeBinding: a multiplicity parameter of the enclosing function/class is bound in
+// the enclosing owner, not taken for the callee's own of the same name (a caller's m and eval's) — mirrors
+// Java FunctionCallParametersBinding.addMultiplicityBinding.
 function platform::pure::compiler::helper::parametersBinding::addMultiplicityBinding(pb:ParametersBinding[1], mulParam:MultiplicityParameter[1], argMul:Multiplicity[1]):ParametersBinding[1]
 {
-    ^$pb(multiplicityBindings = $pb.multiplicityBindings->putMapList($mulParam.name, $argMul))
+    $pb->match([
+        fcpb : FunctionCallParametersBinding[1] |
+            if($fcpb->isEnclosingOwners($mulParam.owner),
+                | ^$fcpb(enclosingOwner = $fcpb.enclosingOwner->toOne()->addMultiplicityBinding($mulParam, $argMul)->cast(@EnclosingOwnerParametersBinding)),
+                | ^$fcpb(multiplicityBindings = $fcpb.multiplicityBindings->putMapList($mulParam.name, $argMul))
+            ),
+        other : ParametersBinding[1] |
+            ^$other(multiplicityBindings = $other.multiplicityBindings->putMapList($mulParam.name, $argMul))
+    ])
+}
+
+// A parameter owned by the function/class enclosing the call.
+function platform::pure::compiler::helper::parametersBinding::isEnclosingOwners(fcpb:FunctionCallParametersBinding[1], owner:Any[0..1]):Boolean[1]
+{
+    $fcpb.enclosingOwner->isNotEmpty() && $owner->isNotEmpty() && ownersMatch($owner->toOne(), $fcpb.enclosingOwner->toOne().owner)
 }
 
 function platform::pure::compiler::helper::parametersBinding::putMapList<K,V>(map:Map<K,List<V>>[1], key:K[1], value:V[1]):Map<K,List<V>>[1]
@@ -135,15 +152,12 @@ function platform::pure::compiler::helper::parametersBinding::unify_step2_transi
             if($gtv.type->isNotEmpty(),
                 | $gtv.type->toOne()->match([
                       tp : TypeParameter[1] |
+                          // the target where it lives: the enclosing owner's, never a local one of its name
+                          // (a caller's T and the callee's)
                           let targetName = $tp.name;
-                          let targetBindingOptional = $tb.typeBindings->get($targetName);
-
-                          let targetBinding = if(($targetBindingOptional->isEmpty() || $targetBindingOptional->toOne().values->isEmpty()) && $tb.enclosingOwner->isNotEmpty(),
-                              | if($tp.owner->isNotEmpty() && ownersMatch($tp.owner->toOne(), $tb.enclosingOwner->toOne().owner),
-                                    | $tb.enclosingOwner->toOne().typeBindings->get($targetName),
-                                    | $targetBindingOptional
-                                ),
-                              | $targetBindingOptional
+                          let targetBinding = if($tb->isEnclosingOwners($tp.owner),
+                              | $tb.enclosingOwner->toOne().typeBindings->get($targetName),
+                              | $tb.typeBindings->get($targetName)
                           );
 
                           if($targetBinding->isNotEmpty() && $targetBinding->toOne().values->size() == 1,
@@ -192,7 +206,10 @@ function platform::pure::compiler::helper::parametersBinding::unify_step3_transi
     $mul->match([
         mp : MultiplicityParameter[1] |
             let targetName = $mp.name;
-            let targetBinding = $tb.multiplicityBindings->get($targetName);
+            let targetBinding = if($tb->isEnclosingOwners($mp.owner),
+                | $tb.enclosingOwner->toOne().multiplicityBindings->get($targetName),
+                | $tb.multiplicityBindings->get($targetName)
+            );
             if($targetBinding->isNotEmpty() && $targetBinding->toOne().values->size() == 1,
                 | let resolved = $targetBinding->toOne().values->at(0);
                   $resolved->match([

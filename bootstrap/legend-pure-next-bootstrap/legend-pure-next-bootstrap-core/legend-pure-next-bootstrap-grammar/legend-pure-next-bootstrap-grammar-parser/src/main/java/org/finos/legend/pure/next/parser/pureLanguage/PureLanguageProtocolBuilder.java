@@ -396,7 +396,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
 
     protected ValueSpecification buildOneColSpec(final M3Parser.OneColSpecContext ctx)
     {
-        ValueSpecification nameAtomic = new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.columnName()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(ctx.columnName().getText());
+        ValueSpecification nameAtomic = new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.columnName()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(columnName(ctx.columnName()));
         ValueSpecification typeHolder = ((ctx.type() != null || ctx.multiplicity() != null) ? new UserDefinedGenericTypeAndMultiplicityHolderImpl()._genericType(new UserDefinedGenericTypeImpl()._type(new RelationTypeImpl()._columns(Lists.mutable.with(buildOneColSpecColumn(ctx))))) : new CompilerGenericTypeAndMultiplicityHolderImpl());
         return new FunctionInvocationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName((ctx.anyLambda() != null ? (ctx.extraFunction() != null ? "aggColSpec" : "funcColSpec") : "colSpec"))._parametersValues((ctx.anyLambda() != null ? (ctx.extraFunction() != null ? Lists.mutable.with(buildAnyLambda(ctx.anyLambda()), buildAnyLambda(ctx.extraFunction().anyLambda()), nameAtomic, typeHolder) : Lists.mutable.with(buildAnyLambda(ctx.anyLambda()), nameAtomic, typeHolder)) : Lists.mutable.with(nameAtomic, typeHolder)));
     }
@@ -411,16 +411,23 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
         // short-circuit those branches and break function-signature
         // unification (Relation<(c:String[?])> vs <(c:String[*])>).
         ColumnImpl __result = new ColumnImpl()
-                ._name(ctx.columnName().getText())
+                ._name(columnName(ctx.columnName()))
                 ._nameWildCard(false);
         if (ctx.type() != null) __result._genericType(buildGenericType(ctx.type()));
         if (ctx.multiplicity() != null) __result._multiplicity(buildMultiplicity(ctx.multiplicity()));
         return __result;
     }
 
+    // A column's name: without its quotes when it is quoted ('other kind'), as a relation type column's is.
+    private static String columnName(final M3Parser.ColumnNameContext ctx)
+    {
+        String raw = ctx.getText();
+        return raw.startsWith("'") ? raw.substring(1, raw.length() - 1) : raw;
+    }
+
     protected ValueSpecification buildColumnNameAtomic(final M3Parser.OneColSpecContext ctx)
     {
-        return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.columnName()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(ctx.columnName().getText());
+        return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.columnName()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(columnName(ctx.columnName()));
     }
 
     protected ValueSpecification buildColSpecArrayHolder(final M3Parser.ColumnBuildersContext ctx)

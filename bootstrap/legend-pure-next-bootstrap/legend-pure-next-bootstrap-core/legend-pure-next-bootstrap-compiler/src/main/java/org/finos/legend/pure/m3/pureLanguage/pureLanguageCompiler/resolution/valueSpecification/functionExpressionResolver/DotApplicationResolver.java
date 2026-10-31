@@ -84,7 +84,9 @@ public final class DotApplicationResolver
 
         int errorCheckpoint = context.currentErrorCount();
         // Resolve the receiver to get its genericType before property lookup
-        MutableList<ValueSpecification> processParameters = expr._parametersValues().collect(p -> ValueSpecificationResolver.resolve(p, model, context));
+        // An untyped lambda argument is resolved once the function is found: a qualified property types its
+        // parameters from its own (as a function application does from its candidate's).
+        MutableList<ValueSpecification> processParameters = expr._parametersValues().collect(p -> isUntypedLambda(p) ? p : ValueSpecificationResolver.resolve(p, model, context));
         ValueSpecification receiver = processParameters.getFirst();
 
         // Parent-reference chain step: `~.~`, `~.~.~`, … parse as
@@ -95,7 +97,7 @@ public final class DotApplicationResolver
         // depth, look up the construction stack, stamp the typed copy.
         if ("~".equals(functionName))
         {
-            return resolveParentReferenceStep(expr, processParameters, model, context);
+            return resolveParentReferenceStep(expr, withLambdaArgumentsResolved(processParameters, null, receiver, model, context), model, context);
         }
 
         if (receiver._genericType() == null || receiver._genericType() instanceof CompilerNotSetGenericType)
@@ -109,7 +111,7 @@ public final class DotApplicationResolver
                         "Can't resolve property '" + functionName + "' on unresolved receiver",
                         expr._sourceInformation()));
             }
-            return expr._parametersValues(processParameters);
+            return expr._parametersValues(withLambdaArgumentsResolved(processParameters, null, receiver, model, context));
         }
 
         Type ownerType = _GenericType.type(receiver._genericType());
@@ -128,10 +130,12 @@ public final class DotApplicationResolver
             // Mirrors the corresponding error-path fix in
             // pure/specification/compiler/compiler-pure/.../dotApplicationResolver.pure (the Pure
             // compiler), which also writes processParameters into $dot here.
-            return expr._parametersValues(processParameters);
+            return expr._parametersValues(withLambdaArgumentsResolved(processParameters, null, receiver, model, context));
         }
 
-        Function result = lookupFunction(functionName, processParameters, receiver, ownerType, expr, model, context);
+        Function found = lookupFunction(functionName, processParameters, receiver, ownerType, expr, model, context);
+        processParameters = withLambdaArgumentsResolved(processParameters, found, receiver, model, context);
+        Function result = found;
         if (result == null)
         {
             // Preserve resolved receiver — see comment above. Without this,
@@ -171,9 +175,10 @@ public final class DotApplicationResolver
         }
 
         Multiplicity receiverMul = receiver._multiplicity();
+        // A bound is null when there is none: [1..*] has no upper bound, a multiplicity parameter neither.
         if (receiverMul != null && !(receiverMul instanceof CompilerNotSetMultiplicity)
-                && _Multiplicity.lowerBound(receiverMul) == 1
-                && _Multiplicity.upperBound(receiverMul) == 1)
+                && Long.valueOf(1).equals(_Multiplicity.lowerBound(receiverMul))
+                && Long.valueOf(1).equals(_Multiplicity.upperBound(receiverMul)))
         {
             // Normal case: [1] receiver, direct access.
             // Function-reference recording is deferred to the post-compile AST
@@ -513,5 +518,43 @@ public final class DotApplicationResolver
         }
 
         return (FunctionExpression) resolved;
+    }
+
+    private static boolean isUntypedLambda(ValueSpecification vs)
+    {
+        return vs instanceof platform.pure.metamodel.valuespecification.AtomicValue av
+                && av._value() instanceof platform.pure.metamodel.function.LambdaFunction lambda
+                && lambda._parameters().anySatisfy(p -> p._genericType() == null || !_GenericType.isConcrete(p._genericType()));
+    }
+
+    /**
+     * The arguments with their untyped lambdas resolved: for a qualified property, each lambda's parameters
+     * typed from the property's parameter (the receiver's class bindings applied); otherwise as they are.
+     */
+    private static MutableList<ValueSpecification> withLambdaArgumentsResolved(
+            MutableList<ValueSpecification> parameters,
+            Function found,
+            ValueSpecification receiver,
+            MetadataAccess model,
+            CompilationContext context)
+    {
+        ParametersBinding bindings = found instanceof QualifiedProperty && receiver != null && _GenericType.type(receiver._genericType()) instanceof platform.pure.metamodel.type.Class ownerClass
+                ? _Class.buildBindingsFromGenericType(ownerClass, receiver._genericType())
+                : null;
+        return parameters.collectWithIndex((p, i) ->
+        {
+            if (!isUntypedLambda(p))
+            {
+                return p;
+            }
+            if (found instanceof QualifiedProperty qp && i < qp._parameters().size() && bindings != null)
+            {
+                platform.pure.metamodel.valuespecification.AtomicValue av = (platform.pure.metamodel.valuespecification.AtomicValue) p;
+                platform.pure.metamodel.function.LambdaFunction typed = FunctionApplicationResolver.setMissingLambdaParameterInformation(
+                        (platform.pure.metamodel.function.LambdaFunction) av._value(), qp._parameters().get(i)._genericType(), bindings, model);
+                return ValueSpecificationResolver.resolve(((platform.pure.metamodel.valuespecification.AtomicValue) av._copy())._value(typed), model, context);
+            }
+            return ValueSpecificationResolver.resolve(p, model, context);
+        });
     }
 }

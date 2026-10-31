@@ -19,10 +19,10 @@ function test(): Any[*]
 ###CompiledGraph
 native function check_String_MANY__Boolean_1_(s:@String@[*]):@Boolean@[1]  ~NativeFunction<{@String@[*]->@Boolean@[1]}>
 
-function g_Function_1__String_m_(f:Function<{@String@[m]->@Boolean@[1]}>[1]):@String@[m]  ~UserDefinedFunction<{Function<{@String@[m]->@Boolean@[1]}>[1]->@String@[m]}>
+function g_Function_1__String_m_(f:Function<{@String@[m~g_Function_1__String_m_]->@Boolean@[1]}>[1]):@String@[m~g_Function_1__String_m_]  ~UserDefinedFunction<{Function<{@String@[m~g_Function_1__String_m_]->@Boolean@[1]}>[1]->@String@[m~g_Function_1__String_m_]}>
   Collection :#Nil#[0]  ~@Collection@  @6:3-6:4
 
-function f_String_m__String_m__String_1_(s:@String@[m], a:@String@[m]):@String@[1]  ~UserDefinedFunction<{@String@[m], @String@[m]->@String@[1]}>
+function f_String_m__String_m__String_1_(s:@String@[m~f_String_m__String_m__String_1_], a:@String@[m~f_String_m__String_m__String_1_]):@String@[1]  ~UserDefinedFunction<{@String@[m~f_String_m__String_m__String_1_], @String@[m~f_String_m__String_m__String_1_]->@String@[1]}>
   AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @11:3-11:5
 
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>

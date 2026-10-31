@@ -1,0 +1,461 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::bridge::loader::*;
+import meta::pure::bridge::loader::tests::*;
+
+// A legacy source placed in a context: legacy's imports are meta::pure::metamodel::type and
+// meta::pure::profiles, next's platform::pure::metamodel::type; next has b::Done, b::done/1, the doc and pct
+// profiles (pct::PCT without excludePlatform), and Class; the bridge has meta::pure::metamodel::type::Class.
+function <<test.TestDependency>> meta::pure::bridge::loader::tests::context(): Context[1]
+{
+   ^Context(
+      imports = ['meta::pure::metamodel::type', 'meta::pure::profiles', 'meta::pure::metamodel::function'],
+      nextImports = ['platform::pure::metamodel::type', 'platform::pure::metamodel::function', 'platform::pure::metamodel'],
+      has = set(['b::Done', 'b::done#1', 'platform::pure::functions::meta::genericType#1', 'platform::pure::functions::date::hour#1', 'platform::pure::functions::date::year#1',
+         'platform::pure::metamodel::type::Stats', 'platform::pure::metamodel::type::statsOf#1']),
+      keptLegacyClasses = set(['meta::pure::metamodel::type::Stats']),
+      renamedProperties = newMap(pair('sourceInformation', 'legacySourceInformation')),
+      typeWitnesses = set(['to#2#1', 'check#2#1']),
+      setAside = set(['a::skipped']),
+      nexts = newMap(pair('meta::pure::metamodel::type::Table', 'x::tds::Table')),
+      nextSignatures = set(['platform::pure::functions::date::hour(DateTime[1])', 'platform::pure::functions::date::year(Date[1])', 'platform::pure::functions::meta::genericType(Any[*])',
+         'platform::pure::metamodel::type::statsOf(Any[1])']),
+      next = set(['b::Done', 'b::done', 'platform::pure::functions::relation::aggColSpec', 'platform::pure::profiles::doc', 'platform::pure::metamodel::type::Any',
+         'platform::pure::functions::lang::f', 'platform::pure::metamodel::type::Class', 'platform::pure::test::pct::PCT',
+         'platform::pure::metamodel::function::Function', 'platform::pure::functions::date::year_Date_1__Integer_1_', 'platform::pure::metamodel::multiplicity::PureOne',
+         'platform::pure::metamodel::PackageableElement']),
+      nextProfiles = set(['platform::pure::profiles::doc', 'platform::pure::profiles::doc.doc',
+         'platform::pure::test::pct::PCT', 'platform::pure::test::pct::PCT.test']),
+      legacy = set(['meta::pure::metamodel::type::Class', 'meta::pure::metamodel::function::Function', 'meta::pure::metamodel::type::Stats']),
+      legacyFunctions = set(['meta::pure::profiles::functionType', 'meta::pure::metamodel::type::genericType', 'meta::pure::metamodel::type::genericType#1',
+         'meta::pure::metamodel::type::new', 'meta::pure::metamodel::type::new#2',
+         'meta::pure::metamodel::type::run', 'meta::pure::metamodel::type::run#1']),
+      legacyFunctionIds = set(['meta::pure::metamodel::type::genericType_Any_MANY__GenericType_1_', 'a::g__Integer_1_']),
+      legacySignatures = newMap([pair('meta::pure::metamodel::type::genericType#1', ^List<String>(values = '(Any[*])')),
+         pair('meta::pure::metamodel::type::run#1', ^List<String>(values = '(legacy:Function[1])'))]),
+      nextDefaultSignatures = set(['genericType(Any[*])', 'run(Function[1])', 'isIt(Any[1], Class[1])', 'hour(DateTime[1])', 'toOne(_[*])', 'map(_[*], Function[1])']),
+      nextDefaultFunctions = newMap([pair('toOne#1', 'platform::pure::functions::lang::toOne'), pair('toOne', 'platform::pure::functions::lang::toOne'),
+         pair('genericType#1', 'platform::pure::metamodel::type::genericType'), pair('genericType', 'platform::pure::metamodel::type::genericType'),
+         pair('new#2', 'platform::pure::functions::lang::new'), pair('map#2', 'platform::pure::functions::collection::map'),
+         pair('run#1', 'platform::pure::functions::lang::run'), pair('hour#1', 'platform::pure::functions::date::hour'),
+         pair('check_Boolean_1__Function_1__Boolean_1_', 'platform::pure::functions::asserts::check_Boolean_1__Function_1__Boolean_1_')]),
+      elementTypes = newMap([pair('a::Person', 'meta::pure::metamodel::type::Class<a::Person>'), pair('a::Kind', 'meta::pure::metamodel::type::Enumeration<a::Kind>'),
+         pair('platform::pure::metamodel::multiplicity::PureOne', 'meta::pure::metamodel::multiplicity::PackageableMultiplicity')]),
+      nextReturns = newMap([pair('genericTypeOf#1', 'meta::pure::metamodel::type::generics::GenericType[1]'), pair('platform::pure::functions::meta::genericTypeOf#1', 'meta::pure::metamodel::type::generics::GenericType[1]'),
+         pair('generalizationsOf#1', 'meta::pure::metamodel::type::Class<Any>[*]')]),
+      legacyProperties = newMap([pair('meta::pure::metamodel::type::Class.generalizations', 'meta::pure::metamodel::type::Class<Any>[*]'),
+         pair('meta::pure::metamodel::type::Class.name', 'String[0..1]'), pair('a::Sub.generalizations', 'meta::pure::metamodel::type::Class<Any>[*]')]),
+      wraps = newMap([pair('meta::pure::metamodel::type::Class', 'platform::pure::metamodel::type::Class'),
+         pair('meta::pure::metamodel::function::Function', 'platform::pure::metamodel::function::Function'),
+         pair('meta::pure::metamodel::PackageableElement', 'platform::pure::metamodel::PackageableElement'),
+         pair('meta::pure::metamodel::function::LambdaFunction', 'platform::pure::metamodel::function::LambdaFunction'),
+         pair('meta::pure::metamodel::function::ConcreteFunctionDefinition', 'platform::pure::metamodel::function::UserDefinedFunction'),
+         pair('meta::pure::metamodel::Package', 'platform::pure::metamodel::Package')])
+   );
+}
+
+function <<test.TestDependency>> meta::pure::bridge::loader::tests::placed(source: String[1]): String[1]
+{
+   placed(platform::pure::functions::meta::parse('test', $source), context())
+      ->platform::pure::functions::printer::protocol::printProtocolFile();
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAnImportBringsInItsNextCounterpart(): Boolean[1]
+{
+   let printed = placed('import meta::pure::test::pct::*;\nfunction <<PCT.test>> a::f(): String[1]\n{\n  \'x\'\n}\n');
+   assert($printed->contains('import platform::pure::test::pct::*;'), | $printed);
+   assert($printed->contains('import platform::pure::profiles::*;'), | $printed);
+   assert($printed->contains('<<PCT.test>>'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAStereotypeOrTagNextsProfileLacksIsDropped(): Boolean[1]
+{
+   let printed = placed('import meta::pure::test::pct::*;\nfunction <<PCT.test, PCT.ExcludeModular>> {PCT.excludePlatform = \'x\', doc.doc = \'d\'} a::f(): String[1]\n{\n  \'x\'\n}\n');
+   assert($printed->contains('<<PCT.test>> {doc.doc = \'d\'} a::f'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testLegacyImportsOpenEverySection(): Boolean[1]
+{
+   let printed = placed('import a::*;\nfunction a::f(): String[1]\n{\n  \'x\'\n}\n');
+   assert($printed->contains('import a::legacyAdapters::*;'), | $printed);
+   assert($printed->contains('import meta::pure::metamodel::type::*;\nimport meta::pure::profiles::*;\nimport meta::pure::metamodel::function::*;\nimport a::*;'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAnElementTheContextHasIsDropped(): Boolean[1]
+{
+   let printed = placed('Class b::Done\n{\n  x: String[1];\n}\nfunction b::done(s: String[1]): String[1]\n{\n  $s\n}\nfunction b::done(s: String[1], t: String[1]): String[1]\n{\n  $s\n}\n');
+   assert(!$printed->contains('Class b::Done'), | $printed);
+   assert($printed->contains('b::done(s: String[1], t: String[1])'), | $printed);
+   assert(!$printed->contains('b::done(s: String[1]):'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testANativeTheContextLacksFailsWhenCalled(): Boolean[1]
+{
+   let printed = placed('native function <<a::p.s>> b::n<T|m>(x: T[m]): T[m];\nnative function b::done(s: String[1]): String[1];\n');
+   assert(!$printed->contains('native function'), | $printed);
+   assert($printed->contains('b::n<T|m>(x: T[m]): T[m]'), | $printed);
+   assert($printed->contains('not bridged: b::n'), | $printed);
+   assert(!$printed->contains('b::done'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testALegacyPathNextStandsForIsRenamed(): Boolean[1]
+{
+   let printed = placed('function {meta::pure::profiles::doc.doc = \'D\'} a::f(): meta::pure::metamodel::type::Any[*]\n{\n  meta::pure::functions::lang::f(1)\n}\n');
+   assert($printed->contains('platform::pure::profiles::doc.doc'), | $printed);
+   assert($printed->contains('platform::pure::metamodel::type::Any[*]'), | $printed);
+   assert($printed->contains('platform::pure::functions::lang::f(1)'), | $printed);
+   assert(!$printed->contains('meta::pure::profiles::doc') && !$printed->contains('meta::pure::metamodel::type::Any') && !$printed->contains('meta::pure::functions'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testANameBothImportsFindIsTheLegacyElement(): Boolean[1]
+{
+   let printed = placed('function a::f(c: Class<Any>[1]): Any[*]\n{\n  ^Class(name = \'Class\')->cast(@Class<Any>)\n}\n');
+   assert($printed->contains('c: meta::pure::metamodel::type::Class<Any>[1]'), | $printed);
+   assert($printed->contains('^meta::pure::metamodel::type::Class('), | $printed);
+   assert($printed->contains('@meta::pure::metamodel::type::Class<Any>'), | $printed);
+   assert($printed->contains('\'Class\''), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testNamesThatAreNotReferencesAreLeftAsTheyAre(): Boolean[1]
+{
+   let printed = placed('Enum a::E\n{\n  Class\n}\nfunction a::f(Class: String[1]): Any[*]\n{\n  [$Class, a::E.Class]\n}\n');
+   assert(!$printed->contains('meta::pure::metamodel::type::Class'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testASourceDeclaresItsElementsAFunctionWithItsArity(): Boolean[1]
+{
+   let file = platform::pure::functions::meta::parse('test', 'Class a::C\n{\n}\nnative function a::n(f: Function<{String[1]->Boolean[1]}>[1], s: String[*]): Boolean[1];\nfunction a::f(): String[1]\n{\n  \'x\'\n}\n');
+   assertEquals(['a::C', 'a::n#2', 'a::f#0'], $file->declared()->map(e | $e->key()));
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAFunctionIsNotTheElementANameMeans(): Boolean[1]
+{
+   let printed = placed('function <<functionType.SideEffectFunction>> a::f(): String[1]\n{\n  \'x\'\n}\n');
+   assert($printed->contains('<<functionType.SideEffectFunction>>'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testNextsTestElementsAreNotWhatNextHas(): Boolean[1]
+{
+   let file = platform::pure::functions::meta::parse('test', 'Class <<test.TestDependency>> a::T\n{\n}\nfunction <<PCT.test>> a::t(): Boolean[1]\n{\n  true\n}\n'
+      + 'function <<PCT.function>> a::f(): Boolean[1]\n{\n  true\n}\nClass a::C\n{\n}\n');
+   assertEquals(['a::f#0', 'a::C'], $file->declared()->filter(e | !$e->isTest())->map(e | $e->key()));
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testALegacyFunctionNextsImportsAlsoFindIsNexts(): Boolean[1]
+{
+   let printed = placed('function meta::pure::metamodel::type::toOne<T>(values: T[*]): T[1]\n{\n  $values->at(0)\n}\nfunction a::f(): String[1]\n{\n  meta::pure::metamodel::type::toOne(\'x\')\n}\n');
+   assert(!$printed->contains('meta::pure::metamodel::type::toOne'), | $printed);
+   assert($printed->contains('platform::pure::functions::lang::toOne(\'x\')'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAFunctionTypeIsNexts(): Boolean[1]
+{
+   let printed = placed('function a::f(f: Function<{->Integer[1]}>[1], g: meta::pure::metamodel::function::Function<{String[1]->Integer[1]}>[1], c: Function<Any>[1]): Any[*]\n{\n  $f->eval()\n}\n');
+   assert($printed->contains('f: platform::pure::metamodel::function::Function<{->Integer[1]}>[1]'), | $printed);
+   assert($printed->contains('g: platform::pure::metamodel::function::Function<{String[1]->Integer[1]}>[1]'), | $printed);
+   assert($printed->contains('c: meta::pure::metamodel::function::Function<Any>[1]'), | $printed);
+}
+
+// Legacy code holds legacy objects, but function values are next's (lambdas, function references): a legacy
+// function taking a legacy function is overloaded to take a next one.
+function <<test.Test>> meta::pure::bridge::loader::tests::testALegacyFunctionTakingALegacyFunctionHasANextTypedAdapter(): Boolean[1]
+{
+   let file = platform::pure::functions::meta::parse('test', 'function <<PCT.function>> a::f<T>(f: meta::pure::metamodel::function::Function<T>[1], fs: meta::pure::metamodel::function::Function<Any>[*], n: String[1]): Boolean[1]\n{\n  true\n}\n'
+      + 'function a::g(c: Class<Any>[1]): Boolean[1]\n{\n  true\n}\n');
+   let adapters = $file->adapters(context())->platform::pure::functions::printer::protocol::printProtocolFile();
+   assert($adapters->contains('function a::legacyAdapters::f<T>(f: platform::pure::metamodel::function::Function<T>[1], fs: platform::pure::metamodel::function::Function<Any>[*], n: String[1]): Boolean[1]'), | $adapters);
+   assert($adapters->contains('a::f(meta::pure::bridge::m3::adapt($f)->cast(@meta::pure::metamodel::function::Function<T>), $fs->map(x|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::function::Function<Any>), $n)'), | $adapters);
+   assert(!$adapters->contains('a::legacyAdapters::g'), | $adapters);
+   assert(!$adapters->contains('PCT'), | $adapters);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAFunctionIdIsTheLegacyFunctionsOrNexts(): Boolean[1]
+{
+   let printed = placed('function a::f(): Any[*]\n{\n  [genericType_Any_MANY__GenericType_1_, meta::pure::functions::date::year_Date_1__Integer_1_]\n}\n');
+   assert($printed->contains('meta::pure::metamodel::type::genericType_Any_MANY__GenericType_1_'), | $printed);
+   assert($printed->contains('platform::pure::functions::date::year_Date_1__Integer_1_'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testALegacyFunctionOverLegacyMetamodelIsKeptAndCalled(): Boolean[1]
+{
+   let printed = placed('function meta::pure::metamodel::type::genericType(any: Any[*]): meta::pure::metamodel::type::Class<Any>[1]\n{\n  []->toOne()\n}\n'
+      + 'function a::f(): Any[*]\n{\n  1->genericType()\n}\n');
+   assert($printed->contains('function meta::pure::metamodel::type::genericType('), | $printed);
+   assert($printed->contains('1->meta::pure::metamodel::type::genericType()'), | $printed);
+   let atNextsPath = placed('function meta::pure::functions::meta::genericType(any: Any[*]): meta::pure::metamodel::type::Class<Any>[1]\n{\n  []->toOne()\n}\n');
+   assert($atNextsPath->contains('function meta::pure::functions::meta::genericType('), | $atNextsPath);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAVariableShadowingAnotherIsRenamedInItsScope(): Boolean[1]
+{
+   let printed = placed('function a::f(f: String[1]): Any[*]\n{\n  let s = [\'a\'];\n  $s->filter(f|$f == $s->at(0))->map(s|$s + $f);\n}\n');
+   assert($printed->contains('$s->filter(f_1|$f_1 == $s->at(0))->map(s_1|$s_1 + $f);'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testTheGrammarsOwnCallsAreNotRenamed(): Boolean[1]
+{
+   let printed = placed('function a::f(): Any[*]\n{\n  ^Any(name=\'x\')\n}\n');
+   assert($printed->contains('^platform::pure::metamodel::type::Any(name=\'x\')') || $printed->contains('^Any(name=\'x\')'), | $printed);
+}
+
+// A #TDS literal's header names its columns' types in text the parser keeps as it is: a legacy path there
+// is renamed like any other reference (legacy's Variant is next's).
+function <<test.Test>> meta::pure::bridge::loader::tests::testATdsHeadersTypesAreRenamed(): Boolean[1]
+{
+   let printed = placed('function a::f(): Any[1]\n{\n  #TDS\n    id, \'a b\':String, payload:meta::pure::metamodel::type::Any[0..1]\n    1, x, \'y,z\'\n  #\n}\n');
+   assert($printed->contains('id, \'a b\':String, payload:platform::pure::metamodel::type::Any[0..1]\n'), | $printed);
+   assert($printed->contains('1, x, \'y,z\''), | $printed);
+}
+
+// A function the grammar calls (`~col : map : reduce` is aggColSpec(...)) that next defines too is next's,
+// whatever legacy's parameters: next's grammar builds next's, which its compiler types the columns of.
+function <<test.Test>> meta::pure::bridge::loader::tests::testALegacyGrammarFunctionNextDefinesIsDropped(): Boolean[1]
+{
+   let printed = placed('function meta::pure::functions::relation::aggColSpec<U,T>(map: Function<{U[1]->Any[1]}>[1], s: String[1], cl: GenericTypeAndMultiplicityHolder<T|?>[1]): Any[1]\n{\n  []->toOne()\n}\nfunction meta::pure::functions::relation::kept(): Integer[1]\n{\n  1\n}\n');
+   assert(!$printed->contains('aggColSpec'), | $printed);
+   assert($printed->contains('meta::pure::functions::relation::kept'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAFunctionOverFunctionTypesIsNotOverLegacyMetamodel(): Boolean[1]
+{
+   let printed = placed('function meta::pure::metamodel::type::map<T,V>(value: T[*], func: Function<{T[1]->V[*]}>[1]): V[*]\n{\n  []\n}\n');
+   assert(!$printed->contains('function meta::pure::metamodel::type::map'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testACallBothCouldTakeIsLeftToOverloadingWhenTheirParametersDiffer(): Boolean[1]
+{
+   let printed = placed('function a::f(g: Function<Any>[1]): Any[*]\n{\n  [{|1}->run(), $g->run()]\n}\n');
+   assert($printed->contains('{|1}->run()'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAFunctionTypeNamedAsLegacysIsLegacys(): Boolean[1]
+{
+   let f = platform::pure::functions::meta::parse('test', 'function a::eval<T,V|m,n>(func: meta::pure::metamodel::function::Function<{T[n]->V[m]}>[1], param: T[n]): V[m]\n{\n  []->toOne()\n}\n'
+      + 'function a::run(f: Function<{->Integer[1]}>[1]): Integer[1]\n{\n  1\n}\n')->declared()->cast(@platform::pure::protocol::grammar::function::PackageableFunction);
+   assertEquals(['(legacy:Function[1], _[n])', '(Function[1])'], $f->map(x | $x->signature(true, context())));
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testNoAdapterIsWhatNextAlreadyHas(): Boolean[1]
+{
+   let file = platform::pure::functions::meta::parse('test', 'function a::isIt(x: Any[1], c: Class<Any>[1]): Boolean[1]\n{\n  true\n}\n');
+   assert($file->adapters(context()).sections->isEmpty(), | $file->adapters(context())->platform::pure::functions::printer::protocol::printProtocolFile());
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAnElementNextsParserCannotReadIsSetAsideNotItsFile(): Boolean[1]
+{
+   let parsed = 'test'->parsedSettingAside('function a::f(): Integer[1]\n{\n  1\n}\n\nfunction a::g(): Any[1]\n{\n  5 RomanLength~Pes\n}\n\nfunction a::h(): Integer[1]\n{\n  3\n}\n');
+   assertEquals(['function a::g(): Any[1]'], $parsed.setAside);
+   assertEquals(['a::f#0', 'a::h#0'], $parsed.file->toOne()->declared()->map(e | $e->key()));
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testALegacyOverloadNextsImportsLackIsKept(): Boolean[1]
+{
+   let printed = placed('function meta::pure::metamodel::type::hour(d: Date[1]): Integer[1]\n{\n  1\n}\nfunction meta::pure::metamodel::type::toOne<T>(values: T[*]): T[1]\n{\n  $values->at(0)\n}\n');
+   assert($printed->contains('function meta::pure::metamodel::type::hour('), | $printed);
+   assert(!$printed->contains('function meta::pure::metamodel::type::toOne'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAQualifiedCallIsNextsWhenLegacyLacksItsArity(): Boolean[1]
+{
+   let printed = placed('function a::f(): Any[*]\n{\n  [meta::pure::metamodel::type::genericType(1), meta::pure::metamodel::type::genericType(1, 2)]\n}\n');
+   assert($printed->contains('[meta::pure::metamodel::type::genericType(1), platform::pure::metamodel::type::genericType(1, 2)]'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testALegacyOverloadAtNextsPathWithOtherParametersIsKept(): Boolean[1]
+{
+   let printed = placed('function meta::pure::functions::date::hour(d: Date[1]): Integer[1]\n{\n  1\n}\nfunction meta::pure::functions::date::year(d: Date[1]): Integer[1]\n{\n  1\n}\n');
+   assert($printed->contains('function meta::pure::functions::date::hour('), | $printed);
+   assert(!$printed->contains('function meta::pure::functions::date::year('), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAnIntegerBeyond64BitsSetsAsideItsElement(): Boolean[1]
+{
+   let parsed = 'test'->parsedSettingAside('function a::f(): Integer[1]\n{\n  1\n}\n\nfunction a::g(): Integer[1]\n{\n  9223372036854775898\n}\n');
+   assertEquals(['function a::g(): Integer[1]'], $parsed.setAside);
+   assertEquals(['a::f#0'], $parsed.file->toOne()->declared()->map(e | $e->key()));
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testALegacyMetamodelObjectBuiltWithNextObjectsAdaptsThem(): Boolean[1]
+{
+   let printed = placed('function a::f(c: Any[1]): Any[*]\n{\n  [^Class(generalizations = $c, name = \'n\'), ^a::Sub(generalizations = [$c])]\n}\n');
+   assert($printed->contains('^meta::pure::metamodel::type::Class(generalizations=$c->map(x|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::Class<Any>), name=\'n\')'), | $printed);
+   assert($printed->contains('^a::Sub(generalizations=[$c]->map(x|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::Class<Any>))'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAMetamodelElementLegacyCodeNamesIsLegacy(): Boolean[1]
+{
+   let printed = placed('function a::f(): Any[*]\n{\n  [a::Person, a::Kind.A, a::Person.all(), a::f__Any_MANY_, meta::pure::metamodel::multiplicity::PureOne]\n}\n');
+   assert($printed->contains('[meta::pure::bridge::m3::adapt(a::Person)->cast(@meta::pure::metamodel::type::Class<a::Person>), a::Kind.A, a::Person.all(), a::f__Any_MANY_, '
+      + 'meta::pure::bridge::m3::adapt(platform::pure::metamodel::multiplicity::PureOne)->cast(@meta::pure::metamodel::multiplicity::PackageableMultiplicity)]'), | $printed);
+}
+
+// A class's property read (C.package) is a read of legacy's Class: the class adapted; an enumeration's value
+// (E.V) is a value, its enumeration not.
+function <<test.Test>> meta::pure::bridge::loader::tests::testAPropertyOfANamedClassIsLegacys(): Boolean[1]
+{
+   let printed = placed('function a::f(): Any[*]\n{\n  [a::Person.package, a::Kind.A]\n}\n');
+   assert($printed->contains('[meta::pure::bridge::m3::adapt(a::Person)->cast(@meta::pure::metamodel::type::Class<a::Person>).package, a::Kind.A]'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testWhatNextsFunctionsReturnToLegacyCodeIsLegacy(): Boolean[1]
+{
+   let printed = placed('function a::f(): Any[*]\n{\n  [1->genericTypeOf(), platform::pure::functions::meta::genericTypeOf(1), 1->generalizationsOf()]\n}\n');
+   assert($printed->contains('meta::pure::bridge::m3::adapt(1->genericTypeOf())->cast(@meta::pure::metamodel::type::generics::GenericType)'), | $printed);
+   assert($printed->contains('meta::pure::bridge::m3::adapt(platform::pure::functions::meta::genericTypeOf(1))->cast(@meta::pure::metamodel::type::generics::GenericType)'), | $printed);
+   assert($printed->contains('1->generalizationsOf()->map(x|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::Class<Any>)'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testANextFunctionTakingMetamodelObjectsHasALegacyTypedAdapter(): Boolean[1]
+{
+   let next = platform::pure::functions::meta::parse('next', 'function platform::pure::metamodel::type::pathOf(element: PackageableElement[1]): String[1]\n{\n  \'\'\n}\n'
+      + 'function platform::pure::metamodel::type::supersOf<T>(c: Class<T>[1]): Class<Any>[*]\n{\n  []\n}\n'
+      + 'function platform::pure::metamodel::type::run(f: Function<Any>[1], a: Any[1]): Any[1]\n{\n  1\n}\n')
+      ->declared()->cast(@platform::pure::protocol::grammar::function::PackageableFunction);
+   let adapters = $next->nextAdapters(context());
+   assert($adapters->contains('function meta::pure::metamodel::type::legacyAdapters::pathOf(element: meta::pure::metamodel::PackageableElement[1]): String[1]\n{\n  platform::pure::metamodel::type::pathOf(meta::pure::bridge::m3::unwrap($element)->cast(@platform::pure::metamodel::PackageableElement))\n}'), | $adapters);
+   assert($adapters->contains('function meta::pure::metamodel::type::legacyAdapters::supersOf<T>(c: meta::pure::metamodel::type::Class<T>[1]): meta::pure::metamodel::type::Class<Any>[*]\n{\n  platform::pure::metamodel::type::supersOf(meta::pure::bridge::m3::unwrap($c)->cast(@platform::pure::metamodel::type::Class<T>))->map(x|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::type::Class<Any>)\n}'), | $adapters);
+   // a legacy function (a property legacy code holds) given to next's function is unwrapped too; a next one
+   // (a lambda) goes to next's function directly
+   assert($adapters->contains('function meta::pure::metamodel::type::legacyAdapters::run(f: meta::pure::metamodel::function::Function<Any>[1], a: Any[1]): Any[1]\n{\n  platform::pure::metamodel::type::run(meta::pure::bridge::m3::unwrap($f)->cast(@platform::pure::metamodel::function::Function<Any>), $a)\n}'), | $adapters);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testANextFunctionTakingAFunctionTypeHasALegacyTypedAdapter(): Boolean[1]
+{
+   let next = platform::pure::functions::meta::parse('next', 'function platform::pure::metamodel::type::apply<T,V>(value: T[*], func: Function<{T[1]->V[*]}>[1]): V[*]\n{\n  []\n}\n')
+      ->declared()->cast(@platform::pure::protocol::grammar::function::PackageableFunction);
+   let adapters = $next->nextAdapters(context());
+   assert($adapters->contains('function meta::pure::metamodel::type::legacyAdapters::apply<T,V>(value: T[*], func: meta::pure::metamodel::function::Function<{T[1]->V[*]}>[1]): V[*]\n{\n  platform::pure::metamodel::type::apply($value, meta::pure::bridge::m3::unwrap($func)->cast(@platform::pure::metamodel::function::Function<{T[1]->V[*]}>))\n}'), | $adapters);
+}
+
+// Next's bootstrap elements (m3.ttl), which no Pure source declares, are named as values like the others.
+function <<test.Test>> meta::pure::bridge::loader::tests::testNextsBootstrapElementsAreLegacyValuesToo(): Boolean[1]
+{
+   let legacyOf = newMap([pair('platform::pure::metamodel::type::PrimitiveType', 'meta::pure::metamodel::type::PrimitiveType'),
+      pair('platform::pure::metamodel::multiplicity::PackageableMultiplicity', 'meta::pure::metamodel::multiplicity::PackageableMultiplicity')]);
+   assertEquals([pair('platform::pure::metamodel::type::primitives::String', 'meta::pure::metamodel::type::PrimitiveType'),
+                 pair('platform::pure::metamodel::multiplicity::PureOne', 'meta::pure::metamodel::multiplicity::PackageableMultiplicity')],
+      ['platform::pure::metamodel::type::primitives::String PrimitiveType', 'platform::pure::metamodel::multiplicity::PureOne PackageableMultiplicity']->bootstrapElementTypes($legacyOf));
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAPackageLegacyCodeNamesIsLegacy(): Boolean[1]
+{
+   assertEquals([pair('::', 'meta::pure::metamodel::Package'), pair('a', 'meta::pure::metamodel::Package'), pair('a::b', 'meta::pure::metamodel::Package')],
+      ['a::b::C', 'a::b::D', 'a::E']->packageTypes());
+}
+
+// A property read on a function value is reflection: the function adapted, its properties legacy's.
+function <<test.Test>> meta::pure::bridge::loader::tests::testAFunctionValueReflectedOnIsLegacy(): Boolean[1]
+{
+   let printed = placed('function a::f(g: Function<{->Integer[1]}>[1]): Any[*]\n{\n  let h = {|2};\n'
+      + '  [{|1}.expressionSequence, $g.classifierGenericType, a::g__Integer_1_.name, {x: Function<{->Integer[1]}>[1]|$x.name}, {y|$y.name}, $h.parameters];\n}\n');
+   assert($printed->contains('meta::pure::bridge::m3::adapt({|1})->cast(@meta::pure::metamodel::function::LambdaFunction<Any>).expressionSequence'), | $printed);
+   // a property of Any is the bridge's (testAReadOfAnysPropertyCrossesToTheBridge), legacy's view whatever the receiver
+   assert($printed->contains('meta::pure::bridge::m3::classifierGenericType($g)'), | $printed);
+   assert($printed->contains('meta::pure::bridge::m3::adapt(a::g__Integer_1_)->cast(@meta::pure::metamodel::function::ConcreteFunctionDefinition<Any>).name'), | $printed);
+   assert($printed->contains('x: platform::pure::metamodel::function::Function<{->Integer[1]}>[1]|meta::pure::bridge::m3::adapt($x)->cast(@meta::pure::metamodel::function::Function<Any>).name'), | $printed);
+   assert($printed->contains(', y|$y.name,'), | $printed);
+   assert($printed->contains('meta::pure::bridge::m3::adapt($h)->cast(@meta::pure::metamodel::function::LambdaFunction<Any>).parameters'), | $printed);
+}
+
+// Legacy's Any is next's: reading one of its properties in legacy code crosses into next's code, the bridge
+// gives legacy's view (whatever the receiver: the read is next's code wherever it is from).
+function <<test.Test>> meta::pure::bridge::loader::tests::testAReadOfAnysPropertyCrossesToTheBridge(): Boolean[1]
+{
+   let printed = placed('function a::f(x: Any[1]): Any[*]\n{\n  [$x.classifierGenericType, $x->map(y|$y.classifierGenericType.rawType)]\n}\n');
+   assert($printed->contains('[meta::pure::bridge::m3::classifierGenericType($x), $x->map(y|meta::pure::bridge::m3::classifierGenericType($y).rawType)]'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testAFunctionIdNextsImportsFindIsNexts(): Boolean[1]
+{
+   let printed = placed('function a::f(): Any[*]\n{\n  check_Boolean_1__Function_1__Boolean_1_\n}\n');
+   assert($printed->contains('platform::pure::functions::asserts::check_Boolean_1__Function_1__Boolean_1_'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testANextAdapterKeepsAOneToManyParameterOneToMany(): Boolean[1]
+{
+   let next = platform::pure::functions::meta::parse('next', 'function platform::pure::metamodel::type::choose(fs: Function<{Nil[1]->Any[1]}>[1..*]): Any[1]\n{\n  1\n}\n')
+      ->declared()->cast(@platform::pure::protocol::grammar::function::PackageableFunction);
+   let adapters = $next->nextAdapters(context());
+   assert($adapters->contains('$fs->map(x|meta::pure::bridge::m3::unwrap($x))->cast(@platform::pure::metamodel::function::Function<{Nil[1]->Any[1]}>)->toOneMany()'), | $adapters);
+}
+
+// A legacy class next has at its path but with fewer properties is legacy's: kept, and so is a legacy
+// function returning it (a native: stubbed) — next's would give next's class, without them.
+function <<test.Test>> meta::pure::bridge::loader::tests::testALegacyClassRicherThanNextsIsKeptWithItsFunctions(): Boolean[1]
+{
+   let printed = placed('Class meta::pure::metamodel::type::Stats\n{\n  size: Integer[1];\n}\nnative function meta::pure::metamodel::type::statsOf(m: Any[1]): Stats[1];\n');
+   assert($printed->contains('Class meta::pure::metamodel::type::Stats'), | $printed);
+   assert($printed->contains('function meta::pure::metamodel::type::statsOf(m: Any[1]): meta::pure::metamodel::type::Stats[1]'), | $printed);
+   assert($printed->contains('not bridged: meta::pure::metamodel::type::statsOf'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testTheClassesKeptAreThoseRicherThanNexts(): Boolean[1]
+{
+   let legacy = platform::pure::functions::meta::parse('legacy', 'Class meta::pure::a::Rich\n{\n  size: Integer[1];\n  count: Integer[1];\n}\nClass meta::pure::a::Same\n{\n  count: Integer[1];\n}\nClass meta::pure::a::Own\n{\n  x: Integer[1];\n}\n')->declared();
+   let next = platform::pure::functions::meta::parse('next', 'Class platform::pure::a::Rich\n{\n  count: Integer[1];\n}\nClass platform::pure::a::Same\n{\n  count: Integer[1];\n}\n')->declared();
+   assertEquals(['meta::pure::a::Rich'], $legacy->classesRicherThanNexts($next));
+}
+
+// The elements listed as set aside (natives/<module>.setAside: legacy features next lacks) are dropped.
+function <<test.Test>> meta::pure::bridge::loader::tests::testAnElementListedAsSetAsideIsDropped(): Boolean[1]
+{
+   let printed = placed('function a::skipped(): Integer[1]\n{\n  1\n}\nfunction a::kept(): Integer[1]\n{\n  2\n}\n');
+   assert(!$printed->contains('a::skipped'), | $printed);
+   assert($printed->contains('a::kept'), | $printed);
+}
+
+// A legacy element listed as next's at another path (natives/<module>.nexts: what next's grammar builds, a
+// #TDS literal's TDS) is dropped, and every reference to it, by its path or its name, is next's.
+function <<test.Test>> meta::pure::bridge::loader::tests::testAnElementListedAsNextsAtAnotherPathIsNexts(): Boolean[1]
+{
+   let printed = placed('Class meta::pure::metamodel::type::Table<T>\n{\n  csv: String[1];\n}\nfunction a::f(t: Table<Any>[1]): meta::pure::metamodel::type::Table<Any>[1]\n{\n  $t->cast(@Table<Any>)\n}\n');
+   assert(!$printed->contains('Class '), | $printed);
+   assert($printed->contains('t: x::tds::Table<Any>[1]): x::tds::Table<Any>[1]'), | $printed);
+   assert($printed->contains('@x::tds::Table<Any>'), | $printed);
+}
+
+// Legacy's Any is next's, whose properties legacy's lacks: a legacy class declaring one of them would
+// override next's. It is renamed, in the class and in every legacy read and assignment of it (legacy's Any
+// has none, so each is the class's own).
+function <<test.Test>> meta::pure::bridge::loader::tests::testAPropertyNamedLikeOneOfAnysIsRenamed(): Boolean[1]
+{
+   let printed = placed('Class a::Failure\n{\n  sourceInformation: String[0..1];\n}\n'
+      + 'function a::f(x: a::Failure[1]): Any[*]\n{\n  [$x.sourceInformation, ^a::Failure(sourceInformation=\'s\'), ^$x(sourceInformation=\'t\')]\n}\n');
+   assert($printed->contains('legacySourceInformation: String[0..1];'), | $printed);
+   assert($printed->contains('[$x.legacySourceInformation, ^a::Failure(legacySourceInformation=\'s\'), ^$x(legacySourceInformation=\'t\')]'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testThePropertiesRenamedAreAnysThatLegacyClassesDeclare(): Boolean[1]
+{
+   let legacy = platform::pure::functions::meta::parse('legacy', 'Class a::F\n{\n  sourceInformation: String[0..1];\n  classifierGenericType: String[0..1];\n  other: String[1];\n}\n')->declared();
+   assertEquals([pair('sourceInformation', 'legacySourceInformation')], $legacy->renamedProperties(['elementOverride', 'classifierGenericType', 'sourceInformation']));
+}
+
+// Legacy passes a type as @X to a parameter typed by a type parameter (to(v, type: T[0..1])), @X being of
+// type X; next's @X is a holder, its functions declaring GenericTypeAndMultiplicityHolder<T|?>.
+function <<test.Test>> meta::pure::bridge::loader::tests::testAParameterLegacyCallsGiveTypesToIsAHolder(): Boolean[1]
+{
+   let printed = placed('native function meta::pure::metamodel::type::to<T>(v: Any[0..1], type: T[0..1]): T[0..1];\n'
+      + 'function a::check<T>(v: Any[0..1], type: T[0..1]): Boolean[1]\n{\n  $type->isEmpty()\n}\n');
+   assert($printed->contains('to<T>(v: Any[0..1], type: GenericTypeAndMultiplicityHolder<T|?>[0..1]): T[0..1]'), | $printed);
+   // a body using it keeps it a value (reported by the load)
+   assert($printed->contains('a::check<T>(v: Any[0..1], type: T[0..1])'), | $printed);
+}
+
+function <<test.Test>> meta::pure::bridge::loader::tests::testTheParametersLegacyCallsGiveTypesTo(): Boolean[1]
+{
+   let file = platform::pure::functions::meta::parse('test', 'function a::f(): Any[*]\n{\n  [1->to(@Integer), a::toMany(1, @String, \'k\'), {|1->other(2)}]\n}\n');
+   assertEquals(['to#2#1', 'toMany#3#1'], $file->typeWitnesses());
+}

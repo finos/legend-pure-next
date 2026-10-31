@@ -42,7 +42,8 @@ function platform::pure::compiler::structural::relationTypeCompiler::compileRela
         );
         let colNameWC = if($col.nameWildCard->isEmpty(), | false, | $col.nameWildCard);
         ^$acc(
-            values += buildColumn(if($col.name->isEmpty(), | '', | $col.name), $ownerGT, $colGTResult.value->toOne(), $colMul, $colNameWC),
+            // the name read as a string literal is (Java RelationTypeCompiler): '\'a\'' is the column 'a', quotes included
+            values += buildColumn(if($col.name->isEmpty(), | '', | platform::pure::compiler::structural::valueSpecificationCompiler::unescapePureString($col.name->toOne())), $ownerGT, $colGTResult.value->toOne(), $colMul, $colNameWC),
             context = $colGTResult.context
         );
     }, ^CompilerListResult<Column<Nil, Any|*>>(context = $context));

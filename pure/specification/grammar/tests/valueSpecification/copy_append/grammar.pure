@@ -1,0 +1,12 @@
+###Pure
+import protocol::support::*;
+function protocol::copyAppend(): Any[*]
+{
+  let x = ^MyClass(names='a');
+  ^$x(names+='b');
+}
+
+Class protocol::support::MyClass
+{
+  names: String[*];
+}

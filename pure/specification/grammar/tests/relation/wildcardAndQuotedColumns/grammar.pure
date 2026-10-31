@@ -1,0 +1,4 @@
+###Pure
+native function test::sorted<T>(s: SortInfo<(?:?)⊆T>[*]): Boolean[1];
+
+native function test::quoted(r: Relation<('\'col\'':Integer,'a|b':String)>[1]): Boolean[1];

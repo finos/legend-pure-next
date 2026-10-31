@@ -218,7 +218,17 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
     // attempts: a lambda body resolved during candidate A is the same body when exploring
     // candidate B (the cache key already gates that). Without this threading, the cache
     // resets per candidate and never amortizes across the candidate explosion.
-    let tryResult = $candidates->fold({candidate, acc |
+    // Re-sorted against the arguments now resolved: a parameter's multiplicity ranked against its argument's
+    // (mirrors Java, which sorts once the arguments are pre-resolved).
+    let arguments = $preResolvedParams->map(p | $p.multiplicity);
+    let ranked = $candidates->sort({a, b |
+        let cmp = compareFunctionTypes($a->getFunctionType($context), $b->getFunctionType($context), $arguments, $context);
+        if($cmp != 0, | $cmp,
+            | let tpCmp = $a.typeParameters->size() - $b.typeParameters->size();
+              if($tpCmp != 0, | $tpCmp, | $a.multiplicityParameters->size() - $b.multiplicityParameters->size());
+        );
+    });
+    let tryResult = $ranked->fold({candidate, acc |
         if($acc.resolved,
             | $acc,
             | debug($deepCtx, | 'trying candidate: ' + $candidate->elementToPath());
@@ -265,13 +275,15 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
 
     // Step 3: Return result or restore first candidate's errors (like Java lines 127-133)
     if($tryResult.resolved,
-        | // Check for equally-specific ties (ambiguity detection — matches Java lines 104-115)
-          // Use normalized function type comparison (ignores TypeParameter name differences between PDB and local functions)
+        | // Check for equally-specific ties (ambiguity detection — matches Java lines 104-115): those the
+          // ranking cannot tell from the one resolved (Java's mostSpecificFirst, without the arguments), so
+          // that parameter types sharing a simple name are told apart by their full paths
           let resolvedCandidate = $tryResult.resolvedCandidate->toOne();
           let resolvedFT = $resolvedCandidate->getFunctionType($context);
-          let resolvedNorm = normalizeFunctionTypeForComparison($resolvedFT);
           let tied = $candidates->filter(c |
-              normalizeFunctionTypeForComparison($c->getFunctionType($context)) == $resolvedNorm
+              compareFunctionTypes($resolvedFT, $c->getFunctionType($context), $context) == 0
+                  && $resolvedCandidate.typeParameters->size() == $c.typeParameters->size()
+                  && $resolvedCandidate.multiplicityParameters->size() == $c.multiplicityParameters->size()
           );
           debug($deepCtx, | 'ambiguity check: tied=' + $tied->size()->toString() + ' for ' + $fi.functionName->toOne());
           if($tied->size() > 1,
@@ -738,8 +750,8 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
                         debug($context, | 'resolveArg: NO_MATCH class=' + $processed->type()->toOne()->elementToPath());
                         ^ResolveOneParamResult(resolved = false, newParam = $processed, bindings = $bindings, context = $ctx1, savedErrors = []);
                   );,
-              fi2 : FunctionInvocation[1] |
-                  // Check if REVERSE_MATCH (Java line 450-454)
+              fi2 : FunctionApplication[1] |
+                  // Check if REVERSE_MATCH (Java line 450-454): any application, `f(x)` or `x->f()`
                   if($fi2.func->isNotEmpty(),
                       | let ctx2 = $ctx1->rollbackErrors($checkpoint, 'REVERSE_MATCH_DISPATCH');
                         debug($context, | 'resolveArg: REVERSE_MATCH func=' + $fi2.functionName->toOne()
@@ -879,12 +891,12 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
 // ============================================================================
 
 function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::reverseMatch(
-    childExpr:FunctionInvocation[1],
+    childExpr:FunctionApplication[1],
     paramGT:GenericType[1],
     paramMul:Multiplicity[1],
     bindings:ParametersBinding[1],
     context:CompilerContext[1]
-):FunctionInvocation[1]
+):FunctionApplication[1]
 {
     // Collect child bindings: child's return type → parent's resolved param type
     let argGT = $childExpr.genericType->toOne();
@@ -921,7 +933,7 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
         }, $acc);
     }, $concreteChildTypeBindings);
 
-    populateResolvedParameters($childExpr, $concreteChildBindings, $context)->cast(@FunctionInvocation);
+    populateResolvedParameters($childExpr, $concreteChildBindings, $context)->cast(@FunctionApplication);
 }
 
 // ============================================================================
@@ -1070,29 +1082,6 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
         ->concatenate(if($outOfScope->isNotEmpty(), | '. Possible matches with ' + $paramCount->toString() + ' parameter(s) not in scope:\n    ' + $outOfScope->map(f | functionSignature($f, $context))->joinStrings('\n    '), | []))
         ->concatenate(if($diffArity->isNotEmpty(), | '. Possible matches with different number of parameters:\n    ' + $diffArity->map(f | functionSignature($f, $context))->joinStrings('\n    '), | []));
     $parts->joinStrings('');
-}
-
-// Normalizes a FunctionType to a canonical string for comparison.
-// TypeParameter names are replaced with positional names (P0, P1, ...) so that
-// functions with identical structure but different TypeParameter objects compare equal.
-// This avoids false negatives from PDB-loaded vs locally-compiled TypeParameter name differences.
-function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::normalizeFunctionTypeForComparison(ft:FunctionType[1]):String[1]
-{
-    // Collect all type parameter names and assign canonical names
-    let allTpNames = collectFunctionTypeReferencedTypeParameterNames($ft)->sort();
-    let allMpNames = collectFunctionTypeReferencedMultiplicityParameterNames($ft)->sort();
-    // Build the canonical FunctionType string using printFunctionType(false) then replace type param names
-    let raw = printFunctionType($ft, false);
-    // Replace each type parameter name with a canonical version
-    let withTp = $allTpNames->fold({n, acc |
-        let idx = $allTpNames->indexOf($n);
-        $acc->replace($n, '_TP' + $idx->toString());
-    }, $raw);
-    let withMp = $allMpNames->fold({n, acc |
-        let idx = $allMpNames->indexOf($n);
-        $acc->replace($n, '_MP' + $idx->toString());
-    }, $withTp);
-    $withMp;
 }
 
 // Matches Java FunctionIndexEntry.compareFunctionTypes + mostSpecificFirst comparator

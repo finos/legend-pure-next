@@ -15,6 +15,7 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import platform.pure.metamodel.multiplicity.MultiplicityParameter;
 import platform.pure.metamodel.type.generics.GenericType;
 import platform.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner;
@@ -307,21 +308,23 @@ public class PureLanguageCompilerContext implements CompilerContextExtension
     }
 
     /**
-     * Return the enclosing type parameter names (from the function or class being compiled).
+     * Return the scope keys of the enclosing type parameters (from the function or class being compiled):
+     * see {@link _GenericType#scopeKey}.
      */
-    public MutableSet<String> inScopeTypeParamNames()
+    public MutableSet<String> inScopeTypeParamKeys()
     {
         MutableList<TypeParameter> params = enclosingTypeParams();
-        return params != null ? params.collect(TypeParameter::_name).toSet() : Sets.mutable.empty();
+        return params != null ? _GenericType.scopeKeysOf(params.collect(TypeParameter::_owner), params.collect(TypeParameter::_name)) : Sets.mutable.empty();
     }
 
     /**
-     * Return the enclosing multiplicity parameter names (from the function or class being compiled).
+     * Return the scope keys of the enclosing multiplicity parameters (from the function or class being
+     * compiled): see {@link _GenericType#scopeKey}.
      */
-    public MutableSet<String> inScopeMultiplicityParamNames()
+    public MutableSet<String> inScopeMultiplicityParamKeys()
     {
         MutableList<MultiplicityParameter> params = enclosingMultiplicityParams();
-        return params != null ? params.collect(MultiplicityParameter::_name).toSet() : Sets.mutable.empty();
+        return params != null ? _GenericType.scopeKeysOf(params.collect(MultiplicityParameter::_owner), params.collect(MultiplicityParameter::_name)) : Sets.mutable.empty();
     }
 
     /**

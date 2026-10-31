@@ -24,7 +24,6 @@ import platform.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl;
 import platform.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
-import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 
@@ -246,7 +245,7 @@ public final class _Multiplicity
      * an in-scope enclosing parameter (which is valid).
      *
      * @param multiplicity     the multiplicity to check
-     * @param scopeMulParams   the set of multiplicity parameter names that are in scope
+     * @param scopeMulParams   the scope keys of the multiplicity parameters in scope ({@link _GenericType#scopeKey})
      */
     public static boolean isConcreteInContext(Multiplicity multiplicity, MutableSet<String> scopeMulParams)
     {
@@ -258,7 +257,7 @@ public final class _Multiplicity
         {
             return true;
         }
-        return scopeMulParams.contains(mp._name());
+        return scopeMulParams.contains(_GenericType.scopeKey(mp._owner(), mp._name()));
     }
 
     /**
@@ -283,9 +282,7 @@ public final class _Multiplicity
         // (including binding to other multiplicity parameters for transitive resolution)
         if (paramMul instanceof MultiplicityParameter mp)
         {
-            String name = mp._name();
-            bindings.multiplicityBindings().computeIfAbsent(name, k -> Lists.mutable.empty())
-                    .add(argMul);
+            bindings.addMultiplicityBinding(mp, argMul);
         }
     }
 

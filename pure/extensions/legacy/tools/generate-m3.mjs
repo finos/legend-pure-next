@@ -164,11 +164,22 @@ function renderGT(gt)
    return typePath(gt.path) + generics;
 }
 
+// A function type (Function<{...}>, LambdaFunction<{...}>): its values are next's — the lambdas legacy code
+// writes — so a property of one is typed by the next class (its signature keeps legacy's types).
+const isFunctionTyped = (gt) => (gt.typeArguments ?? []).some((a) => a.functionType) && !!mapping.classes[gt.path]?.wraps;
+
+function valueGT(gt)
+{
+   if (!isFunctionTyped(gt)) return renderGT(gt);
+   const mults = gt.multiplicityArguments ?? [];
+   return `${NEXT}${mapping.classes[gt.path].wraps[0]}<${gt.typeArguments.map(renderGT).join(', ')}${mults.length ? `|${mults.join(', ')}` : ''}>`;
+}
+
 // Whether values of this legacy type are next metamodel objects to wrap (vs values both sides share)
 function needsWrap(gt)
 {
    if (gt.typeParam) return true;
-   if (gt.functionType) return false;
+   if (gt.functionType || isFunctionTyped(gt)) return false;
    if (PRIMITIVES.has(gt.path) || mapping.types[gt.path]) return false;
    const m = mapping.classes[gt.path];
    return !!m && !m.legacyOnly;
@@ -230,15 +241,16 @@ function propertyBody(c, p, stats)
 function emitClass(c, stats)
 {
    const mode = modeOf(c.path);
+   // an alias is next's class itself, a supertype as it is; but Any, which every class has
    const gens = c.generalizations
-      .filter((g) => !(g.path && mapping.classes[g.path]?.alias))
+      .filter((g) => !(g.path && mapping.classes[g.path]?.alias === 'type::Any'))
       .map(renderGT);
    if (gens.length === 0 && !mode.legacyOnly) gens.push(WRAPPER);
    const header = `Class ${pathOf(c.path)}${typeParamsDecl(c)}${gens.length ? ` extends ${gens.join(', ')}` : ''}`;
    const body = [];
    for (const p of c.properties)
    {
-      const type = `${renderGT(p.genericType)}[${p.multiplicity}]`;
+      const type = `${valueGT(p.genericType)}[${p.multiplicity}]`;
       body.push(mode.legacyOnly ? `   ${p.name} : ${type};` : `   ${p.name} : ${type} = ${propertyBody(c, p, stats)};`);
    }
    return `${header}\n{\n${body.join('\n')}${body.length ? '\n' : ''}}`;

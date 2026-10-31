@@ -1,0 +1,5 @@
+# Legacy elements that are next's at another path: a reference to one is next's, its legacy definition dropped
+# (loader/code/loader.pure, Context.nexts). '<legacy path> <next path>', '# ...' a reason.
+
+# what a #TDS literal builds, next's TDS extension's (pure/extensions/pure/tds)
+meta::pure::metamodel::relation::TDS platform::extensions::pure::tds::metamodel::TDS

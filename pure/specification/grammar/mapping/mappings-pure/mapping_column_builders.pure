@@ -127,7 +127,7 @@ function platform::pure::parser::mappings::buildColumnNameAtomic(ctx: AntlrConte
    ^platform::pure::protocol::grammar::valuespecification::AtomicValue(
       p_sourceInformation = buildSourceInfo($cn, $lineOffset),
       genericType         = primitiveType('String'),
-      value               = $cn->getText()
+      value               = stripIfQuoted($cn->getText())->toOne()
    );
 }
 
@@ -167,7 +167,7 @@ function platform::pure::parser::mappings::buildColSpecArrayHolder(ctx: AntlrCon
 function platform::pure::parser::mappings::buildOneColSpecColumn(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::relation::Column[1]
 {
    ^platform::pure::protocol::grammar::relation::Column(
-      name         = $ctx->getChild('columnName')->toOne()->getText(),
+      name         = stripIfQuoted($ctx->getChild('columnName')->toOne()->getText())->toOne(),
       nameWildCard = false,
       genericType  = if($ctx->hasChild('type'),
                         | buildGenericType($ctx->getChild('type')->toOne(), $lineOffset),

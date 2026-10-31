@@ -22,6 +22,7 @@ import platform.pure.metamodel.type.FunctionTypeImpl;
 import platform.pure.metamodel.type.generics.GenericType;
 import platform.pure.metamodel.valuespecification.VariableExpression;
 import platform.pure.metamodel.valuespecification.VariableExpressionImpl;
+import platform.pure.metamodel.type.generics.TypeParameter;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -368,12 +369,17 @@ public final class _FunctionType
      */
     public static MutableSet<String> collectReferencedTypeParameterNames(FunctionType ft)
     {
-        MutableSet<String> names = Sets.mutable.empty();
+        return collectReferencedTypeParameters(ft).collect(TypeParameter::_name).toSet();
+    }
+
+    static MutableList<TypeParameter> collectReferencedTypeParameters(FunctionType ft)
+    {
+        MutableList<TypeParameter> names = Lists.mutable.empty();
         if (ft._parameters() != null)
         {
-            ft._parameters().forEach(p -> { if (p != null) _GenericType.collectReferencedTypeParameterNames(p._genericType(), names); });
+            ft._parameters().forEach(p -> { if (p != null) _GenericType.collectReferencedTypeParameters(p._genericType(), names); });
         }
-        _GenericType.collectReferencedTypeParameterNames(ft._returnType(), names);
+        _GenericType.collectReferencedTypeParameters(ft._returnType(), names);
         return names;
     }
 
@@ -382,7 +388,12 @@ public final class _FunctionType
      */
     public static MutableSet<String> collectReferencedMultiplicityParameterNames(FunctionType ft)
     {
-        MutableSet<String> names = Sets.mutable.empty();
+        return collectReferencedMultiplicityParameters(ft).collect(platform.pure.metamodel.multiplicity.MultiplicityParameter::_name).toSet();
+    }
+
+    static MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> collectReferencedMultiplicityParameters(FunctionType ft)
+    {
+        MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> names = Lists.mutable.empty();
         if (ft._parameters() != null)
         {
             ft._parameters().forEach(p ->
@@ -391,17 +402,17 @@ public final class _FunctionType
                 {
                     if (p._multiplicity() instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mp)
                     {
-                        names.add(mp._name());
+                        names.add(mp);
                     }
-                    _GenericType.collectReferencedMultiplicityParameterNames(p._genericType(), names);
+                    _GenericType.collectReferencedMultiplicityParameters(p._genericType(), names);
                 }
             });
         }
         if (ft._returnMultiplicity() instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter retMp)
         {
-            names.add(retMp._name());
+            names.add(retMp);
         }
-        _GenericType.collectReferencedMultiplicityParameterNames(ft._returnType(), names);
+        _GenericType.collectReferencedMultiplicityParameters(ft._returnType(), names);
         return names;
     }
 }

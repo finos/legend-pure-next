@@ -119,9 +119,13 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
 
 function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplicationInternal(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1], functionName:String[1], siCtx:String[1]):CompilerResult<ValueSpecification>[1]
 {
-    // Resolve receiver parameters — use resolved types for property lookup
-    let resolvedParamResults = $dot.parametersValues->map(p | resolveValueSpecification($p, $scope, $context));
-    let ctx1 = $resolvedParamResults->fold({r, c | $r.context}, $context);
+    // Resolve receiver parameters — use resolved types for property lookup. An untyped lambda argument is
+    // resolved once the property is found: a qualified property types its parameters (mirrors Java).
+    let resolvedParamResults = $dot.parametersValues->map(p | if($p->isUntypedLambda(),
+        | ^CompilerResult<ValueSpecification>(value = $p, context = $context),
+        | resolveValueSpecification($p, $scope, $context)));
+    let ctx1 = range(0, $resolvedParamResults->size())->filter(i | !$dot.parametersValues->at($i)->isUntypedLambda())
+        ->fold({i, c | $resolvedParamResults->at($i).context}, $context);
     let resolvedParams = $resolvedParamResults->map(r | if($r.value->isEmpty(), | [], | $r.value->toOne()));
 
     if($resolvedParams->isEmpty(),
@@ -322,6 +326,7 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
                                   // {@code Owner.propName} edge for the matched
                                   // property) is deferred to the post-compile
                                   // AST walk in {@link extractFunctionRefsInto}.
+                                  let typed = $resolvedParams->cast(@ValueSpecification)->withLambdaArgumentsTyped($resolvedProp, $receiver, $resolvedOwner, $scope, $ctx1);
                                   if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
                                       | // Direct access — receiver is [1]
                                         debug($context, | '  direct access [1]');
@@ -330,9 +335,9 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
                                                 func = $resolvedPropPointer,
                                                 genericType = $propGT,
                                                 multiplicity = $propMul,
-                                                parametersValues = $resolvedParams->cast(@ValueSpecification)
+                                                parametersValues = $typed.first.values
                                             ),
-                                            context = $ctx1
+                                            context = $typed.second
                                         );,
                                       | // Automap — rewrite as map(receiver, {v:T[1] | $v.prop})
                                         debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
@@ -476,4 +481,39 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
     let mapCtx = $mapResult.context;
     let restoredCtx = ^$mapCtx(debugState = $context.debugState);
     ^CompilerResult<ValueSpecification>(value = $mapResult.value, context = $restoredCtx);
+}
+
+// An untyped lambda (a parameter without a type): typed from the function it is given to.
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::isUntypedLambda(v:ValueSpecification[1]):Boolean[1]
+{
+    $v->match([
+        av:AtomicValue[1] | $av.value->toOne()->match([
+            l:LambdaFunction<Any>[1] | $l.parameters->cast(@VariableExpression)->exists(p | $p.genericType->isEmpty() || !$p.genericType->toOne()->isConcreteGenericType()),
+            o:Any[1] | false
+        ]),
+        o:Any[1] | false
+    ]);
+}
+
+// The arguments with their untyped lambdas resolved: for a qualified property, each lambda's parameters
+// typed from the property's parameter (the receiver's class bindings applied); otherwise as they are
+// (mirrors Java DotApplicationResolver.withLambdaArgumentsResolved).
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::withLambdaArgumentsTyped(params:ValueSpecification[*], found:AbstractProperty<Any>[1], receiver:ValueSpecification[1], owner:Class<Any>[1], scope:VariableExpression[*], context:CompilerContext[1]):Pair<List<ValueSpecification>, CompilerContext>[1]
+{
+    let bindings = buildBindingsFromGenericType($owner, $receiver.genericType->toOne());
+    range(0, $params->size())->fold({i, acc |
+        let p = $params->at($i);
+        if(!$p->isUntypedLambda(), | pair(^List<ValueSpecification>(values = $acc.first.values->concatenate($p)), $acc.second), |
+            let typedLambda = $found->match([
+                qp:QualifiedProperty<Any>[1] | if($i < $qp.parameters->size(),
+                    | let av = $p->cast(@AtomicValue);
+                      ^$av(value = platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::setMissingLambdaParameterInformation(
+                          $av.value->toOne()->cast(@LambdaFunction<Any>), $qp.parameters->cast(@VariableExpression)->at($i).genericType->toOne(), $bindings, $acc.second));,
+                    | $p),
+                o:Any[1] | $p
+            ]);
+            let r = resolveValueSpecification($typedLambda, $scope, $acc.second);
+            pair(^List<ValueSpecification>(values = $acc.first.values->concatenate(if($r.value->isEmpty(), | $typedLambda, | $r.value->toOne()))), $r.context);
+        );
+    }, pair(^List<ValueSpecification>(values = []), $context));
 }

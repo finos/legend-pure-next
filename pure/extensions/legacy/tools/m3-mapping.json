@@ -94,8 +94,8 @@
 
     "meta::pure::metamodel::relation::GenericTypeOperation": { "wraps": ["relation::GenericTypeOperation"] },
     "meta::pure::metamodel::relation::RelationType": { "wraps": ["relation::RelationType"] },
-    "meta::pure::metamodel::relation::Relation": { "wraps": ["relation::Relation"] },
-    "meta::pure::metamodel::relation::RelationElementAccessor": { "wraps": ["relation::RelationElementAccessor"] },
+    "meta::pure::metamodel::relation::Relation": { "alias": "relation::Relation" },
+    "meta::pure::metamodel::relation::RelationElementAccessor": { "legacyOnly": true },
     "meta::pure::metamodel::relation::Column": { "wraps": ["relation::Column"] }
   },
   "_typesComment": "Legacy non-class types used in property signatures, resolved to next elements (primitives and enumerations are shared, not wrapped).",

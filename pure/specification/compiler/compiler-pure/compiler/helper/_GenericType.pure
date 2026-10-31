@@ -364,6 +364,40 @@ function platform::pure::compiler::helper::genericType::isConcreteGenericTypeInC
 }
 
 
+// The key a type or multiplicity parameter is known by in a scope (isConcreteInContext): its owner's path and
+// its name, so that a callee's T is not taken for its caller's; its name alone when it has no owner. A scope
+// holds both forms of each parameter in it, so that an ownerless reference is in scope by its name — mirrors
+// Java _GenericType.scopeKey.
+function platform::pure::compiler::helper::genericType::scopeKey(owner:Any[0..1], name:String[1]):String[1]
+{
+    if($owner->isEmpty(),
+        | $name,
+        | $owner->toOne()->match([
+              pe : PackageableElement[1] | $pe->elementToPath() + '#' + $name,
+              a  : Any[1]                | $name
+          ])
+    );
+}
+
+// The type parameters referenced within a GenericType (its nested function and relation types and type
+// arguments included).
+function platform::pure::compiler::helper::genericType::collectReferencedTypeParameters(genericType:GenericType[1]):TypeParameter[*]
+{
+    $genericType->match([
+        gto : GenericTypeOperation[1] | $gto.left->collectReferencedTypeParameters()->concatenate($gto.right->collectReferencedTypeParameters()),
+        gtv : GenericTypeValue[1] |
+            let own = if($gtv.type->isEmpty(), | [], | $gtv.type->toOne()->match([
+                tp : TypeParameter[1] | $tp,
+                ft : FunctionType[1] | $ft.parameters->filter(p | $p.genericType->isNotEmpty())->map(p | $p.genericType->toOne()->collectReferencedTypeParameters())
+                                          ->concatenate(if($ft.returnType->isEmpty(), | [], | $ft.returnType->toOne()->collectReferencedTypeParameters())),
+                rt : RelationType<Any>[1] | $rt.columns->cast(@Column<Any,Any|*>)->filter(c | $c.genericType->isNotEmpty())->map(c | $c.genericType->toOne()->collectReferencedTypeParameters()),
+                a  : Any[1] | []->cast(@TypeParameter)
+            ]));
+            $own->concatenate($gtv.typeArguments->map(a | $a->collectReferencedTypeParameters()));,
+        a : Any[1] | []->cast(@TypeParameter)
+    ]);
+}
+
 // GenericType referenced parameter names
 
 function platform::pure::compiler::helper::genericType::collectReferencedTypeParameterNames(genericType:GenericType[1]):String[*]
@@ -1098,7 +1132,7 @@ function platform::pure::compiler::helper::genericType::withUndefinedTypeParams(
     ]);
 }
 
-// Mirrors Java isConcreteInContext (line 504-514) + inScopeTypeParamNames (line 206-210):
+// Mirrors Java isConcreteInContext + inScopeTypeParamKeys:
 // A type is concrete in context if it is fully concrete OR all referenced type parameters
 // belong to the enclosing owner (the function/class being compiled).
 // Java uses enclosingOwnerParametersBinding.owner()._typeParameters() — NOT the accumulated
@@ -1111,13 +1145,14 @@ function platform::pure::compiler::helper::genericType::isConcreteInContext(gt:G
           let mulConcrete = $mul->toOne()->isConcreteMultiplicity();
           if($gtConcrete && $mulConcrete,
               | true,
-              | let referencedTypeParams = collectReferencedTypeParameterNames($gt->toOne());
-                let referencedMulParams = $mul->toOne()->match([mp:MultiplicityParameter[1] | [$mp.name], a:Any[1] | []]);
+              | // by scope key (scopeKey): a callee's T is not taken for the enclosing owner's
+                let referencedTypeParams = collectReferencedTypeParameters($gt->toOne())->map(tp | scopeKey($tp.owner, $tp.name));
+                let referencedMulParams = $mul->toOne()->match([mp:MultiplicityParameter[1] | [scopeKey($mp.owner, $mp.name)], a:Any[1] | []]);
                 // Use ownerTypeParams (enclosing function/class being compiled), not scopeTypeParams (accumulated)
-                let ownerTypeParamNames = $context.ownerTypeParams->map(tp | $tp.name);
-                let ownerMulParamNames = $context.ownerMulParams->map(mp | $mp.name);
-                let allTypeParamsInScope = $referencedTypeParams->forAll(n | $ownerTypeParamNames->contains($n));
-                let allMulParamsInScope = $referencedMulParams->forAll(n | $ownerMulParamNames->contains($n));
+                let ownerTypeParamKeys = $context.ownerTypeParams->map(tp | [$tp.name, scopeKey($tp.owner, $tp.name)]);
+                let ownerMulParamKeys = $context.ownerMulParams->map(mp | [$mp.name, scopeKey($mp.owner, $mp.name)]);
+                let allTypeParamsInScope = $referencedTypeParams->forAll(n | $ownerTypeParamKeys->contains($n));
+                let allMulParamsInScope = $referencedMulParams->forAll(n | $ownerMulParamKeys->contains($n));
                 ($referencedTypeParams->isNotEmpty() || $referencedMulParams->isNotEmpty())
                     && $allTypeParamsInScope && $allMulParamsInScope;
           );

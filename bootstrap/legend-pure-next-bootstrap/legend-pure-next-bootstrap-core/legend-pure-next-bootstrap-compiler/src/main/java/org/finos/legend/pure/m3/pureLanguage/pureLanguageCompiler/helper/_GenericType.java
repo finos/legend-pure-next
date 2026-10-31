@@ -518,7 +518,7 @@ public class _GenericType
      * are in-scope enclosing parameters (which is valid).
      *
      * @param genericType     the generic type to check
-     * @param scopeTypeParams the set of type parameter names that are in scope
+     * @param scopeTypeParams the scope keys of the type parameters in scope ({@link #scopeKey})
      */
     public static boolean isConcreteInContext(GenericType genericType, MutableSet<String> scopeTypeParams)
     {
@@ -526,10 +526,36 @@ public class _GenericType
         {
             return true;
         }
-        MutableSet<String> referencedParams = collectReferencedTypeParameterNames(genericType);
+        MutableSet<String> referencedParams = collectReferencedTypeParameterKeys(genericType);
         // If no type params were found but isConcrete was false, the type has
         // structural incompleteness (e.g. null rawType) — not concrete in any context.
         return referencedParams.notEmpty() && scopeTypeParams.containsAll(referencedParams);
+    }
+
+    /**
+     * The key a type or multiplicity parameter is known by in a scope (see {@link #isConcreteInContext}): its
+     * owner's and its name, so that a callee's {@code T} is not taken for its caller's; its name alone when it
+     * has no owner. A scope holds both forms of each parameter in it, so that an ownerless reference is in
+     * scope by its name.
+     */
+    public static String scopeKey(Object owner, String name)
+    {
+        return owner == null ? name : ownerKey(owner) + "#" + name;
+    }
+
+    /** The scope keys of parameters in scope: each one's own key, and its name. */
+    public static MutableSet<String> scopeKeysOf(MutableList<? extends Object> owners, MutableList<String> names)
+    {
+        MutableSet<String> keys = Sets.mutable.withAll(names);
+        owners.forEachWithIndex((owner, i) -> keys.add(scopeKey(owner, names.get(i))));
+        return keys;
+    }
+
+    // An owner by its path (a function or class: one canonical key however many instances stand for it), else
+    // by identity.
+    private static String ownerKey(Object owner)
+    {
+        return owner instanceof PackageableElement pe ? _PackageableElement.path(pe) : "@" + System.identityHashCode(owner);
     }
 
     /**
@@ -538,12 +564,23 @@ public class _GenericType
      */
     public static MutableSet<String> collectReferencedTypeParameterNames(GenericType genericType)
     {
-        MutableSet<String> names = Sets.mutable.empty();
-        collectReferencedTypeParameterNames(genericType, names);
-        return names;
+        return collectReferencedTypeParameters(genericType).collect(TypeParameter::_name).toSet();
     }
 
-    static void collectReferencedTypeParameterNames(GenericType genericType, MutableSet<String> names)
+    /** The scope keys ({@link #scopeKey}) of the type parameters referenced within a GenericType. */
+    public static MutableSet<String> collectReferencedTypeParameterKeys(GenericType genericType)
+    {
+        return collectReferencedTypeParameters(genericType).collect(tp -> scopeKey(tp._owner(), tp._name())).toSet();
+    }
+
+    static MutableList<TypeParameter> collectReferencedTypeParameters(GenericType genericType)
+    {
+        MutableList<TypeParameter> params = Lists.mutable.empty();
+        collectReferencedTypeParameters(genericType, params);
+        return params;
+    }
+
+    static void collectReferencedTypeParameters(GenericType genericType, MutableList<TypeParameter> names)
     {
         if (genericType == null)
         {
@@ -554,24 +591,24 @@ public class _GenericType
             case CompilerNotSetGenericType notSet -> { /* no-op */ }
             case UndefinedGenericType undefined ->
             { /* no-op */ }
-            case GenericTypeOperation gto -> _GenericTypeOperation.collectReferencedTypeParameterNames(gto, names);
+            case GenericTypeOperation gto -> _GenericTypeOperation.collectReferencedTypeParameters(gto, names);
             case GenericTypeValue gtv ->
             {
                 if (gtv._type() instanceof TypeParameter tp)
                 {
-                    names.add(tp._name());
+                    names.add(tp);
                 }
                 if (gtv._type() instanceof FunctionType ft)
                 {
-                    names.addAll(_FunctionType.collectReferencedTypeParameterNames(ft));
+                    names.addAll(_FunctionType.collectReferencedTypeParameters(ft));
                 }
                 if (gtv._type() instanceof platform.pure.metamodel.relation.RelationType rt)
                 {
-                    names.addAll(_RelationType.collectReferencedTypeParameterNames(rt));
+                    names.addAll(_RelationType.collectReferencedTypeParameters(rt));
                 }
                 if (gtv._typeArguments() != null)
                 {
-                    gtv._typeArguments().forEach(arg -> collectReferencedTypeParameterNames(arg, names));
+                    gtv._typeArguments().forEach(arg -> collectReferencedTypeParameters(arg, names));
                 }
             }
             default -> throw new IllegalArgumentException("Unexpected GenericType: " + genericType.getClass());
@@ -584,12 +621,17 @@ public class _GenericType
      */
     public static MutableSet<String> collectReferencedMultiplicityParameterNames(GenericType genericType)
     {
-        MutableSet<String> names = Sets.mutable.empty();
-        collectReferencedMultiplicityParameterNames(genericType, names);
-        return names;
+        return collectReferencedMultiplicityParameters(genericType).collect(platform.pure.metamodel.multiplicity.MultiplicityParameter::_name).toSet();
     }
 
-    static void collectReferencedMultiplicityParameterNames(GenericType genericType, MutableSet<String> names)
+    static MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> collectReferencedMultiplicityParameters(GenericType genericType)
+    {
+        MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> params = Lists.mutable.empty();
+        collectReferencedMultiplicityParameters(genericType, params);
+        return params;
+    }
+
+    static void collectReferencedMultiplicityParameters(GenericType genericType, MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> names)
     {
         if (genericType == null)
         {
@@ -601,22 +643,22 @@ public class _GenericType
             case UndefinedGenericType undefined -> { /* no-op */ }
             case GenericTypeOperation gto ->
             {
-                collectReferencedMultiplicityParameterNames(gto._left(), names);
-                collectReferencedMultiplicityParameterNames(gto._right(), names);
+                collectReferencedMultiplicityParameters(gto._left(), names);
+                collectReferencedMultiplicityParameters(gto._right(), names);
             }
             case GenericTypeValue gtv ->
             {
                 if (gtv._type() instanceof FunctionType ft)
                 {
-                    names.addAll(_FunctionType.collectReferencedMultiplicityParameterNames(ft));
+                    names.addAll(_FunctionType.collectReferencedMultiplicityParameters(ft));
                 }
                 if (gtv._type() instanceof platform.pure.metamodel.relation.RelationType rt)
                 {
-                    names.addAll(_RelationType.collectReferencedMultiplicityParameterNames(rt));
+                    names.addAll(_RelationType.collectReferencedMultiplicityParameters(rt));
                 }
                 if (gtv._typeArguments() != null)
                 {
-                    gtv._typeArguments().forEach(arg -> collectReferencedMultiplicityParameterNames(arg, names));
+                    gtv._typeArguments().forEach(arg -> collectReferencedMultiplicityParameters(arg, names));
                 }
                 if (gtv._multiplicityArguments() != null)
                 {
@@ -624,7 +666,7 @@ public class _GenericType
                     {
                         if (mul instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mp)
                         {
-                            names.add(mp._name());
+                            names.add(mp);
                         }
                     });
                 }

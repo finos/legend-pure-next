@@ -124,10 +124,11 @@ function platform::pure::functions::printer::protocol::printTypeAndMulArgs(typeA
 }
 
 // Multiplicity argument inside `<T|m>` is rendered without surrounding
-// brackets — `1`, `*`, `0..1`, `1..*` — which is what the parser expects.
+// brackets — `1`, `*`, `0..1`, `1..*` — which is what the parser expects; an
+// undefined one (a holder's `<T|?>`) as `?`.
 function platform::pure::functions::printer::protocol::printMultiplicityArg(m: platform::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]): String[1]
 {
-    let bracketed = printMultiplicity($m);
+    let bracketed = if ($m->instanceOf(platform::pure::protocol::grammar::multiplicity::UndefinedMultiplicity), | '?', | printMultiplicity($m));
     if ($bracketed->startsWith('[') && $bracketed->endsWith(']'),
         | $bracketed->substring(1, $bracketed->length() - 1),
         | $bracketed
@@ -168,6 +169,14 @@ function platform::pure::functions::printer::protocol::printRelationType(rt: pla
 // GenericTypeOperation models relation column-spec inference (e.g. `~name`
 // → a typeOperation that says "pick column `name` of the inferred relation").
 // First-cut sentinel-free render: bracket the operation text. Per-shape
+// A column's name as written: as it is when it is a plain identifier, otherwise (a space, a `|`, a quote...)
+// in single quotes — `'with space'` — the parser's quoted-identifier syntax; the parser keeps a quoted name
+// as written, its escapes intact, and its quotes stripped.
+function platform::pure::functions::printer::protocol::printColumnName(name: String[1]): String[1]
+{
+    if ($name->matches('[A-Za-z_][A-Za-z0-9_]*'), | $name, | '\'' + $name + '\'');
+}
+
 // fidelity TBD.
 function platform::pure::functions::printer::protocol::printGenericTypeOperation(gto: platform::pure::protocol::grammar::relation::GenericTypeOperation[1]): String[1]
 {
@@ -189,17 +198,18 @@ function platform::pure::functions::printer::protocol::printGenericTypeOperation
 
 function platform::pure::functions::printer::protocol::printRelationColumn(col: platform::pure::protocol::grammar::relation::Column[1]): String[1]
 {
-    // Column names that contain non-identifier characters (spaces, etc.) are
-    // emitted in single quotes — `'with space':String[1]` — matching the
-    // parser's quoted-identifier syntax. Wildcard columns (`?:T`) carry
-    // `nameWildCard=true` and a null `name`; render those as `?`.
+    // Column names that are not plain identifiers (a space, a `|`, a quote...)
+    // are emitted in single quotes — `'with space':String[1]` — matching the
+    // parser's quoted-identifier syntax; the parser keeps a quoted name as
+    // written, its escapes intact. Wildcard columns (`?:T`) carry
+    // `nameWildCard=true` and a null `name`; render those as `?`, and one of
+    // any type as `?:?` (the grammar has no bare `?`).
     let isWild = !$col.nameWildCard->isEmpty() && $col.nameWildCard->toOne();
     let n = if ($isWild,
                 | '?',
-                | let cname = $col.name->orElse('');
-                  if ($cname->contains(' '), | '\'' + $cname + '\'', | $cname);
+                | printColumnName($col.name->orElse(''));
                );
-    let gt = if ($col.genericType->isEmpty(), | '', | ':' + printGenericType($col.genericType->toOne()));
+    let gt = if ($col.genericType->isEmpty(), | if ($isWild, | ':?', | ''), | ':' + printGenericType($col.genericType->toOne()));
     let mul = if ($col.multiplicity->isEmpty(), | '', | printMultiplicity($col.multiplicity->toOne()));
     $n + $gt + $mul;
 }

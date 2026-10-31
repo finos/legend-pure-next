@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// `#TDS{…}#`: a table written inline. Its first line is a column specification, compiled exactly as a
+// `#TDS{…}#` (or `#TDS … #`, as legend-pure writes it): a table written inline. Its first line is a column
+// specification, compiled exactly as a
 // written `~[…]` is (M3 parses it; its types resolve in the enclosing context, imports included); the rest
 // is CSV (csv.pure). A column without a type gets the one its cells have (inferType); a column's
 // multiplicity defaults to [0..1]. Cells are checked against their column at compile time, and every
@@ -32,11 +33,17 @@ function platform::extensions::pure::tds::compiler::tdsExtension(): CompilerExte
       handles = e: platform::pure::protocol::grammar::PackageableElement[1] | false,
       islands = ^IslandHandler(
          name    = 'tds',
-         claims  = t: String[1] | $t->startsWith('TDS{') && $t->endsWith('}'),
+         claims  = t: String[1] | ($t->startsWith('TDS{') && $t->endsWith('}')) || $t->isBracelessTds(),
          compile = {i: platform::pure::protocol::grammar::valuespecification::Island[1], ctx: CompilerContext[1], scope: VariableExpression[*] |
                       platform::extensions::pure::tds::compiler::compileTds($i, $ctx)},
          owns    = v: ValueSpecification[1] | $v->instanceOf(TDS),
          print   = v: ValueSpecification[1] | platform::extensions::pure::tds::compiler::printTds($v->cast(@TDS<Any>))));
+}
+
+// A TDS written as legend-pure writes it, `#TDS`, the table, `#`: no braces, the table from the next line.
+function platform::extensions::pure::tds::compiler::isBracelessTds(text: String[1]): Boolean[1]
+{
+   $text->startsWith('TDS\n') || $text->startsWith('TDS\r\n') || $text->startsWith('TDS ')
 }
 
 // The parsed header: each column name (unquoted) and where it is in the file, and the columns written
@@ -52,8 +59,10 @@ Class platform::extensions::pure::tds::compiler::TdsHeader
 function platform::extensions::pure::tds::compiler::compileTds(
    island: platform::pure::protocol::grammar::valuespecification::Island[1], ctx: CompilerContext[1]): ValueCompileResult[1]
 {
-   let inner = $island.text->substring('TDS{'->length(), $island.text->length() - 1)->replace('\r\n', '\n');
-   let lines = numberedLines($inner, 1, 'TDS{'->length() + 1);
+   let braceless = $island.text->isBracelessTds();
+   let opening = if($braceless, | 'TDS', | 'TDS{');
+   let inner = $island.text->substring($opening->length(), $island.text->length() - if($braceless, | 0, | 1))->replace('\r\n', '\n');
+   let lines = numberedLines($inner, 1, $opening->length() + 1);
    let header = $lines->filter(l | $l.text->trim() != '')->head();
    if($header->isEmpty(),
       | islandError('The TDS has no header', $island, $ctx),
@@ -169,13 +178,15 @@ function platform::extensions::pure::tds::compiler::cellError(
 }
 
 // Which cells a type accepts: by its primitive family — a user-defined primitive (`Primitive m::Code extends
-// String`) by the one it extends —, or as an enumeration's value names; '' for a type no cell can hold.
+// String`) by the one it extends —, as an enumeration's value names, or any for a Variant (a cell is its JSON
+// text, read when the value is); '' for a type no cell can hold.
 function platform::extensions::pure::tds::compiler::cellKind(path: String[1], ctx: CompilerContext[1]): String[1]
 {
    let builtIn = $path->startsWith('platform::pure::metamodel::type::primitives::');
    let element = if($builtIn, | [], | $ctx->pathToElementInContext($path));
    if([pair(| $builtIn,
             | platform::extensions::pure::tds::compiler::primitiveKind(platform::extensions::pure::tds::compiler::typeName($path))),
+       pair(| $path == 'platform::pure::metamodel::variant::Variant', | 'Variant'),
        pair(| $element->filter(e | $e->instanceOf(platform::pure::metamodel::type::Enumeration))->isNotEmpty(), | 'Enum'),
        pair(| $element->filter(e | $e->instanceOf(platform::pure::metamodel::type::PrimitiveType))->isNotEmpty(),
             | platform::extensions::pure::tds::compiler::extendedKind($element->toOne()->cast(@platform::pure::metamodel::type::PrimitiveType), $ctx))],
@@ -209,7 +220,7 @@ function platform::extensions::pure::tds::compiler::enumValues(path: String[1], 
 function platform::extensions::pure::tds::compiler::fits(kind: String[1], value: String[1], enumValues: String[*]): Boolean[1]
 {
    let dateTime = '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?(Z|[+-][0-9]{2}:?[0-9]{2})?';
-   if([pair(| $kind == 'String', | true),
+   if([pair(| ($kind == 'String') || ($kind == 'Variant'), | true),
        pair(| $kind == 'Integer', | $value->matches('[+-]?[0-9]+')),
        pair(| $kind == 'Number', | $value->matches('[+-]?([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][+-]?[0-9]+)?')),
        pair(| $kind == 'Boolean', | ['true', 'false']->contains($value->toLower())),

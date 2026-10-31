@@ -452,7 +452,7 @@ public final class ValueSpecificationCompiler
      * as literal two-character sequences: backslash-[' \ n t r] or backslash-uXXXX
      * This converts them to their actual single characters.
      */
-    private static String unescapePureString(String s)
+    static String unescapePureString(String s)
     {
         if (s.indexOf('\\') < 0)
         {

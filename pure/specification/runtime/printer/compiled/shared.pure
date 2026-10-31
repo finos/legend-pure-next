@@ -79,7 +79,7 @@ function platform::pure::functions::printer::compiled::printRelationColumn(c: Co
     // `[1]` multiplicity is the column-default and gets elided to match the
     // surface syntax `(col:String)` ≡ `(col:String[1])`.
     let cgt = $c->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
-    let n = if ($c.nameWildCard, | '?', | $c.name->orElse(''));
+    let n = if ($c.nameWildCard, | '?', | printCompiledColumnName($c.name->orElse('')));
     let m = printMultiplicity($cgt.multiplicityArguments->at(0));
     let mulSuffix = if ($m == '[1]', | '', | $m);
     $n + ':' + printGenericType($cgt.typeArguments->at(1), $ctx) + $mulSuffix;

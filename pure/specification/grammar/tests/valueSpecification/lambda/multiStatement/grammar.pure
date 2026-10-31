@@ -1,0 +1,7 @@
+###Pure
+function protocol::multiStatementLambdas(): Any[*]
+{
+  let none = {|let a = 1; $a;};
+  let one = {x|let y = $x; $y;};
+  let two = {x, y|let z = $x; $y;};
+}

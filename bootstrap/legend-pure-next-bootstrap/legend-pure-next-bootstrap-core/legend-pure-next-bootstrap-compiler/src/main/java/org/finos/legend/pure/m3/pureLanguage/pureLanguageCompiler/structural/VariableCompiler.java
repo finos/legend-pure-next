@@ -61,6 +61,6 @@ public final class VariableCompiler
         return _VariableExpression.newVariableExpression(model)
                 ._name(grammarParam._name() != null ? grammarParam._name() : "")
                 ._genericType(genericType)
-                ._multiplicity(MultiplicityCompiler.compile(grammarParam._multiplicity(), model));
+                ._multiplicity(MultiplicityCompiler.compile(grammarParam._multiplicity(), model, context));
     }
 }

@@ -144,8 +144,8 @@ public class FunctionApplicationResolver
                     if (preResolvePlcc == null)
                     {
                         preResolvePlcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
-                        preResolveScopeTypeParams = preResolvePlcc.inScopeTypeParamNames();
-                        preResolveScopeMulParams = preResolvePlcc.inScopeMultiplicityParamNames();
+                        preResolveScopeTypeParams = preResolvePlcc.inScopeTypeParamKeys();
+                        preResolveScopeMulParams = preResolvePlcc.inScopeMultiplicityParamKeys();
                     }
                     boolean isSurfaceResolved = (resolved instanceof FunctionExpression fe)
                             && fe._func() != null
@@ -160,8 +160,9 @@ public class FunctionApplicationResolver
             FunctionApplication preResolvedExpr = (FunctionApplication)
                     ((FunctionApplication) expr._copy())._parametersValues(preResolvedParams);
 
-            // Multiple candidates — sort most-specific-first, then try each with rollback.
-            candidates.sortThis(FunctionIndexEntry.mostSpecificFirst(model));
+            // Multiple candidates — sort most-specific-first against the arguments (a parameter's multiplicity
+            // ranked against its argument's), then try each with rollback.
+            candidates.sortThis(FunctionIndexEntry.mostSpecificFirst(model, preResolvedParams.collect(ValueSpecification::_multiplicity)));
             MutableList<CompilationError> bestCandidateErrors = null;
             for (FunctionIndexEntry candidateEntry : candidates)
             {
@@ -232,8 +233,8 @@ public class FunctionApplicationResolver
                 ._resolvedMultiplicityParameters(null);
 
         MutableList<VariableExpression> funcParams = entry.functionType()._parameters();
-        MutableSet<String> scopeTypeParams = plcc.inScopeTypeParamNames();
-        MutableSet<String> scopeMulParams = plcc.inScopeMultiplicityParamNames();
+        MutableSet<String> scopeTypeParams = plcc.inScopeTypeParamKeys();
+        MutableSet<String> scopeMulParams = plcc.inScopeMultiplicityParamKeys();
 
         try
         {
@@ -544,7 +545,7 @@ public class FunctionApplicationResolver
             // (e.g., V,U from AggregateValue<Trade,V,U>) so that resolveArg's
             // isParamConcreteWithBindings gate passes for child elements
             MutableSet<String> enrichedScopeTypeParams = Sets.mutable.withAll(scopeTypeParams);
-            enrichedScopeTypeParams.addAll(_GenericType.collectReferencedTypeParameterNames(resolvedParamGT));
+            enrichedScopeTypeParams.addAll(_GenericType.collectReferencedTypeParameterKeys(resolvedParamGT));
             context.debug("resolveArg: COLLECTION (%d elements) resolvedParamGT=%s", col._values().size(), lazy(() -> _GenericType.print(resolvedParamGT)));
             context.debugDepthInc();
             Collection newCollection = ((Collection)col._copy())._values(
@@ -612,7 +613,7 @@ public class FunctionApplicationResolver
      * Resolve a single lambda's parameter types and body using the function parameter's
      * expected type and the current type/multiplicity bindings.
      */
-    private static LambdaFunction setMissingLambdaParameterInformation(
+    static LambdaFunction setMissingLambdaParameterInformation(
             LambdaFunction lambda,
             GenericType paramGT,
             ParametersBinding bindings,

@@ -1,0 +1,152 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "Collection",
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 5
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 5
+          }
+        },
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 51,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        },
+        "values" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "platform::pure::metamodel::type::primitives::String"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 10,
+            "endLine" : 4,
+            "startColumn" : 4,
+            "startLine" : 4
+          },
+          "value" : "it\\'s"
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "platform::pure::metamodel::type::primitives::String"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 18,
+            "endLine" : 4,
+            "startColumn" : 13,
+            "startLine" : 4
+          },
+          "value" : "a\\\\b"
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "platform::pure::metamodel::type::primitives::String"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 33,
+            "endLine" : 4,
+            "startColumn" : 21,
+            "startLine" : 4
+          },
+          "value" : "line\\nbreak"
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "platform::pure::metamodel::type::primitives::String"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 42,
+            "endLine" : 4,
+            "startColumn" : 36,
+            "startLine" : 4
+          },
+          "value" : "tab\\t"
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "platform::pure::metamodel::type::primitives::String"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 50,
+            "endLine" : 4,
+            "startColumn" : 45,
+            "startLine" : 4
+          },
+          "value" : "café"
+        } ]
+      } ],
+      "functionName" : "stringEscapes",
+      "name" : "stringEscapes__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 39,
+            "endLine" : 2,
+            "startColumn" : 37,
+            "startLine" : 2
+          },
+          "value" : "Any"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 0
+        }
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

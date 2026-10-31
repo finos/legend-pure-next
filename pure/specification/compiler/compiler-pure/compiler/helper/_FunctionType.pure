@@ -312,6 +312,15 @@ function platform::pure::compiler::helper::functionType::reconcileInferredFT(exp
 // Returns -1 if f1 is more specific, 1 if f2 is more specific, 0 if equal.
 function platform::pure::compiler::helper::functionType::compareFunctionTypes(f1:FunctionType[1], f2:FunctionType[1], context:platform::pure::compiler::CompilerContext[1]):Integer[1]
 {
+    compareFunctionTypes($f1, $f2, [], $context);
+}
+
+// As compareFunctionTypes for a call whose arguments have the given multiplicities (Java's
+// FunctionIndexEntry.compareFunctionTypes with arguments): against a concrete argument multiplicity, a
+// parameter's is ranked as legend-pure ranks them — an exact match, then a multiplicity parameter, then a
+// concrete one containing the argument's, the closest first; the universal [*] aside, a parameter beating it.
+function platform::pure::compiler::helper::functionType::compareFunctionTypes(f1:FunctionType[1], f2:FunctionType[1], arguments:Multiplicity[*], context:platform::pure::compiler::CompilerContext[1]):Integer[1]
+{
     let params1 = $f1.parameters->cast(@VariableExpression);
     let params2 = $f2.parameters->cast(@VariableExpression);
     let count = if($params1->size() < $params2->size(), | $params1->size(), | $params2->size());
@@ -344,17 +353,48 @@ function platform::pure::compiler::helper::functionType::compareFunctionTypes(f1
               if($typeCmp != 0, | $typeCmp,
                   | let m1 = $params1->at($i).multiplicity->toOne();
                     let m2 = $params2->at($i).multiplicity->toOne();
+                    let argument = if($i < $arguments->size(), | $arguments->at($i), | []);
+                    let rankCmp = if($argument->isNotEmpty() && $argument->toOne()->instanceOf(ConcreteMultiplicity)
+                                        && !platform::pure::compiler::helper::multiplicity::isUniversalMultiplicity($m1) && !platform::pure::compiler::helper::multiplicity::isUniversalMultiplicity($m2),
+                       | compareRanks(multiplicityRank($m1, $argument->toOne()), multiplicityRank($m2, $argument->toOne())),
+                       | 0);
                     let m1IsParam = $m1->instanceOf(MultiplicityParameter);
                     let m2IsParam = $m2->instanceOf(MultiplicityParameter);
-                    if([pair(| $m1IsParam && !$m2IsParam, | if(platform::pure::compiler::helper::multiplicity::isUniversalMultiplicity($m2), | -1, | 1)),
+                    if($rankCmp != 0, | $rankCmp, | if([pair(| $m1IsParam && !$m2IsParam, | if(platform::pure::compiler::helper::multiplicity::isUniversalMultiplicity($m2), | -1, | 1)),
                         pair(| !$m1IsParam && $m2IsParam, | if(platform::pure::compiler::helper::multiplicity::isUniversalMultiplicity($m1), | 1, | -1)),
                         pair(| !$m1IsParam && !$m2IsParam,
                              | let s1 = platform::pure::compiler::helper::multiplicity::subsumesMultiplicity($m1, $m2);
                                let s2 = platform::pure::compiler::helper::multiplicity::subsumesMultiplicity($m2, $m1);
                                if($s1 && !$s2, | 1, | if($s2 && !$s1, | -1, | 0));)],
                        | 0
-                    );
+                    ));
               );
         );
     }, 0);
+}
+
+// A parameter multiplicity's rank against a concrete argument multiplicity, lower first (Java's
+// FunctionIndexEntry.multiplicityRank): [0] an exact match, [1] a multiplicity parameter, [2, upper bound
+// distance, lower bound distance] a concrete one containing the argument's, [3] another.
+function platform::pure::compiler::helper::functionType::multiplicityRank(parameter:Multiplicity[1], argument:Multiplicity[1]):Integer[3]
+{
+    if($parameter->instanceOf(MultiplicityParameter), | [1, 0, 0], |
+        if(!$parameter->instanceOf(ConcreteMultiplicity), | [3, 0, 0], |
+            let pLower = platform::pure::compiler::helper::multiplicity::multiplicityLowerBound($parameter);
+            let aLower = platform::pure::compiler::helper::multiplicity::multiplicityLowerBound($argument);
+            let pUpper = platform::pure::compiler::helper::multiplicity::multiplicityUpperBound($parameter);
+            let aUpper = platform::pure::compiler::helper::multiplicity::multiplicityUpperBound($argument);
+            let containsUpper = $pUpper == -1 || ($aUpper != -1 && $aUpper <= $pUpper);
+            if($pLower > $aLower || !$containsUpper, | [3, 0, 0], |
+                let upperDistance = if($pUpper == -1, | if($aUpper == -1, | 0, | 9223372036854775807), | $pUpper - $aUpper);
+                let lowerDistance = $aLower - $pLower;
+                if($upperDistance == 0 && $lowerDistance == 0, | [0, 0, 0], | [2, $upperDistance, $lowerDistance]);
+            );
+        )
+    );
+}
+
+function platform::pure::compiler::helper::functionType::compareRanks(r1:Integer[3], r2:Integer[3]):Integer[1]
+{
+    range(0, 3)->fold({i, cmp | if($cmp != 0, | $cmp, | $r1->at($i)->compare($r2->at($i)))}, 0);
 }

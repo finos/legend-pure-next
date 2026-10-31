@@ -1,0 +1,266 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "letFunction",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 32,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "platform::pure::metamodel::type::primitives::String"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 7,
+            "endLine" : 4,
+            "startColumn" : 7,
+            "startLine" : 4
+          },
+          "value" : "f"
+        }, {
+          "_type" : "AtomicValue",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 32,
+            "endLine" : 4,
+            "startColumn" : 11,
+            "startLine" : 4
+          },
+          "value" : {
+            "expressionSequence" : [ {
+              "_type" : "FunctionInvocation",
+              "functionName" : "plus",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 31,
+                "endLine" : 4,
+                "startColumn" : 26,
+                "startLine" : 4
+              },
+              "parametersValues" : [ {
+                "_type" : "VariableExpression",
+                "name" : "i",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 27,
+                  "endLine" : 4,
+                  "startColumn" : 26,
+                  "startLine" : 4
+                }
+              }, {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "platform::pure::metamodel::type::primitives::Integer"
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 31,
+                  "endLine" : 4,
+                  "startColumn" : 31,
+                  "startLine" : 4
+                },
+                "value" : 1
+              } ]
+            } ],
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 32,
+              "endLine" : 4,
+              "startColumn" : 11,
+              "startLine" : 4
+            },
+            "parameters" : [ {
+              "_type" : "VariableExpression",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "p_sourceInformation" : {
+                    "_type" : "SourceInformation",
+                    "endColumn" : 21,
+                    "endLine" : 4,
+                    "startColumn" : 15,
+                    "startLine" : 4
+                  },
+                  "value" : "Integer"
+                }
+              },
+              "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
+                "lowerBound" : {
+                  "_type" : "MultiplicityValue",
+                  "value" : 1
+                },
+                "upperBound" : {
+                  "_type" : "MultiplicityValue",
+                  "value" : 1
+                }
+              },
+              "name" : "i",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 24,
+                "endLine" : 4,
+                "startColumn" : 12,
+                "startLine" : 4
+              }
+            } ]
+          }
+        } ]
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "letFunction",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 16,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "platform::pure::metamodel::type::primitives::String"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 7,
+            "endLine" : 5,
+            "startColumn" : 7,
+            "startLine" : 5
+          },
+          "value" : "g"
+        }, {
+          "_type" : "AtomicValue",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 16,
+            "endLine" : 5,
+            "startColumn" : 11,
+            "startLine" : 5
+          },
+          "value" : {
+            "expressionSequence" : [ {
+              "_type" : "VariableExpression",
+              "name" : "x",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 15,
+                "endLine" : 5,
+                "startColumn" : 14,
+                "startLine" : 5
+              }
+            } ],
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 16,
+              "endLine" : 5,
+              "startColumn" : 11,
+              "startLine" : 5
+            },
+            "parameters" : [ {
+              "_type" : "VariableExpression",
+              "name" : "x"
+            } ]
+          }
+        } ]
+      }, {
+        "_type" : "ArrowInvocation",
+        "functionName" : "eval",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 13,
+          "endLine" : 6,
+          "startColumn" : 5,
+          "startLine" : 6
+        },
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "f",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 6,
+            "startColumn" : 3,
+            "startLine" : 6
+          }
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "platform::pure::metamodel::type::primitives::Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 12,
+            "endLine" : 6,
+            "startColumn" : 12,
+            "startLine" : 6
+          },
+          "value" : 1
+        } ]
+      } ],
+      "functionName" : "letLambdas",
+      "name" : "letLambdas__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 36,
+            "endLine" : 2,
+            "startColumn" : 34,
+            "startLine" : 2
+          },
+          "value" : "Any"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 0
+        }
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

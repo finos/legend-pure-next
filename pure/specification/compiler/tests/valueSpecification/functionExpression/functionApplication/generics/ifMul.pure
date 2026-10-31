@@ -9,7 +9,7 @@ function test(): Any[*]
 }
 
 ###CompiledGraph
-native function test::xif_Boolean_1__Function_1__Function_1__T_m_(test:@Boolean@[1], valid:Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1], invalid:Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1]):T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]  ~NativeFunction<{@Boolean@[1], Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1], Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1]->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>
+native function test::xif_Boolean_1__Function_1__Function_1__T_m_(test:@Boolean@[1], valid:Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m~test::xif_Boolean_1__Function_1__Function_1__T_m_]}>[1], invalid:Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m~test::xif_Boolean_1__Function_1__Function_1__T_m_]}>[1]):T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m~test::xif_Boolean_1__Function_1__Function_1__T_m_]  ~NativeFunction<{@Boolean@[1], Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m~test::xif_Boolean_1__Function_1__Function_1__T_m_]}>[1], Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m~test::xif_Boolean_1__Function_1__Function_1__T_m_]}>[1]->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m~test::xif_Boolean_1__Function_1__Function_1__T_m_]}>
 
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
   FunctionInvocation test::xif_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[1..2]#  ~@FunctionInvocation@  @8:3-8:24

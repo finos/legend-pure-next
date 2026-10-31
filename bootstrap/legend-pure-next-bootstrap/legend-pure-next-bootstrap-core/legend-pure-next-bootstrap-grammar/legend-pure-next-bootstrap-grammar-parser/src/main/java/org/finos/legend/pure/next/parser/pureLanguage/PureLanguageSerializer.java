@@ -489,11 +489,13 @@ public class PureLanguageSerializer
         MutableList<VariableExpression> params = lambda._parameters();
         MutableList<ValueSpecification> body = lambda._expressionSequence();
 
-        boolean multiParam = params != null && params.size() > 1;
+        boolean multiStatement = body != null && body.size() > 1;
+        boolean braced = (params != null && params.size() > 1) || multiStatement;
         boolean hasTypeAnnotation = hasLambdaTypeAnnotation(params);
 
-        // Multi-param or typed single-param uses curly braces
-        if (multiParam)
+        // Multi-param or multi-statement uses curly braces: without them the statements after the first
+        // would be read as the enclosing block's
+        if (braced)
         {
             sb.append("{");
         }
@@ -518,9 +520,13 @@ public class PureLanguageSerializer
         if (body != null && !body.isEmpty())
         {
             appendJoining(sb, body, "; ", (b, expr) -> serializeExpression(b, expr));
+            if (multiStatement)
+            {
+                sb.append(";");
+            }
         }
 
-        if (multiParam)
+        if (braced)
         {
             sb.append("}");
         }
@@ -651,7 +657,7 @@ public class PureLanguageSerializer
             if (colParams != null && !colParams.isEmpty())
             {
                 // Column name
-                sb.append(extractStringValue(colParams.get(0)));
+                sb.append(columnName(extractStringValue(colParams.get(0))));
                 // Optional type (GenericTypeAndMultiplicityHolder with RelationType wrapping)
                 for (int i = 1; i < colParams.size(); i++)
                 {
@@ -912,20 +918,17 @@ public class PureLanguageSerializer
             }
             else
             {
-                String colName = String.valueOf(col._name());
-                if (colName.contains(" "))
-                {
-                    sb.append("'").append(colName).append("'");
-                }
-                else
-                {
-                    sb.append(colName);
-                }
+                sb.append(columnName(String.valueOf(col._name())));
             }
             sb.append(":");
             if (col._genericType() != null)
             {
                 serializeGenericType(sb, col._genericType());
+            }
+            else if (Boolean.TRUE.equals(col._nameWildCard()))
+            {
+                // a wildcard column of any type: `?:?` (the grammar has no bare `?`)
+                sb.append("?");
             }
             if (col._multiplicity() != null)
             {
@@ -1240,7 +1243,8 @@ public class PureLanguageSerializer
         // sliceExpression grammar rule's sugar (the rule name follows the
         // Python-slice-looking syntax; the semantics are range).
         if ("range".equals(funcName) && params != null
-                && !params.isEmpty() && params.size() <= 3)
+                && !params.isEmpty() && params.size() <= 3
+                && params.allSatisfy(p -> p instanceof AtomicValue || p instanceof VariableExpression))
         {
             sb.append("[");
             if (params.size() == 1)
@@ -1280,7 +1284,7 @@ public class PureLanguageSerializer
         {
             sb.append("~");
             // funcColSpec(lambda, name, TypeHolder?) — name is second param
-            sb.append(extractStringValue(params.get(1)));
+            sb.append(columnName(extractStringValue(params.get(1))));
             sb.append(" : ");
             // Lambda is first param (AtomicValue wrapping a LambdaFunction)
             serializeExpression(sb, params.get(0));
@@ -1293,7 +1297,7 @@ public class PureLanguageSerializer
         {
             sb.append("~");
             // aggColSpec(mapLambda, reduceLambda, name, TypeHolder?) — name is third param
-            sb.append(extractStringValue(params.get(2)));
+            sb.append(columnName(extractStringValue(params.get(2))));
             sb.append(" : ");
             serializeExpression(sb, params.get(0));
             sb.append(" : ");
@@ -1338,7 +1342,7 @@ public class PureLanguageSerializer
                         sb.append(", ");
                     }
                     String colName = extractStringValue(names.get(i));
-                    sb.append(colName);
+                    sb.append(columnName(colName));
                     if (typeMap.containsKey(colName))
                     {
                         sb.append(" : ");
@@ -1377,7 +1381,7 @@ public class PureLanguageSerializer
                         && innerFe._parametersValues() != null
                         && innerFe._parametersValues().size() >= 2)
                 {
-                    sb.append(extractStringValue(innerFe._parametersValues().get(1)));
+                    sb.append(columnName(extractStringValue(innerFe._parametersValues().get(1))));
                     sb.append(" : ");
                     serializeExpression(sb, innerFe._parametersValues().get(0));
                 }
@@ -1404,7 +1408,7 @@ public class PureLanguageSerializer
                         && innerFe._parametersValues() != null
                         && innerFe._parametersValues().size() >= 3)
                 {
-                    sb.append(extractStringValue(innerFe._parametersValues().get(2)));
+                    sb.append(columnName(extractStringValue(innerFe._parametersValues().get(2))));
                     sb.append(" : ");
                     serializeExpression(sb, innerFe._parametersValues().get(0));
                     sb.append(" : ");
@@ -1465,7 +1469,9 @@ public class PureLanguageSerializer
             ValueSpecification nameParam = params.get(0);
             String varName = extractStringValue(nameParam);
             sb.append("let ").append(varName).append(" = ");
-            serializeExpression(sb, params.get(1));
+            // a lambda's body reads statements up to its closing brace: without one, those after the let
+            // would be read into it
+            serializeBracedIfLambda(sb, params.get(1));
             return;
         }
 
@@ -1503,7 +1509,8 @@ public class PureLanguageSerializer
                         if (keyParams != null && keyParams.size() >= 2)
                         {
                             String propName = extractStringValue(keyParams.get(0));
-                            b.append(propName).append("=");
+                            // a third parameter is the parser's mark of `+=` (append)
+                            b.append(propName).append(keyParams.size() == 3 ? "+=" : "=");
                             serializeExpression(b, keyParams.get(1));
                         }
                     }
@@ -1541,7 +1548,8 @@ public class PureLanguageSerializer
                         if (keyParams != null && keyParams.size() >= 2)
                         {
                             String propName = extractStringValue(keyParams.get(0));
-                            b.append(propName).append("=");
+                            // a third parameter is the parser's mark of `+=` (append)
+                            b.append(propName).append(keyParams.size() == 3 ? "+=" : "=");
                             serializeExpression(b, keyParams.get(1));
                         }
                     }
@@ -1785,8 +1793,27 @@ public class PureLanguageSerializer
         }
         else
         {
-            serializeExpression(sb, first);
+            // a lambda receiver in braces: `x|$x->f()` would apply f in its body
+            serializeBracedIfLambda(sb, first);
         }
+    }
+
+    // A value, a lambda in braces ({x|...}) unless it has them already.
+    private void serializeBracedIfLambda(final StringBuilder sb, final ValueSpecification value)
+    {
+        StringBuilder inner = new StringBuilder();
+        serializeExpression(inner, value);
+        boolean lambda = value instanceof AtomicValue av && av._value() instanceof LambdaFunction;
+        boolean wrap = lambda && !inner.toString().startsWith("{");
+        sb.append(wrap ? "{" : "").append(inner).append(wrap ? "}" : "");
+    }
+
+    // A column's name as written: as it is when it is a plain identifier, otherwise (a space, a `|`, a
+    // quote...) in single quotes, the parser's quoted-identifier syntax; the parser keeps a quoted name as
+    // written, its escapes intact, and its quotes stripped.
+    private static String columnName(final String name)
+    {
+        return name.matches("[A-Za-z_][A-Za-z0-9_]*") ? name : "'" + name + "'";
     }
 
     /**

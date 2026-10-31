@@ -1,0 +1,29 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Legacy natives next needs no native for.
+
+// Legacy evaluates its argument and returns it deactivated, as metamodel objects rather than live values.
+// In next a lambda or an expression already is a graph object: the value is what legacy code wants.
+function meta::pure::functions::meta::evaluateAndDeactivate<T|m>(var:T[m]):T[m]
+{
+   $var
+}
+
+// A function (a lambda, a function reference: next values) is how legacy code reaches a function's metamodel:
+// legacy's view of it, its expressions legacy ones.
+function meta::pure::functions::meta::evaluateAndDeactivate(var: platform::pure::metamodel::function::Function<Any>[1]): meta::pure::metamodel::function::FunctionDefinition<Any>[1]
+{
+   meta::pure::bridge::m3::adapt($var)->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>)
+}

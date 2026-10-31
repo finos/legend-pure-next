@@ -23,6 +23,7 @@ import platform.pure.metamodel.relation.RelationTypeImpl;
 import platform.pure.metamodel.type.Type;
 import platform.pure.metamodel.type.generics.GenericType;
 import platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.metamodel.type.generics.TypeParameter;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -377,10 +378,15 @@ public class _RelationType
      */
     public static MutableSet<String> collectReferencedTypeParameterNames(RelationType rt)
     {
-        MutableSet<String> names = Sets.mutable.empty();
+        return collectReferencedTypeParameters(rt).collect(TypeParameter::_name).toSet();
+    }
+
+    static MutableList<TypeParameter> collectReferencedTypeParameters(RelationType rt)
+    {
+        MutableList<TypeParameter> names = Lists.mutable.empty();
         if (rt._columns() != null)
         {
-            rt._columns().forEach(col -> _GenericType.collectReferencedTypeParameterNames(col._genericType(), names));
+            rt._columns().forEach(col -> _GenericType.collectReferencedTypeParameters(col._genericType(), names));
         }
         return names;
     }
@@ -390,15 +396,20 @@ public class _RelationType
      */
     public static MutableSet<String> collectReferencedMultiplicityParameterNames(RelationType rt)
     {
-        MutableSet<String> names = Sets.mutable.empty();
+        return collectReferencedMultiplicityParameters(rt).collect(platform.pure.metamodel.multiplicity.MultiplicityParameter::_name).toSet();
+    }
+
+    static MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> collectReferencedMultiplicityParameters(RelationType rt)
+    {
+        MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> names = Lists.mutable.empty();
         if (rt._columns() != null)
         {
             rt._columns().forEach(col ->
             {
-                _GenericType.collectReferencedMultiplicityParameterNames(col._genericType(), names);
+                _GenericType.collectReferencedMultiplicityParameters(col._genericType(), names);
                 if (col._multiplicity() instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mp)
                 {
-                    names.add(mp._name());
+                    names.add(mp);
                 }
             });
         }

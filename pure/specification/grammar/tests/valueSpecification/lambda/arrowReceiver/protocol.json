@@ -1,0 +1,135 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "ArrowInvocation",
+        "functionName" : "eval",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 21,
+          "endLine" : 4,
+          "startColumn" : 13,
+          "startLine" : 4
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 12,
+            "endLine" : 4,
+            "startColumn" : 3,
+            "startLine" : 4
+          },
+          "value" : {
+            "expressionSequence" : [ {
+              "_type" : "FunctionInvocation",
+              "functionName" : "plus",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 11,
+                "endLine" : 4,
+                "startColumn" : 6,
+                "startLine" : 4
+              },
+              "parametersValues" : [ {
+                "_type" : "VariableExpression",
+                "name" : "a",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 7,
+                  "endLine" : 4,
+                  "startColumn" : 6,
+                  "startLine" : 4
+                }
+              }, {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "platform::pure::metamodel::type::primitives::Integer"
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 11,
+                  "endLine" : 4,
+                  "startColumn" : 11,
+                  "startLine" : 4
+                },
+                "value" : 1
+              } ]
+            } ],
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 12,
+              "endLine" : 4,
+              "startColumn" : 3,
+              "startLine" : 4
+            },
+            "parameters" : [ {
+              "_type" : "VariableExpression",
+              "name" : "a"
+            } ]
+          }
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "platform::pure::metamodel::type::primitives::Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 20,
+            "endLine" : 4,
+            "startColumn" : 20,
+            "startLine" : 4
+          },
+          "value" : 1
+        } ]
+      } ],
+      "functionName" : "lambdaReceivers",
+      "name" : "lambdaReceivers__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 41,
+            "endLine" : 2,
+            "startColumn" : 39,
+            "startLine" : 2
+          },
+          "value" : "Any"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 0
+        }
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

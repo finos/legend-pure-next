@@ -1,0 +1,33 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+// A Variant column: each cell is its JSON text, read when the value is.
+function test::tds::variant(): Any[*]
+{
+  #TDS{
+    id, payload:platform::pure::metamodel::variant::Variant
+    1, "[1,2,3]"
+    2, "{""a"":1}"
+  }#;
+}
+
+###CompiledGraph
+function test::tds::variant__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+TDS :platform::extensions::pure::tds::metamodel::TDS<(id:@Integer@[0..1], payload:Variant[0..1])>[1]  ~platform::extensions::pure::tds::metamodel::TDS<@Any@>  @18:3-22:4
+| 1, "[1,2,3]"
+| 2, "{""a"":1}"
+
+###ReverseIndex
+platform::extensions::pure::tds::metamodel::TDS:
+  test::tds::variant__Any_MANY_
