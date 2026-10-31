@@ -474,7 +474,8 @@ function platform::pure::compiler::structural::valueSpecificationCompiler::compi
 
     ^ValueCompileResult(
         values = [^DotApplication(
-            functionName = $dot.functionName,
+            // the name read as a string literal is (Java ValueSpecificationCompiler.compileDotApplication)
+            functionName = $dot.functionName->map(n | platform::pure::compiler::structural::valueSpecificationCompiler::unescapePureString($n)),
             parametersValues = $paramsAcc.values->cast(@ValueSpecification),
             genericType = ^CompilerNotSetGenericType(),
             multiplicity = PureOne,

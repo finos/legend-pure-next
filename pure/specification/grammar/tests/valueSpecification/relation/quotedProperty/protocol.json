@@ -1,0 +1,145 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "DotApplication",
+        "functionName" : "other kind",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 17,
+          "endLine" : 6,
+          "startColumn" : 5,
+          "startLine" : 6
+        },
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 6,
+            "startColumn" : 3,
+            "startLine" : 6
+          }
+        } ]
+      }, {
+        "_type" : "DotApplication",
+        "functionName" : "\\'a\\'",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 12,
+          "endLine" : 7,
+          "startColumn" : 5,
+          "startLine" : 7
+        },
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 7,
+            "startColumn" : 3,
+            "startLine" : 7
+          }
+        } ]
+      }, {
+        "_type" : "DotApplication",
+        "functionName" : "plain",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 10,
+          "endLine" : 8,
+          "startColumn" : 5,
+          "startLine" : 8
+        },
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 8,
+            "startColumn" : 3,
+            "startLine" : 8
+          }
+        } ]
+      } ],
+      "functionName" : "quotedProperties",
+      "name" : "quotedProperties_Any_1__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 9,
+        "startColumn" : 1,
+        "startLine" : 4
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 42,
+              "endLine" : 4,
+              "startColumn" : 40,
+              "startLine" : 4
+            },
+            "value" : "Any"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "x",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 45,
+          "endLine" : 4,
+          "startColumn" : 37,
+          "startLine" : 4
+        }
+      } ],
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 51,
+            "endLine" : 4,
+            "startColumn" : 49,
+            "startLine" : 4
+          },
+          "value" : "Any"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 0
+        }
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

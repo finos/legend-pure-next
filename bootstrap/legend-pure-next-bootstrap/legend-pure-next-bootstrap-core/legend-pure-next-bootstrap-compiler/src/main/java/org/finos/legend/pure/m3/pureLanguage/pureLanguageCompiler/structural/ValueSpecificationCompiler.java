@@ -265,8 +265,9 @@ public final class ValueSpecificationCompiler
             platform.pure.protocol.grammar.valuespecification.DotApplicationImpl dot,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
+        // the name read as a string literal is ($x.'\'a\'' reads the property or column 'a', quotes included)
         DotApplicationImpl result = new DotApplicationImpl(model)
-                ._functionName(dot._functionName())
+                ._functionName(dot._functionName() == null ? null : unescapePureString(dot._functionName()))
                 ._parametersValues(dot._parametersValues()
                         .collect(pv -> compile(pv, imports, model, context)));
         if (dot._p_sourceInformation() != null)

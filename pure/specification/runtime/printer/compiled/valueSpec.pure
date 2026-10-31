@@ -686,8 +686,10 @@ function platform::pure::functions::printer::compiled::printCompiledArrowInvocat
 // make sense here; the receiver disambiguates).
 function platform::pure::functions::printer::compiled::printCompiledDotApplication(dot: DotApplication[1], ctx: PrintContext[1]): String[1]
 {
+    // a name that is not an identifier in quotes, with its escapes ($x.'\'a\''); `~` is the parent reference
+    let name = if ($dot.functionName == '~', | '~', | printCompiledColumnName($dot.functionName->toOne()));
     if ($dot.parametersValues->isEmpty(),
-        | '.' + $dot.functionName,
+        | '.' + $name,
         | let receiver = printCompiledValueSpec($dot.parametersValues->at(0), $ctx);
           let rest = $dot.parametersValues->drop(1);
           // QualifiedProperty calls need `()` even with no extra args — the
@@ -695,8 +697,8 @@ function platform::pure::functions::printer::compiled::printCompiledDotApplicati
           // (zero-arg QualifiedProperty invocation) by the parens.
           let isQp = isCompiledQualifiedPropertyCall($dot);
           if ($rest->isEmpty() && !$isQp,
-              | $receiver + '.' + $dot.functionName,
-              | $receiver + '.' + $dot.functionName + $rest->map(p | printCompiledValueSpec($p, $ctx))->joinStrings('(', ', ', ')')
+              | $receiver + '.' + $name,
+              | $receiver + '.' + $name + $rest->map(p | printCompiledValueSpec($p, $ctx))->joinStrings('(', ', ', ')')
           );
     );
 }

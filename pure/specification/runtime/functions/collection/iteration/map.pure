@@ -45,6 +45,13 @@ function <<PCT.test>> platform::pure::functions::collection::tests::map::testMap
     assertEquals('circle', $f->eval(|$shape->map(s | $s->platform::pure::functions::collection::tests::map::sameShape())->match([c: M_Circle[1] | 'circle', s: M_Shape[1] | 'shape'])));
 }
 
+// map over one value is that one value itself: a property taking one value takes it, a metamodel class's
+// (whose instances a host may build natively) as a user class's.
+function <<PCT.test>> platform::pure::functions::collection::tests::map::testMapOneValueIntoOneProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('ab', $f->eval(|^platform::pure::metamodel::Package(name = 'a'->map(x | $x + 'b')).name));
+}
+
 Class platform::pure::functions::collection::tests::map::M_Shape
 {
 }

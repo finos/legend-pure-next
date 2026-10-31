@@ -1,0 +1,9 @@
+###Pure
+// A property read by a quoted name ($x.'other kind'), as a relation's column not an identifier is read: the
+// name without its quotes, its escapes kept, as a column spec's is.
+function protocol::quotedProperties(x: Any[1]): Any[*]
+{
+  $x.'other kind';
+  $x.'\'a\'';
+  $x.plain;
+}

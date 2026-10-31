@@ -207,7 +207,20 @@ public class CollectionNatives
         });
 
         // map(T[m], Function<{T[1]->V[m]}>[1]) : V[m]  — generic multiplicity overload
-        natives.put("map_T_m__Function_1__V_m_", natives.get("map_T_MANY__Function_1__V_MANY_"));
+        // map(T[m], Function<{T[1]->V[1]}>[1]) : V[m] — with m bound to [1], that value's image itself (not a
+        // collection of it: a property or a match arm taking one value takes it); otherwise as map over many, a
+        // [*] holding one value staying a collection
+        NativeImpl mapMany = natives.get("map_T_MANY__Function_1__V_MANY_");
+        natives.put("map_T_m__Function_1__V_m_", (args, eval, genericType, multiplicity) ->
+        {
+            boolean toOne = !(multiplicity instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter) && multiplicity != null
+                    && org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.lowerBound(multiplicity) == 1
+                    && Long.valueOf(1).equals(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.upperBound(multiplicity));
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            return toOne && col._values().size() == 1
+                    ? eval.executeFunction(args.get(1), List.of(col._values().getFirst()))
+                    : mapMany.apply(args, eval, genericType, multiplicity);
+        });
 
         // map(T[0..1], Function<{T[1]->V[0..1]}>[1]) : V[0..1]
         natives.put("map_T_$0_1$__Function_1__V_$0_1$_", (args, eval, genericType, multiplicity) ->

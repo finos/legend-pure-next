@@ -1215,7 +1215,9 @@ public class PureLanguageSerializer
         {
             serializeExpression(sb, params.get(0));
         }
-        sb.append(".").append(dot._functionName());
+        // a name that is not an identifier is quoted ($x.'other kind'); `~` is the parent reference
+        String name = String.valueOf(dot._functionName());
+        sb.append(".").append("~".equals(name) ? name : columnName(name));
         // Additional args (e.g., milestoning params)
         if (params != null && params.size() > 1)
         {

@@ -368,7 +368,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
                     {
                         return new DotApplicationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName("~")._parametersValues(Lists.mutable.with(acc));
                     }
-                    return new DotApplicationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName(it.propertyName().getText())._parametersValues(Lists.mutable.with(acc));
+                    return new DotApplicationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName(propertyName(it.propertyName()))._parametersValues(Lists.mutable.with(acc));
                 });
     }
 
@@ -416,6 +416,14 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
         if (ctx.type() != null) __result._genericType(buildGenericType(ctx.type()));
         if (ctx.multiplicity() != null) __result._multiplicity(buildMultiplicity(ctx.multiplicity()));
         return __result;
+    }
+
+    // A property's name as a dot reads it: without its quotes when it is quoted ($x.'other kind'), its escapes kept,
+    // as a column's is.
+    private static String propertyName(final M3Parser.PropertyNameContext ctx)
+    {
+        String raw = ctx.getText();
+        return ctx.STRING() != null ? raw.substring(1, raw.length() - 1) : raw;
     }
 
     // A column's name: without its quotes when it is quoted ('other kind'), as a relation type column's is.
@@ -560,7 +568,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
 
     protected ValueSpecification buildPropertyExpression(final ValueSpecification receiver, final M3Parser.PropertyExpressionContext ctx)
     {
-        return new DotApplicationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName(ctx.propertyName().getText())._parametersValues((ctx.functionExpressionParameters() != null ? Lists.mutable.<ValueSpecification>with(receiver).withAll(ListAdapter.adapt(ctx.functionExpressionParameters().combinedExpression()).collect(this::buildCombinedExpression)) : Lists.mutable.with(receiver)));
+        return new DotApplicationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName(propertyName(ctx.propertyName()))._parametersValues((ctx.functionExpressionParameters() != null ? Lists.mutable.<ValueSpecification>with(receiver).withAll(ListAdapter.adapt(ctx.functionExpressionParameters().combinedExpression()).collect(this::buildCombinedExpression)) : Lists.mutable.with(receiver)));
     }
 
     protected VariableExpressionImpl buildLambdaParam(final M3Parser.LambdaParamContext ctx)

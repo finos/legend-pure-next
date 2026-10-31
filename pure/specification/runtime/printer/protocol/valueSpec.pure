@@ -609,13 +609,15 @@ function platform::pure::functions::printer::protocol::printArrowReceiver(v: pla
 // extra params are present (qualified-property style). Receiver is param[0].
 function platform::pure::functions::printer::protocol::printDotApplication(dot: platform::pure::protocol::grammar::valuespecification::DotApplication[1]): String[1]
 {
+    // a name that is not an identifier in quotes ($x.'other kind'); `~` is the parent reference
+    let name = if ($dot.functionName == '~', | '~', | printColumnName($dot.functionName));
     if ($dot.parametersValues->isEmpty(),
-        | '.' + $dot.functionName,
+        | '.' + $name,
         | let receiver = printValueSpec($dot.parametersValues->at(0));
           let rest = $dot.parametersValues->drop(1);
           if ($rest->isEmpty(),
-              | $receiver + '.' + $dot.functionName,
-              | $receiver + '.' + $dot.functionName + $rest->map(p | printValueSpec($p))->joinStrings('(', ', ', ')');
+              | $receiver + '.' + $name,
+              | $receiver + '.' + $name + $rest->map(p | printValueSpec($p))->joinStrings('(', ', ', ')');
           );
     );
 }
