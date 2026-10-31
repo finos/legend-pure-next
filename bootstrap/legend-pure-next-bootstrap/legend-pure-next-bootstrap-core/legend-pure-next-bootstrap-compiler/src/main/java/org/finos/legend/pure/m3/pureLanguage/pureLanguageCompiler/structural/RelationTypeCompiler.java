@@ -52,7 +52,10 @@ public final class RelationTypeCompiler
                                                                     // read as a string literal is: '\'a\'' is the column 'a', quotes included
                                                                     col._name() != null ? ValueSpecificationCompiler.unescapePureString(col._name()) : "",
                                                                     ownerGT,
-                                                                    col._genericType() != null ? GenericTypeCompiler.compile(col._genericType(), imports, model, context) : null,
+                                                                    // a wildcard column of any type (?:?) is of an undefined type, which nothing
+                                                                    // infers (a column spec's untyped column, ~[name], is left for inference)
+                                                                    col._genericType() != null ? GenericTypeCompiler.compile(col._genericType(), imports, model, context)
+                                                                            : Boolean.TRUE.equals(col._nameWildCard()) ? new platform.pure.metamodel.type.generics.UndefinedGenericTypeImpl(model) : null,
                                                                     col._multiplicity() != null ? MultiplicityCompiler.compile(col._multiplicity(), model) : null,
                                                                     col._nameWildCard() != null && col._nameWildCard(),
                                                                     model)

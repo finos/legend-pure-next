@@ -1,0 +1,138 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+import x::*;
+
+// A nested call with several overloads none of which resolves before the enclosing call binds its type
+// (over's T, which only the extend taking it knows): its overload is the one the kinds of its arguments fit
+// (a ColSpecArray, then SortInfos), chosen before T is, which the extend then binds.
+Class x::Rows
+{
+}
+
+Class x::Range
+{
+}
+
+native function over<T>(cols: ColSpec<(?:?)⊆T>[1], rows: Rows[1]): Window<T>[1];
+
+native function over<T>(cols: ColSpecArray<(?:?)⊆T>[1], rows: Rows[1]): Window<T>[1];
+
+native function over<T>(sortInfo: SortInfo<(?:?)⊆T>[1], range: Range[1]): Window<T>[1];
+
+native function over<T>(cols: ColSpec<(?:?)⊆T>[1], sortInfo: SortInfo<(?:?)⊆T>[*]): Window<T>[1];
+
+native function over<T>(cols: ColSpecArray<(?:?)⊆T>[1], sortInfo: SortInfo<(?:?)⊆T>[*]): Window<T>[1];
+
+native function ascending<T>(column: ColSpec<T>[1]): SortInfo<T>[1];
+
+native function ascending<T>(column: ColSpec<T>[1], emptyOrder: EmptyOrder[1]): SortInfo<T>[1];
+
+native function extend<T,Z,W,R>(r: Relation<T>[1], window: Window<T>[1], f: FuncColSpecArray<{Relation<T>[1],Window<T>[1],T[1]->Any[*]}, R>[1]): Relation<T+R>[1];
+
+function f(rel: Relation<(id:Integer, category:String, val:Integer)>[1]): Relation<(id:Integer, category:String, val:Integer, rnk:Integer)>[1]
+{
+  $rel->extend(over(~[id], [~category->ascending()]), ~[rnk : {p, w, r|1}])
+}
+
+###CompiledGraph
+class x::Rows extends Any  ~Class<x::Rows>  @21:1-23:1
+
+class x::Range extends Any  ~Class<x::Range>  @25:1-27:1
+
+native function over_ColSpec_1__Rows_1__Window_1_(cols:ColSpec<(?:?[1])⊆T~over_ColSpec_1__Rows_1__Window_1_>[1], rows:x::Rows[1]):Window<T~over_ColSpec_1__Rows_1__Window_1_>[1]  ~NativeFunction<{ColSpec<(?:?[1])⊆T~over_ColSpec_1__Rows_1__Window_1_>[1], x::Rows[1]->Window<T~over_ColSpec_1__Rows_1__Window_1_>[1]}>
+
+native function over_ColSpecArray_1__Rows_1__Window_1_(cols:ColSpecArray<(?:?[1])⊆T~over_ColSpecArray_1__Rows_1__Window_1_>[1], rows:x::Rows[1]):Window<T~over_ColSpecArray_1__Rows_1__Window_1_>[1]  ~NativeFunction<{ColSpecArray<(?:?[1])⊆T~over_ColSpecArray_1__Rows_1__Window_1_>[1], x::Rows[1]->Window<T~over_ColSpecArray_1__Rows_1__Window_1_>[1]}>
+
+native function over_SortInfo_1__Range_1__Window_1_(sortInfo:SortInfo<(?:?[1])⊆T~over_SortInfo_1__Range_1__Window_1_>[1], range:x::Range[1]):Window<T~over_SortInfo_1__Range_1__Window_1_>[1]  ~NativeFunction<{SortInfo<(?:?[1])⊆T~over_SortInfo_1__Range_1__Window_1_>[1], x::Range[1]->Window<T~over_SortInfo_1__Range_1__Window_1_>[1]}>
+
+native function over_ColSpec_1__SortInfo_MANY__Window_1_(cols:ColSpec<(?:?[1])⊆T~over_ColSpec_1__SortInfo_MANY__Window_1_>[1], sortInfo:SortInfo<(?:?[1])⊆T~over_ColSpec_1__SortInfo_MANY__Window_1_>[*]):Window<T~over_ColSpec_1__SortInfo_MANY__Window_1_>[1]  ~NativeFunction<{ColSpec<(?:?[1])⊆T~over_ColSpec_1__SortInfo_MANY__Window_1_>[1], SortInfo<(?:?[1])⊆T~over_ColSpec_1__SortInfo_MANY__Window_1_>[*]->Window<T~over_ColSpec_1__SortInfo_MANY__Window_1_>[1]}>
+
+native function over_ColSpecArray_1__SortInfo_MANY__Window_1_(cols:ColSpecArray<(?:?[1])⊆T~over_ColSpecArray_1__SortInfo_MANY__Window_1_>[1], sortInfo:SortInfo<(?:?[1])⊆T~over_ColSpecArray_1__SortInfo_MANY__Window_1_>[*]):Window<T~over_ColSpecArray_1__SortInfo_MANY__Window_1_>[1]  ~NativeFunction<{ColSpecArray<(?:?[1])⊆T~over_ColSpecArray_1__SortInfo_MANY__Window_1_>[1], SortInfo<(?:?[1])⊆T~over_ColSpecArray_1__SortInfo_MANY__Window_1_>[*]->Window<T~over_ColSpecArray_1__SortInfo_MANY__Window_1_>[1]}>
+
+native function ascending_ColSpec_1__SortInfo_1_(column:ColSpec<T~ascending_ColSpec_1__SortInfo_1_>[1]):SortInfo<T~ascending_ColSpec_1__SortInfo_1_>[1]  ~NativeFunction<{ColSpec<T~ascending_ColSpec_1__SortInfo_1_>[1]->SortInfo<T~ascending_ColSpec_1__SortInfo_1_>[1]}>
+
+native function ascending_ColSpec_1__EmptyOrder_1__SortInfo_1_(column:ColSpec<T~ascending_ColSpec_1__EmptyOrder_1__SortInfo_1_>[1], emptyOrder:EmptyOrder[1]):SortInfo<T~ascending_ColSpec_1__EmptyOrder_1__SortInfo_1_>[1]  ~NativeFunction<{ColSpec<T~ascending_ColSpec_1__EmptyOrder_1__SortInfo_1_>[1], EmptyOrder[1]->SortInfo<T~ascending_ColSpec_1__EmptyOrder_1__SortInfo_1_>[1]}>
+
+native function extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_(r:Relation<T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1], window:Window<T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1], f:FuncColSpecArray<{Relation<T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1], Window<T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1], T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_[1]->@Any@[*]}, R~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1]):Relation<T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_+R~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1], Window<T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1], FuncColSpecArray<{Relation<T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1], Window<T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1], T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_[1]->@Any@[*]}, R~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1]->Relation<T~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_+R~extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_>[1]}>
+
+function f_Relation_1__Relation_1_(rel:Relation<(id:@Integer@[1], category:@String@[1], val:@Integer@[1])>[1]):Relation<(id:@Integer@[1], category:@String@[1], val:@Integer@[1], rnk:@Integer@[1])>[1]  ~UserDefinedFunction<{Relation<(id:@Integer@[1], category:@String@[1], val:@Integer@[1])>[1]->Relation<(id:@Integer@[1], category:@String@[1], val:@Integer@[1], rnk:@Integer@[1])>[1]}>
+  ArrowInvocation extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_ :#Relation<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#, rnk:@Integer@[1])#>##[1]#  ~@ArrowInvocation@  @47:7-47:75
+    typeParam R -> #(rnk:@Integer@[1])#
+    typeParam T -> #(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#
+    Variable rel :#Relation<(id:@Integer@[1], category:@String@[1], val:@Integer@[1])>##[1]#  ~@VariableExpression@  @47:3-47:6
+    FunctionInvocation over_ColSpecArray_1__SortInfo_MANY__Window_1_ :#Window<#(id:@Integer@[1], category:@String@[1], val:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @47:16-47:52
+      typeParam T -> #(id:@Integer@[1], category:@String@[1], val:@Integer@[1])#
+      FunctionInvocation colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_ :#ColSpecArray<#(id:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @47:21-47:25
+        typeParam T -> #(id:@Integer@[1])#
+        Collection :#String#[1]  ~@Collection@
+          AtomicValue  'id' :@String@[1]  ~@AtomicValue@  @47:23-47:24
+        TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(id:@Integer@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+      Collection :#SortInfo<#(category:#String##[1]#)#>#[1]  ~@Collection@  @47:28-47:51
+        ArrowInvocation ascending_ColSpec_1__SortInfo_1_ :#SortInfo<#(category:#String##[1]#)#>##[1]#  ~@ArrowInvocation@  @47:38-47:50
+          typeParam T -> #(category:#String##[1]#)#
+          FunctionInvocation colSpec_String_1__GenericTypeAndMultiplicityHolder_1__ColSpec_1_ :#ColSpec<#(category:@String@[1])#>##[1]#  ~@FunctionInvocation@  @47:30-47:37
+            typeParam T -> #(category:@String@[1])#
+            AtomicValue  'category' :@String@[1]  ~@AtomicValue@  @47:30-47:37
+            TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(category:@String@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+    FunctionInvocation funcColSpecArray2_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_ :#FuncColSpecArray<#{#Relation<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#>#[1], #Window<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#>#[1], #(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#[1]->@Any@[*]}#, #(rnk:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @47:55-47:74
+      typeParam P -> #(rnk:@Integer@[1])#
+      typeParam T -> #(rnk:@Integer@[1])#
+      typeParam U -> #(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#
+      Collection :#FuncColSpec<#{#Relation<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#>#[1], #Window<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#>#[1], #(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#[1]->@Any@[1]}#, #(rnk:@Integer@[1])#>#[1]  ~@Collection@
+        FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#>#[1], #Window<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#>#[1], #(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#[1]->@Any@[1]}#, #(rnk:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @47:57-47:73
+          typeParam T -> #(rnk:@Integer@[1])#
+          typeParam U -> #(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#
+          Lambda(p:#Relation<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#>##[1]#, w:#Window<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#>##[1]#, r:#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)##[1]#) :#LambdaFunction<#{#Relation<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#>##[1]#, #Window<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#>##[1]#, #(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)##[1]#->@Integer@[1]}#>#[1]  ~@AtomicValue@  @47:63-47:73
+            AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @47:72-47:72
+          AtomicValue  'rnk' :@String@[1]  ~@AtomicValue@  @47:57-47:59
+          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(rnk:@Integer@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(rnk:@Integer@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+
+###ReverseIndex
+ascending_ColSpec_1__SortInfo_1_:
+  f_Relation_1__Relation_1_
+extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_:
+  f_Relation_1__Relation_1_
+over_ColSpecArray_1__SortInfo_MANY__Window_1_:
+  f_Relation_1__Relation_1_
+platform::pure::functions::relation::EmptyOrder:
+  ascending_ColSpec_1__EmptyOrder_1__SortInfo_1_
+platform::pure::functions::relation::SortInfo:
+  ascending_ColSpec_1__EmptyOrder_1__SortInfo_1_
+  ascending_ColSpec_1__SortInfo_1_
+  over_ColSpecArray_1__SortInfo_MANY__Window_1_
+  over_ColSpec_1__SortInfo_MANY__Window_1_
+  over_SortInfo_1__Range_1__Window_1_
+platform::pure::functions::relation::Window:
+  extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_
+  over_ColSpecArray_1__Rows_1__Window_1_
+  over_ColSpecArray_1__SortInfo_MANY__Window_1_
+  over_ColSpec_1__Rows_1__Window_1_
+  over_ColSpec_1__SortInfo_MANY__Window_1_
+  over_SortInfo_1__Range_1__Window_1_
+platform::pure::functions::relation::colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_:
+  f_Relation_1__Relation_1_
+platform::pure::functions::relation::colSpec_String_1__GenericTypeAndMultiplicityHolder_1__ColSpec_1_:
+  f_Relation_1__Relation_1_
+platform::pure::functions::relation::funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_:
+  f_Relation_1__Relation_1_
+platform::pure::functions::relation::funcColSpecArray2_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_:
+  f_Relation_1__Relation_1_
+x::Range:
+  over_SortInfo_1__Range_1__Window_1_
+x::Rows:
+  over_ColSpecArray_1__Rows_1__Window_1_
+  over_ColSpec_1__Rows_1__Window_1_

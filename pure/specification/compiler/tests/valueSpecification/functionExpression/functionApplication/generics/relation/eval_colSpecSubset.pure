@@ -1,0 +1,59 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+// A column spec typed as a subset (ColSpec<(?:String)⊆T>) given where one is expected
+// (ColSpec<(?:Z)⊆T>): each side binds the other's, Z to String, so eval's result is the column's type and
+// the reduce's lambdas typed by it.
+native function reduce<T,V,U|m>(rel: Relation<T>[1], map: Function<{T[1]->V[*]}>[1], agg: Function<{V[*]->U[m]}>[1]): U[m];
+
+native function eval<Z,T>(col: ColSpec<(?:Z)⊆T>[1], row: T[1]): Z[0..1];
+
+function joinS<T>(rel: Relation<T>[1], col: ColSpec<(?:String)⊆T>[1], separator: String[1]): String[1]
+{
+  $rel->reduce(x|eval($col, $x), y|$y->joinStrings($separator))
+}
+
+###CompiledGraph
+native function reduce_Relation_1__Function_1__Function_1__U_m_(rel:Relation<T~reduce_Relation_1__Function_1__Function_1__U_m_>[1], map:Function<{T~reduce_Relation_1__Function_1__Function_1__U_m_[1]->V~reduce_Relation_1__Function_1__Function_1__U_m_[*]}>[1], agg:Function<{V~reduce_Relation_1__Function_1__Function_1__U_m_[*]->U~reduce_Relation_1__Function_1__Function_1__U_m_[m~reduce_Relation_1__Function_1__Function_1__U_m_]}>[1]):U~reduce_Relation_1__Function_1__Function_1__U_m_[m~reduce_Relation_1__Function_1__Function_1__U_m_]  ~NativeFunction<{Relation<T~reduce_Relation_1__Function_1__Function_1__U_m_>[1], Function<{T~reduce_Relation_1__Function_1__Function_1__U_m_[1]->V~reduce_Relation_1__Function_1__Function_1__U_m_[*]}>[1], Function<{V~reduce_Relation_1__Function_1__Function_1__U_m_[*]->U~reduce_Relation_1__Function_1__Function_1__U_m_[m~reduce_Relation_1__Function_1__Function_1__U_m_]}>[1]->U~reduce_Relation_1__Function_1__Function_1__U_m_[m~reduce_Relation_1__Function_1__Function_1__U_m_]}>
+
+native function eval_ColSpec_1__T_1__Z_$0_1$_(col:ColSpec<(?:Z~eval_ColSpec_1__T_1__Z_$0_1$_[1])⊆T~eval_ColSpec_1__T_1__Z_$0_1$_>[1], row:T~eval_ColSpec_1__T_1__Z_$0_1$_[1]):Z~eval_ColSpec_1__T_1__Z_$0_1$_[0..1]  ~NativeFunction<{ColSpec<(?:Z~eval_ColSpec_1__T_1__Z_$0_1$_[1])⊆T~eval_ColSpec_1__T_1__Z_$0_1$_>[1], T~eval_ColSpec_1__T_1__Z_$0_1$_[1]->Z~eval_ColSpec_1__T_1__Z_$0_1$_[0..1]}>
+
+function joinS_Relation_1__ColSpec_1__String_1__String_1_(rel:Relation<T~joinS_Relation_1__ColSpec_1__String_1__String_1_>[1], col:ColSpec<(?:@String@[1])⊆T~joinS_Relation_1__ColSpec_1__String_1__String_1_>[1], separator:@String@[1]):@String@[1]  ~UserDefinedFunction<{Relation<T~joinS_Relation_1__ColSpec_1__String_1__String_1_>[1], ColSpec<(?:@String@[1])⊆T~joinS_Relation_1__ColSpec_1__String_1__String_1_>[1], @String@[1]->@String@[1]}>
+  ArrowInvocation reduce_Relation_1__Function_1__Function_1__U_m_ :#String##[1]#  ~@ArrowInvocation@  @25:7-25:63
+    typeParam T -> T~joinS_Relation_1__ColSpec_1__String_1__String_1_
+    typeParam U -> #String#
+    typeParam V -> #String#
+    mulParam m -> #[1]#
+    Variable rel :#Relation<T~joinS_Relation_1__ColSpec_1__String_1__String_1_>##[1]#  ~@VariableExpression@  @25:3-25:6
+    Lambda(x:#T~joinS_Relation_1__ColSpec_1__String_1__String_1_##[1]#) :#LambdaFunction<#{#T~joinS_Relation_1__ColSpec_1__String_1__String_1_##[1]#->#String##[0..1]#}#>#[1]  ~@AtomicValue@  @25:16-25:31
+      openVar col :#ColSpec<(?:@String@[1])⊆T~joinS_Relation_1__ColSpec_1__String_1__String_1_>##[1]#
+      FunctionInvocation eval_ColSpec_1__T_1__Z_$0_1$_ :#String##[0..1]#  ~@FunctionInvocation@  @25:18-25:31
+        typeParam T -> T~joinS_Relation_1__ColSpec_1__String_1__String_1_
+        typeParam Z -> @String@
+        Variable col :#ColSpec<(?:@String@[1])⊆T~joinS_Relation_1__ColSpec_1__String_1__String_1_>##[1]#  ~@VariableExpression@  @25:23-25:26
+        Variable x :#T~joinS_Relation_1__ColSpec_1__String_1__String_1_##[1]#  ~@VariableExpression@  @25:29-25:30
+    Lambda(y:#String##[*]#) :#LambdaFunction<#{#String##[*]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @25:34-25:62
+      openVar separator :#String##[1]#
+      ArrowInvocation joinStrings_String_MANY__String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @25:38-25:62
+        Variable y :#String##[*]#  ~@VariableExpression@  @25:36-25:37
+        Variable separator :#String##[1]#  ~@VariableExpression@  @25:52-25:61
+
+###ReverseIndex
+eval_ColSpec_1__T_1__Z_$0_1$_:
+  joinS_Relation_1__ColSpec_1__String_1__String_1_
+platform::pure::functions::string::joinStrings_String_MANY__String_1__String_1_:
+  joinS_Relation_1__ColSpec_1__String_1__String_1_
+reduce_Relation_1__Function_1__Function_1__U_m_:
+  joinS_Relation_1__ColSpec_1__String_1__String_1_

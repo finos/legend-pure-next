@@ -17,7 +17,7 @@ function test::tst():Any[*]
 }
 
 ###CompilerStats
-inferenceRollbacks: 8
-candidateEvaluations: 12
+inferenceRollbacks: 4
+candidateEvaluations: 8
 rollbackSites:
   MULTI_CANDIDATE_PRE_RESOLVE = 2

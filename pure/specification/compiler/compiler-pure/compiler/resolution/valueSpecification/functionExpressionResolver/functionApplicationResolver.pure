@@ -153,6 +153,31 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
 }
 
 // Mirrors Java resolveFunctionApplication multi-candidate path
+// The candidates the kinds of the arguments fit: those none of whose parameters is of a raw type an argument's
+// known raw type is not of (over(~[id], [~category->ascending()]) is the over taking a ColSpecArray and
+// SortInfos, whatever their T, which the call taking it binds). An argument not typed yet, or a parameter or
+// argument typed by a type parameter or a function type, fits any. All of them when none fits, for the errors
+// to be the candidates' — mirrors Java FunctionApplicationResolver.fittingKinds.
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::fittingKinds(candidates:PackageableFunction<Any>[*], args:ValueSpecification[*], context:CompilerContext[1]):PackageableFunction<Any>[*]
+{
+    let fitting = $candidates->filter(c |
+        let params = $c->getFunctionType($context).parameters->cast(@VariableExpression);
+        range(if($params->size() < $args->size(), | $params->size(), | $args->size()))->forAll(i | kindFits($params->at($i).genericType, $args->at($i).genericType, $context));
+    );
+    if($fitting->isEmpty(), | $candidates, | $fitting);
+}
+
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::kindFits(paramGT:GenericType[0..1], argGT:GenericType[0..1], context:CompilerContext[1]):Boolean[1]
+{
+    let param = $paramGT->map(g | $g->rawType())->map(t | $t->derefTypeIfPointer($context));
+    let arg = $argGT->map(g | $g->rawType())->map(t | $t->derefTypeIfPointer($context));
+    $param->isEmpty() || $arg->isEmpty()
+        || $param->toOne()->instanceOf(TypeParameter) || $arg->toOne()->instanceOf(TypeParameter)
+        || $param->toOne()->instanceOf(FunctionType) || $arg->toOne()->instanceOf(FunctionType)
+        || platform::pure::compiler::helper::type::isTopType($param->toOne())
+        || platform::pure::compiler::helper::type::subtypeOf($arg->toOne(), $param->toOne(), $context);
+}
+
 function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveWithMultipleCandidates(fi:FunctionApplication[1], candidates:PackageableFunction<Any>[*], scope:VariableExpression[*], deepCtx:CompilerContext[1], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     // Step 1: Pre-resolve non-lambda params once (like Java lines 86-94).
@@ -221,7 +246,7 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
     // Re-sorted against the arguments now resolved: a parameter's multiplicity ranked against its argument's
     // (mirrors Java, which sorts once the arguments are pre-resolved).
     let arguments = $preResolvedParams->map(p | $p.multiplicity);
-    let ranked = $candidates->sort({a, b |
+    let ranked = $candidates->fittingKinds($preResolvedParams, $context)->sort({a, b |
         let cmp = compareFunctionTypes($a->getFunctionType($context), $b->getFunctionType($context), $arguments, $context);
         if($cmp != 0, | $cmp,
             | let tpCmp = $a.typeParameters->size() - $b.typeParameters->size();
@@ -898,8 +923,17 @@ function platform::pure::compiler::resolution::valueSpecification::functionExpre
     context:CompilerContext[1]
 ):FunctionApplication[1]
 {
-    // Collect child bindings: child's return type → parent's resolved param type
-    let argGT = $childExpr.genericType->toOne();
+    // Collect child bindings: child's return type → parent's resolved param type. The child's own type
+    // parameters are bound from its function's declared return type (colSpec's ColSpec<T>), not from its
+    // current type, already in terms of the parent's (ColSpec<X⊆T>) — mirrors Java reverseMatch.
+    // a pointer dereferenced through the registry, as finalizeFunctionExpression does
+    let childFunc = $childExpr.func->map(f | $f->match([
+        ptr : platform::pure::metamodel::pointer::TempCompilerPointer[1] | $ptr->platform::pure::compiler::helper::pointer::dereferencePointer($context)->cast(@Function<Any>),
+        f2 : Function<Any>[1] | $f2
+    ]));
+    let argGT = if($childFunc->isNotEmpty() && $childFunc->toOne()->instanceOf(PackageableFunction),
+        | $childFunc->toOne()->getFunctionType($context).returnType->toOne(),
+        | $childExpr.genericType->toOne());
     let childBindings = newPlainParametersBinding()->cast(@ParametersBinding);
     let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings, $context);
     let b1 = collectTypeParameterBindings($argGT, $resolvedParamGT, $childBindings);

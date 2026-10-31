@@ -162,6 +162,7 @@ public class FunctionApplicationResolver
 
             // Multiple candidates — sort most-specific-first against the arguments (a parameter's multiplicity
             // ranked against its argument's), then try each with rollback.
+            candidates = fittingKinds(candidates, preResolvedParams, model);
             candidates.sortThis(FunctionIndexEntry.mostSpecificFirst(model, preResolvedParams.collect(ValueSpecification::_multiplicity)));
             MutableList<CompilationError> bestCandidateErrors = null;
             for (FunctionIndexEntry candidateEntry : candidates)
@@ -211,6 +212,35 @@ public class FunctionApplicationResolver
             }
             return (FunctionApplication) ((FunctionApplication) expr._copy())._func(null);
         }
+    }
+
+    /**
+     * The candidates the kinds of the arguments fit: those none of whose parameters is of a raw type an
+     * argument's known raw type is not of ({@code over(~[id], [~category->ascending()])} is the over taking a
+     * ColSpecArray and SortInfos, whatever their T, which the call taking it binds). An argument not typed yet,
+     * or a parameter or argument typed by a type parameter or a function type, fits any. All of them when none
+     * fits, for the errors to be the candidates'.
+     */
+    private static MutableList<FunctionIndexEntry> fittingKinds(MutableList<FunctionIndexEntry> candidates, MutableList<ValueSpecification> args, MetadataAccess model)
+    {
+        MutableList<FunctionIndexEntry> fitting = candidates.select(c ->
+        {
+            MutableList<VariableExpression> params = c.functionType()._parameters();
+            return org.eclipse.collections.impl.list.primitive.IntInterval.zeroTo(Math.min(params.size(), args.size()) - 1)
+                    .allSatisfy(i -> kindFits(params.get(i)._genericType(), args.get(i)._genericType(), model));
+        });
+        return fitting.isEmpty() ? candidates : fitting;
+    }
+
+    private static boolean kindFits(GenericType paramGT, GenericType argGT, MetadataAccess model)
+    {
+        platform.pure.metamodel.type.Type param = paramGT == null ? null : _GenericType.type(paramGT);
+        platform.pure.metamodel.type.Type arg = argGT == null ? null : _GenericType.type(argGT);
+        return param == null || arg == null
+                || param instanceof TypeParameter || arg instanceof TypeParameter
+                || param instanceof platform.pure.metamodel.type.FunctionType || arg instanceof platform.pure.metamodel.type.FunctionType
+                || org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.isTopType(param)
+                || org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.subtypeOf(arg, param, model);
     }
 
     /**
@@ -662,7 +692,11 @@ public class FunctionApplicationResolver
             MetadataAccess model,
             CompilationContext context)
     {
-        GenericType argGT = childExpr._genericType();
+        // the child's own type parameters are bound from its function's declared return type (colSpec's
+        // ColSpec<T>), not from its current type, already in terms of the parent's (ColSpec<X⊆T>)
+        GenericType argGT = childExpr._func() instanceof platform.pure.metamodel.function.PackageableFunction childFunc
+                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function.getFunctionType(childFunc, model)._returnType()
+                : childExpr._genericType();
         ParametersBinding childBindings = PlainParametersBinding.empty();
         GenericType resolvedParamGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
         _GenericType.collectTypeParameterBindings(argGT, resolvedParamGT, childBindings);

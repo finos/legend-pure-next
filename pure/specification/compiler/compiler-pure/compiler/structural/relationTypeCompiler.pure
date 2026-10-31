@@ -31,8 +31,10 @@ function platform::pure::compiler::structural::relationTypeCompiler::compileRela
         let colGenType = $col.genericType;
         let colGTResult = if($colGenType->isNotEmpty() && $colGenType->toOne()->instanceOf(platform::pure::protocol::grammar::type::generics::GenericTypeValue),
             | $colGenType->toOne()->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext),
-            | ^CompilerResult<GenericType>(
-                  value = ^CompilerNotSetGenericType(),
+            | // a wildcard column of any type (?:?) is of an undefined type, which nothing infers (a column
+              // spec's untyped column, ~[name], is left for inference) — mirrors Java RelationTypeCompiler
+              ^CompilerResult<GenericType>(
+                  value = if($col.nameWildCard->isNotEmpty() && $col.nameWildCard->toOne(), | ^UndefinedGenericType(), | ^CompilerNotSetGenericType()),
                   context = $acc.context
               )
         );

@@ -166,7 +166,13 @@ public final class _GenericTypeOperation
      */
     public static void collectTypeParameterBindings(GenericTypeOperation gto, GenericType argGT, ParametersBinding bindings)
     {
-        if (isSubset(gto))
+        if (isSubset(gto) && argGT instanceof GenericTypeOperation argGto && isSubset(argGto))
+        {
+            // a subset given for a subset ((?:String)⊆T for (?:Z)⊆T): each side binds the other's
+            _GenericType.collectTypeParameterBindings(gto._left(), argGto._left(), bindings);
+            _GenericType.collectTypeParameterBindings(gto._right(), argGto._right(), bindings);
+        }
+        else if (isSubset(gto))
         {
             _GenericType.collectTypeParameterBindings(gto._left(), argGT, bindings);
         }

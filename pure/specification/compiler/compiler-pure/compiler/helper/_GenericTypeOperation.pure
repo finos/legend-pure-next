@@ -50,7 +50,12 @@ function platform::pure::compiler::helper::genericTypeOperation::collectGenericT
 
 function platform::pure::compiler::helper::genericTypeOperation::collectGenericTypeOperationTypeParameterBindings(gto:GenericTypeOperation[1], argGT:GenericType[1], bindings:ParametersBinding[1]):ParametersBinding[1]
 {
-    if([pair(| $gto.operationType == GenericTypeOperationType.Subset, | collectTypeParameterBindings($gto.left, $argGT, $bindings)),
+    let argSubset = $argGT->match([a : GenericTypeOperation[1] | if($a.operationType == GenericTypeOperationType.Subset, | $a, | []), o : Any[1] | []]);
+    if([// a subset given for a subset ((?:String)⊆T for (?:Z)⊆T): each side binds the other's — mirrors Java
+        pair(| $gto.operationType == GenericTypeOperationType.Subset && $argSubset->isNotEmpty(),
+             | let b1 = collectTypeParameterBindings($gto.left, $argSubset->toOne().left, $bindings);
+               collectTypeParameterBindings($gto.right, $argSubset->toOne().right, $b1);),
+        pair(| $gto.operationType == GenericTypeOperationType.Subset, | collectTypeParameterBindings($gto.left, $argGT, $bindings)),
         pair(| $gto.operationType == GenericTypeOperationType.Equal,
              | let b1 = collectTypeParameterBindings($gto.left, $argGT, $bindings);
                collectTypeParameterBindings($gto.right, $argGT, $b1);)],

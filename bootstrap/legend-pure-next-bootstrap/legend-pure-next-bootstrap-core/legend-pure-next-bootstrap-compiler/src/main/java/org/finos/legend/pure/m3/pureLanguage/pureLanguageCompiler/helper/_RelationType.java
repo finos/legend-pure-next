@@ -184,8 +184,9 @@ public class _RelationType
         RelationTypeImpl result = new RelationTypeImpl();
         GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
 
+        // in the first relation's order (a set's is arbitrary): the columns as written
         MutableList<Column> commonColumns = Lists.mutable.empty();
-        for (String colName : commonNames)
+        for (String colName : relationTypes.getFirst()._columns().collect(Column::_name).select(commonNames::contains))
         {
             MutableList<GenericType> colTypes = Lists.mutable.empty();
             MutableList<Multiplicity> colMuls = Lists.mutable.empty();

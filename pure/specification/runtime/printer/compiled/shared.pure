@@ -82,7 +82,8 @@ function platform::pure::functions::printer::compiled::printRelationColumn(c: Co
     let n = if ($c.nameWildCard, | '?', | printCompiledColumnName($c.name->orElse('')));
     let m = printMultiplicity($cgt.multiplicityArguments->at(0));
     let mulSuffix = if ($m == '[1]', | '', | $m);
-    $n + ':' + printGenericType($cgt.typeArguments->at(1), $ctx) + $mulSuffix;
+    // a column of an undefined type is `?` (a wildcard column of any type, `?:?`), as the grammar writes it
+    $n + ':' + printCompiledTypeArg($cgt.typeArguments->at(1), $ctx) + $mulSuffix;
 }
 
 function platform::pure::functions::printer::compiled::printPackageableTypePath(path: String[1]): String[1]
