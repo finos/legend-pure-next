@@ -57,3 +57,8 @@ test("collectReports copies the Pure reports and splits the JUnit ones below eac
     assert.ok(existsSync(join(repo, "bootstrap/m/target/surefire-reports/TEST-org.x.ATest.xml")));
     assert.deepEqual(result, { reports: 1, classes: 2 });
 });
+
+test("no test logs (no test ran) is nothing to collect", () => {
+    const repo = mkdtempSync(join(tmpdir(), "repo-"));
+    assert.deepEqual(collectReports(join(repo, "no-testlogs"), repo), { reports: 0, classes: 0 });
+});

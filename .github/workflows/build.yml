@@ -17,11 +17,11 @@
 #
 #   guard
 #   └── bootstrap                       the bootstrap, its PDBs, the field-ID registry checks
-#       ├── bootstrap-self-host         manual: the bootstrap tests, specification suites and self-host
+#       ├── bootstrap-self-host         the bootstrap tests, specification suites and self-host (tagged manual)
 #       ├── printer-compiled            compiler-pure printed back, on Truffle
 #       ├── pdb-golden                  compiler-pure PDB goldens, on Truffle
 #       ├── printer-protocol            the protocol printer corpus, on Truffle
-#       ├── truffle-native-self-host    the native image: [specifications | self-host (manual)]
+#       ├── truffle-native-self-host    the native image: [specifications | self-host (every self-host check)]
 #       └── truffle-self-host           Truffle: its JUnit tests, the compiler corpus, the usage example
 #           ├── truffle-specifications  every other suite on Truffle
 #           └── translation-deps        the module suites on Truffle: [language-java | language-javascript | translation-shared]
@@ -29,8 +29,9 @@
 #   publish-gallery → all-green
 #
 # Jobs hand their work on through the Bazel disk cache (.bazelrc config ci): bootstrap and truffle-self-host save
-# theirs, the jobs that need them restore it, and main saves the one every run starts from. Manual jobs run on
-# workflow_dispatch and nightly. The test dashboard reads each job's reports as before (tools/bazel/collect-reports.mjs).
+# theirs, the jobs that need them restore it, and main saves the one every run starts from. The manual tiers (tags
+# bootstrap, selfhost) are not in //..., so not in a local `bazel test //...`, but CI runs them on every run, in
+# parallel. The test dashboard reads each job's reports as before (tools/bazel/collect-reports.mjs).
 name: Build CI
 
 env:
@@ -65,10 +66,8 @@ env:
 on:
   push:
   pull_request:
+  # A run on demand, of any branch.
   workflow_dispatch:
-  # The manual tier, nightly (spec Section 3).
-  schedule:
-    - cron: '0 3 * * *'
 
 # deploy-pages needs `pages: write` + `id-token: write` (OIDC). `contents: read`
 # stays minimal — no other job writes back to the repo.
@@ -102,7 +101,7 @@ jobs:
     name: Pipeline guard
     runs-on: ubuntu-24.04
     if: |
-      github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+      github.event_name == 'workflow_dispatch'
       || ((github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
           && !contains(github.event.head_commit.message, '[maven-release-plugin]'))
     steps:
@@ -159,10 +158,9 @@ jobs:
           key: bazel-${{ runner.os }}-${{ github.run_id }}-bootstrap
 
   bootstrap-self-host:
-    name: "Bootstrap tier (manual: its tests, specification suites and self-host)"
+    name: "Bootstrap tier (its tests, specification suites and self-host)"
     needs: bootstrap
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -346,10 +344,10 @@ jobs:
         include:
           - suite: specifications
             command: bazel test --build_tests_only --test_tag_filters=job:truffle-native-self-host/specifications //...
-          # Every self-host check (Truffle JIT, native image, bootstrap): manual (spec Section 3).
+          # Every self-host check (Truffle JIT, native image, bootstrap): tagged manual, so not in //..., but run here
+          # on every run, in parallel with the other jobs.
           - suite: self-host
             command: bazel test $(bazel query --noshow_progress 'attr(tags, "\bselfhost\b", //...)')
-            manual: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -360,7 +358,6 @@ jobs:
           restore-from: bootstrap
 
       - name: Test
-        if: ${{ !matrix.manual || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
         run: ${{ matrix.command }}
 
       - name: Collect dashboard reports

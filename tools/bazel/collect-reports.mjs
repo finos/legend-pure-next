@@ -69,6 +69,8 @@ const put = (path, text) => {
 
 /** Copy every report below 'testlogs' into 'root'; how many Pure reports and JUnit classes it wrote. */
 export function collectReports(testlogs, root) {
+    // No test ran (a step skipped, or a build that failed first): nothing to collect, and nothing to fail on here.
+    if (!existsSync(testlogs)) return { reports: 0, classes: 0 };
     const outputs = walk(testlogs).filter((f) => f.split(sep).includes("test.outputs"));
     const relativeToOutputs = (f) => {
         const parts = f.split(sep);
@@ -91,10 +93,6 @@ export function collectReports(testlogs, root) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     const testlogs = process.argv[2] ?? execFileSync("bazel", ["info", "bazel-testlogs"]).toString().trim();
     const root = process.argv[3] ?? process.cwd();
-    if (!existsSync(testlogs)) {
-        console.error(`no test logs at '${testlogs}'`);
-        process.exit(1);
-    }
     const { reports, classes } = collectReports(testlogs, root);
     console.log(`  ${reports} Pure reports into ${relative(process.cwd(), join(root, "test-results")) || "test-results"}, ${classes} JUnit classes into <module>/target/surefire-reports`);
 }
