@@ -37,9 +37,17 @@ final class FloatHelper
         }
         if (v instanceof Number n)
         {
-            return n.doubleValue();
+            return numberToDouble(n);
         }
         throw new ClassCastException(signature + " expected Float, got: "
                 + (v == null ? "null" : v.getClass().getName()));
+    }
+
+    // Graal sees BigDecimal.doubleValue here, which reaches BigInteger.squareKaratsuba, and that is
+    // genuinely recursive: without a boundary it bails out with `Too deep inlining` (see BinaryNumberNode).
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static double numberToDouble(Number n)
+    {
+        return n.doubleValue();
     }
 }

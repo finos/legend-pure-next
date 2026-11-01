@@ -35,7 +35,14 @@ public final class MinusNegateDecimalNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object v = operand.executeGeneric(frame);
+        return negate(operand.executeGeneric(frame));
+    }
+
+    // BigDecimal.doubleValue and toString reach BigInteger.squareKaratsuba, which is genuinely recursive:
+    // without a boundary Graal bails out with `Too deep inlining` (see BinaryNumberNode).
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static BigDecimal negate(Object v)
+    {
         if (v instanceof BigDecimal bd)
         {
             return bd.negate();

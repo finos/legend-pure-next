@@ -49,7 +49,15 @@ public final class DivideDecimalNode extends PureNode
         Object a = dividend.executeGeneric(frame);
         Object b = divisor.executeGeneric(frame);
         int s = (int) IntegerHelper.asLong(scale.executeGeneric(frame), SIG);
-        return toBigDecimal(a).divide(toBigDecimal(b), s, RoundingMode.HALF_UP);
+        return divide(toBigDecimal(a), toBigDecimal(b), s);
+    }
+
+    // BigDecimal.divide reaches BigInteger.squareKaratsuba, which is genuinely recursive:
+    // without a boundary Graal bails out with `Too deep inlining` (see BinaryNumberNode).
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static BigDecimal divide(BigDecimal a, BigDecimal b, int scale)
+    {
+        return a.divide(b, scale, RoundingMode.HALF_UP);
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

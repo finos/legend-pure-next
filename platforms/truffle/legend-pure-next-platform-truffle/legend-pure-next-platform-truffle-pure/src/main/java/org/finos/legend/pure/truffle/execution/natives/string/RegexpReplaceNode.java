@@ -66,6 +66,7 @@ public final class RegexpReplaceNode extends PureNode
         return replace(s, regex, replacement, replaceAll, flags);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean asBoolean(Object v)
     {
         if (v instanceof Boolean b) return b;

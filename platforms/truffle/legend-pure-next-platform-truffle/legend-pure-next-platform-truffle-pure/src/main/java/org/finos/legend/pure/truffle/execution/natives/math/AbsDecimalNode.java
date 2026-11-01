@@ -37,7 +37,14 @@ public final class AbsDecimalNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object v = operand.executeGeneric(frame);
+        return abs(operand.executeGeneric(frame));
+    }
+
+    // BigDecimal.doubleValue and toString reach BigInteger.squareKaratsuba, which is genuinely recursive:
+    // without a boundary Graal bails out with `Too deep inlining` (see BinaryNumberNode).
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static BigDecimal abs(Object v)
+    {
         if (v instanceof BigDecimal bd)
         {
             return bd.abs();

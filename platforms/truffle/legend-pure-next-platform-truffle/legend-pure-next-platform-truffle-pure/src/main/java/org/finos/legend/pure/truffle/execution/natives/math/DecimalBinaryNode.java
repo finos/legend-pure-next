@@ -52,6 +52,14 @@ public final class DecimalBinaryNode extends PureNode
     {
         BigDecimal a = asBigDecimal(left.executeGeneric(frame));
         BigDecimal b = asBigDecimal(right.executeGeneric(frame));
+        return apply(a, b);
+    }
+
+    // BigDecimal arithmetic reaches BigInteger.squareKaratsuba, which is genuinely recursive:
+    // without a boundary Graal bails out with `Too deep inlining` (see BinaryNumberNode).
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private BigDecimal apply(BigDecimal a, BigDecimal b)
+    {
         return op.apply(a, b);
     }
 

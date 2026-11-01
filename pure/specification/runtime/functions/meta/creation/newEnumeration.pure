@@ -55,53 +55,75 @@ function <<PCT.function>> platform::pure::functions::meta::creation::newEnumerat
         // set the classifierGenericType directly with the precise runtime
         // type args (Property<Enumeration<self>, self|1>, Enum<>=self) —
         // `^Type<...>` would only accept a parse-time type literal here.
-        properties = $valueNames->map(vn |
-            // Enum value: CGT type = the outer enumeration. `new(GT)`
-            // bypasses classifier-override validation. Set name via copy.
-            let baseEnum = new(^UserDefinedGenericType(type = ~.~))
-                ->cast(@platform::pure::metamodel::type::Enum);
-            let namedEnum = ^$baseEnum(name = $vn);
-            // Property: CGT = Property<Enumeration<self>, self|1> with
-            // multiplicity 1, mirroring the canonical structure built by
-            // the legacy native. The two typeArguments reference the outer
-            // enumeration; the inner UDGT layer adds one tilde level.
-            let baseProp = new(^UserDefinedGenericType(
-                type = Property,
-                typeArguments = [
-                    ^UserDefinedGenericType(
-                        type = Enumeration,
-                        typeArguments = ^UserDefinedGenericType(type = ~.~.~.~)
-                    ),
-                    ^UserDefinedGenericType(type = ~.~.~)
-                ],
-                multiplicityArguments = PureOne
-            ))->cast(@platform::pure::metamodel::function::property::Property<platform::pure::metamodel::type::Enumeration<platform::pure::metamodel::type::Any>, platform::pure::metamodel::type::Enum|1>);
-            ^$baseProp(
-                name = $vn,
-                owner = ~.~,
-                multiplicity = PureOne,
-                aggregation = AggregationKind.None,
-                genericType = ^UserDefinedGenericType(type = ~.~.~),
-                // Like every default, a function of the object the property belongs to: `this` is
-                // the enumeration (Enumeration<self> — six levels out from the inner type argument).
-                defaultValue = ^LambdaFunction<{Enumeration<Any>[1]->Any[1]}>(
-                    parameters = ^VariableExpression(
-                        name = 'this',
-                        genericType = ^UserDefinedGenericType(
-                            type = Enumeration,
-                            typeArguments = ^UserDefinedGenericType(type = ~.~.~.~.~.~)
-                        ),
-                        multiplicity = PureOne
-                    ),
-                    expressionSequence = ^AtomicValue(
-                        value = $namedEnum->cast(@platform::pure::metamodel::type::Any),
-                        genericType = ^UserDefinedGenericType(type = ~.~.~.~.~),
-                        multiplicity = PureOne
-                    )
-                )
-            );
+        //
+        // The body is split into named functions, each its own Graal compilation root: as one lambda it
+        // is too big to compile (GraphTooBigBailoutException on Truffle).
+        properties = $valueNames->map(vn | platform::pure::functions::meta::creation::newEnumerationProperty($vn, ~))
+    );
+}
+
+function platform::pure::functions::meta::creation::newEnumerationProperty(valueName:String[1], enumeration:Enumeration<Any>[1]):Property<Enumeration<Any>, Enum|1>[1]
+{
+    let baseProp = new(platform::pure::functions::meta::creation::newEnumerationPropertyType($enumeration))
+        ->cast(@platform::pure::metamodel::function::property::Property<platform::pure::metamodel::type::Enumeration<platform::pure::metamodel::type::Any>, platform::pure::metamodel::type::Enum|1>);
+    ^$baseProp(
+        name = $valueName,
+        owner = $enumeration,
+        multiplicity = PureOne,
+        aggregation = AggregationKind.None,
+        genericType = ^UserDefinedGenericType(type = $enumeration),
+        // Like every default, a function of the object the property belongs to: `this` is the enumeration.
+        defaultValue = ^LambdaFunction<{Enumeration<Any>[1]->Any[1]}>(
+            parameters = platform::pure::functions::meta::creation::newEnumerationThisParameter($enumeration),
+            expressionSequence = platform::pure::functions::meta::creation::newEnumerationDefaultExpression($valueName, $enumeration)
         )
     );
+}
+
+// Property: CGT = Property<Enumeration<self>, self|1> with multiplicity 1, mirroring the canonical
+// structure built by the legacy native.
+function platform::pure::functions::meta::creation::newEnumerationPropertyType(enumeration:Enumeration<Any>[1]):UserDefinedGenericType[1]
+{
+    ^UserDefinedGenericType(
+        type = Property,
+        typeArguments = [
+            ^UserDefinedGenericType(
+                type = Enumeration,
+                typeArguments = ^UserDefinedGenericType(type = $enumeration)
+            ),
+            ^UserDefinedGenericType(type = $enumeration)
+        ],
+        multiplicityArguments = PureOne
+    );
+}
+
+function platform::pure::functions::meta::creation::newEnumerationThisParameter(enumeration:Enumeration<Any>[1]):VariableExpression[1]
+{
+    ^VariableExpression(
+        name = 'this',
+        genericType = ^UserDefinedGenericType(
+            type = Enumeration,
+            typeArguments = ^UserDefinedGenericType(type = $enumeration)
+        ),
+        multiplicity = PureOne
+    );
+}
+
+function platform::pure::functions::meta::creation::newEnumerationDefaultExpression(valueName:String[1], enumeration:Enumeration<Any>[1]):AtomicValue[1]
+{
+    ^AtomicValue(
+        value = platform::pure::functions::meta::creation::newEnumerationValue($valueName, $enumeration)->cast(@platform::pure::metamodel::type::Any),
+        genericType = ^UserDefinedGenericType(type = $enumeration),
+        multiplicity = PureOne
+    );
+}
+
+// Enum value: CGT type = the enumeration. `new(GT)` bypasses classifier-override validation. Set name via copy.
+function platform::pure::functions::meta::creation::newEnumerationValue(valueName:String[1], enumeration:Enumeration<Any>[1]):Enum[1]
+{
+    let baseEnum = new(^UserDefinedGenericType(type = $enumeration))
+        ->cast(@platform::pure::metamodel::type::Enum);
+    ^$baseEnum(name = $valueName);
 }
 
 function <<PCT.test>> platform::pure::functions::meta::tests::creation::testNewEnumeration<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
