@@ -23,6 +23,7 @@ import platform.pure.metamodel.relation.RelationTypeImpl;
 import platform.pure.metamodel.type.Type;
 import platform.pure.metamodel.type.generics.GenericType;
 import platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.metamodel.type.generics.TypeParameter;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -183,8 +184,9 @@ public class _RelationType
         RelationTypeImpl result = new RelationTypeImpl();
         GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
 
+        // in the first relation's order (a set's is arbitrary): the columns as written
         MutableList<Column> commonColumns = Lists.mutable.empty();
-        for (String colName : commonNames)
+        for (String colName : relationTypes.getFirst()._columns().collect(Column::_name).select(commonNames::contains))
         {
             MutableList<GenericType> colTypes = Lists.mutable.empty();
             MutableList<Multiplicity> colMuls = Lists.mutable.empty();
@@ -377,10 +379,15 @@ public class _RelationType
      */
     public static MutableSet<String> collectReferencedTypeParameterNames(RelationType rt)
     {
-        MutableSet<String> names = Sets.mutable.empty();
+        return collectReferencedTypeParameters(rt).collect(TypeParameter::_name).toSet();
+    }
+
+    static MutableList<TypeParameter> collectReferencedTypeParameters(RelationType rt)
+    {
+        MutableList<TypeParameter> names = Lists.mutable.empty();
         if (rt._columns() != null)
         {
-            rt._columns().forEach(col -> _GenericType.collectReferencedTypeParameterNames(col._genericType(), names));
+            rt._columns().forEach(col -> _GenericType.collectReferencedTypeParameters(col._genericType(), names));
         }
         return names;
     }
@@ -390,15 +397,20 @@ public class _RelationType
      */
     public static MutableSet<String> collectReferencedMultiplicityParameterNames(RelationType rt)
     {
-        MutableSet<String> names = Sets.mutable.empty();
+        return collectReferencedMultiplicityParameters(rt).collect(platform.pure.metamodel.multiplicity.MultiplicityParameter::_name).toSet();
+    }
+
+    static MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> collectReferencedMultiplicityParameters(RelationType rt)
+    {
+        MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> names = Lists.mutable.empty();
         if (rt._columns() != null)
         {
             rt._columns().forEach(col ->
             {
-                _GenericType.collectReferencedMultiplicityParameterNames(col._genericType(), names);
+                _GenericType.collectReferencedMultiplicityParameters(col._genericType(), names);
                 if (col._multiplicity() instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mp)
                 {
-                    names.add(mp._name());
+                    names.add(mp);
                 }
             });
         }

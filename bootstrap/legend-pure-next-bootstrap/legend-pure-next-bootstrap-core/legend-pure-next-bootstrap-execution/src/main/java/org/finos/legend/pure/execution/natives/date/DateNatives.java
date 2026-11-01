@@ -47,52 +47,52 @@ public class DateNatives
     {
         // currentTimeMillis() : Integer[1]
         // Milliseconds since the epoch — useful for benchmarking.
-        natives.put("currentTimeMillis__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::currentTimeMillis__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(System.currentTimeMillis(), genericType, multiplicity, resolver));
 
-        natives.put("year_Date_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::year_Date_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(0)));
             return _E_ValueSpecification.wrap((long) parseDate(dateStr).getYear(), genericType, multiplicity, resolver);
         });
 
-        natives.put("monthNumber_Date_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::monthNumber_Date_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(0)));
             return _E_ValueSpecification.wrap((long) parseDate(dateStr).getMonthValue(), genericType, multiplicity, resolver);
         });
 
-        natives.put("dayOfMonth_Date_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::dayOfMonth_Date_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(0)));
             return _E_ValueSpecification.wrap((long) parseDate(dateStr).getDayOfMonth(), genericType, multiplicity, resolver);
         });
 
-        natives.put("hour_DateTime_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::hour_DateTime_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(0)));
             return _E_ValueSpecification.wrap((long) parseDate(dateStr).getHour(), genericType, multiplicity, resolver);
         });
 
-        natives.put("minute_DateTime_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::minute_DateTime_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(0)));
             return _E_ValueSpecification.wrap((long) parseDate(dateStr).getMinute(), genericType, multiplicity, resolver);
         });
 
-        natives.put("second_DateTime_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::second_DateTime_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(0)));
             return _E_ValueSpecification.wrap((long) parseDate(dateStr).getSecond(), genericType, multiplicity, resolver);
         });
 
-        natives.put("millis_DateTime_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::millis_DateTime_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(0)));
             return _E_ValueSpecification.wrap((long) (parseDate(dateStr).getNano() / 1_000_000), genericType, multiplicity, resolver);
         });
 
-        natives.put("datePart_Date_1__StrictDate_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::datePart_Date_1__StrictDate_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = (String) _E_ValueSpecification.unwrap(args.get(0));
             String datePart = dateStr.contains("T") ? dateStr.substring(0, dateStr.indexOf('T')) : dateStr;
@@ -104,7 +104,7 @@ public class DateNatives
             return _E_ValueSpecification.wrap(datePart, genericType, multiplicity, resolver);
         });
 
-        natives.put("dateDiff_Date_1__Date_1__DurationUnit_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::dateDiff_Date_1__Date_1__DurationUnit_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             LocalDateTime d1 = parseDate(org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(0))));
             LocalDateTime d2 = parseDate(org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(1))));
@@ -170,7 +170,7 @@ public class DateNatives
             return _E_ValueSpecification.wrap(sign * absOpResult, genericType, multiplicity, resolver);
         });
 
-        natives.put("adjust_Date_1__Integer_1__DurationUnit_1__Date_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::date::adjust_Date_1__Integer_1__DurationUnit_1__Date_1_", (args, eval, genericType, multiplicity) ->
         {
             String originalDateStr = (String) _E_ValueSpecification.unwrap(args.get(0));
             String dateStr = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(originalDateStr);

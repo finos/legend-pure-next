@@ -131,13 +131,9 @@ function platform::pure::compiler::pdb::writerHelper::pointerKindAndSegs(v:Any[1
       s   : Stereotype[1]                    | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 3, segs = [$s.profile->toOne()->fullPath(), $s.value->toOne()]),
       t   : Tag[1]                           | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 4, segs = [$t.profile->toOne()->fullPath(), $t.value->toOne()]),
       pe  : platform::pure::metamodel::PackageableElement[1] | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [$pe->fullPath()]),
-      // Live relation column whose owner is a RelationType (not packageable):
-      // unresolvable either way, but the segment must be deterministic and
-      // platform-independent — toString would differ between the JVM
-      // interpreter and the JS runtime. Mirrors the reference writer's
-      // explicit Column arm (column name).
-      col : platform::pure::metamodel::relation::Column<Nil, Any|*>[1] | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [if($col.name->isEmpty(), | $col->toString(), | $col.name->toOne())]),
-      a   : Any[1]                           | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [$a->toString()])
+      // Nothing addresses it (a relation column is written inline, where its slot allows): writing anything
+      // would lose it, and the reader would never know — mirrors the Java writer.
+      a   : Any[1]                           | fail('PDB writer: cannot write a pointer to a ' + $a->type()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()); ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = []);
    ]);
 }
 
@@ -299,6 +295,20 @@ function platform::pure::compiler::pdb::writerHelper::isDecimalTyped(gt:Any[0..1
 // --- validation helpers (byte-neutral: only fire on invalid graphs) --------------
 // Ports of the reference writer's hand-written pointerPath/sourceInfo used in
 // validation messages, and the two semantic checks the reference emits.
+
+// What `obj` holds for its class `ownerPath`'s property `name`: rawEvalProperty, never the default a read
+// would compute. The property is looked up once per execution (memoize): Property objects are written by
+// the thousand.
+function platform::pure::compiler::pdb::writerHelper::stored(obj:Any[1], ownerPath:String[1], name:String[1]):Any[*]
+{
+   memoize(platform::pure::compiler::pdb::writerHelper::propertyNamed_String_1__String_1__Property_1_, $ownerPath, $name)
+      ->rawEvalProperty($obj)
+}
+
+function platform::pure::compiler::pdb::writerHelper::propertyNamed(ownerPath:String[1], name:String[1]):Property<Any,Any|*>[1]
+{
+   $ownerPath->pathToElement()->cast(@Class<Any>).properties->filter(p | $p.name == $name)->toOne()
+}
 
 function platform::pure::compiler::pdb::writerHelper::pointerPath(obj:Any[1]):String[1]
 {

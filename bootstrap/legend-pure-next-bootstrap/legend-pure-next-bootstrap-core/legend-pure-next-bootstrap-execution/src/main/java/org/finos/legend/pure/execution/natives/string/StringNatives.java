@@ -39,21 +39,21 @@ public class StringNatives
                                 Map<String, LazyNativeImpl> lazyNatives,
                                 MetadataAccess resolver)
     {
-        natives.put("plus_String_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::plus_String_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
                 {
                     return _E_ValueSpecification.wrap((String) _E_ValueSpecification.unwrap(args.get(0)) + (String) _E_ValueSpecification.unwrap(args.get(1)),
                             genericType, multiplicity, resolver);
                 });
 
 
-        natives.put("toString_Any_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::toString_Any_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             Object val = _E_ValueSpecification.unwrap(args.get(0));
             return _E_ValueSpecification.wrap(pureToString(val, args.get(0), eval, resolver), genericType, multiplicity, resolver);
         });
 
         // joinStrings(String[*], String[1], String[1], String[1]) : String[1]
-        natives.put("joinStrings_String_MANY__String_1__String_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::joinStrings_String_MANY__String_1__String_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             String prefix = (String) _E_ValueSpecification.unwrap(args.get(1));
             String separator = (String) _E_ValueSpecification.unwrap(args.get(2));
@@ -81,14 +81,9 @@ public class StringNatives
         });
 
         // toRepresentation - returns the Pure-syntax representation of a value
-        natives.put("toRepresentation_Any_1__String_1_", (args, eval, genericType, multiplicity) ->
-        {
-            Object val = _E_ValueSpecification.unwrap(args.get(0));
-            return _E_ValueSpecification.wrap(pureToRepresentation(val, args.get(0), eval, resolver), genericType, multiplicity, resolver);
-        });
 
         // format(String[1], Any[*]) : String[1]
-        natives.put("format_String_1__Any_MANY__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::format_String_1__Any_MANY__String_1_", (args, eval, genericType, multiplicity) ->
         {
             String formatStr = (String) _E_ValueSpecification.unwrap(args.get(0));
             // Keep VS wrappers so we can check genericType (e.g. Date vs String)
@@ -228,16 +223,16 @@ public class StringNatives
         });
 
         // length(String[1]) : Integer[1]
-        natives.put("length_String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::length_String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((long) ((String) _E_ValueSpecification.unwrap(args.get(0))).length(), genericType, multiplicity, resolver));
 
         // startsWith(String[1], String[1]) : Boolean[1]
-        natives.put("startsWith_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::startsWith_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((String) _E_ValueSpecification.unwrap(args.get(0))).startsWith((String) _E_ValueSpecification.unwrap(args.get(1))),
                         genericType, multiplicity, resolver));
 
         // replace(String[1], String[1], String[1]) : String[1]
-        natives.put("replace_String_1__String_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::replace_String_1__String_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             String source = (String) _E_ValueSpecification.unwrap(args.get(0));
             String toReplace = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -251,7 +246,7 @@ public class StringNatives
         // under self-host because each iteration distorts the unescape patterns
         // it stores for the next iteration. Expose as a native that mirrors
         // ValueSpecificationCompiler.unescapePureString on the Java side.
-        natives.put("unescapePureString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::compiler::structural::valueSpecificationCompiler::unescapePureString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String result;
@@ -307,17 +302,17 @@ public class StringNatives
         });
 
         // endsWith(String[1], String[1]) : Boolean[1]
-        natives.put("endsWith_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::endsWith_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((String) _E_ValueSpecification.unwrap(args.get(0))).endsWith((String) _E_ValueSpecification.unwrap(args.get(1))),
                         genericType, multiplicity, resolver));
 
         // contains(String[1], String[1]) : Boolean[1]
-        natives.put("contains_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::contains_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((String) _E_ValueSpecification.unwrap(args.get(0))).contains((String) _E_ValueSpecification.unwrap(args.get(1))),
                         genericType, multiplicity, resolver));
 
         // substring(String[1], Integer[1]) : String[1]
-        natives.put("substring_String_1__Integer_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::substring_String_1__Integer_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             int start = ((Long) _E_ValueSpecification.unwrap(args.get(1))).intValue();
@@ -325,7 +320,7 @@ public class StringNatives
         });
 
         // substring(String[1], Integer[1], Integer[1]) : String[1]
-        natives.put("substring_String_1__Integer_1__Integer_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::substring_String_1__Integer_1__Integer_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             int start = ((Long) _E_ValueSpecification.unwrap(args.get(1))).intValue();
@@ -334,7 +329,7 @@ public class StringNatives
         });
 
         // split(String[1], String[1]) : String[*]
-        natives.put("split_String_1__String_1__String_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::split_String_1__String_1__String_MANY_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String delimiter = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -354,31 +349,31 @@ public class StringNatives
         });
 
         // trim(String[1]) : String[1]
-        natives.put("trim_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::trim_String_1__String_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((String) _E_ValueSpecification.unwrap(args.get(0))).trim(), genericType, multiplicity, resolver));
 
         // ltrim(String[1]) : String[1]
-        natives.put("ltrim_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::ltrim_String_1__String_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((String) _E_ValueSpecification.unwrap(args.get(0))).stripLeading(), genericType, multiplicity, resolver));
 
         // rtrim(String[1]) : String[1]
-        natives.put("rtrim_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::rtrim_String_1__String_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((String) _E_ValueSpecification.unwrap(args.get(0))).stripTrailing(), genericType, multiplicity, resolver));
 
         // toLower(String[1]) : String[1]
-        natives.put("toLower_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::toLower_String_1__String_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((String) _E_ValueSpecification.unwrap(args.get(0))).toLowerCase(), genericType, multiplicity, resolver));
 
         // toUpper(String[1]) : String[1]
-        natives.put("toUpper_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::toUpper_String_1__String_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((String) _E_ValueSpecification.unwrap(args.get(0))).toUpperCase(), genericType, multiplicity, resolver));
 
         // reverseString(String[1]) : String[1]
-        natives.put("reverseString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::reverseString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(new StringBuilder((String) _E_ValueSpecification.unwrap(args.get(0))).reverse().toString(), genericType, multiplicity, resolver));
 
         // indexOf(String[1], String[1]) : Integer[1]
-        natives.put("indexOf_String_1__String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::indexOf_String_1__String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String search = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -386,7 +381,7 @@ public class StringNatives
         });
 
         // indexOf(String[1], String[1], Integer[1]) : Integer[1]
-        natives.put("indexOf_String_1__String_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::indexOf_String_1__String_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String search = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -395,7 +390,7 @@ public class StringNatives
         });
 
         // lastIndexOf(String[1], String[1]) : Integer[1]
-        natives.put("lastIndexOf_String_1__String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::lastIndexOf_String_1__String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String search = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -403,7 +398,7 @@ public class StringNatives
         });
 
         // chunk(String[1], Integer[1]) : String[*]
-        natives.put("chunk_String_1__Integer_1__String_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::chunk_String_1__Integer_1__String_MANY_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             int size = ((Long) _E_ValueSpecification.unwrap(args.get(1))).intValue();
@@ -422,7 +417,7 @@ public class StringNatives
         });
 
         // matches(String[1], String[1]) : Boolean[1] — full-string regex match
-        natives.put("matches_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::matches_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -430,7 +425,7 @@ public class StringNatives
         });
 
         // regexpLike(String[1], String[1], RegexpParameter[1..*]) : Boolean[1] — contains-match
-        natives.put("regexpLike_String_1__String_1__RegexpParameter_$1_MANY$__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::regexpLike_String_1__String_1__RegexpParameter_$1_MANY$__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -440,7 +435,7 @@ public class StringNatives
         });
 
         // regexpCount(String[1], String[1], RegexpParameter[1..*]) : Integer[1]
-        natives.put("regexpCount_String_1__String_1__RegexpParameter_$1_MANY$__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::regexpCount_String_1__String_1__RegexpParameter_$1_MANY$__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -452,7 +447,7 @@ public class StringNatives
         });
 
         // regexpIndexOf(String[1], String[1], Integer[1], RegexpParameter[1..*]) : Integer[1]
-        natives.put("regexpIndexOf_String_1__String_1__Integer_1__RegexpParameter_$1_MANY$__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::regexpIndexOf_String_1__String_1__Integer_1__RegexpParameter_$1_MANY$__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -464,7 +459,7 @@ public class StringNatives
         });
 
         // regexpReplace(String[1], String[1], String[1], Boolean[1], RegexpParameter[1..*]) : String[1]
-        natives.put("regexpReplace_String_1__String_1__String_1__Boolean_1__RegexpParameter_$1_MANY$__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::regexpReplace_String_1__String_1__String_1__Boolean_1__RegexpParameter_$1_MANY$__String_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -477,7 +472,7 @@ public class StringNatives
         });
 
         // regexpExtract(String[1], String[1], Boolean[1], Integer[1], RegexpParameter[1..*]) : String[*]
-        natives.put("regexpExtract_String_1__String_1__Boolean_1__Integer_1__RegexpParameter_$1_MANY$__String_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::regexpExtract_String_1__String_1__Boolean_1__Integer_1__RegexpParameter_$1_MANY$__String_MANY_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -515,7 +510,7 @@ public class StringNatives
         });
 
         // inferType(String[*]) : Type[1] — the type a CSV column's cells have (see inferType.pure for the rules)
-        natives.put("inferType_String_MANY__Type_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::inferType_String_MANY__Type_1_", (args, eval, genericType, multiplicity) ->
         {
             List<String> cells = new ArrayList<>();
             _E_ValueSpecification.toCollection(args.get(0), resolver)._values().forEach(v -> cells.add((String) _E_ValueSpecification.unwrap(v)));
@@ -523,24 +518,24 @@ public class StringNatives
         });
 
         // parseInteger(String[1]) : Integer[1]
-        natives.put("parseInteger_String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::parseInteger_String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Long.parseLong(((String) _E_ValueSpecification.unwrap(args.get(0))).trim()), genericType, multiplicity, resolver));
 
         // parseFloat(String[1]) : Float[1]
-        natives.put("parseFloat_String_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::parseFloat_String_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Double.parseDouble(((String) _E_ValueSpecification.unwrap(args.get(0))).trim()), genericType, multiplicity, resolver));
 
         // parseDecimal(String[1]) : Decimal[1] — BigDecimal preserves the exact
         // decimal representation of the source so downstream arithmetic doesn't
         // round-trip through Double.
-        natives.put("parseDecimal_String_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::parseDecimal_String_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
         {
             java.math.BigDecimal bd = new java.math.BigDecimal(stripDecimalSuffix(((String) _E_ValueSpecification.unwrap(args.get(0))).trim()));
             return _E_ValueSpecification.wrap(bd, genericType, multiplicity, resolver);
         });
 
         // parseDecimal(String[1], Integer[1], Integer[1]) : Decimal[1]
-        natives.put("parseDecimal_String_1__Integer_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::parseDecimal_String_1__Integer_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
         {
             String str = stripDecimalSuffix(((String) _E_ValueSpecification.unwrap(args.get(0))).trim());
             int scale = ((Number) _E_ValueSpecification.unwrap(args.get(2))).intValue();
@@ -550,11 +545,11 @@ public class StringNatives
         });
 
         // parseBoolean(String[1]) : Boolean[1]
-        natives.put("parseBoolean_String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::parseBoolean_String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Boolean.parseBoolean(((String) _E_ValueSpecification.unwrap(args.get(0))).trim()), genericType, multiplicity, resolver));
 
         // parseDate(String[1]) : Date[1]
-        natives.put("parseDate_String_1__Date_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::string::parseDate_String_1__Date_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = ((String) _E_ValueSpecification.unwrap(args.get(0))).trim();
             String result = normalizePureDate(dateStr);

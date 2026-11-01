@@ -68,6 +68,10 @@ public final class PureFunctionRootNode extends RootNode
     @CompilationFinal
     private final boolean mayBindTypeVars;
 
+    // A qualified property's class, whose type parameters its body binds (see PureContext.classTypeParameterBindings).
+    @CompilationFinal
+    private Object declaringClass;
+
     /**
      * Parallel arrays computed at compile time: {@code funcTypeVarArgIdx[i]}
      * is the parameter index whose declared type is the TypeParameter named
@@ -162,6 +166,11 @@ public final class PureFunctionRootNode extends RootNode
         return rootSourceSection;
     }
 
+    public void setDeclaringClass(Object declaringClass)
+    {
+        this.declaringClass = declaringClass;
+    }
+
     @Override
     @ExplodeLoop
     public Object execute(VirtualFrame frame)
@@ -196,9 +205,13 @@ public final class PureFunctionRootNode extends RootNode
         // Bind type variables from the target's CGT (for QPs with type parameters).
         // mayBindTypeVars is @CompilationFinal so PE folds this whole branch out
         // for plain FunctionDefinitions — which is most of compiler-pure.
+        // and the class's type parameters from its type arguments, for cast(@T) in the body
+        // (testQualifiedPropertyBindsTheClassTypeParameters).
+        java.util.Map<String, Object> classTypeBindings = java.util.Map.of();
         if (mayBindTypeVars && arguments.length > 0 && arguments[0] != null)
         {
             PureContext.bindQpTypeVariablesStatic(arguments[0], frame, layout);
+            classTypeBindings = PureContext.classTypeParameterBindings(arguments[0], declaringClass);
         }
 
         // Function-level `<T>` and `<T|m>` bindings: build name→resolved-Type
@@ -208,8 +221,13 @@ public final class PureFunctionRootNode extends RootNode
         // PE for the common case (functions with no parametric `<T>`/`<T|m>`).
         boolean hasFuncTypeVars = funcTypeVarArgIdx.length > 0;
         boolean hasFuncMulVars = funcMulVarArgIdx.length > 0;
+        boolean hasClassTypeVars = !classTypeBindings.isEmpty();
         org.finos.legend.pure.truffle.execution.PureContext ctx =
-                (hasFuncTypeVars || hasFuncMulVars) ? org.finos.legend.pure.truffle.execution.PureLanguage.get(this) : null;
+                (hasFuncTypeVars || hasFuncMulVars || hasClassTypeVars) ? org.finos.legend.pure.truffle.execution.PureLanguage.get(this) : null;
+        if (hasClassTypeVars)
+        {
+            ctx.pushFunctionTypeVarBindings(classTypeBindings);
+        }
         if (hasFuncTypeVars)
         {
             ctx.pushFunctionTypeVarBindings(buildFuncTypeVarBindings(arguments));
@@ -234,6 +252,10 @@ public final class PureFunctionRootNode extends RootNode
                 ctx.popFunctionMulVarBindings();
             }
             if (hasFuncTypeVars)
+            {
+                ctx.popFunctionTypeVarBindings();
+            }
+            if (hasClassTypeVars)
             {
                 ctx.popFunctionTypeVarBindings();
             }

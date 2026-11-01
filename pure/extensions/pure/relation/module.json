@@ -1,0 +1,6 @@
+{
+  "name": "relation",
+  "packagePattern": "(platform::pure::functions::relation)(::.*)?",
+  "dependencies": ["core"],
+  "testDependencies": ["core-tests", "tds"]
+}

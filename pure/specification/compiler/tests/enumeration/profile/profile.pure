@@ -23,8 +23,8 @@ profile protocol::support::AProfile  ~@Profile@  @4:1-8:1
 enumeration protocol::AnEnum extends Enum  ~Enumeration<protocol::AnEnum>  @10:1-14:1
   <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
   {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
-  property Val  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum|1>  = ^protocol::AnEnum(name='Val')  ~lambda:#LambdaFunction<#{->protocol::AnEnum[1]}#>#  @12:3-12:5
-  property Val2  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum|1>  = ^protocol::AnEnum(name='Val2')  ~lambda:#LambdaFunction<#{->protocol::AnEnum[1]}#>#  @13:3-13:89
+  property Val  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum|1>  = ^protocol::AnEnum(name='Val')  ~lambda:#LambdaFunction<#{Enumeration<protocol::AnEnum>[1]->protocol::AnEnum[1]}#>#  @12:3-12:5
+  property Val2  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum|1>  = ^protocol::AnEnum(name='Val2')  ~lambda:#LambdaFunction<#{Enumeration<protocol::AnEnum>[1]->protocol::AnEnum[1]}#>#  @13:3-13:89
     <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
     {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
 

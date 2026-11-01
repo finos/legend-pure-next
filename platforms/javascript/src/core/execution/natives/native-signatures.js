@@ -12,39 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Mangled signatures of the natives the JavaScript host implements — the keys
-// of NativeRegistry, identical to the JVM hosts' native keys and to the element
-// ids the pdbs store (package omitted). A leaf module so the natives and their
-// extensions can share them without an import cycle.
+// Full ids of the natives the JavaScript host implements — package and mangled
+// signature, the keys of NativeRegistry as on every host, and the element paths
+// the pdbs store. A leaf module so the natives and their extensions can share
+// them without an import cycle.
 
-export const COMPILE_SOURCE = "compileSource_PureFile_1__String_MANY__CompileSourceResult_1_";
-export const EVALUATE = "evaluate_Function_1__List_MANY__Any_MANY_";
-export const JS_COMPILE_MODULE = "compileModule_String_1__Any_1_";
-export const JS_EXECUTE = "execute_Any_1__String_1__Any_MANY__GenericType_$0_1$__Multiplicity_$0_1$__Any_$0_1$__Any_MANY_";
-export const JS_DRAIN_COMPILED_SOURCES = "drainCompiledSources__String_MANY_";
-export const READ_FILE_BYTES = "readFileBytes_String_1__Binary_1_";
-export const ENTRY_NAMES = "entryNames_Binary_1__String_MANY_";
-export const ENTRY_BYTES = "entryBytes_Binary_1__String_1__Binary_1_";
-export const DIRECTORY_TREE = "directoryTree_String_1__String_MANY_";
-export const WRITE_FILE = "writeFile_String_1__String_1__String_1_";
+export const COMPILE_SOURCE = "platform::pure::functions::meta::compileSource_PureFile_1__String_MANY__CompileSourceResult_1_";
+export const EVALUATE = "platform::pure::functions::lang::evaluate_Function_1__List_MANY__Any_MANY_";
+export const JS_COMPILE_MODULE = "platform::extensions::language::javascript::compileModule_String_1__Any_1_";
+export const JS_EXECUTE = "platform::extensions::language::javascript::execute_Any_1__String_1__Any_MANY__GenericType_$0_1$__Multiplicity_$0_1$__Any_$0_1$__Any_MANY_";
+export const JS_DRAIN_COMPILED_SOURCES = "platform::extensions::language::javascript::drainCompiledSources__String_MANY_";
+export const READ_FILE_BYTES = "platform::pure::functions::io::readFileBytes_String_1__Binary_1_";
+export const ENTRY_NAMES = "platform::pure::compiler::pdb::archive::entryNames_Binary_1__String_MANY_";
+export const ENTRY_BYTES = "platform::pure::compiler::pdb::archive::entryBytes_Binary_1__String_1__Binary_1_";
+export const DIRECTORY_TREE = "platform::pure::functions::io::directoryTree_String_1__String_MANY_";
+export const WRITE_FILE = "platform::pure::functions::io::writeFile_String_1__String_1__String_1_";
 
-// platform::pure::functions::meta::antlr natives: [name, signature]. The translator emits `__<name>(...)`.
+// platform::pure::functions::meta::antlr natives: [name, id]. The translator emits `__<name>(...)`.
 export const ANTLR_NATIVES = [
-    ["parseAntlr", "parseAntlr_String_1__String_1__String_1__Integer_1__AntlrContext_1_"],
-    ["getText", "getText_AntlrContext_1__String_1_"],
-    ["grammarRuleName", "grammarRuleName_AntlrContext_1__String_1_"],
-    ["getChild", "getChild_AntlrContext_1__String_1__AntlrContext_$0_1$_"],
-    ["getChildren", "getChildren_AntlrContext_1__String_1__AntlrContext_MANY_"],
-    ["getTopLevelChildren", "getTopLevelChildren_AntlrContext_1__AntlrContext_MANY_"],
-    ["getChildTextAt", "getChildTextAt_AntlrContext_1__Integer_1__String_$0_1$_"],
-    ["getTokenText", "getTokenText_AntlrContext_1__String_1__String_$0_1$_"],
-    ["getTokenTexts", "getTokenTexts_AntlrContext_1__String_1__String_MANY_"],
-    ["hasChild", "hasChild_AntlrContext_1__String_1__Boolean_1_"],
-    ["hasToken", "hasToken_AntlrContext_1__String_1__Boolean_1_"],
-    ["getStartLine", "getStartLine_AntlrContext_1__Integer_1_"],
-    ["getStartColumn", "getStartColumn_AntlrContext_1__Integer_1_"],
-    ["getStopLine", "getStopLine_AntlrContext_1__Integer_1_"],
-    ["getStopColumn", "getStopColumn_AntlrContext_1__Integer_1_"],
-    ["stripTripleQuotesDedented", "stripTripleQuotesDedented_String_1__String_1_"],
-    ["computeFirstNonNewlineLine", "computeFirstNonNewlineLine_AntlrContext_$0_1$__Integer_1_"],
+    ["parseAntlr", "platform::pure::functions::meta::antlr::parseAntlr_String_1__String_1__String_1__Integer_1__AntlrContext_1_"],
+    ["getText", "platform::pure::functions::meta::antlr::getText_AntlrContext_1__String_1_"],
+    ["grammarRuleName", "platform::pure::functions::meta::antlr::grammarRuleName_AntlrContext_1__String_1_"],
+    ["getChild", "platform::pure::functions::meta::antlr::getChild_AntlrContext_1__String_1__AntlrContext_$0_1$_"],
+    ["getChildren", "platform::pure::functions::meta::antlr::getChildren_AntlrContext_1__String_1__AntlrContext_MANY_"],
+    ["getTopLevelChildren", "platform::pure::functions::meta::antlr::getTopLevelChildren_AntlrContext_1__AntlrContext_MANY_"],
+    ["getChildTextAt", "platform::pure::functions::meta::antlr::getChildTextAt_AntlrContext_1__Integer_1__String_$0_1$_"],
+    ["getTokenText", "platform::pure::functions::meta::antlr::getTokenText_AntlrContext_1__String_1__String_$0_1$_"],
+    ["getTokenTexts", "platform::pure::functions::meta::antlr::getTokenTexts_AntlrContext_1__String_1__String_MANY_"],
+    ["hasChild", "platform::pure::functions::meta::antlr::hasChild_AntlrContext_1__String_1__Boolean_1_"],
+    ["hasToken", "platform::pure::functions::meta::antlr::hasToken_AntlrContext_1__String_1__Boolean_1_"],
+    ["getStartLine", "platform::pure::functions::meta::antlr::getStartLine_AntlrContext_1__Integer_1_"],
+    ["getStartColumn", "platform::pure::functions::meta::antlr::getStartColumn_AntlrContext_1__Integer_1_"],
+    ["getStopLine", "platform::pure::functions::meta::antlr::getStopLine_AntlrContext_1__Integer_1_"],
+    ["getStopColumn", "platform::pure::functions::meta::antlr::getStopColumn_AntlrContext_1__Integer_1_"],
+    ["stripTripleQuotesDedented", "platform::pure::functions::meta::antlr::stripTripleQuotesDedented_String_1__String_1_"],
+    ["computeFirstNonNewlineLine", "platform::pure::functions::meta::antlr::computeFirstNonNewlineLine_AntlrContext_$0_1$__Integer_1_"],
 ];

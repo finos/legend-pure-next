@@ -19,10 +19,10 @@ function x::testF(): String[1]
 }
 
 ###CompiledGraph
-function x::myFunc_String_m__String_p__String_1_(p:@String@[m], z:@String@[p]):@String@[1]  ~UserDefinedFunction<{@String@[m], @String@[p]->@String@[1]}>
+function x::myFunc_String_m__String_p__String_1_(p:@String@[m~x::myFunc_String_m__String_p__String_1_], z:@String@[p~x::myFunc_String_m__String_p__String_1_]):@String@[1]  ~UserDefinedFunction<{@String@[m~x::myFunc_String_m__String_p__String_1_], @String@[p~x::myFunc_String_m__String_p__String_1_]->@String@[1]}>
   AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @6:3-6:5
 
-function x::myFunc_String_m__String_m__String_1_(p:@String@[m], z:@String@[m]):@String@[1]  ~UserDefinedFunction<{@String@[m], @String@[m]->@String@[1]}>
+function x::myFunc_String_m__String_m__String_1_(p:@String@[m~x::myFunc_String_m__String_m__String_1_], z:@String@[m~x::myFunc_String_m__String_m__String_1_]):@String@[1]  ~UserDefinedFunction<{@String@[m~x::myFunc_String_m__String_m__String_1_], @String@[m~x::myFunc_String_m__String_m__String_1_]->@String@[1]}>
   AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @11:3-11:5
 
 function x::testF__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>

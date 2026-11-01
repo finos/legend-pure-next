@@ -39,6 +39,14 @@ public final class ReverseStringNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         String s = StringHelper.asString(arg.executeGeneric(frame), SIG);
+        return reverse(s);
+    }
+
+    // StringBuilder reaches the JDK bounds check, whose message formatting (Formatter, Locale, generics
+    // reflection) loops back to String.substring: without a boundary Graal bails out with `Too deep inlining`.
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String reverse(String s)
+    {
         return new StringBuilder(s).reverse().toString();
     }
 }

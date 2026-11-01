@@ -1,0 +1,5 @@
+###Pure
+Class protocol::WithTypeVariables(x: Integer[1], y: String[1])
+{
+  text: String[*];
+}

@@ -20,6 +20,7 @@ import platform.pure.metamodel.valuespecification.CollectionImpl;
 import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.utility.Iterate;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
 import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
@@ -41,27 +42,27 @@ public class CollectionNatives
                                 MetadataAccess resolver)
     {
         // size(Any[*]) : Integer[1]
-        natives.put("size_Any_MANY__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::size_Any_MANY__Integer_1_", (args, eval, genericType, multiplicity) ->
             _E_ValueSpecification.wrap((long) _E_ValueSpecification.toCollection(args.get(0), resolver)._values().size(), genericType, multiplicity, resolver)
         );
 
         // isEmpty(Any[*]) : Boolean[1]
-        natives.put("isEmpty_Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::isEmpty_Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
              _E_ValueSpecification.wrap(_E_ValueSpecification.toCollection(args.get(0), resolver)._values().isEmpty(), genericType, multiplicity, resolver)
         );
         // isEmpty(Any[0..1]) — semantics identical, just a stricter param mul.
-        natives.put("isEmpty_Any_$0_1$__Boolean_1_", natives.get("isEmpty_Any_MANY__Boolean_1_"));
+        natives.put("platform::pure::functions::collection::isEmpty_Any_$0_1$__Boolean_1_", natives.get("platform::pure::functions::collection::isEmpty_Any_MANY__Boolean_1_"));
 
         // isNotEmpty(Any[*]) / (Any[0..1]) : Boolean[1]
-        natives.put("isNotEmpty_Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::isNotEmpty_Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
              _E_ValueSpecification.wrap(!_E_ValueSpecification.toCollection(args.get(0), resolver)._values().isEmpty(), genericType, multiplicity, resolver)
         );
-        natives.put("isNotEmpty_Any_$0_1$__Boolean_1_", natives.get("isNotEmpty_Any_MANY__Boolean_1_"));
+        natives.put("platform::pure::functions::collection::isNotEmpty_Any_$0_1$__Boolean_1_", natives.get("platform::pure::functions::collection::isNotEmpty_Any_MANY__Boolean_1_"));
 
         // firstNonEmpty(thunks:Function<{->T[*]}>[*]) : T[*]
         // Walk thunks linearly, eval each, return first non-empty result;
         // short-circuit — later thunks aren't evaluated.
-        natives.put("firstNonEmpty_Function_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::firstNonEmpty_Function_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection thunks = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification thunk : thunks._values())
@@ -76,7 +77,7 @@ public class CollectionNatives
         });
 
         // toOne(T[*]) : T[1]
-        natives.put("toOne_T_MANY__T_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::toOne_T_MANY__T_1_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             if (col._values().size() != 1)
@@ -87,7 +88,7 @@ public class CollectionNatives
         });
 
         // toOne(T[*], message:String[1]) : T[1]
-        natives.put("toOne_T_MANY__String_1__T_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::toOne_T_MANY__String_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             if (col._values().size() != 1)
@@ -99,7 +100,7 @@ public class CollectionNatives
         });
 
         // toOneMany(T[*]) : T[1..*]
-        natives.put("toOneMany_T_MANY__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::toOneMany_T_MANY__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             if (col._values().isEmpty())
@@ -109,8 +110,19 @@ public class CollectionNatives
             return col._values().size() == 1 ? col._values().get(0) : col;
         });
 
+        // toOneMany(T[*], String[1]) : T[1..*] — the same, failing with the message
+        natives.put("platform::pure::functions::lang::toOneMany_T_MANY__String_1__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
+        {
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            if (col._values().isEmpty())
+            {
+                throw new RuntimeException((String) _E_ValueSpecification.unwrap(args.get(1)));
+            }
+            return col._values().size() == 1 ? col._values().get(0) : col;
+        });
+
         // concatenate(T[*], T[*]) : T[*]
-        natives.put("concatenate_T_MANY__T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::concatenate_T_MANY__T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection colA = _E_ValueSpecification.toCollection(args.get(0), resolver);
             platform.pure.metamodel.valuespecification.Collection colB = _E_ValueSpecification.toCollection(args.get(1), resolver);
@@ -120,7 +132,7 @@ public class CollectionNatives
         });
 
         // at(T[*], Integer[1]) : T[1]
-        natives.put("at_T_MANY__Integer_1__T_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::at_T_MANY__Integer_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
             long index = (Long) _E_ValueSpecification.unwrap(args.get(1));
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
@@ -131,11 +143,10 @@ public class CollectionNatives
             return col._values().get((int) index);
         });
         // short-name alias for null-func fallback
-        natives.put("at", natives.get("at_T_MANY__Integer_1__T_1_"));
 
         // sort(T[m], Function<{T[1]->U[1]}>[0..1], Function<{U[1],U[1]->Integer[1]}>[0..1]) : T[m]
         // arg[0]=col, arg[1]=key extractor, arg[2]=comparator on keys
-        natives.put("sort_T_m__Function_$0_1$__Function_$0_1$__T_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::sort_T_m__Function_$0_1$__Function_$0_1$__T_m_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             List<ValueSpecification> sorted = new ArrayList<>(col._values());
@@ -185,7 +196,7 @@ public class CollectionNatives
         });
 
         // map(T[*], Function<{T[1]->V[*]}>[1]) : V[*]
-        natives.put("map_T_MANY__Function_1__V_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::map_T_MANY__Function_1__V_MANY_", (args, eval, genericType, multiplicity) ->
         {
             List<ValueSpecification> results = new ArrayList<>();
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
@@ -206,10 +217,23 @@ public class CollectionNatives
         });
 
         // map(T[m], Function<{T[1]->V[m]}>[1]) : V[m]  — generic multiplicity overload
-        natives.put("map_T_m__Function_1__V_m_", natives.get("map_T_MANY__Function_1__V_MANY_"));
+        // map(T[m], Function<{T[1]->V[1]}>[1]) : V[m] — with m bound to [1], that value's image itself (not a
+        // collection of it: a property or a match arm taking one value takes it); otherwise as map over many, a
+        // [*] holding one value staying a collection
+        NativeImpl mapMany = natives.get("platform::pure::functions::collection::map_T_MANY__Function_1__V_MANY_");
+        natives.put("platform::pure::functions::collection::map_T_m__Function_1__V_m_", (args, eval, genericType, multiplicity) ->
+        {
+            boolean toOne = !(multiplicity instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter) && multiplicity != null
+                    && org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.lowerBound(multiplicity) == 1
+                    && Long.valueOf(1).equals(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.upperBound(multiplicity));
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            return toOne && col._values().size() == 1
+                    ? eval.executeFunction(args.get(1), List.of(col._values().getFirst()))
+                    : mapMany.apply(args, eval, genericType, multiplicity);
+        });
 
         // map(T[0..1], Function<{T[1]->V[0..1]}>[1]) : V[0..1]
-        natives.put("map_T_$0_1$__Function_1__V_$0_1$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::map_T_$0_1$__Function_1__V_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
             // For 0..1: pass the arg VS directly if non-empty; function returns the new VS
             if (!_E_ValueSpecification.toCollection(args.get(0), resolver)._values().isEmpty())
@@ -220,7 +244,7 @@ public class CollectionNatives
         });
 
         // filter(T[*], Function<{T[1]->Boolean[1]}>[1]) : T[*]
-        natives.put("filter_T_MANY__Function_1__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::filter_T_MANY__Function_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             List<ValueSpecification> results = new ArrayList<>();
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
@@ -235,7 +259,7 @@ public class CollectionNatives
         });
 
         // head(T[*]) : T[0..1] — canonical native
-        natives.put("head_T_MANY__T_$0_1$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::head_T_MANY__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             return col._values().isEmpty()
@@ -244,7 +268,7 @@ public class CollectionNatives
         });
 
         // init(T[*]) : T[*] — all but the last element
-        natives.put("init_T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::init_T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             int sz = col._values().size();
@@ -252,7 +276,7 @@ public class CollectionNatives
         });
 
         // tail(T[*]) : T[*] — all but the first element
-        natives.put("tail_T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::tail_T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             int sz = col._values().size();
@@ -260,7 +284,7 @@ public class CollectionNatives
         });
 
         // last(T[*]) : T[0..1]
-        natives.put("last_T_MANY__T_$0_1$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::last_T_MANY__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             return col._values().isEmpty()
@@ -269,7 +293,7 @@ public class CollectionNatives
         });
 
         // range(Integer[1], Integer[1], Integer[1]) : Integer[*]
-        natives.put("range_Integer_1__Integer_1__Integer_1__Integer_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::range_Integer_1__Integer_1__Integer_1__Integer_MANY_", (args, eval, genericType, multiplicity) ->
         {
             long start = (Long) _E_ValueSpecification.unwrap(args.get(0));
             long stop = (Long) _E_ValueSpecification.unwrap(args.get(1));
@@ -288,7 +312,7 @@ public class CollectionNatives
         });
 
         // add(T[*], T[1]) : T[1..*]
-        natives.put("add_T_MANY__T_1__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             List<ValueSpecification> result = new ArrayList<>(col._values());
@@ -297,7 +321,7 @@ public class CollectionNatives
         });
 
         // add(T[*], Integer[1], T[1]) : T[1..*]
-        natives.put("add_T_MANY__Integer_1__T_1__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::add_T_MANY__Integer_1__T_1__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             int index = ((Long) _E_ValueSpecification.unwrap(args.get(1))).intValue();
@@ -307,7 +331,7 @@ public class CollectionNatives
         });
 
         // find(T[*], Function<{T[1]->Boolean[1]}>[1]) : T[0..1]
-        natives.put("find_T_MANY__Function_1__T_$0_1$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::find_T_MANY__Function_1__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification itemVS : col._values())
@@ -321,7 +345,7 @@ public class CollectionNatives
         });
 
         // fold(T[*], Function<{T[1],V[*]->V[*]}>[1], V[*]) : V[*]
-        natives.put("fold_T_MANY__Function_1__V_MANY__V_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_", (args, eval, genericType, multiplicity) ->
         {
             ValueSpecification accumulator = args.get(2);
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
@@ -333,10 +357,10 @@ public class CollectionNatives
         });
 
         // fold(T[*], Function<{T[1],V[1]->V[1]}>[1], V[1]) : V[1]
-        natives.put("fold_T_MANY__Function_1__V_1__V_1_", natives.get("fold_T_MANY__Function_1__V_MANY__V_MANY_"));
+        natives.put("platform::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_", natives.get("platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_"));
 
         // removeDuplicates(T[*], Function[0..1], Function[0..1]) : T[*]
-        natives.put("removeDuplicates_T_MANY__Function_$0_1$__Function_$0_1$__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::removeDuplicates_T_MANY__Function_$0_1$__Function_$0_1$__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             ValueSpecification keyFnVS = args.size() > 1 ? args.get(1) : null;
@@ -388,7 +412,7 @@ public class CollectionNatives
         });
 
         // indexOf(T[*], T[1]) : Integer[1]
-        natives.put("indexOf_T_MANY__T_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::indexOf_T_MANY__T_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             Object rawList = _E_ValueSpecification.unwrap(args.get(0));
             Object target = _E_ValueSpecification.unwrap(args.get(1));
@@ -408,7 +432,7 @@ public class CollectionNatives
             return _E_ValueSpecification.wrap(-1L, genericType, multiplicity, resolver);
         });
         // drop(T[*], Integer[1]) : T[*]
-        natives.put("drop_T_MANY__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::drop_T_MANY__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             long count = (Long) _E_ValueSpecification.unwrap(args.get(1));
@@ -417,7 +441,7 @@ public class CollectionNatives
         });
 
         // take(T[*], Integer[1]) : T[*]
-        natives.put("take_T_MANY__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::take_T_MANY__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             long count = (Long) _E_ValueSpecification.unwrap(args.get(1));
@@ -426,7 +450,7 @@ public class CollectionNatives
         });
 
         // slice(T[*], Integer[1], Integer[1]) : T[*]
-        natives.put("slice_T_MANY__Integer_1__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::slice_T_MANY__Integer_1__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             int from = (int) Math.max(0, (Long) _E_ValueSpecification.unwrap(args.get(1)));
@@ -437,7 +461,7 @@ public class CollectionNatives
         });
 
         // reverse(T[m]) : T[m]
-        natives.put("reverse_T_m__T_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::reverse_T_m__T_m_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             List<ValueSpecification> reversed = new ArrayList<>(col._values());
@@ -446,7 +470,7 @@ public class CollectionNatives
         });
 
         // zip(T[*], U[*]) : Pair<T,U>[*]
-        natives.put("zip_T_MANY__U_MANY__Pair_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::zip_T_MANY__U_MANY__Pair_MANY_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection colA = _E_ValueSpecification.toCollection(args.get(0), resolver);
             platform.pure.metamodel.valuespecification.Collection colB = _E_ValueSpecification.toCollection(args.get(1), resolver);
@@ -468,7 +492,7 @@ public class CollectionNatives
         });
 
         // removeAll(T[*], T[*]) : T[*]
-        natives.put("removeAll_T_MANY__T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::removeAll_T_MANY__T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection setCol = _E_ValueSpecification.toCollection(args.get(0), resolver);
             platform.pure.metamodel.valuespecification.Collection otherCol = _E_ValueSpecification.toCollection(args.get(1), resolver);
@@ -495,7 +519,7 @@ public class CollectionNatives
 
         // ===== Map API =====
         // newMap(Pair<U,V>[*]) : Map<U,V>[1]
-        natives.put("newMap_Pair_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::newMap_Pair_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
         {
             java.util.LinkedHashMap<ValueSpecification, ValueSpecification> map = new java.util.LinkedHashMap<>();
             for (ValueSpecification pairVS : _E_ValueSpecification.toCollection(args.get(0), resolver)._values())
@@ -509,24 +533,37 @@ public class CollectionNatives
         });
 
         // newMap(Pair<U,V>[*], Property<U,Any|1>[*]) : Map<U,V>[1]  — key-function overload (ignore property arg, use equality)
-        natives.put("newMap_Pair_MANY__Property_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
-                natives.get("newMap_Pair_MANY__Map_1_").apply(args, eval, genericType, multiplicity));
+        natives.put("platform::pure::functions::collection::newMap_Pair_MANY__Property_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
+                natives.get("platform::pure::functions::collection::newMap_Pair_MANY__Map_1_").apply(args, eval, genericType, multiplicity));
+
+        // A Pure map is immutable: replaceAll is a new map of the pairs, getIfAbsentPutWithKey stores nothing, and a
+        // map keeps no statistics.
+        natives.put("platform::pure::functions::collection::replaceAll_Map_1__Pair_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
+                natives.get("platform::pure::functions::collection::newMap_Pair_MANY__Map_1_").apply(args.subList(1, 2), eval, genericType, multiplicity));
+        natives.put("platform::pure::functions::collection::getIfAbsentPutWithKey_Map_1__U_1__Function_1__V_$0_1$_", (args, eval, genericType, multiplicity) ->
+        {
+            PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
+            return org.eclipse.collections.impl.utility.Iterate.detectOptional(pureMap.getMap().entrySet(),
+                            e -> org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(e.getKey(), args.get(1), resolver))
+                    .map(Map.Entry::getValue)
+                    .orElseGet(() -> eval.executeFunction(args.get(2), args.subList(1, 2)));
+        });
+        natives.put("platform::pure::functions::collection::getMapStats_Map_1__MapStats_$0_1$_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver));
 
         // put(Map<U,V>[1], key:U[1], value:V[1]) : Map<U,V>[1]
-        natives.put("put_Map_1__U_1__V_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::put_Map_1__U_1__V_1__Map_1_", (args, eval, genericType, multiplicity) ->
         {
             PureMap original = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
             ValueSpecification keyVS = args.get(1);
             ValueSpecification valueVS = args.get(2);
             java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(original.getMap());
-            // remove existing structurally-equal key first
-            m.keySet().removeIf(k -> org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(k, keyVS, resolver));
-            m.put(keyVS, valueVS);
+            putKeepingPosition(m, keyVS, valueVS, resolver);
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
         });
 
         // remove(Map<U,V>[1], key:U[1]) : Map<U,V>[1]
-        natives.put("remove_Map_1__U_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::remove_Map_1__U_1__Map_1_", (args, eval, genericType, multiplicity) ->
         {
             PureMap original = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
             ValueSpecification keyVS = args.get(1);
@@ -536,7 +573,7 @@ public class CollectionNatives
         });
 
         // get(Map<U,V>[1], key:U[1]) : V[0..1]
-        natives.put("get_Map_1__U_1__V_$0_1$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::get_Map_1__U_1__V_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
             PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
             ValueSpecification keyVS = args.get(1);
@@ -552,7 +589,7 @@ public class CollectionNatives
         });
 
         // keys(Map<U,V>[1]) : U[*]
-        natives.put("keys_Map_1__U_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::keys_Map_1__U_MANY_", (args, eval, genericType, multiplicity) ->
         {
             PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
             // Keys are already stored as ValueSpecification — return them directly
@@ -560,7 +597,7 @@ public class CollectionNatives
         });
 
         // values(Map<U,V>[1]) : V[*]
-        natives.put("values_Map_1__V_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::values_Map_1__V_MANY_", (args, eval, genericType, multiplicity) ->
         {
             PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
             // Values are already stored as ValueSpecification — return them directly
@@ -568,7 +605,7 @@ public class CollectionNatives
         });
 
         // keyValues(Map<U,V>[1]) : Pair<U,V>[*]
-        natives.put("keyValues_Map_1__Pair_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::keyValues_Map_1__Pair_MANY_", (args, eval, genericType, multiplicity) ->
         {
             PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
             List<ValueSpecification> pairs = new ArrayList<>();
@@ -586,7 +623,7 @@ public class CollectionNatives
         });
 
         // putAll(Map<U,V>[1], Pair<U,V>[*]) : Map<U,V>[1]
-        natives.put("putAll_Map_1__Pair_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::putAll_Map_1__Pair_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
         {
             PureMap original = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
             java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(original.getMap());
@@ -595,28 +632,26 @@ public class CollectionNatives
                 DynamicInstance pair = (DynamicInstance) _E_ValueSpecification.unwrap(pairVS);
                 ValueSpecification kVS = _E_ValueSpecification.wrap(pair.get("first"), org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(pair.get("first"), resolver), null, resolver);
                 ValueSpecification vVS = _E_ValueSpecification.wrap(pair.get("second"), org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(pair.get("second"), resolver), null, resolver);
-                m.keySet().removeIf(key -> org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(key, kVS, resolver));
-                m.put(kVS, vVS);
+                putKeepingPosition(m, kVS, vVS, resolver);
             }
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
         });
 
         // putAll_Map_1__Map_1__Map_1_ — merge two maps
-        natives.put("putAll_Map_1__Map_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::putAll_Map_1__Map_1__Map_1_", (args, eval, genericType, multiplicity) ->
         {
             PureMap m1 = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
             PureMap m2 = (PureMap) _E_ValueSpecification.unwrap(args.get(1));
             java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(m1.getMap());
             for (Map.Entry<ValueSpecification, ValueSpecification> e : m2.getMap().entrySet())
             {
-                m.keySet().removeIf(k -> org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(k, e.getKey(), resolver));
-                m.put(e.getKey(), e.getValue());
+                putKeepingPosition(m, e.getKey(), e.getValue(), resolver);
             }
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
         });
 
         // exists(T[*], Function<{T[1]->Boolean[1]}>[1]) : Boolean[1]
-        natives.put("exists_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::exists_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification itemVS : col._values())
@@ -633,7 +668,7 @@ public class CollectionNatives
         // {@code $collection->exists(x | $value == $x)}; declared native in
         // {@code pure/specification/runtime/functions/collection/boolean/contains.pure}
         // to let backends skip the per-element closure dispatch.
-        natives.put("contains_Any_MANY__Any_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::contains_Any_MANY__Any_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             Object value = _E_ValueSpecification.unwrap(args.get(1));
@@ -648,7 +683,7 @@ public class CollectionNatives
         });
 
         // forAll(T[*], Function<{T[1]->Boolean[1]}>[1]) : Boolean[1]
-        natives.put("forAll_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::forAll_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification itemVS : col._values())
@@ -663,7 +698,7 @@ public class CollectionNatives
 
         // groupBy(X[*], Function<{X[1]->K[1]}>[1]) : Map<K,List<X>>[1]
         // Pure's List<X> has a 'values' property that contains the grouped elements
-        natives.put("groupBy_X_MANY__Function_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::collection::groupBy_X_MANY__Function_1__Map_1_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             java.util.LinkedHashMap<ValueSpecification, List<ValueSpecification>> grouped = new java.util.LinkedHashMap<>();
@@ -722,6 +757,17 @@ public class CollectionNatives
      * Creates a DynamicInstance representing a Pure Pair with its classifierGenericType
      * built from the actual element types of the two input collections.
      */
+    /**
+     * Sets `key` to `value` in `map`. A key already there (by Pure equality) keeps its position and only its
+     * value changes; a new key goes last (testPut_overridesEntryKeepsItsPosition).
+     */
+    private static void putKeepingPosition(java.util.LinkedHashMap<ValueSpecification, ValueSpecification> map, ValueSpecification key,
+                                           ValueSpecification value, MetadataAccess resolver)
+    {
+        ValueSpecification existing = Iterate.detect(map.keySet(), k -> org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(k, key, resolver));
+        map.put(existing == null ? key : existing, value);
+    }
+
     private static DynamicInstance makePair(ValueSpecification first, ValueSpecification second,
             platform.pure.metamodel.type.generics.GenericType firstGT,
             platform.pure.metamodel.type.generics.GenericType secondGT,

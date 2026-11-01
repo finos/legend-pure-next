@@ -22,6 +22,7 @@ import platform.pure.metamodel.constraint.Constraint;
 import platform.pure.metamodel.extension.Stereotype;
 import platform.pure.metamodel.extension.TaggedValue;
 import platform.pure.metamodel.function.PackageableFunction;
+import platform.pure.metamodel.multiplicity.ConcreteMultiplicity;
 import platform.pure.metamodel.multiplicity.Multiplicity;
 import platform.pure.metamodel.multiplicity.MultiplicityParameter;
 import platform.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl;
@@ -36,6 +37,7 @@ import platform.pure.metamodel.valuespecification.ValueSpecification;
 import platform.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
+import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
@@ -373,9 +375,18 @@ public abstract class FunctionIndexEntry implements PackageableFunction
      */
     public static Comparator<FunctionIndexEntry> mostSpecificFirst(MetadataAccess model)
     {
+        return mostSpecificFirst(model, Lists.immutable.empty());
+    }
+
+    /**
+     * As {@link #mostSpecificFirst(MetadataAccess)}, for a call whose arguments have the given multiplicities:
+     * a parameter's multiplicity is ranked against its argument's (see {@link #multiplicityRank}).
+     */
+    public static Comparator<FunctionIndexEntry> mostSpecificFirst(MetadataAccess model, ListIterable<? extends Multiplicity> arguments)
+    {
         return (e1, e2) ->
         {
-            int cmp = compareFunctionTypes(e1.functionType(), e2.functionType(), model);
+            int cmp = compareFunctionTypes(e1.functionType(), e2.functionType(), model, arguments);
             if (cmp != 0)
             {
                 return cmp;
@@ -395,6 +406,15 @@ public abstract class FunctionIndexEntry implements PackageableFunction
      * Compare two FunctionTypes by parameter specificity.
      */
     public static int compareFunctionTypes(FunctionType f1, FunctionType f2, MetadataAccess model)
+    {
+        return compareFunctionTypes(f1, f2, model, Lists.immutable.empty());
+    }
+
+    /**
+     * Compare two FunctionTypes by parameter specificity, for a call whose arguments have the given
+     * multiplicities (none known: by the declared multiplicities alone).
+     */
+    public static int compareFunctionTypes(FunctionType f1, FunctionType f2, MetadataAccess model, ListIterable<? extends Multiplicity> arguments)
     {
         MutableList<VariableExpression> params1 = f1._parameters();
         MutableList<VariableExpression> params2 = f2._parameters();
@@ -464,6 +484,21 @@ public abstract class FunctionIndexEntry implements PackageableFunction
             Multiplicity m1 = params1.get(i)._multiplicity();
             Multiplicity m2 = params2.get(i)._multiplicity();
 
+            // Against a concrete argument multiplicity, as legend-pure ranks them: an exact match first, then
+            // a multiplicity parameter (it binds to the argument's exactly), then a concrete multiplicity
+            // containing the argument's, the closest first. Not against the universal [*], which a parameter
+            // still beats below: overloads such as cast's tell themselves apart by it, where legend-pure
+            // compares every parameter's type (a holder's multiplicity argument among them) first.
+            Multiplicity argument = i < arguments.size() ? arguments.get(i) : null;
+            if (isConcrete(argument) && !_Multiplicity.isUniversal(m1) && !_Multiplicity.isUniversal(m2))
+            {
+                int rankCmp = compareRanks(multiplicityRank(m1, argument), multiplicityRank(m2, argument));
+                if (rankCmp != 0)
+                {
+                    return rankCmp;
+                }
+            }
+
             // Multiplicity parameter (e.g. [m]) vs concrete:
             // - [m] is MORE specific than [*] (the universal wildcard), because
             //   [m] binds to the exact multiplicity of the actual argument.
@@ -494,6 +529,53 @@ public abstract class FunctionIndexEntry implements PackageableFunction
             }
         }
 
+        return 0;
+    }
+
+    private static boolean isConcrete(Multiplicity m)
+    {
+        return m instanceof ConcreteMultiplicity;
+    }
+
+    /**
+     * A parameter multiplicity's rank against a concrete argument multiplicity, lower first: [0] an exact
+     * match, [1] a multiplicity parameter, [2, upper bound distance, lower bound distance] a concrete one
+     * containing the argument's, [3] another.
+     */
+    private static long[] multiplicityRank(Multiplicity parameter, Multiplicity argument)
+    {
+        if (parameter instanceof MultiplicityParameter)
+        {
+            return new long[]{1, 0, 0};
+        }
+        if (!isConcrete(parameter))
+        {
+            return new long[]{3, 0, 0};
+        }
+        long pLower = _Multiplicity.lowerBound(parameter);
+        long aLower = _Multiplicity.lowerBound(argument);
+        Long pUpper = _Multiplicity.upperBound(parameter);
+        Long aUpper = _Multiplicity.upperBound(argument);
+        boolean containsUpper = pUpper == null || (aUpper != null && aUpper <= pUpper);
+        if (pLower > aLower || !containsUpper)
+        {
+            return new long[]{3, 0, 0};
+        }
+        long upperDistance = pUpper == null ? (aUpper == null ? 0 : Long.MAX_VALUE) : pUpper - aUpper;
+        long lowerDistance = aLower - pLower;
+        return upperDistance == 0 && lowerDistance == 0 ? new long[]{0, 0, 0} : new long[]{2, upperDistance, lowerDistance};
+    }
+
+    private static int compareRanks(long[] r1, long[] r2)
+    {
+        for (int i = 0; i < r1.length; i++)
+        {
+            int cmp = Long.compare(r1[i], r2[i]);
+            if (cmp != 0)
+            {
+                return cmp;
+            }
+        }
         return 0;
     }
 

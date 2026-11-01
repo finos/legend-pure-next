@@ -1,0 +1,31 @@
+###Pure
+import test::*;
+
+Class test::Box<T>
+[
+  typed: $this.value->cast(@T)->isNotEmpty()
+]
+{
+  value: Any[1];
+}
+
+###CompiledGraph
+class test::Box extends Any  ~Class<test::Box<T~test::Box>>  @4:1-10:1
+  property value :@Any@[1]  ~Property<test::Box<T~test::Box>, @Any@|1>
+  constraint typed
+    Lambda(this:test::Box<T~test::Box>[1])  ~#LambdaFunction<#{test::Box<T~test::Box>[1]->#Boolean##[1]#}#>#
+      ArrowInvocation isNotEmpty_Any_$0_1$__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @6:21-6:44
+        ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#T~test::Box##[1]#  ~@ArrowInvocation@  @6:21-6:44
+          typeParam T -> T~test::Box
+          mulParam m -> #[1]#
+          DotApplication test::Box.value :#Any##[1]#  ~@DotApplication@  @6:15-6:20
+            Variable this :#test::Box<T~test::Box>##[1]#  ~@VariableExpression@  @6:10-6:14
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<T~test::Box|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<T~test::Box|?>  @6:28-6:29
+
+###ReverseIndex
+platform::pure::functions::collection::isNotEmpty_Any_$0_1$__Boolean_1_:
+  test::Box.typed
+platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+  test::Box.typed
+test::Box.value:
+  test::Box.typed

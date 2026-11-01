@@ -94,14 +94,6 @@ public final class AssertErrorNode extends PureNode
             {
                 throw new RuntimeException("assertError: argument is not a function");
             }
-            // Pass `this` (the AssertErrorNode) as the location: it carries
-            // the Pure source section attached at AST-build time via
-            // PureSourceHelper.withSource, so the throwing frame's
-            // `frame.getLocation()` returns this node and stack-trace
-            // rendering can show the call site. Passing null here lost the
-            // source location entirely.
-            throw new PureException.AssertionError("Expected error with message containing: '"
-                    + expectedMessage + "' but no error was thrown", this);
         }
         catch (Exception e)
         {
@@ -128,5 +120,11 @@ public final class AssertErrorNode extends PureNode
             }
             return true;
         }
+        // Outside the try: this failure is not the error the function was expected to raise.
+        // Pass `this` (the AssertErrorNode) as the location: it carries the Pure source section attached at
+        // AST-build time via PureSourceHelper.withSource, so the throwing frame's `frame.getLocation()` returns
+        // this node and stack-trace rendering can show the call site.
+        throw new PureException.AssertionError("Expected error with message containing: '"
+                + expectedMessage + "' but no error was thrown", this);
     }
 }

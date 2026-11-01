@@ -1,0 +1,26 @@
+###Pure
+import pack::*;
+
+Class pack::Box<T>
+{
+  value: Any[1];
+  typed: T[1] = $this.value->cast(@T);
+}
+
+###CompiledGraph
+class pack::Box extends Any  ~Class<pack::Box<T~pack::Box>>  @4:1-8:1
+  property value :@Any@[1]  ~Property<pack::Box<T~pack::Box>, @Any@|1>
+  property typed :T~pack::Box[1]  ~Property<pack::Box<T~pack::Box>, T~pack::Box|1>
+    defaultValue Lambda(this:pack::Box<T~pack::Box>[1])  ~#LambdaFunction<#{pack::Box<T~pack::Box>[1]->#T~pack::Box##[1]#}#>#
+      ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#T~pack::Box##[1]#  ~@ArrowInvocation@  @7:28-7:37
+        typeParam T -> T~pack::Box
+        mulParam m -> #[1]#
+        DotApplication pack::Box.value :#Any##[1]#  ~@DotApplication@  @7:22-7:27
+          Variable this :#pack::Box<T~pack::Box>##[1]#  ~@VariableExpression@  @7:17-7:21
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<T~pack::Box|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<T~pack::Box|?>  @7:35-7:36
+
+###ReverseIndex
+pack::Box.value:
+  pack::Box.typed
+platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+  pack::Box.typed

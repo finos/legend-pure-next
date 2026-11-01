@@ -55,3 +55,17 @@ platform::extensions::language::javascript::translation::tests::renderMetaProper
    let sf = $canonical->translateFunctionDef(conventionForRoot($canonical));
    $sf->serialize();
 }
+
+// The coder table is this platform's native registry, keyed by full id: every native the loaded modules declare
+// has a coder (or is listed as not on this platform), and every coder is for a native — a function written in Pure
+// is always translated from its body, never replaced.
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::testTheCodersAreTheNativesOfTheLoadedModules(): Boolean[1]
+{
+   let coders = platform::extensions::language::javascript::translation::defaultConvention().functionCoders->keys();
+   let notHere = platform::extensions::language::javascript::translation::notOnThisPlatform().first;
+   let natives = platform::pure::test::nativeFunctionsUnder(pathToElement('platform')->cast(@Package))->map(n | $n->elementToPath())->removeDuplicates();
+   assertEquals([], $natives->filter(n | !$coders->contains($n) && !$notHere->contains($n))->sort());
+   assertEquals([], $coders->filter(c | $notHere->contains($c))->sort());
+   assertEquals([], $coders->filter(c | platform::pure::functions::meta::lenientPathToElement($c)
+                                           ->filter(e | !$e->instanceOf(platform::pure::metamodel::function::NativeFunction))->isNotEmpty())->sort());
+}

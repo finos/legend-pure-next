@@ -188,41 +188,85 @@ public final class PureStrings
         return out;
     }
 
-    /** {@code regexpIndexOf(s, regex[, group])}: where the first match (of {@code group}) starts, or -1. */
-    public static long regexpIndexOf(String s, String regex, long group)
+    /**
+     * The java.util.regex flags of a {@code RegexpParameter[1..*]} value, read by name as the other platforms do:
+     * CASE_INSENSITIVE, MULTILINE, NON_NEWLINE_SENSITIVE (dot matches a newline); CASE_SENSITIVE sets none.
+     */
+    public static int regexpFlags(Object parameters)
     {
-        Matcher m = Pattern.compile(regex).matcher(s);
+        List<?> values = parameters instanceof List<?> list ? list : List.of(parameters);
+        return org.eclipse.collections.impl.factory.Lists.adapt(values)
+                .collect(v -> v instanceof Enum<?> e ? e.name() : String.valueOf(v))
+                .injectInto(0, (int flags, String name) -> flags | switch (name)
+                {
+                    case "CASE_INSENSITIVE" -> Pattern.CASE_INSENSITIVE;
+                    case "MULTILINE" -> Pattern.MULTILINE;
+                    case "NON_NEWLINE_SENSITIVE" -> Pattern.DOTALL;
+                    default -> 0;
+                });
+    }
+
+    /** The successive matches of {@code regex} in {@code s}, read lazily. */
+    private static org.eclipse.collections.api.LazyIterable<java.util.regex.MatchResult> matches(String s, String regex, int flags)
+    {
+        Matcher m = Pattern.compile(regex, flags).matcher(s);
+        return org.eclipse.collections.impl.utility.LazyIterate.adapt(() -> new java.util.Iterator<java.util.regex.MatchResult>()
+        {
+            private Boolean found;
+
+            @Override
+            public boolean hasNext()
+            {
+                if (found == null)
+                {
+                    found = m.find();
+                }
+                return found;
+            }
+
+            @Override
+            public java.util.regex.MatchResult next()
+            {
+                if (!hasNext())
+                {
+                    throw new java.util.NoSuchElementException();
+                }
+                found = null;
+                return m.toMatchResult();
+            }
+        });
+    }
+
+    /** {@code regexpIndexOf(s, regex, group, parameters)}: where the first match (of {@code group}) starts, or -1. */
+    public static long regexpIndexOf(String s, String regex, long group, int flags)
+    {
+        Matcher m = Pattern.compile(regex, flags).matcher(s);
         return m.find() ? m.start((int) group) : -1;
     }
 
-    /** {@code regexpCount(s, regex[, flags])}: the number of non-overlapping matches. */
+    /** {@code regexpCount(s, regex, parameters)}: the number of non-overlapping matches. */
     public static long regexpCount(String s, String regex, int flags)
     {
-        Matcher m = Pattern.compile(regex, flags).matcher(s);
-        long count = 0;
-        while (m.find())
-        {
-            count++;
-        }
-        return count;
+        return matches(s, regex, flags).size();
     }
 
-    /** {@code regexpExtract(s, regex, extractAll[, group])}: every match (of {@code group}), or the first one. */
-    public static List<String> regexpExtract(String s, String regex, boolean extractAll, long group)
+    /** {@code regexpReplace(s, regex, replacement, replaceAll, parameters)}. */
+    public static String regexpReplace(String s, String regex, String replacement, boolean replaceAll, int flags)
     {
-        Matcher m = Pattern.compile(regex).matcher(s);
-        List<String> out = new ArrayList<>();
-        if (extractAll)
-        {
-            while (m.find())
-            {
-                out.add(m.group((int) group));
-            }
-        }
-        else if (m.find())
-        {
-            out.add(m.group((int) group));
-        }
-        return out;
+        Matcher m = Pattern.compile(regex, flags).matcher(s);
+        return replaceAll ? m.replaceAll(replacement) : m.replaceFirst(replacement);
+    }
+
+    /**
+     * {@code regexpExtract(s, regex, extractAll, group, parameters)}: every match (of {@code group}), or the first
+     * one; a group that did not take part in a match contributes nothing.
+     */
+    public static List<String> regexpExtract(String s, String regex, boolean extractAll, long group, int flags)
+    {
+        return matches(s, regex, flags)
+                .take(extractAll ? Integer.MAX_VALUE : 1)
+                .collect(match -> match.group((int) group))
+                .select(java.util.Objects::nonNull)
+                .toList();
     }
 }

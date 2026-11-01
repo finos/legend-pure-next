@@ -206,6 +206,13 @@ public class PdbModule implements Module
         return loader.hasElement(path);
     }
 
+    /** From the archive's entry name ({@code elements/<path>.NativeFunction}): nothing is decoded. */
+    @Override
+    public boolean isNativeFunction(String path)
+    {
+        return "NativeFunction".equals(archive.getElementType(path));
+    }
+
     /**
      * Get all element paths in the archive.
      */

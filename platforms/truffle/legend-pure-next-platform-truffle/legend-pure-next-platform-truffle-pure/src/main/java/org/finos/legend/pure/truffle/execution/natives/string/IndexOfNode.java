@@ -50,9 +50,17 @@ public final class IndexOfNode extends PureNode
         if (fromArg != null)
         {
             int from = (int) fromArg.executeLong(frame);
-            return s.indexOf(search, from);
+            return indexOf(s, search, from);
         }
-        return s.indexOf(search);
+        return indexOf(s, search, 0);
+    }
+
+    // String.indexOf reaches the JDK bounds check, whose message formatting (Formatter, Locale, generics
+    // reflection) loops back to String.substring: without a boundary Graal bails out with `Too deep inlining`.
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static long indexOf(String s, String search, int from)
+    {
+        return s.indexOf(search, from);
     }
 
     @Override

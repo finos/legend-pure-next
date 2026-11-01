@@ -72,9 +72,11 @@ function platform::pure::compiler::elements::compileClass(protocolClass:platform
     );
 
     let ownerGenericType = $skeleton.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0);
-    let constraintAccum = compileConstraints($protocolClass.constraints, $ownerGenericType, $typeVariables, $ctx4);
+    // The class's type parameters are in scope in its constraints, and only there (class/constraints/typeParameterCast).
+    let constraintAccum = compileConstraints($protocolClass.constraints, $ownerGenericType, $typeVariables, ^$ctx4(ownerTypeParams = $skeleton.typeParameters->cast(@TypeParameter)));
     let compiledConstraints = $constraintAccum.values;
-    let ctx5 = $constraintAccum.context;
+    let constraintCtx = $constraintAccum.context;
+    let ctx5 = ^$constraintCtx(ownerTypeParams = $ctx4.ownerTypeParams);
 
     // Compile qualified properties — sub-element caller scope so refs inside
     // each QP's type attribute to {@code Class.qpName}.

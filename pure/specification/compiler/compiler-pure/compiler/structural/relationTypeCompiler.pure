@@ -31,8 +31,10 @@ function platform::pure::compiler::structural::relationTypeCompiler::compileRela
         let colGenType = $col.genericType;
         let colGTResult = if($colGenType->isNotEmpty() && $colGenType->toOne()->instanceOf(platform::pure::protocol::grammar::type::generics::GenericTypeValue),
             | $colGenType->toOne()->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext),
-            | ^CompilerResult<GenericType>(
-                  value = ^CompilerNotSetGenericType(),
+            | // a wildcard column of any type (?:?) is of an undefined type, which nothing infers (a column
+              // spec's untyped column, ~[name], is left for inference) — mirrors Java RelationTypeCompiler
+              ^CompilerResult<GenericType>(
+                  value = if($col.nameWildCard->isNotEmpty() && $col.nameWildCard->toOne(), | ^UndefinedGenericType(), | ^CompilerNotSetGenericType()),
                   context = $acc.context
               )
         );
@@ -42,7 +44,8 @@ function platform::pure::compiler::structural::relationTypeCompiler::compileRela
         );
         let colNameWC = if($col.nameWildCard->isEmpty(), | false, | $col.nameWildCard);
         ^$acc(
-            values += buildColumn(if($col.name->isEmpty(), | '', | $col.name), $ownerGT, $colGTResult.value->toOne(), $colMul, $colNameWC),
+            // the name read as a string literal is (Java RelationTypeCompiler): '\'a\'' is the column 'a', quotes included
+            values += buildColumn(if($col.name->isEmpty(), | '', | platform::pure::compiler::structural::valueSpecificationCompiler::unescapePureString($col.name->toOne())), $ownerGT, $colGTResult.value->toOne(), $colMul, $colNameWC),
             context = $colGTResult.context
         );
     }, ^CompilerListResult<Column<Nil, Any|*>>(context = $context));

@@ -1385,6 +1385,40 @@ function __memoize(fn, ...args) {
     __memoizing.delete(key);
   }
 }
+// A property's default value, read on an object that never set it (the translator's prototype getter):
+// `compute` called with the object. Never stored. A default that needs its own value is an error.
+const __computingDefaults = new WeakMap();
+function __default(obj, classPath, name, compute) {
+  let computing = __computingDefaults.get(obj);
+  if (computing === void 0) {
+    computing = new Set();
+    __computingDefaults.set(obj, computing);
+  }
+  if (computing.has(name)) throw new Error("default value cycle: " + classPath + "." + name + " is already being computed for this object");
+  computing.add(name);
+  try {
+    return compute(obj);
+  } finally {
+    computing.delete(name);
+  }
+}
+// rawEvalProperty(property, object): what the object holds — an own field — never the default a read
+// computes through the class's prototype getter (see __default).
+function __rawEvalProperty(property, object) {
+  const name = __pdo(property).name;
+  const o = __pdo(object);
+  if (o === null || o === void 0 || typeof o !== "object") return [];
+  if (Object.prototype.hasOwnProperty.call(o, name)) return o[name] === void 0 ? [] : o[name];
+  for (let p = Object.getPrototypeOf(o); p !== null; p = Object.getPrototypeOf(p)) {
+    const d = Object.getOwnPropertyDescriptor(p, name);
+    if (d !== void 0) return typeof d.get === "function" ? [] : (o[name] === void 0 ? [] : o[name]);
+  }
+  return o[name] === void 0 ? [] : o[name];
+}
+// A value set on a property that has a default: an own field, which shadows the prototype getter.
+function __defineOwn(obj, name, value) {
+  Object.defineProperty(obj, name, { value, writable: true, enumerable: true, configurable: true });
+}
 function __tryEval(thunk) {
   try {
     return __newOf("platform$pure$functions$lang$TryResult", {
@@ -1414,31 +1448,17 @@ function __tryEval(thunk) {
     });
   }
 }
-function __removeDuplicatesBy(coll, fn1, fn2) {
+// The native removeDuplicates(coll, key, eql): key and eql are each [0..1]. A value is dropped when its key (the value
+// itself without `key`) equals the key of one already kept — by eql(keptKey, key) when given, else as a Set compares.
+function __removeDuplicates(coll, key, eql) {
+  const k = __optFn(key), e = __optFn(eql);
   const arr = __asArr(coll);
-  const out = [];
-  if (fn2 !== void 0) {
-    const keptKeys = [];
-    for (const x of arr) {
-      const kx = fn1(x);
-      if (!keptKeys.some((ky) => fn2(ky, kx))) {
-        keptKeys.push(kx);
-        out.push(x);
-      }
-    }
-  } else if (fn1.length >= 2) {
-    for (const x of arr) if (!out.some((y) => fn1(y, x))) out.push(x);
-  } else {
-    const seen = /* @__PURE__ */ new Set();
-    for (const x of arr) {
-      const k = fn1(x);
-      if (!seen.has(k)) {
-        seen.add(k);
-        out.push(x);
-      }
-    }
+  if (e === undefined) {
+    const seen = new Set();
+    return arr.filter((x) => { const kx = k ? k(x) : x; if (seen.has(kx)) return false; seen.add(kx); return true; });
   }
-  return out;
+  const keptKeys = [];
+  return arr.filter((x) => { const kx = k ? k(x) : x; if (keptKeys.some((ky) => e(ky, kx))) return false; keptKeys.push(kx); return true; });
 }
 function __match(v, arms, withArg) {
   for (const arm of arms) {
@@ -1600,7 +1620,8 @@ function __removeAll(set, other) {
   return __asArr(set).filter((x) => !os.some((o) => __eq(x, o)));
 }
 function __mapKeyValues(m) {
-  return __mapEntriesOf(m).map(([k, v]) => __newOf("platform$pure$functions$collection$Pair", { first: k, second: v }));
+  // __pair: a Pair with its classifier, so genericType()/type() answer for it as for any built Pair.
+  return __mapEntriesOf(m).map(([k, v]) => __pair(k, v));
 }
 function __mapKeys(m) {
   return __mapEntriesOf(m).map((x) => x[0]);
@@ -1888,9 +1909,16 @@ function __defaultCompare(a, b) {
   const sa = __toString(a), sb = __toString(b);
   return sa < sb ? -1 : sa > sb ? 1 : 0;
 }
+// A [0..1] function argument: the function, or undefined for none (undefined, null, or an empty array — how an empty
+// [0..1] value arrives).
+function __optFn(v) {
+  if (__isEmpty(v)) return undefined;
+  return Array.isArray(v) ? v[0] : v;
+}
+// The native sort(coll, key, comp): key and comp are each [0..1].
 function __sort(coll, key, comp) {
-  const k = key || ((x) => x);
-  const c = comp || __defaultCompare;
+  const k = __optFn(key) || ((x) => x);
+  const c = __optFn(comp) || __defaultCompare;
   // Pure comparators return an Integer (bigint); Array.sort requires a number.
   // Number() preserves the sign (all sort needs).
   return __asArr(coll).slice().sort((a, b) => Number(c(k(a), k(b))));
@@ -1912,6 +1940,15 @@ function __toOne(v, message) {
     throw new Error(message !== undefined ? String(message) : "toOne expected exactly 1 element, got " + arr.length);
   }
   return arr[0];
+}
+// toOneMany(values[, message]): the values, or an error when there are none — the message, else as Truffle's
+// ToOneManyNode and bootstrap's CollectionNatives word it.
+function __toOneMany(v, message) {
+  const arr = __asArr(v);
+  if (arr.length === 0) {
+    throw new Error(message !== undefined ? String(message) : "toOneMany expected at least 1 element, got 0");
+  }
+  return v;
 }
 function __eval(fn, ...args) {
   if (typeof fn === "function") return fn(...args);
@@ -2580,18 +2617,20 @@ function __lenientPathToElement(p, sep) {
   const resolved = __metadataPathToElement(p, sep ?? "::");
   return (resolved === null || resolved === void 0) ? [] : [__pureResolve(resolved)];
 }
-function __assertIs(expected, actual) {
-  if (expected === actual) return true;
-  // Element identity: a translated function REFERENCE (an arrow tagged with
-  // __purePath) and the element proxy pathToElement returns are the same
-  // Pure element — compare paths (works across function/object shapes).
-  const ppE = expected && expected.__purePath, ppA = actual && actual.__purePath;
-  if (typeof ppE === "string" && ppE === ppA) return true;
-  if (expected && actual && typeof expected === "object" && typeof actual === "object") {
-    if (expected.path !== void 0 && expected.path === actual.path) return true;
-    if (expected.name !== void 0 && expected.name === actual.name) return true;
+// is(a, b): the same value. A Pure element has several JS shapes — its translated function, the arrow a function
+// passed as a value is (tagged with __purePath), the proxy __pureResolve hands out — so two values with one path are
+// one element. A copy (`^$f()`) carries the path too, but is a value of its own (__copy marks it). Two enum values
+// are the same when they are of one enumeration and named alike. Anything else: ===.
+function __is(a, b) {
+  if (a === b) return true;
+  if (!a || !b || (typeof a !== "object" && typeof a !== "function") || (typeof b !== "object" && typeof b !== "function")) return false;
+  const pa = a.__purePath, pb = b.__purePath;
+  if (typeof pa === "string" && pa === pb && !a.__isCopy && !b.__isCopy) return true;
+  const E = globalThis["platform$pure$metamodel$type$Enum"];
+  if (typeof E === "function" && a instanceof E && b instanceof E) {
+    return __pureTypeOf(a) === __pureTypeOf(b) && __toString(a.name) === __toString(b.name);
   }
-  throw new Error("assertIs: expected " + __toRepresentation(expected) + " is " + __toRepresentation(actual));
+  return false;
 }
 function __regexpLike(str, pat, flags) {
   let f = "";
@@ -2753,6 +2792,43 @@ function __cast(value, targetPath) {
   if (vtPath && __metadataSubtypeOf(targetPath, vtPath)) return value;
   throw new Error("Cast exception: " + __castLeaf(vtPath) + " cannot be cast to " + __castLeaf(targetPath));
 }
+// cast(@T) in a default, a qualified property or a constraint of the class `declaringPath`, computed for
+// `owner`: T is what owner's type arguments bind it to — String for a Box<T> built as Box<String>, and
+// through its generalizations for a subclass, String for a StringBox (extends Box<String>). An object
+// built with a raw class binds nothing: the value passes, as a cast to a type parameter with no witness does.
+function __castToClassTypeParameter(value, owner, declaringPath, name) {
+  const cgt = owner !== void 0 && owner !== null && typeof owner === "object" ? owner.classifierGenericType : void 0;
+  const typePath = cgt ? __typePath(cgt.type) : void 0;
+  const bindings = typePath ? __classTypeBindingsAs(typePath, __asArr(cgt.typeArguments).map((a) => __typePath(a.type)), declaringPath) : void 0;
+  const path = bindings ? bindings.get(name) : void 0;
+  return path === void 0 ? value : __cast(value, path);
+}
+function __typePath(t) {
+  return t ? t.__purePath ?? t.path : void 0;
+}
+// The type parameters of the class `typePath` bound to `values` (type paths), seen as its ancestor
+// `ancestorPath`: walked up its generalizations, each parent's type arguments read through the bindings
+// below it (Box<U> under a RenamedBox<Integer> is Box<Integer>). Undefined when it is not an ancestor.
+function __classTypeBindingsAs(typePath, values, ancestorPath) {
+  const cls = __pureResolve(typePath);
+  if (cls === void 0 || cls === null) return void 0;
+  const own = new Map();
+  __asArr(cls.typeParameters).forEach((p, i) => { if (values[i] !== void 0) own.set(p.name, values[i]); });
+  if (typePath === ancestorPath) return own;
+  return __asArr(cls.generalizations)
+    .map((g) => {
+      const general = g.general;
+      const parentPath = general ? __typePath(general.type) : void 0;
+      if (parentPath === void 0) return void 0;
+      const parentValues = __asArr(general.typeArguments).map((a) => {
+        const t = a.type;
+        const isParameter = t && String(__pureTypeOf(t) ?? "").endsWith("TypeParameter");
+        return isParameter ? own.get(t.name) : __typePath(t);
+      });
+      return __classTypeBindingsAs(parentPath, parentValues, ancestorPath);
+    })
+    .find((b) => b !== void 0);
+}
 const __resolveCache = {};
 const __OPT_CGT_PREFIX = "platform::pure::metamodel::type::generics::optimization::GenericType_";
 const __OPT_DEFAULTS = {
@@ -2903,8 +2979,28 @@ function __newCgt(slots) {
 // code which may run in the standalone parser, where none of the compiler's classes exist.
 function __newOf(mangled, slots) {
   const Cls = globalThis[mangled];
-  if (typeof Cls !== "function") return slots;
+  if (typeof Cls !== "function") return __withAccessors(slots);
   return Object.assign(new Cls(), slots);
+}
+// The prototype of a value whose class is not loaded in this host: it answers the generated accessors (`_type()`
+// reads `type`, `_type(v)` sets it) as an instance of the class would — translated code reads a Class-typed value
+// through them, whichever way the value was built. A prototype, not a wrapper, so the value keeps its identity.
+const __accessorPrototype = new Proxy(Object.create(Object.prototype), {
+  get(target, prop, receiver) {
+    if (typeof prop === "string" && prop.length > 1 && prop.charCodeAt(0) === 95 && prop.charCodeAt(1) !== 95) {
+      const field = prop.substring(1);
+      return function (value) {
+        if (arguments.length === 0) return receiver[field];
+        receiver[field] = value;
+        return receiver;
+      };
+    }
+    return Reflect.get(target, prop, receiver);
+  }
+});
+globalThis.__accessorPrototype = __accessorPrototype;
+function __withAccessors(slots) {
+  return Object.getPrototypeOf(slots) === Object.prototype ? Object.setPrototypeOf(slots, __accessorPrototype) : slots;
 }
 function __rewrapStubs(v) {
   if (v === void 0 || v === null) return void 0;
@@ -3044,13 +3140,19 @@ function __bindAssoc(thisObj, otherValue, reverseName, toMany, className, propNa
     otherValue[reverseName] = thisObj;
   }
 }
+// A copy is a value of its own even when it carries its source's __purePath: __is reads the mark. Non-enumerable,
+// so printing and comparison never see it.
+function __markCopy(self) {
+  if (self !== null && typeof self === "object") Object.defineProperty(self, "__isCopy", { value: true });
+  return self;
+}
 function __copy(base, overrides) {
-  const self = __spreadEager(base);
+  const self = __markCopy(__spreadEager(base));
   if (self === null || typeof self !== "object") return self;
   return Object.assign(self, overrides);
 }
 function __copyCtx(src, fill) {
-  const self = __spreadEager(src);
+  const self = __markCopy(__spreadEager(src));
   __ctorStack.push(self);
   try {
     fill(self);
@@ -3487,6 +3589,9 @@ function __variantCoerce(t, d) {
 }
 function __toString(v) {
   if (v === void 0 || v === null) return "";
+  // A Float is a JS number (an Integer is a bigint): always a decimal point, never an exponent — whatever the
+  // argument's declared type (a Number-typed `n` holding 17.0 is '17.0').
+  if (typeof v === "number") return __floatStr1(v);
   if (v instanceof Big) return v.toString();
   if (v instanceof Date) return __formatPureDate(v);
   if (Array.isArray(v)) return "[" + v.map(__toString).join(", ") + "]";

@@ -25,13 +25,13 @@ Class pack::MyClass
 ###CompiledGraph
 class pack::MyClass extends Any  ~Class<pack::MyClass>  @18:1-23:1
   property value :@Integer@[1]  ~Property<pack::MyClass, @Integer@|1>
-    defaultValue Lambda()  ~#LambdaFunction<#{->@Integer@[1]}#>#
+    defaultValue Lambda(this:pack::MyClass[1])  ~#LambdaFunction<#{pack::MyClass[1]->@Integer@[1]}#>#
       AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:23-20:23
   property str :@String@[1]  ~Property<pack::MyClass, @String@|1>
-    defaultValue Lambda()  ~#LambdaFunction<#{->@String@[1]}#>#
+    defaultValue Lambda(this:pack::MyClass[1])  ~#LambdaFunction<#{pack::MyClass[1]->@String@[1]}#>#
       AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @21:20-21:23
   property advanced :@String@[1]  ~Property<pack::MyClass, @String@|1>
-    defaultValue Lambda()  ~#LambdaFunction<#{->#String##[1]#}#>#
+    defaultValue Lambda(this:pack::MyClass[1])  ~#LambdaFunction<#{pack::MyClass[1]->#String##[1]#}#>#
       FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @22:30-22:41
         DotApplication pack::MyClass.str :#String##[1]#  ~@DotApplication@  @22:30-22:33
           Variable this :#pack::MyClass##[1]#  ~@VariableExpression@  @22:25-22:29

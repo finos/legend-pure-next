@@ -1,0 +1,42 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+// A column name in a relation type is read as a string literal is, its escapes processed: '\'a\'' is the
+// column named 'a' with its quotes, the one ~'\'a\'' names.
+native function select<T,Z>(r: Relation<T>[1], cols: ColSpec<Z⊆T>[1]): Relation<Z>[1];
+
+function f(rel: Relation<(val:Integer, '\'a\'':String)>[1]): Any[*]
+{
+  $rel->select(~'\'a\'')
+}
+
+###CompiledGraph
+native function select_Relation_1__ColSpec_1__Relation_1_(r:Relation<T~select_Relation_1__ColSpec_1__Relation_1_>[1], cols:ColSpec<Z~select_Relation_1__ColSpec_1__Relation_1_⊆T~select_Relation_1__ColSpec_1__Relation_1_>[1]):Relation<Z~select_Relation_1__ColSpec_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~select_Relation_1__ColSpec_1__Relation_1_>[1], ColSpec<Z~select_Relation_1__ColSpec_1__Relation_1_⊆T~select_Relation_1__ColSpec_1__Relation_1_>[1]->Relation<Z~select_Relation_1__ColSpec_1__Relation_1_>[1]}>
+
+function f_Relation_1__Any_MANY_(rel:Relation<(val:@Integer@[1], 'a':@String@[1])>[1]):@Any@[*]  ~UserDefinedFunction<{Relation<(val:@Integer@[1], 'a':@String@[1])>[1]->@Any@[*]}>
+  ArrowInvocation select_Relation_1__ColSpec_1__Relation_1_ :#Relation<#('a':@String@[1])#>##[1]#  ~@ArrowInvocation@  @22:7-22:24
+    typeParam T -> (val:@Integer@[1], 'a':@String@[1])
+    typeParam Z -> #('a':@String@[1])#
+    Variable rel :#Relation<(val:@Integer@[1], 'a':@String@[1])>##[1]#  ~@VariableExpression@  @22:3-22:6
+    FunctionInvocation colSpec_String_1__GenericTypeAndMultiplicityHolder_1__ColSpec_1_ :#ColSpec<#('a':@String@[1])#>##[1]#  ~@FunctionInvocation@  @22:17-22:23
+      typeParam T -> #('a':@String@[1])#
+      AtomicValue  ''a'' :@String@[1]  ~@AtomicValue@  @22:17-22:23
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#('a':@String@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+
+###ReverseIndex
+platform::pure::functions::relation::colSpec_String_1__GenericTypeAndMultiplicityHolder_1__ColSpec_1_:
+  f_Relation_1__Any_MANY_
+select_Relation_1__ColSpec_1__Relation_1_:
+  f_Relation_1__Any_MANY_

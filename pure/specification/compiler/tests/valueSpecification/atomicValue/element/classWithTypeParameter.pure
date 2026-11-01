@@ -37,7 +37,7 @@ function test__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
     AtomicValue  'g' :@String@[1]  ~@AtomicValue@  @25:7-25:7
     AtomicValue  a::G :#Class<#a::G<?>#>#[1]  ~@AtomicValue@  @25:11-25:11
   ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @26:16-26:23
-    DotApplication platform::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @26:5-26:15
+    DotApplication platform::pure::metamodel::type::Class.properties :#Property<#a::G<?>#, @Any@|*>##[*]#  ~@DotApplication@  @26:5-26:15
       Variable g :#Class<#a::G<?>#>##[1]#  ~@VariableExpression@  @26:3-26:4
 
 ###ReverseIndex

@@ -15,6 +15,7 @@
 
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
+import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.FbsNode;
 
 import java.util.ArrayList;
@@ -66,9 +67,34 @@ public abstract class LazyObject
         if (cached == null)
         {
             cached = node == null ? Collections.emptyList() : runtime.read(this, property);
+            if (cached.isEmpty())
+            {
+                // Never set: its default value, if the class gives it one, computed for this object now.
+                // Not stored — a copy holds only what was set, and computes its own
+                // (testCopyKeepsDefaultValues).
+                List<Object> computed = Metadata.defaultValue(this, property);
+                if (computed != null)
+                {
+                    return computed;
+                }
+            }
             values.put(property, cached);
         }
         return cached;
+    }
+
+    /**
+     * What this object holds for a property — set, or decoded from its PDB node — without the default a read
+     * computes for an unset one (rawEvalProperty).
+     */
+    public final List<Object> __storedValues(String property)
+    {
+        List<Object> cached = values.get(property);
+        if (cached != null)
+        {
+            return cached;
+        }
+        return node == null ? Lists.fixedSize.empty() : runtime.read(this, property);
     }
 
     /** The properties this object holds values for: set, or already decoded from its PDB node. */

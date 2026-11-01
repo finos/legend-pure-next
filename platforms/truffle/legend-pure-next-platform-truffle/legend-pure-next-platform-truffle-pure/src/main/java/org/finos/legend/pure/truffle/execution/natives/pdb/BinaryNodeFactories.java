@@ -29,49 +29,49 @@ public final class BinaryNodeFactories
 
     public static void registerAll(NativeRegistry registry)
     {
-        registry.register("binarySize_Binary_1__Integer_1_",
+        registry.register("platform::pure::functions::binary::binarySize_Binary_1__Integer_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.Size(args[0]));
 
-        registry.register("binaryAt_Binary_1__Integer_1__Byte_1_",
+        registry.register("platform::pure::functions::binary::binaryAt_Binary_1__Integer_1__Byte_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.At(args[0], args[1]));
 
-        registry.register("binaryLeUInt_Binary_1__Integer_1__Integer_1__Integer_1_",
+        registry.register("platform::pure::functions::binary::binaryLeUInt_Binary_1__Integer_1__Integer_1__Integer_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.LeInt(args[0], args[1], args[2], false));
 
-        registry.register("binaryLeInt_Binary_1__Integer_1__Integer_1__Integer_1_",
+        registry.register("platform::pure::functions::binary::binaryLeInt_Binary_1__Integer_1__Integer_1__Integer_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.LeInt(args[0], args[1], args[2], true));
 
-        registry.register("binaryUtf8_Binary_1__Integer_1__Integer_1__String_1_",
+        registry.register("platform::pure::functions::binary::binaryUtf8_Binary_1__Integer_1__Integer_1__String_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.Utf8Range(args[0], args[1], args[2]));
 
-        registry.register("binarySlice_Binary_1__Integer_1__Integer_1__Binary_1_",
+        registry.register("platform::pure::functions::binary::binarySlice_Binary_1__Integer_1__Integer_1__Binary_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.Slice(args[0], args[1], args[2]));
 
-        registry.register("binaryConcat_Binary_MANY__Binary_1_",
+        registry.register("platform::pure::functions::binary::binaryConcat_Binary_MANY__Binary_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.Concat(args[0]));
 
-        registry.register("binaryZeros_Integer_1__Binary_1_",
+        registry.register("platform::pure::functions::binary::binaryZeros_Integer_1__Binary_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.Zeros(args[0]));
 
-        registry.register("binaryEquals_Binary_1__Binary_1__Boolean_1_",
+        registry.register("platform::pure::functions::binary::binaryEquals_Binary_1__Binary_1__Boolean_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.Equals(args[0], args[1]));
 
-        registry.register("binaryToHex_Binary_1__String_1_",
+        registry.register("platform::pure::functions::binary::binaryToHex_Binary_1__String_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.ToHex(args[0]));
 
-        registry.register("intToLeBytes_Integer_1__Integer_1__Binary_1_",
+        registry.register("platform::pure::functions::binary::intToLeBytes_Integer_1__Integer_1__Binary_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.IntToLe(args[0], args[1]));
 
-        registry.register("floatToLeBytes_Float_1__Binary_1_",
+        registry.register("platform::pure::functions::binary::floatToLeBytes_Float_1__Binary_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.FloatToLe(args[0]));
 
-        registry.register("stringToUtf8Bytes_String_1__Binary_1_",
+        registry.register("platform::pure::functions::binary::stringToUtf8Bytes_String_1__Binary_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.StringToUtf8(args[0]));
 
-        registry.register("utf8BytesToString_Binary_1__String_1_",
+        registry.register("platform::pure::functions::binary::utf8BytesToString_Binary_1__String_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.Utf8ToString(args[0]));
 
-        registry.register("leBytesToFloat_Binary_1__Float_1_",
+        registry.register("platform::pure::functions::binary::leBytesToFloat_Binary_1__Float_1_",
                 (args, gt, mul, fe) -> new BinaryNodes.LeBytesToFloat(args[0]));
     }
 }

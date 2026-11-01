@@ -11,7 +11,7 @@ function pack::constrained(x: Integer[1]): Integer[1]
 }
 
 ###CompilerStats
-inferenceRollbacks: 20
-candidateEvaluations: 19
+inferenceRollbacks: 6
+candidateEvaluations: 5
 rollbackSites:
   MULTI_CANDIDATE_PRE_RESOLVE = 2

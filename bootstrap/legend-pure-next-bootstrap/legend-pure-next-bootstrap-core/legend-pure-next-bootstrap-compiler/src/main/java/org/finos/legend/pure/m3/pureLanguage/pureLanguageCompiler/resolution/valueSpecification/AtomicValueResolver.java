@@ -121,8 +121,8 @@ public class AtomicValueResolver
 
         // Skip body resolution if lambda params don't have concrete types.
         // Use isConcreteInContext to allow in-scope type params (e.g., class-level T)
-        if (params.anySatisfy(p -> !_GenericType.isConcreteInContext(p._genericType(), plcc.inScopeTypeParamNames()) ||
-                !_Multiplicity.isConcreteInContext(p._multiplicity(), plcc.inScopeMultiplicityParamNames())))
+        if (params.anySatisfy(p -> !_GenericType.isConcreteInContext(p._genericType(), plcc.inScopeTypeParamKeys()) ||
+                !_Multiplicity.isConcreteInContext(p._multiplicity(), plcc.inScopeMultiplicityParamKeys())))
         {
             // Record the failure verdict so subsequent identical visits short-circuit at (1).
             // When setMissingLambdaParameterInformation later substitutes a free T → Integer

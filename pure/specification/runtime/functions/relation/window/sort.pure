@@ -20,8 +20,16 @@ Enum platform::pure::functions::relation::SortType
     ASC, DESC
 }
 
+// Where the rows whose column is empty go: before the others or after them.
+Enum platform::pure::functions::relation::EmptyOrder
+{
+    FIRST, LAST
+}
+
+// A column to sort by, its direction, and where its empty values go (by default as the store orders them).
 Class platform::pure::functions::relation::SortInfo<T>
 {
    column : ColSpec<T>[1];
    direction : SortType[1];
+   emptyOrder : EmptyOrder[0..1];
 }

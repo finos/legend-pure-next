@@ -1,0 +1,7 @@
+# Legacy elements set aside: they use legacy features next lacks. The loader drops them (load reports them).
+# One element path per line; '#' starts a reason.
+meta::pure::functions::collection::tests::fold::testFoldCollectionAccumulator   # fold with a [1..3] accumulator: next's fold binds its multiplicity strictly
+meta::pure::functions::lang::tests::eval::testEvalWithCollectionWithOneElement  # eval of a [1] function on a [*] argument: next checks the multiplicity
+meta::pure::functions::meta::tests::pathToElement::testPathToElement            # units (RomanLength), the Byte primitive: next has neither
+meta::pure::functions::meta::tests::pathToElement::testPathElementRoundTrip     # units (RomanLength): next has none
+meta::pure::functions::meta::tests::pathToElement::testTopLevelPathToElement    # Root, legacy's root package name: next's is unnamed

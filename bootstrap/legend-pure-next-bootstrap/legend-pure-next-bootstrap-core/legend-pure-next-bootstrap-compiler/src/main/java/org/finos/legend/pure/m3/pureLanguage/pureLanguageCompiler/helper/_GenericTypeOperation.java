@@ -25,6 +25,7 @@ import platform.pure.metamodel.type.generics.GenericType;
 import platform.pure.metamodel.type.generics.GenericTypeValue;
 import platform.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.metamodel.type.generics.TypeParameter;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -165,7 +166,13 @@ public final class _GenericTypeOperation
      */
     public static void collectTypeParameterBindings(GenericTypeOperation gto, GenericType argGT, ParametersBinding bindings)
     {
-        if (isSubset(gto))
+        if (isSubset(gto) && argGT instanceof GenericTypeOperation argGto && isSubset(argGto))
+        {
+            // a subset given for a subset ((?:String)⊆T for (?:Z)⊆T): each side binds the other's
+            _GenericType.collectTypeParameterBindings(gto._left(), argGto._left(), bindings);
+            _GenericType.collectTypeParameterBindings(gto._right(), argGto._right(), bindings);
+        }
+        else if (isSubset(gto))
         {
             _GenericType.collectTypeParameterBindings(gto._left(), argGT, bindings);
         }
@@ -207,10 +214,10 @@ public final class _GenericTypeOperation
     /**
      * Collect all referenced type parameter names in a GenericTypeOperation.
      */
-    public static void collectReferencedTypeParameterNames(GenericTypeOperation gto, MutableSet<String> names)
+    static void collectReferencedTypeParameters(GenericTypeOperation gto, MutableList<TypeParameter> names)
     {
-        _GenericType.collectReferencedTypeParameterNames(gto._left(), names);
-        _GenericType.collectReferencedTypeParameterNames(gto._right(), names);
+        _GenericType.collectReferencedTypeParameters(gto._left(), names);
+        _GenericType.collectReferencedTypeParameters(gto._right(), names);
     }
 
     /**

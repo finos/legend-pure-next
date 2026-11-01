@@ -1,0 +1,11 @@
+###Pure
+import protocol::support::*;
+function protocol::newCalls(c: Class<MyClass>[1]): Any[*]
+{
+  new($c, 'id')
+}
+
+Class protocol::support::MyClass
+{
+  name: String[1];
+}

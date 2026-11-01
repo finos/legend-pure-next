@@ -73,8 +73,10 @@ evalJs(source, "pure-runtime-functions.inprocess.js");
 
 // --- 3. discover and run the PCT corpus --------------------------------------
 const asArr = (v) => (v === undefined || v === null ? [] : Array.isArray(v) ? v : [v]);
+// PCT_ONLY=<substring> runs the tests whose path contains it; PCT_STACK=1 prints each failure's stack.
 const tests = asArr(silently(() =>
-    call("platform::pure::test::collectPCTTests", globalThis.__pureResolve(ROOT_PACKAGE))));
+    call("platform::pure::test::collectPCTTests", globalThis.__pureResolve(ROOT_PACKAGE))))
+    .filter((t) => !process.env.PCT_ONLY || t.__purePath.includes(process.env.PCT_ONLY));
 if (tests.length === 0) throw new Error(`collectPCTTests found no <<PCT.test>> under ${ROOT_PACKAGE}`);
 
 const adapter = resolveFn("platform::pure::test::pct::testAdapterForInMemoryExecution", 1);
@@ -92,7 +94,8 @@ for (const test of tests) {
         report.pass(path, Date.now() - started);
     } catch (e) {
         report.fail(path, Date.now() - started, e instanceof Error ? e : String(e));
-        failures.push(`  FAIL ${path}\n        ${String(e && e.message ? e.message : e).split("\n")[0].slice(0, 200)}`);
+        failures.push(`  FAIL ${path}\n        ${String(e && e.message ? e.message : e).split("\n")[0].slice(0, 200)}`
+            + (process.env.PCT_STACK && e && e.stack ? `\n${e.stack.split("\n").slice(1, 14).join("\n")}` : ""));
     }
 }
 const elapsed = Date.now() - t0;

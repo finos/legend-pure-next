@@ -185,8 +185,12 @@ public final class RelationColumnResolver
             MetadataAccess model,
             CompilationContext context)
     {
-        // Resolve the right side (reference relation) of the SUBSET
-        RelationType referenceRT = (RelationType) (_GenericType.type(_GenericType.makeAsConcreteAsPossible(subsetOp._right(), bindings, model)));
+        // Resolve the right side (reference relation) of the SUBSET; not known yet (over(~grp), whose T only the
+        // extend taking it binds), the expression is left as it is, to be resolved once it is
+        if (!(_GenericType.type(_GenericType.makeAsConcreteAsPossible(subsetOp._right(), bindings, model)) instanceof RelationType referenceRT))
+        {
+            return expr;
+        }
 
         // Extract column names from the string arguments
         MutableList<String> columnNames = extractColumnNames(expr);

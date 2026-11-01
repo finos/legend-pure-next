@@ -73,3 +73,9 @@ function <<PCT.test>> platform::pure::functions::collection::tests::sort::testSo
 {
     assertEquals([], $f->eval(|[]->sort()));
 }
+
+// The native itself, its key written empty: the values compare as they are, by the comparator given.
+function <<PCT.test>> platform::pure::functions::collection::tests::sort::testSortWithNoKey<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals([3, 2, 1], $f->eval(|[2, 3, 1]->sort([], {x:Integer[1], y:Integer[1] | $y->compare($x)})));
+}

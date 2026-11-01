@@ -16,6 +16,7 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
 import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.multiplicity.MultiplicityParameter;
 import platform.pure.metamodel.type.generics.GenericType;
 import platform.pure.metamodel.type.generics.TypeParameter;
 import org.eclipse.collections.api.factory.Maps;
@@ -61,6 +62,15 @@ public abstract class ParametersBinding
      * during cross-match unification.
      */
     public abstract void addTypeBinding(TypeParameter typeParam, GenericType argGT);
+
+    /**
+     * Add a multiplicity parameter binding, locally; {@link FunctionCallParametersBinding} routes one
+     * owned by the enclosing function/class to the enclosing owner, as it does a type parameter's.
+     */
+    public void addMultiplicityBinding(MultiplicityParameter mulParam, Multiplicity argMul)
+    {
+        multiplicityBindings.getIfAbsentPut(mulParam._name(), org.eclipse.collections.impl.factory.Lists.mutable::empty).add(argMul);
+    }
 
     /**
      * Create a plain data-only copy of this binding set (no routing).

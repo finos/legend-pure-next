@@ -43,7 +43,7 @@ public class MetaNatives
                                 MetadataAccess resolver)
     {
         // instanceOf(Any[1], Type[1]) : Boolean[1]
-        natives.put("instanceOf_Any_1__Type_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::meta::instanceOf_Any_1__Type_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             Object value = _E_ValueSpecification.unwrap(args.get(0));
             if (value == null)
@@ -80,21 +80,9 @@ public class MetaNatives
         });
 
         // type(Any[*]) : Type[1] — returns the raw type of the value
-        natives.put("type_Any_MANY__Type_1_", (args, eval, genericType, multiplicity) ->
-        {
-            Type type = _E_ValueSpecification.getValueOriginalType(args.getFirst());
-            // If the resolved type is itself a TypeParameter (unresolved generic like T),
-            // fall back to the VS's genericType which has the concrete binding from the compiler
-            if (type instanceof platform.pure.metamodel.type.generics.TypeParameter
-                    && args.getFirst()._genericType() != null)
-            {
-                type = _GenericType.type(args.getFirst()._genericType());
-            }
-            return _E_ValueSpecification.wrap(type, genericType, multiplicity, resolver);
-        });
 
         // genericType(Any[*]) : GenericTypeValue[1]
-        natives.put("genericType_Any_MANY__GenericTypeValue_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::meta::genericType_Any_MANY__GenericTypeValue_1_", (args, eval, genericType, multiplicity) ->
         {
             ValueSpecification vs = args.get(0);
             Object val = _E_ValueSpecification.unwrap(vs);
@@ -112,7 +100,7 @@ public class MetaNatives
         });
 
         // genericTypeHolder(Any[m]) : GenericTypeAndMultiplicityHolder<T|m>[1]
-        natives.put("genericTypeHolder_T_m__GenericTypeAndMultiplicityHolder_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::meta::genericTypeHolder_T_m__GenericTypeAndMultiplicityHolder_1_", (args, eval, genericType, multiplicity) ->
         {
             ValueSpecification vs = args.get(0);
             platform.pure.metamodel.type.generics.GenericType heldGT = vs._genericType();
@@ -137,7 +125,7 @@ public class MetaNatives
         });
 
         // new(GenericTypeAndMultiplicityHolder[1]) : T[1] — construct an object with no property assignments
-        natives.put("new_GenericTypeAndMultiplicityHolder_1__T_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
             Object unwrapped = _E_ValueSpecification.unwrap(args.get(0));
             if (!(unwrapped instanceof GenericTypeAndMultiplicityHolder gtmh))
@@ -211,7 +199,7 @@ public class MetaNatives
         });
 
         // new(GenericType[1]) : Any[1] — construct an instance with the given GenericType as classifierGenericType
-        natives.put("new_GenericType_1__Any_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::new_GenericType_1__Any_1_", (args, eval, genericType, multiplicity) ->
         {
             Object rawArg = _E_ValueSpecification.unwrap(args.get(0));
             if (!(rawArg instanceof platform.pure.metamodel.type.generics.GenericTypeValue gt))
@@ -263,7 +251,7 @@ public class MetaNatives
         // new(GenericTypeAndMultiplicityHolder[1], KeyExpression[*]) : T[1] — construct from key expressions
         // Registered as a LAZY native so we can push the instance onto the construction stack
         // BEFORE evaluating key expressions, enabling parentReference (~) resolution.
-        lazyNatives.put("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", (fe, eval) ->
+        lazyNatives.put("platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", (fe, eval) ->
         {
             // Open a fresh-instance scope so this instance — and any inner
             // new/copy created during key evaluation — is tracked as fresh
@@ -443,11 +431,11 @@ public class MetaNatives
             }
             return _E_ValueSpecification.wrap(keyExpr, genericType, multiplicity, resolver);
         };
-        natives.put("keyExpression_String_1__Any_MANY__KeyExpression_1_", keyExprFn);
-        natives.put("keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_", keyExprFn);
+        natives.put("platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_", keyExprFn);
+        natives.put("platform::pure::functions::lang::keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_", keyExprFn);
 
         // copy(T[1]) : T[1] — simple copy with no overrides
-        natives.put("copy_T_1__T_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::copy_T_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
             // Open + close a fresh-instance scope so this copy's product
             // registers in the enclosing new/copy expression's scope (see
@@ -529,7 +517,7 @@ public class MetaNatives
         // copy(T[1], KeyExpression[*]) : T[1] — shallow copy with property overrides
         // Registered as a LAZY native so we can push the copy onto the construction stack
         // BEFORE evaluating key expressions, enabling parentReference (~) resolution.
-        lazyNatives.put("copy_T_1__KeyExpression_MANY__T_1_", (fe, eval) ->
+        lazyNatives.put("platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_", (fe, eval) ->
         {
             // Open a fresh-instance scope. Every PDO created by `^Type(...)` or
             // `^$x()` while evaluating the keys (or this very copy itself)
@@ -698,7 +686,7 @@ public class MetaNatives
         });
 
         // cast(Any[m], T[1]) : T[m]
-        natives.put("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_", (args, eval, genericType, multiplicity) ->
         {
             ValueSpecification inputVs = args.get(0);
             ValueSpecification targetVs = args.get(1);
@@ -848,94 +836,14 @@ public class MetaNatives
         // the resolver always dispatched there even for `<T|m>` / `<?|m>`
         // holders; now that subsumes() correctly rejects `?`-vs-real matches,
         // sig 3 / sig 2 dispatches need an implementation too.
-        NativeImpl castImpl = natives.get("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_");
-        natives.put("cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_", castImpl);
-        natives.put("cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_", castImpl);
+        NativeImpl castImpl = natives.get("platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_");
+        natives.put("platform::pure::functions::lang::cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_", castImpl);
+        natives.put("platform::pure::functions::lang::cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_", castImpl);
 
         // evaluateAndDeactivate — passthrough
         NativeImpl evalAndDeactivate = (args, eval, genericType, multiplicity) -> args.get(0);
-        natives.put("evaluateAndDeactivate_Any_m__Any_m_", evalAndDeactivate);
-        natives.put("evaluateAndDeactivate", evalAndDeactivate);
 
         // newClass(TypeParameter[*], MultiplicityParameter[*]) : Class<Any>[1]
-        natives.put("newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_", (args, eval, genericType, multiplicity) ->
-        {
-            platform.pure.metamodel.type.ClassImpl newClass = new platform.pure.metamodel.type.ClassImpl();
-
-            // Build classifierGenericType = Class<self> where the typeArgument points to this class.
-            platform.pure.metamodel.type.Type classType = (platform.pure.metamodel.type.Type) resolver.getElement("platform::pure::metamodel::type::Class");
-            platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef = _GenericType.buildUserDefinedGenericType(newClass, resolver);
-
-            // Build typeArguments from the provided typeParameters
-            Object typeParamsRaw = _E_ValueSpecification.unwrap(args.get(0));
-            List<Object> typeParams;
-            if (typeParamsRaw instanceof List<?> list)
-            {
-                typeParams = new ArrayList<>(list);
-            }
-            else
-            {
-                typeParams = new ArrayList<>();
-                if (typeParamsRaw != null)
-                {
-                    typeParams.add(typeParamsRaw);
-                }
-            }
-            if (typeParams != null && !typeParams.isEmpty())
-            {
-                org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.type.generics.GenericType> innerTypeArgs = org.eclipse.collections.impl.factory.Lists.mutable.empty();
-                org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.type.generics.TypeParameter> tpList = org.eclipse.collections.impl.factory.Lists.mutable.empty();
-                for (Object tp : typeParams)
-                {
-                    if (tp instanceof platform.pure.metamodel.type.generics.TypeParameter tpObj)
-                    {
-                        tpObj._owner(newClass);
-                        tpList.add(tpObj);
-                    }
-                    platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl tpArg = _GenericType.buildUserDefinedGenericType((platform.pure.metamodel.type.Type) tp, resolver);
-                    innerTypeArgs.add(tpArg);
-                }
-                selfRef._typeArguments(innerTypeArgs);
-                newClass._typeParameters(tpList);
-            }
-            // Build multiplicityArguments from provided multiplicityParameters
-            Object mulParamsRaw = _E_ValueSpecification.unwrap(args.get(1));
-            List<Object> mulParams;
-            if (mulParamsRaw instanceof List<?> list)
-            {
-                mulParams = new ArrayList<>(list);
-            }
-            else
-            {
-                mulParams = new ArrayList<>();
-                if (mulParamsRaw != null)
-                {
-                    mulParams.add(mulParamsRaw);
-                }
-            }
-            if (mulParams != null && !mulParams.isEmpty())
-            {
-                org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.multiplicity.Multiplicity> innerMulArgs = org.eclipse.collections.impl.factory.Lists.mutable.empty();
-                org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> mpList = org.eclipse.collections.impl.factory.Lists.mutable.empty();
-                for (Object mp : mulParams)
-                {
-                    if (mp instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mpObj)
-                    {
-                        mpObj._owner(newClass);
-                        mpList.add(mpObj);
-                    }
-                    innerMulArgs.add((platform.pure.metamodel.multiplicity.Multiplicity) mp);
-                }
-                selfRef._multiplicityArguments(innerMulArgs);
-                newClass._multiplicityParameters(mpList);
-            }
-
-            platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = _GenericType.buildUserDefinedGenericType(classType, resolver);
-            cgt._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(selfRef));
-            newClass._classifierGenericType(cgt);
-
-            return _E_ValueSpecification.wrap(newClass, genericType, multiplicity, resolver);
-        });
 
         // newEnumeration is implemented in Pure (see newEnumeration.pure).
 
@@ -944,7 +852,7 @@ public class MetaNatives
         // Returns the lambda's captured open-variable bindings as a Map keyed by
         // variable name. Lambdas with no captures (no enclosing scope at
         // definition) are not converted to Closure — they return an empty map.
-        natives.put("openVariableValues_LambdaFunction_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::meta::openVariableValues_LambdaFunction_1__Map_1_", (args, eval, genericType, multiplicity) ->
         {
             java.util.LinkedHashMap<ValueSpecification, ValueSpecification> resultMap = new java.util.LinkedHashMap<>();
             Object lambdaObj = _E_ValueSpecification.unwrap(args.get(0));
@@ -1163,14 +1071,19 @@ public class MetaNatives
         validateConstraintsOnType(type, targetGT, value, eval, resolver);
         if (type._generalizations() != null)
         {
-            for (var gen : type._generalizations())
+            // Each parent as the object's type arguments bind it: a RenamedBox<Integer> (extends Box<U>) checks
+            // Box's constraints as Box<Integer> — its parameters made concrete with the ones below, as defaults are.
+            org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding typeBindings =
+                    org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
+            if (type instanceof platform.pure.metamodel.type.Class cls && cls._typeParameters() != null
+                    && targetGT instanceof platform.pure.metamodel.type.generics.GenericTypeValue v && v._typeArguments() != null)
             {
-                if (gen._general() != null && _GenericType.type(gen._general()) != null)
-                {
-                    platform.pure.metamodel.type.Type superType = _GenericType.type(gen._general());
-                    validateConstraints(superType, gen._general(), value, eval, resolver);
-                }
+                cls._typeParameters().zip(v._typeArguments()).forEach(pair -> typeBindings.addTypeBinding(pair.getOne(), pair.getTwo()));
             }
+            type._generalizations()
+                    .select(gen -> gen._general() != null && _GenericType.type(gen._general()) != null)
+                    .forEach(gen -> validateConstraints(_GenericType.type(gen._general()),
+                            _GenericType.makeAsConcreteAsPossible(gen._general(), typeBindings, resolver), value, eval, resolver));
         }
     }
 

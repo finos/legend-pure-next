@@ -31,9 +31,17 @@ function <<access.private>> platform::extensions::language::java::serialization:
 // classToString collects these into the class's position table and strips them.
 function <<access.private>> platform::extensions::language::java::serialization::positionMarker(sfer:Stringifier[1], code: Code[1]): Stringifier[1]
 {
+   // `/*@<lambdaDepth>@<sourceId>:<line>:<column>*/`
    $code.sourceInformation->fold({si, s |
-      $s->addText(platform::extensions::language::java::serialization::markerOpen() + $si.sourceId->joinStrings('') + ':' + $si.startLine->toString() + ':' + $si.startColumn->toString() + '*/')},
+      $s->addText(platform::extensions::language::java::serialization::markerOpen() + $sfer.lambdaDepth->orElse(0)->toString() + '@'
+                  + $si.sourceId->joinStrings('') + ':' + $si.startLine->toString() + ':' + $si.startColumn->toString() + '*/')},
       $sfer);
+}
+
+// `sfer` back at a lambda depth once the lambda's body is written.
+function <<access.private>> platform::extensions::language::java::serialization::withLambdaDepth(sfer:Stringifier[1], depth: Integer[0..1]): Stringifier[1]
+{
+   ^$sfer(lambdaDepth = $depth);
 }
 
 function <<access.private>> platform::extensions::language::java::serialization::doCode(sfer:Stringifier[1], code: Code[1]) :Stringifier[1]
@@ -96,7 +104,7 @@ function <<access.private>> platform::extensions::language::java::serialization:
       c:StaticMethodCall[1]         | $sfer->doType($c.class)->foldable()->addText('.')->doTypeArguments($c.typeArguments)->addText($c.methodName)->doArguments($c.arguments),
       c:StaticFieldAccess[1]        | $sfer->doType($c.class)->foldable()->addText('.')->addText($c.fieldName),
       c:StaticMethodReference[1]    | $sfer->doType($c.class)->addText('::')->addText($c.methodName),
-      c:Lambda[1]                   | $sfer->doParametersWithoutFolds($c.parameters)->addText(' -> ')->doLambdaExpression($c.expression)
+      c:Lambda[1]                   | ^$sfer(lambdaDepth = $sfer.lambdaDepth->orElse(0) + 1)->doParametersWithoutFolds($c.parameters)->addText(' -> ')->doLambdaExpression($c.expression)->withLambdaDepth($sfer.lambdaDepth)
    ]);
 }
 

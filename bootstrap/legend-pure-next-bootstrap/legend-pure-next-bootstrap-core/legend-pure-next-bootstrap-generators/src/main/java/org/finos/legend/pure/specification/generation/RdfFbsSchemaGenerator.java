@@ -412,6 +412,16 @@ public class RdfFbsSchemaGenerator
             entries.add(new Entry(dep, "bool", id, true));
         }
         entries.sort(java.util.Comparator.comparingInt(Entry::id));
+        // A union at id N also takes N - 1 for its type. A field that became a union keeps the id it had, and
+        // N - 1 may be another field's: say so, rather than let flatc report ids that are not contiguous.
+        org.eclipse.collections.impl.factory.Lists.adapt(entries)
+                .select(e -> !e.deprecated() && isUnionType(e.type()))
+                .forEach(u -> entries.stream().filter(o -> o != u && o.id() == u.id() - 1).findFirst().ifPresent(o ->
+                {
+                    throw new IllegalStateException("FBS field ids: " + table + "." + u.field() + " is a union at id " + u.id()
+                            + ", whose type takes id " + (u.id() - 1) + ", already " + table + "." + o.field()
+                            + "'s: renumber " + table + " in m3-fbs-field-ids.txt (a union takes two consecutive ids)");
+                }));
         for (Entry e : entries)
         {
             sb.append("    ").append(e.field()).append(": ").append(e.type());

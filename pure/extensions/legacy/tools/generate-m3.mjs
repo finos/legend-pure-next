@@ -23,12 +23,16 @@
 //   tools/m3-mapping.json                   how each legacy class is laid over next's
 //   code/m3/overrides.pure                  hand-written bodies for legacy properties next models differently
 //
-// Each legacy class becomes a class at its legacy path. A wrapping class extends meta::pure::bridge::Wrapper
-// (through its legacy parents) and computes each legacy property from _next: through the override
-// meta::pure::bridge::m3::overrides::<Class>_<property> when there is one, else from the next property of
-// the same name, else a stub failing with 'not bridged'. Metamodel objects in a result are wrapped; values
-// next and legacy share (primitives, enumerations, Any) pass through. A legacyOnly class keeps its legacy
-// properties as stored properties. wrap() turns any next object into the most specific wrapper.
+// Each legacy class becomes a class at its legacy path, with its legacy properties as stored properties.
+// A wrapping class extends meta::pure::bridge::Wrapper (through its legacy parents), whose _next holds the
+// next object it stands for (read as the next class the legacy class wraps). Each legacy property's
+// default computes it from _next: through the override meta::pure::bridge::m3::overrides::<Class>_<property>
+// when there is one, else from the next property of the same name, else a stub failing with 'not bridged'.
+// Defaults are computed when read and never stored, so a legacy object built without a next object holds
+// what it is given, and a copy holds what it sets and computes the rest. Metamodel objects in a result are
+// adapted; values next and legacy share (primitives, enumerations, Any) pass through. A legacyOnly class
+// has no defaults. adapt() turns a next object into the legacy object of its most specific next class,
+// memoized, so a next object always stands as the same legacy object.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -47,7 +51,8 @@ const outFile = path.join(root, 'code/m3/m3.pure');
 const NEXT = 'platform::pure::metamodel::';
 const BRIDGE = 'meta::pure::bridge';
 const WRAPPER = `${BRIDGE}::Wrapper`;
-const WRAP = `${BRIDGE}::m3::wrap`;
+const ADAPT = `${BRIDGE}::m3::adapt`;
+const NEW_ADAPTER = `${BRIDGE}::m3::newAdapter`;
 const OVERRIDES = `${BRIDGE}::m3::overrides`;
 const UNWRAP = `${BRIDGE}::m3::unwrap`;
 const PRIMITIVES = new Set(['String', 'Boolean', 'Integer', 'Float', 'Decimal', 'Number', 'Date', 'StrictDate', 'DateTime', 'LatestDate', 'StrictTime', 'Binary', 'Byte']);
@@ -159,11 +164,22 @@ function renderGT(gt)
    return typePath(gt.path) + generics;
 }
 
+// A function type (Function<{...}>, LambdaFunction<{...}>): its values are next's — the lambdas legacy code
+// writes — so a property of one is typed by the next class (its signature keeps legacy's types).
+const isFunctionTyped = (gt) => (gt.typeArguments ?? []).some((a) => a.functionType) && !!mapping.classes[gt.path]?.wraps;
+
+function valueGT(gt)
+{
+   if (!isFunctionTyped(gt)) return renderGT(gt);
+   const mults = gt.multiplicityArguments ?? [];
+   return `${NEXT}${mapping.classes[gt.path].wraps[0]}<${gt.typeArguments.map(renderGT).join(', ')}${mults.length ? `|${mults.join(', ')}` : ''}>`;
+}
+
 // Whether values of this legacy type are next metamodel objects to wrap (vs values both sides share)
 function needsWrap(gt)
 {
    if (gt.typeParam) return true;
-   if (gt.functionType) return false;
+   if (gt.functionType || isFunctionTyped(gt)) return false;
    if (PRIMITIVES.has(gt.path) || mapping.types[gt.path]) return false;
    const m = mapping.classes[gt.path];
    return !!m && !m.legacyOnly;
@@ -187,13 +203,17 @@ function castTarget(c, nextPath)
 
 const stub = (c, p) => `[]->toOne('not bridged: ${c.name}.${p.name}')`;
 
+// The multiplicity of `$this._next.<p>` (_next is [0..1]) for a next property of multiplicity `m`.
+const readMultiplicity = (m) => (['1', '0..1'].includes(m) ? '0..1' : '*');
+
 function propertyBody(c, p, stats)
 {
    const key = `${c.name}_${p.name}`;
    if (overrides.has(key))
    {
       stats.overridden.push(key);
-      return `${OVERRIDES}::${key}($this)`;
+      // an override cannot name the class's type parameters: a property typed by one casts to it
+      return `${OVERRIDES}::${key}($this)${p.genericType.typeParam ? `->cast(@${p.genericType.typeParam})` : ''}`;
    }
    const wraps = modeOf(c.path).wraps;
    const np = wraps ? nextProperty(NEXT + wraps[0], p.name) : null;
@@ -204,16 +224,15 @@ function propertyBody(c, p, stats)
    }
    stats.direct.push(key);
    let expr = `$this._next->cast(@${castTarget(c, NEXT + wraps[0])}).${p.name}`;
+   let multiplicity = readMultiplicity(np.multiplicity);
    if (needsWrap(p.genericType))
    {
-      const type = renderGT(p.genericType);
-      expr = p.multiplicity === '1' && np.multiplicity === '1'
-         ? `${WRAP}(${expr})->cast(@${type})`
-         : `${expr}->map(x | ${WRAP}($x))->cast(@${type})`;
+      expr = `${expr}->map(x | ${ADAPT}($x))->cast(@${renderGT(p.genericType)})`;
+      multiplicity = '*';
    }
-   if (p.multiplicity === '1' && np.multiplicity !== '1' && !(needsWrap(p.genericType) && np.multiplicity === '1')) expr += '->toOne()';
-   else if (p.multiplicity === '0..1' && !['1', '0..1'].includes(np.multiplicity)) expr += '->head()';
-   else if (p.multiplicity === '1..*' && np.multiplicity !== '1..*' && np.multiplicity !== '1') expr += '->toOneMany()';
+   if (p.multiplicity === '1') expr += '->toOne()';
+   else if (p.multiplicity === '0..1' && multiplicity === '*') expr += '->head()';
+   else if (p.multiplicity === '1..*') expr += '->toOneMany()';
    return expr;
 }
 
@@ -222,18 +241,19 @@ function propertyBody(c, p, stats)
 function emitClass(c, stats)
 {
    const mode = modeOf(c.path);
+   // an alias is next's class itself, a supertype as it is; but Any, which every class has
    const gens = c.generalizations
-      .filter((g) => !(g.path && mapping.classes[g.path]?.alias))
+      .filter((g) => !(g.path && mapping.classes[g.path]?.alias === 'type::Any'))
       .map(renderGT);
    if (gens.length === 0 && !mode.legacyOnly) gens.push(WRAPPER);
    const header = `Class ${pathOf(c.path)}${typeParamsDecl(c)}${gens.length ? ` extends ${gens.join(', ')}` : ''}`;
-   const body = c.properties.map((p) =>
+   const body = [];
+   for (const p of c.properties)
    {
-      const type = `${renderGT(p.genericType)}[${p.multiplicity}]`;
-      if (mode.legacyOnly) return `   ${p.name} : ${type};`;
-      return `   ${p.name}()\n   {\n      ${propertyBody(c, p, stats)}\n   }: ${type};`;
-   });
-   return `${header}\n{\n${body.join('\n\n')}${body.length ? '\n' : ''}}`;
+      const type = `${valueGT(p.genericType)}[${p.multiplicity}]`;
+      body.push(mode.legacyOnly ? `   ${p.name} : ${type};` : `   ${p.name} : ${type} = ${propertyBody(c, p, stats)};`);
+   }
+   return `${header}\n{\n${body.join('\n')}${body.length ? '\n' : ''}}`;
 }
 
 // An instantiable next class reaching two wrapped classes neither of which is more specific is wrapped by
@@ -253,28 +273,29 @@ function checkUnambiguous(branches)
 
 function emitWrapper()
 {
-   return `// Every legacy metamodel class is a Wrapper: it holds the next object it stands for, and computes its
-// legacy properties from it. Two wrappers of the same next object are equal, so legacy code comparing,
-// deduplicating or keying on metamodel objects sees the next graph's identity.
+   return `// Every legacy metamodel class is a Wrapper: _next holds the next object it stands for, and its legacy
+// properties default to what that next object says. A legacy object
+// built by legacy code has no next object, and holds what it is given.
 Class ${WRAPPER}
 {
-   <<equality.Key>> _next : Any[1];
+   _next : Any[0..1];
 }`;
 }
 
 function emitUnwrap()
 {
-   return `// The next object behind a wrapper; any other value is its own next value.
+   return `// The next object a legacy object stands for; any other value, or a legacy object built without one, is
+// its own next value.
 function ${UNWRAP}(x: Any[1]): Any[1]
 {
    $x->match([
-      w: ${WRAPPER}[1] | $w._next,
+      w: ${WRAPPER}[1] | if($w._next->isEmpty(), | $w, | $w._next->toOne()),
       a: Any[1] | $a
    ])
 }`;
 }
 
-function emitWrap()
+function emitAdapt()
 {
    const branches = [];
    for (const c of legacy)
@@ -294,14 +315,24 @@ function emitWrap()
    // most specific next classes first: match takes the first branch the value is an instance of
    branches.sort((a, b) => b.depth - a.depth);
    checkUnambiguous(branches);
-   return `// The wrapper for a next object: the legacy class of its most specific next class. Values next and
-// legacy share (primitives, enumeration values, instances of user classes) are returned as they are.
-function ${WRAP}(x: Any[1]): Any[1]
+   return `// The legacy object a next object stands as. Memoized: a next object always stands as the same legacy
+// object (within an execution), so legacy code comparing, deduplicating or keying on metamodel objects sees
+// the next graph's identity.
+function ${ADAPT}(x: Any[1]): Any[1]
 {
-   $x->match([
+   memoize(${NEW_ADAPTER}_Any_1__Any_1_, $x)
+}
+
+// A new legacy object for a next object: legacy's subgraph where legacy builds another one (shapes.pure), else
+// of the legacy class of its most specific next class. Values next and legacy share (primitives, enumeration
+// values, instances of user classes) are returned as they are.
+function ${NEW_ADAPTER}(x: Any[1]): Any[1]
+{
+   let shaped = ${BRIDGE}::m3::shapes::legacyShape($x);
+   if($shaped->isNotEmpty(), | $shaped->toOne(), | $x->match([
 ${branches.map((b) => b.text).join(',\n')},
       a: Any[1] | $a
-   ])
+   ]));
 }`;
 }
 
@@ -325,8 +356,18 @@ const header = `// Copyright 2020 Goldman Sachs (legend-pure m3, from which this
 // GENERATED by tools/generate-m3.mjs from legend-pure ${LEGACY_VERSION} m3.pure — do not edit.
 // Legacy property bodies next models differently go in overrides.pure.
 `;
-fs.writeFileSync(outFile, `${header}\n${emitWrapper()}\n\n${classes.join('\n\n')}\n\n${emitWrap()}\n\n${emitUnwrap()}\n`);
+fs.writeFileSync(outFile, `${header}\n${emitWrapper()}\n\n${classes.join('\n\n')}\n\n${emitAdapt()}\n\n${emitUnwrap()}\n`);
 
+// Every legacy property has a value, but those m3-mapping.json lists as pending.
+const pending = new Set(JSON.parse(fs.readFileSync(path.join(here, 'm3-mapping.json'), 'utf8')).pendingProperties ?? []);
+const unlisted = stats.stubbed.filter((k) => !pending.has(k));
+const answered = [...pending].filter((k) => !stats.stubbed.includes(k));
+if (unlisted.length || answered.length)
+{
+   if (unlisted.length) console.error(`legacy properties with no value: ${unlisted.join(', ')} — give each an override in code/m3/overrides.pure`);
+   if (answered.length) console.error(`pending legacy properties that now have a value: ${answered.join(', ')} — take them off m3-mapping.json's pendingProperties`);
+   process.exit(1);
+}
 console.log(`wrote ${path.relative(process.cwd(), outFile)}: ${classes.length} classes`);
 console.log(`  properties: ${stats.direct.length} delegated, ${stats.overridden.length} overridden, ${stats.stubbed.length} not bridged`);
 if (process.argv.includes('--verbose')) console.log(`  not bridged: ${stats.stubbed.join(', ')}`);

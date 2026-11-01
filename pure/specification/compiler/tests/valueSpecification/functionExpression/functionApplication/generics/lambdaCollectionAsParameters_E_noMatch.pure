@@ -15,8 +15,8 @@ function a(k:FunctionExpression[1]):Any[*]
 }
 
 ###CompilerStats
-inferenceRollbacks: 9
-candidateEvaluations: 7
+inferenceRollbacks: 5
+candidateEvaluations: 3
 rollbackSites:
   LAMBDA_DISPATCH = 2
   MULTI_CANDIDATE_PRE_RESOLVE = 2

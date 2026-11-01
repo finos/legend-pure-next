@@ -70,7 +70,7 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 default: test
 
 # Build the Java compiler/CLI and stage core.pdb + compiler.pdb into shared/.
-build: (_mvn "skip-tests") stage build-compiler-pdb
+build: (_mvn "skip-tests") stage build-compiler-pdb check-metamodel
 
 # Bootstrap is the root of the dep tree — alias of `build` for symmetry with sub-Justfiles' `build-all`.
 build-all: build
@@ -274,7 +274,7 @@ test-java: (_mvn "with-tests")
 # remain visible.
 
 # Every specification run of the bootstrap host (self-host excluded: see `spec-compiler-selfhost`).
-spec: spec-compiler spec-pdb check-fbs-parity spec-functions spec-pct spec-pdb-golden spec-printer-compiled spec-printer-protocol
+spec: spec-compiler spec-pdb check-fbs-parity spec-functions spec-package-tree spec-pct spec-pdb-golden spec-printer-compiled spec-printer-protocol
 
 # Needs core-tests.pdb (runTests is <<test.TestDependency>>, classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
@@ -289,6 +289,22 @@ spec-functions:
         --pdb {{shared_out}}/compiler-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
         --args "platform::pure::functions" "{{test_results}}/spec/functions/pure@cli-bootstrap.json" {{err_filter}}
+
+# An extension's tests are found by walking the package tree from `platform`, which core owns: the TDS
+# extension's PDBs (compiled by `pure-bootstrap compile`) list their packages below core's, and this host's
+# registry merges them at every depth. Its one test of the TDS tests: the others compile TDS islands, which
+# need the extension's compiler — a language this host does not have.
+spec-package-tree:
+    @{{header}} 'spec-package-tree'
+    @{{substep}} 'testTheTdsTestsAreReachableFromTheRoot (assumes `just build` was run)'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{repo_root}}/pure/extensions/pure/tds/build/tds.pdb \
+        --pdb {{repo_root}}/pure/extensions/pure/tds/build/tds-tests.pdb \
+        --function "platform::extensions::pure::tds::tests::testTheTdsTestsAreReachableFromTheRoot__Boolean_1_" {{err_filter}}
 
 # Needs core-tests.pdb and compiler-tests.pdb for the same reason as spec-functions.
 # Standalone Pure PCT tests over platform::pure::functions (assumes `just build` was run).
@@ -381,6 +397,19 @@ spec-pdb:
 # The Pure fbs generator (compiler-pure pdb/fbsgen) run over m3 itself must reproduce m3.fbs.
 # m3.fbs stays RdfFbsSchemaGenerator's output (from m3.ttl); this keeps the Pure port of its rules —
 # which generates every language extension's schema — the same rules. Run as part of `just test`.
+# m3's metamodel, and the island test extension's, keep the rules the compiler does not check of an ordinary
+# class (platform::pure::compiler::metamodel::validation): a violation fails the build here, naming the fix.
+# Each extension checks its own metamodel when it compiles it.
+check-metamodel:
+    @{{header}} 'check-metamodel'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "platform::pure::compiler::metamodel::validation::printMetamodelValidation_String_1__Boolean_1_" \
+        --args "platform::pure::metamodel,platform::pure::compiler::test::islands::metamodel" {{err_filter}}
+
 check-fbs-parity:
     #!/usr/bin/env bash
     set -euo pipefail

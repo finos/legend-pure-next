@@ -1,0 +1,20 @@
+// Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+
+// The relation tests are found by walking the package tree from `platform`: their packages sit below ones
+// core and core-tests own, so the relation PDBs list them there, and the host merges that at every depth.
+function <<platform::pure::profiles::test.Test>> platform::pure::functions::relation::tests::testTheRelationTestsAreReachableFromTheRoot(): Boolean[1]
+{
+   assert(platform::pure::test::reachableFromItsRoot(platform::pure::functions::meta::pathToElement('platform::pure::functions::relation::tests::testTheRelationTestsAreReachableFromTheRoot__Boolean_1_')));
+}

@@ -1,0 +1,76 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Legacy natives next needs no native for.
+
+// Legacy evaluates its argument and returns it deactivated, as metamodel objects rather than live values.
+// In next a lambda or an expression already is a graph object: the value is what legacy code wants.
+function meta::pure::functions::meta::evaluateAndDeactivate<T|m>(var:T[m]):T[m]
+{
+   $var
+}
+
+// A function (a lambda, a function reference: next values) is how legacy code reaches a function's metamodel:
+// legacy's view of it, its expressions legacy ones.
+function meta::pure::functions::meta::evaluateAndDeactivate(var: platform::pure::metamodel::function::Function<Any>[1]): meta::pure::metamodel::function::FunctionDefinition<Any>[1]
+{
+   meta::pure::bridge::m3::adapt($var)->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>)
+}
+
+// Whether a value is an instance of a type legacy code holds a view of: the next type it stands for answers.
+// The value is left as it is: a view is an instance of legacy's metamodel class, as in legacy.
+function meta::pure::functions::meta::instanceOf(instance: Any[1], type: meta::pure::metamodel::type::Type[1]): Boolean[1]
+{
+   $instance->platform::pure::functions::meta::instanceOf(meta::pure::bridge::m3::unwrap($type)->cast(@platform::pure::metamodel::type::Type))
+}
+
+// A value's generic type, as legacy's view of next's.
+function meta::pure::functions::meta::genericType(any: Any[*]): meta::pure::metamodel::type::generics::GenericType[1]
+{
+   meta::pure::bridge::m3::adapt($any->platform::pure::functions::meta::genericType())->cast(@meta::pure::metamodel::type::generics::GenericType)
+}
+
+// An enumeration's values, from the next enumeration a view stands for.
+function meta::pure::functions::meta::enumValues<T>(enum: meta::pure::metamodel::type::Enumeration<T>[1]): T[*]
+{
+   meta::pure::bridge::m3::unwrap($enum)->cast(@platform::pure::metamodel::type::Enumeration<Any>)->platform::pure::functions::meta::enumValues()->cast(@T)
+}
+
+// A profile's stereotype or tag by its name, as legacy's view of the next one.
+function meta::pure::functions::meta::stereotype(profile: meta::pure::metamodel::extension::Profile[1], str: String[1]): meta::pure::metamodel::extension::Stereotype[1]
+{
+   meta::pure::bridge::m3::unwrap($profile)->cast(@platform::pure::metamodel::extension::Profile).p_stereotypes
+      ->map(s | meta::pure::bridge::m3::adapt($s)->cast(@meta::pure::metamodel::extension::Stereotype))
+      ->filter(s | $s.value == $str)
+      ->toOne('The stereotype \'' + $str + '\' can\'t be found in profile \'' + $profile.name->toOne() + '\'')
+}
+
+function meta::pure::functions::meta::tag(profile: meta::pure::metamodel::extension::Profile[1], str: String[1]): meta::pure::metamodel::extension::Tag[1]
+{
+   meta::pure::bridge::m3::unwrap($profile)->cast(@platform::pure::metamodel::extension::Profile).p_tags
+      ->map(t | meta::pure::bridge::m3::adapt($t)->cast(@meta::pure::metamodel::extension::Tag))
+      ->filter(t | $t.value == $str)
+      ->toOne('The tag \'' + $str + '\' can\'t be found in profile \'' + $profile.name->toOne() + '\'')
+}
+
+// An element's path, as next gives it, with legacy's root: `Root` heads the path of a packaged element when
+// asked for, and is the root package's own path.
+function meta::pure::functions::meta::elementToPath(element: meta::pure::metamodel::PackageableElement[1], separator: String[1], includeRoot: Boolean[1]): String[1]
+{
+   let next = meta::pure::bridge::m3::unwrap($element)->cast(@platform::pure::metamodel::PackageableElement);
+   let path = $next->platform::pure::functions::meta::elementToPath($separator);
+   if(!$includeRoot,
+      | $path,
+      | if($path == '', | 'Root', | if($next.package->isEmpty(), | $path, | 'Root' + $separator + $path)));
+}

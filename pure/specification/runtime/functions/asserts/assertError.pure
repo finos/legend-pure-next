@@ -118,3 +118,8 @@ function <<test.Test>> platform::pure::functions::asserts::tests::stackTrace::te
     );
 }
 
+// Code that doesn't fail fails the assertion: assertError's own failure is not the error it looks for.
+function <<PCT.test>> platform::pure::functions::asserts::testAssertErrorFailsWhenNothingFails<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(| platform::pure::functions::lang::tryEval(| assertError(| 1, 'never raised')).failure->isNotEmpty()));
+}

@@ -1,0 +1,53 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// A legacy function — a property, a qualified property, a function reached by reflection — evaluates as the
+// next function it stands for. A next function (a lambda legacy code writes) is evaluated by next's eval.
+function meta::pure::functions::lang::eval<T,V|m,n>(func: meta::pure::metamodel::function::Function<{T[n]->V[m]}>[1], param: T[n]): V[m]
+{
+   meta::pure::bridge::m3::unwrap($func)->cast(@platform::pure::metamodel::function::Function<{T[n]->V[m]}>)->platform::pure::functions::lang::eval($param)
+}
+
+// A legacy function evaluated on parameter lists: the next function it stands for, by next's evaluate.
+function meta::pure::functions::lang::evaluate(func: meta::pure::metamodel::function::Function<Any>[1], params: List<Any>[*]): Any[*]
+{
+   meta::pure::bridge::m3::unwrap($func)->cast(@platform::pure::metamodel::function::Function<Any>)->platform::pure::functions::lang::evaluate($params)
+}
+
+// Legacy's key/value pair for dynamicNew, declared by the bridge so that its dynamicNew can take it.
+Class meta::pure::functions::lang::KeyValue
+{
+   key : String[1];
+   value : Any[*];
+}
+
+// An instance of a class chosen at run time, from name/value pairs: next's new of the generic type, then a copy
+// with the values, as next's own reflection builds instances.
+function meta::pure::functions::lang::dynamicNew(class: meta::pure::metamodel::type::Class<Any>[1], keyExpressions: meta::pure::functions::lang::KeyValue[*]): Any[1]
+{
+   ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::bridge::m3::unwrap($class)->cast(@platform::pure::metamodel::type::Class<Any>))
+      ->meta::pure::bridge::m3::newWithValues($keyExpressions)
+}
+
+function meta::pure::functions::lang::dynamicNew(genericType: meta::pure::metamodel::type::generics::GenericType[1], keyExpressions: meta::pure::functions::lang::KeyValue[*]): Any[1]
+{
+   meta::pure::bridge::m3::unwrap($genericType)->cast(@platform::pure::metamodel::type::generics::GenericType)
+      ->meta::pure::bridge::m3::newWithValues($keyExpressions)
+}
+
+function meta::pure::bridge::m3::newWithValues(genericType: platform::pure::metamodel::type::generics::GenericType[1], keyExpressions: meta::pure::functions::lang::KeyValue[*]): Any[1]
+{
+   platform::pure::functions::lang::new($genericType)
+      ->platform::pure::functions::lang::copy($keyExpressions->map(k | platform::pure::functions::lang::keyExpression($k.key, $k.value)))
+}

@@ -1,0 +1,5 @@
+###Pure
+function protocol::stringEscapes(): Any[*]
+{
+  ['it\'s', 'a\\b', 'line\nbreak', 'tab\t', 'café']
+}

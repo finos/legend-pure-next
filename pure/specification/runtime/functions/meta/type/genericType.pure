@@ -135,7 +135,7 @@ function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testC
 function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericTypeArgumentsOnProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // CC_Person.locations has type CC_Location[*] — no type args
-    assertIs(CC_Location, $f->eval(|CC_Person->cast(@Class<Any>).properties->filter(p | $p.name == 'locations')->toOne().genericType->toOne()->cast(@GenericTypeValue).type->toOne()));
+    assertIs(CC_Location, $f->eval(|CC_Person.properties->filter(p | $p.name == 'locations')->toOne().genericType->toOne()->cast(@GenericTypeValue).type->toOne()));
 }
 
 // A lambda literal `{ ... }` is a metamodel LambdaFunction; its

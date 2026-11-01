@@ -205,11 +205,15 @@ public class _E_ValueSpecification
             {
                 return resolver != null ? (Type) resolver.getElement("platform::pure::metamodel::type::Nil") : null;
             }
-            org.eclipse.collections.api.list.MutableList<GenericType> elementTypes =
-                    col._values().collect(ValueSpecification::_genericType).select(gt -> gt != null);
-            if (elementTypes.notEmpty() && resolver != null)
+            // each element by its own type (a DynamicInstance by its class), as a single value is: a collection
+            // declared of a supertype holding one instance of a subclass is of the subclass
+            org.eclipse.collections.api.list.MutableList<Type> elementTypes =
+                    col._values().collect(v -> getValueOriginalType(v, resolver)).select(java.util.Objects::nonNull);
+            if (elementTypes.size() == col._values().size() && resolver != null)
             {
-                return _GenericType.type(_GenericType.findCommonGenericType(elementTypes, resolver));
+                return elementTypes.distinct().size() == 1
+                        ? elementTypes.getFirst()
+                        : _GenericType.type(_GenericType.findCommonGenericType(elementTypes.collect(t -> (GenericType) _GenericType.buildUserDefinedGenericType(t, resolver)), resolver));
             }
             return col._genericType() != null ? _GenericType.type(col._genericType()) : null;
         }

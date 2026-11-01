@@ -1,0 +1,31 @@
+###Pure
+import test::primitive::*;
+
+// A value of an enumeration having a value named as one of Enum's properties: the enumeration's dot is the
+// value, the value's dot Enum's property (name: String).
+Enum test::primitive::Keywords
+{
+  name,
+  other
+}
+
+function test::primitive::nameOfTheValueName(): String[1]
+{
+  Keywords.name.name
+}
+
+###CompiledGraph
+enumeration test::primitive::Keywords extends Enum  ~Enumeration<test::primitive::Keywords>  @6:1-10:1
+  property name  ~Property<Enumeration<test::primitive::Keywords>, test::primitive::Keywords|1>  = ^test::primitive::Keywords(name='name')  ~lambda:#LambdaFunction<#{Enumeration<test::primitive::Keywords>[1]->test::primitive::Keywords[1]}#>#  @8:3-8:6
+  property other  ~Property<Enumeration<test::primitive::Keywords>, test::primitive::Keywords|1>  = ^test::primitive::Keywords(name='other')  ~lambda:#LambdaFunction<#{Enumeration<test::primitive::Keywords>[1]->test::primitive::Keywords[1]}#>#  @9:3-9:7
+
+function test::primitive::nameOfTheValueName__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
+  DotApplication platform::pure::metamodel::NamedElement.name :#String##[1]#  ~@DotApplication@  @14:16-14:20
+    DotApplication test::primitive::Keywords.name :#test::primitive::Keywords##[1]#  ~@DotApplication@  @14:11-14:15
+      AtomicValue  test::primitive::Keywords :#Enumeration<test::primitive::Keywords>#[1]  ~@AtomicValue@  @14:3-14:10
+
+###ReverseIndex
+test::primitive::Keywords:
+  test::primitive::nameOfTheValueName__String_1_
+test::primitive::Keywords.name:
+  test::primitive::nameOfTheValueName__String_1_

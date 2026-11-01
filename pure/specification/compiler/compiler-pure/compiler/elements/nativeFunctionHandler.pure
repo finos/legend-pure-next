@@ -86,7 +86,7 @@ function platform::pure::compiler::elements::compileNativeFunctionPass2(fn:platf
     let rMGenType = $rResult.value->toOne();
     let ctx3 = $rResult.context;
 
-    let rMMult = $fn.returnMultiplicity->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+    let rMMult = $fn.returnMultiplicity->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($ctx3);
 
     let classifierGT = compileFunctionClassifierGenericType(NativeFunction, $compiledParams, $rMGenType, $rMMult);
 

@@ -28,7 +28,7 @@ function platform::pure::compiler::structural::variableCompiler::compileParamete
     // error doesn't end up with a bogus `in parameter ''` segment.
     let elementContext = if($p.name->isEmpty(), | '', | 'parameter \'' + $p.name->toOne() + '\'');
     let gtResult = $pType->compileGenericType($context, $packagePath, $typeParameters, $elementContext, $ownerContext);
-    let mMult = $p.multiplicity->toOne()->compileMultiplicity();
+    let mMult = $p.multiplicity->toOne()->compileMultiplicity($context);
     ^CompilerResult<VariableExpression>(
         value = ^VariableExpression(
             // Mirror Java VariableCompiler.compileParameter: anonymous params

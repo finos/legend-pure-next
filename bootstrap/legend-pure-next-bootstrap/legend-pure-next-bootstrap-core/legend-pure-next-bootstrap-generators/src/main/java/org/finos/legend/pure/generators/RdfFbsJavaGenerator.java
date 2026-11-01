@@ -1037,6 +1037,21 @@ public class RdfFbsJavaGenerator
                 sb.append("AncestorRef ar = (AncestorRef) fb.").append(fbField).append("(new AncestorRef()); ");
                 sb.append("if (ar != null) { Object t = this; for (int d = 0; d < ar.depth(); d++) { if (t instanceof FlatBufferWrapper w) t = w._fbParent(); else break; } return (").append(javaType).append(") t; } return null; }\n");
             }
+            else if ("ColumnDef".equals(member) && "func".equals(prop.name))
+            {
+                // A column read: the column is written inline, and read back as the receiver's relation type's
+                // column of that name, the very object the compiler resolved — not a copy.
+                sb.append("ColumnDef d = (ColumnDef) fb.").append(fbField).append("(new ColumnDef()); ");
+                String linked = "org.finos.legend.pure.m3.pureLanguage.ColumnReads.receiversColumn(this, new ColumnFlatBufferWrapper(d, resolver, this))";
+                if (cacheField != null)
+                {
+                    sb.append(cacheField).append(" = d != null ? ").append(linked).append(" : null; return ").append(cacheField).append("; }\n");
+                }
+                else
+                {
+                    sb.append("return d != null ? ").append(linked).append(" : null; }\n");
+                }
+            }
             else
             {
                 String subtype = stripDefSuffix(member);
@@ -1053,7 +1068,8 @@ public class RdfFbsJavaGenerator
             }
         }
 
-        sb.append("            default: return null;\n");
+        // a type the schema doesn't know: this reader can't read what was written, and must not pretend it was absent
+        sb.append("            default: throw new IllegalStateException(\"PDB reader: unknown type \" + uType + \" in ").append(parentClass).append(".").append(prop.name).append("\");\n");
         sb.append("        }\n");
     }
 
@@ -1312,7 +1328,9 @@ public class RdfFbsJavaGenerator
         sb.append("        else if (obj instanceof platform.pure.metamodel.pointer.TempCompilerPointer tcp)\n");
         sb.append("        {\n");
         sb.append("            kind = 0; // PackageableElement-style pointer (path only)\n");
-        sb.append("            segments = new String[]{tcp._path()};\n");
+        // A root PackagePointer carries path '' (a top-level package's parent); on the wire the root is '::',
+        // its name — as the Pure writer (writerHelper's pointerKindAndSegs) and a Java-compiled graph write it.
+        sb.append("            segments = new String[]{tcp._path().isEmpty() ? \"::\" : tcp._path()};\n");
         sb.append("        }\n");
         sb.append("        else if (obj instanceof platform.pure.metamodel.function.property.QualifiedProperty qp && qp._owner() instanceof PackageableElement owner)\n");
         sb.append("        {\n");
@@ -1339,19 +1357,11 @@ public class RdfFbsJavaGenerator
         sb.append("            kind = 0; // Element\n");
         sb.append("            segments = new String[]{_PackageableElement.path(pe)};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof platform.pure.metamodel.relation.Column col && col._name() != null)\n");
-        sb.append("        {\n");
-        sb.append("            // Live relation column whose owner is a RelationType (not a\n");
-        sb.append("            // packageable element): the ref is unresolvable either way, but\n");
-        sb.append("            // the segment must be DETERMINISTIC — String.valueOf would embed\n");
-        sb.append("            // a JVM identity hash into the archive.\n");
-        sb.append("            kind = 0;\n");
-        sb.append("            segments = new String[]{col._name()};\n");
-        sb.append("        }\n");
         sb.append("        else\n");
         sb.append("        {\n");
-        sb.append("            kind = 0;\n");
-        sb.append("            segments = new String[]{String.valueOf(obj)};\n");
+        sb.append("            // nothing addresses it (a relation column is written inline, where its slot allows): writing\n");
+        sb.append("            // anything would lose it, and the reader would never know\n");
+        sb.append("            throw new IllegalStateException(\"PDB writer: cannot write a pointer to a \" + (obj == null ? \"null\" : obj.getClass().getName()));\n");
         sb.append("        }\n");
         sb.append("        int[] segOffsets = new int[segments.length];\n");
         sb.append("        for (int i = 0; i < segments.length; i++) { segOffsets[i] = builder.createSharedString(segments[i]); }\n");

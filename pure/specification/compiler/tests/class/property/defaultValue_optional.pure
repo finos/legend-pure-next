@@ -1,0 +1,21 @@
+###Pure
+import pack::*;
+
+Class pack::MyClass
+{
+  value: Integer[0..1] = 1;
+  values: Integer[*] = [1, 2];
+}
+
+###CompiledGraph
+class pack::MyClass extends Any  ~Class<pack::MyClass>  @4:1-8:1
+  property value :@Integer@[0..1]  ~Property<pack::MyClass, @Integer@|0..1>
+    defaultValue Lambda(this:pack::MyClass[1])  ~#LambdaFunction<#{pack::MyClass[1]->@Integer@[1]}#>#
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:26-6:26
+  property values :@Integer@[*]  ~Property<pack::MyClass, @Integer@|*>
+    defaultValue Lambda(this:pack::MyClass[1])  ~#LambdaFunction<#{pack::MyClass[1]->#Integer#[2]}#>#
+      Collection :#Integer#[2]  ~@Collection@  @7:24-7:29
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @7:25-7:25
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @7:28-7:28
+
+###ReverseIndex

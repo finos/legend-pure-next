@@ -28,15 +28,15 @@ public final class VariantNodeFactories
 
     public static void registerAll(NativeRegistry registry)
     {
-        registry.register("fromJson_String_1__Variant_1_",
+        registry.register("platform::pure::functions::variant::convert::fromJson_String_1__Variant_1_",
                 (args, gt, mul, fe) -> new FromJsonNode(args[0]));
-        registry.register("toJson_Variant_1__String_1_",
+        registry.register("platform::pure::functions::variant::convert::toJson_Variant_1__String_1_",
                 (args, gt, mul, fe) -> new ToJsonNode(args[0]));
-        registry.register("toVariant_Any_MANY__Variant_1_",
+        registry.register("platform::pure::functions::variant::convert::toVariant_Any_MANY__Variant_1_",
                 (args, gt, mul, fe) -> new ToVariantNode(args[0]));
-        registry.register("to_Variant_$0_1$__GenericTypeAndMultiplicityHolder_1__T_$0_1$_",
+        registry.register("platform::pure::functions::variant::convert::to_Variant_$0_1$__GenericTypeAndMultiplicityHolder_1__T_$0_1$_",
                 (args, gt, mul, fe) -> new ToNode(args[0], args[1]));
-        registry.register("toMany_Variant_$0_1$__GenericTypeAndMultiplicityHolder_1__T_MANY_",
+        registry.register("platform::pure::functions::variant::convert::toMany_Variant_$0_1$__GenericTypeAndMultiplicityHolder_1__T_MANY_",
                 (args, gt, mul, fe) -> new ToManyNode(args[0], args[1]));
     }
 }

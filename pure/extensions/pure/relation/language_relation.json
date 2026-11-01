@@ -1,0 +1,15 @@
+{
+  "name": "relation",
+  "sections": [],
+  "module": "relation",
+  "pure": {},
+  "pdbs": [
+    "pure/extensions/pure/relation/build/relation.pdb"
+  ],
+  "packages": [
+    "platform::pure::functions::relation"
+  ],
+  "testPackages": [
+    "platform::pure::functions::relation::tests"
+  ]
+}

@@ -103,7 +103,7 @@ function platform::pure::compiler::helper::class::findProperty(owner:Any[1], nam
             // `test::PersonDept`). Pointer dereference targets the Association
             // by path; this arm makes the lookup reach those properties.
             assoc : platform::pure::metamodel::relationship::Association[1] |
-                $assoc.properties->filter(p | $p.name == $name)->cast(@Property<Nil, Any|*>)->head();,
+                $assoc.properties->filter(p | $p.name == $name)->head();,
             a : Any[1] | []
         ]
     )

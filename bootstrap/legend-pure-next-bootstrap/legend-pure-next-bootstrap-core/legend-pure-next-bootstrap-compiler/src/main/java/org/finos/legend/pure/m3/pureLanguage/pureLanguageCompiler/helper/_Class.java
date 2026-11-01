@@ -68,6 +68,20 @@ public final class _Class
      * Find a property by name on a PropertyOwner, searching own properties,
      * association properties, then traversing up the class hierarchy.
      */
+    /**
+     * A property a type inherits by that name: found in its generalizations, not among its own properties.
+     */
+    public static Property findPropertyInGeneralizations(Type type, String name)
+    {
+        return type._generalizations() == null
+                ? null
+                : type._generalizations()
+                        .collect(g -> g._general() == null ? null : _GenericType.type(g._general()))
+                        .selectInstancesOf(SimplePropertyOwner.class)
+                        .collect(o -> findProperty(o, name))
+                        .detect(p -> p != null);
+    }
+
     public static Property findProperty(SimplePropertyOwner owner, String name)
     {
         // Direct properties

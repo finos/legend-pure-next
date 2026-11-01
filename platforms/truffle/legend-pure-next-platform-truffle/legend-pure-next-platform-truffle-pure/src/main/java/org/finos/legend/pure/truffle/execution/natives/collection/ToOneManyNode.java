@@ -21,8 +21,8 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.execution.ast.PureNode;
 
 /**
- * {@code toOneMany(T[*]) : T[1..*]} — asserts at least one element,
- * returns the single element or the collection as-is.
+ * {@code toOneMany(T[*]) : T[1..*]} and {@code toOneMany(T[*], String[1]) : T[1..*]} — asserts at least one
+ * element, returns the single element or the collection as-is; with a message, that is the error's.
  */
 @NodeInfo(shortName = "toOneMany")
 public final class ToOneManyNode extends PureNode
@@ -30,9 +30,18 @@ public final class ToOneManyNode extends PureNode
     @Child
     private PureNode arg;
 
+    @Child
+    private PureNode messageArg;
+
     public ToOneManyNode(PureNode arg)
     {
+        this(arg, null);
+    }
+
+    public ToOneManyNode(PureNode arg, PureNode messageArg)
+    {
         this.arg = arg;
+        this.messageArg = messageArg;
     }
 
     @Override
@@ -43,6 +52,11 @@ public final class ToOneManyNode extends PureNode
         if (size == 0)
         {
             CompilerDirectives.transferToInterpreter();
+            if (messageArg != null)
+            {
+                throw new org.finos.legend.pure.truffle.execution.ast.PureException(
+                        org.finos.legend.pure.truffle.execution.natives.string.StringHelper.asString(messageArg.executeGeneric(frame), "toOneMany"), this);
+            }
             throw new RuntimeException("toOneMany expected at least 1 element, got 0");
         }
         if (size == 1)

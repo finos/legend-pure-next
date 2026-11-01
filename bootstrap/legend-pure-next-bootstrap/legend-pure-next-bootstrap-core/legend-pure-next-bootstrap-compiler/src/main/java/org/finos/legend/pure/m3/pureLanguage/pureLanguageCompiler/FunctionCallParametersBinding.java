@@ -120,6 +120,27 @@ public class FunctionCallParametersBinding extends ParametersBinding
     }
 
     /**
+     * Route multiplicity parameter bindings by owner, as {@link #addTypeBinding} does: one owned by the
+     * enclosing function/class is stored in {@link #enclosingOwner}, so that it is not taken for the
+     * callee's own of the same name (a caller's {@code m} and eval's).
+     */
+    @Override
+    public void addMultiplicityBinding(MultiplicityParameter mulParam, Multiplicity argMul)
+    {
+        if (isEnclosingOwners(mulParam._owner()))
+        {
+            enclosingOwner.addMultiplicityBinding(mulParam, argMul);
+            return;
+        }
+        super.addMultiplicityBinding(mulParam, argMul);
+    }
+
+    private boolean isEnclosingOwners(Object owner)
+    {
+        return enclosingOwner != null && owner != null && owner == enclosingOwner.owner();
+    }
+
+    /**
      * Unify parameters bound to multiple values by finding their common type/multiplicity.
      *
      * <ul>
@@ -173,17 +194,12 @@ public class FunctionCallParametersBinding extends ParametersBinding
                     GenericType gt = entry.getValue().getFirst();
                     if (gt instanceof GenericTypeValue && _GenericType.type(gt) instanceof TypeParameter tp)
                     {
+                        // the target where it lives: the enclosing owner's, never a local one of its name
+                        // (a caller's T and the callee's)
                         String targetName = tp._name();
-                        MutableList<GenericType> targetBinding = typeBindings.get(targetName);
-
-                        if ((targetBinding == null || targetBinding.isEmpty()) && enclosingOwner != null)
-                        {
-                            Object targetOwner = tp._owner();
-                            if (targetOwner == enclosingOwner.owner())
-                            {
-                                targetBinding = enclosingOwner.typeBindings().get(targetName);
-                            }
-                        }
+                        MutableList<GenericType> targetBinding = isEnclosingOwners(tp._owner())
+                                ? enclosingOwner.typeBindings().get(targetName)
+                                : typeBindings.get(targetName);
 
                         if (targetBinding != null && targetBinding.size() == 1)
                         {
@@ -213,7 +229,9 @@ public class FunctionCallParametersBinding extends ParametersBinding
                     if (mul instanceof MultiplicityParameter mulParam)
                     {
                         String targetName = mulParam._name();
-                        MutableList<Multiplicity> targetBinding = multiplicityBindings.get(targetName);
+                        MutableList<Multiplicity> targetBinding = isEnclosingOwners(mulParam._owner())
+                                ? enclosingOwner.multiplicityBindings().get(targetName)
+                                : multiplicityBindings.get(targetName);
                         if (targetBinding != null && targetBinding.size() == 1)
                         {
                             Multiplicity resolved = targetBinding.getFirst();

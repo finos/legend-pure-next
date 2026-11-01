@@ -216,7 +216,7 @@ setup:
 #     it first ships a jar without the schema ("languages/diagram.fbs is not on the class path");
 #   - Truffle's generate-pdb-reader runs on java.pdb, translation-shared.pdb and java-translation{,-tests}.pdb
 #     ("NoSuchFileException: .../java.pdb" on a clean checkout).
-build: doctor bootstrap::build modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::build javascript::build
+build: doctor bootstrap::build modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::build extensions::pure::relation::build-tests javascript::build
 
 # Top-level `build` already chains every subproject's `build` in dep order — alias for symmetry with sub-Justfiles' `build-all`.
 build-all: build
@@ -232,7 +232,7 @@ test: doctor
 # The suites `test` runs. modules::build stages the translator pdbs
 # javascript::test's generate step needs (see `build` ordering note, which is also why protocol, the
 # extensions and the modules come before truffle::test).
-_test: bootstrap::test modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::test javascript::test java::test-all
+_test: bootstrap::test modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::test extensions::pure::relation::test-all javascript::test java::test-all
 
 # Delete every generated/ directory so the suites below cannot pass against
 # stale output. These are all gitignored build artifacts, each with a recipe
@@ -297,7 +297,7 @@ _test-all: clean (_stage-start "build") _test-all-build (_stage-end "build") _te
 _test-all-build: javascript::antlr-bundle \
     bootstrap::test-java bootstrap::stage bootstrap::build-compiler-pdb \
     modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests \
-    truffle::test-java modules::language_java::build-tests
+    truffle::test-java extensions::pure::relation::build-tests modules::language_java::build-tests
 
 # The suites, five branches at once, each a separate `just` writing test-results/logs/<branch>.log;
 # a branch prints one line when it finishes, and the last lines of its log if it failed.
@@ -321,28 +321,176 @@ _test-all-suites:
     mkdir -p "$logs"
     j() { just --justfile "{{justfile()}}" "$@"; }
     branch_bootstrap()  { j bootstrap::spec && j --no-deps bootstrap::spec-compiler-selfhost; }
-    branch_truffle()    { j truffle::spec truffle::spec-compiler-selfhost truffle::native::test-all && j --no-deps truffle::usage-example && j --no-deps extensions::pure::tds::test-all; }
+    branch_truffle()    { j truffle::spec truffle::spec-compiler-selfhost truffle::native::test-all && j --no-deps truffle::usage-example && j --no-deps extensions::pure::tds::test-all && j --no-deps extensions::pure::relation::test-all; }
     branch_javascript() { j javascript::test-all modules::translation_javascript::test-all; }
     branch_modules()    { j --no-deps modules::language_java::test-all modules::language_javascript::test-all modules::translation_shared::test-all; }
     branch_java()       { j java::test-all; }
     branches="bootstrap truffle javascript modules java"
+    rm -f "$logs"/*.status "$logs"/*.result "$logs"/*.steps "$logs/.done"
+    # On a terminal, a live block redrawn every second: one line per lane, with the step it is on and a
+    # bar for that step's (n/total) counter. Each step a lane finishes is printed above the block, with
+    # its time. Otherwise (CI, redirected output) the finished steps and each lane's ✓/✗ as they happen,
+    # and a status line every 30s.
+    live=false; [ -t 1 ] && live=true
+    started_all=$SECONDS
     run() {
-        local name=$1 started=$SECONDS status
+        local name=$1 started=$SECONDS status line
         {{build_step}} start "test-all/$name"
         "branch_$name" > "$logs/$name.log" 2>&1
         status=$?
         local took=$(( SECONDS - started ))
         if [ "$status" -eq 0 ]; then
             {{build_step}} end "test-all/$name"
-            printf '  ✓ %-11s %dm%02ds\n' "$name" $(( took / 60 )) $(( took % 60 ))
+            line=$(printf '✓ %dm%02ds' $(( took / 60 )) $(( took % 60 )))
         else
-            printf '  ✗ %-11s %dm%02ds  exit %s — test-results/logs/%s.log\n' "$name" $(( took / 60 )) $(( took % 60 )) "$status" "$name"
+            line=$(printf '✗ %dm%02ds  exit %s — test-results/logs/%s.log' $(( took / 60 )) $(( took % 60 )) "$status" "$name")
         fi
         echo "$status" > "$logs/$name.status"
+        echo "$line" > "$logs/$name.result"
     }
+    # A lane's log, scanned: every step header ([module::recipe]) in order, one per line, then a last line
+    # "#<TAB>n<TAB>total" with the latest progress counter ("37%  (59/155)") after the last header.
+    lane_scan() {
+        # A lane that has not created its log yet is starting: no steps, no counter.
+        [ -f "$logs/$1.log" ] || { printf '#\t\t\n'; return; }
+        LC_ALL=C tr '\r' '\n' < "$logs/$1.log" | LC_ALL=C awk '
+            match($0, /\[[A-Za-z0-9_-]+(::[A-Za-z0-9_-]+)+\]/) { print substr($0, RSTART + 1, RLENGTH - 2); n = ""; m = "" }
+            match($0, /[0-9]+%  \([0-9]+\/[0-9]+\)/) { s = substr($0, RSTART, RLENGTH); sub(/.*\(/, "", s); sub(/\)/, "", s); split(s, a, "/"); n = a[1]; m = a[2] }
+            END { printf "#\t%s\t%s\n", n, m }'
+    }
+    # The previous passing run's steps per lane, "lane<TAB>index<TAB>step<TAB>seconds": the reference for
+    # step counts and time estimates. Kept by `clean`, like builds.json.
+    steps_ref="$(dirname "$logs")/lane-steps.tsv"
+    lane_ref() { [ -f "$steps_ref" ] && awk -F'\t' -v l="$1" '$1 == l { print $2 "\t" $3 "\t" $4 }' "$steps_ref"; }
+    # "total|usual|left" for a lane on its k-th step (named `step`, running for `took` seconds), from its
+    # reference (`ref`, "index<TAB>step<TAB>seconds" lines); all three empty without one.
+    lane_estimate() {
+        printf '%s\n' "$1" | awk -F'\t' -v k="$2" -v step="$3" -v took="$4" '
+            NF == 3 { n++; name[$1] = $2; secs[$1] = $3; if (!($2 in byname)) byname[$2] = $3 }
+            END {
+                if (n == 0) { print "||"; exit }
+                usual = (name[k] == step) ? secs[k] : ((step in byname) ? byname[step] : "")
+                left = (usual == "" || usual + 0 < took + 0) ? 0 : usual - took
+                for (i = k + 1; i <= n; i++) left += secs[i]
+                printf "%s|%s|%s\n", n, usual, left
+            }'
+    }
+    # A running lane's line in the live block: its step number, its step and how long that step has run
+    # against its usual time, a bar for the step's counter, and the time the lane has left.
+    lane_line() {
+        local name=$1 tick=$2 step=$3 n=$4 m=$5 took=$6 k=$7 total=$8 usual=$9 left=${10} width=20 filled bar pos time tail
+        pos="$k${total:+/$total}"
+        time="$(duration "$took")${usual:+/~$(duration "$usual")}"
+        tail="${left:+  ~$(duration "$left") left}"
+        if [ -n "$m" ] && [ "$m" -gt 0 ]; then
+            filled=$(( n * width / m ))
+            bar=$(printf '%*s' "$filled" '' | sed 's/ /█/g')$(printf '%*s' $(( width - filled )) '' | sed 's/ /░/g')
+            printf '  %-11s %-6s %-26.26s %-13s [%s] %5s/%-5s%s' "$name" "$pos" "$step" "$time" "$bar" "$n" "$m" "$tail"
+        else
+            printf '  %-11s %-6s %-26.26s %-13s %s%s' "$name" "$pos" "${step:-starting}" "$time" "$(echo '|/-\' | cut -c$(( tick % 4 + 1 )))" "$tail"
+        fi
+    }
+    duration() { printf '%dm%02ds' $(( $1 / 60 )) $(( $1 % 60 )); }
+    # "  ── title ─────…", 78 columns wide: the live view's section rules.
+    rule() { local r; r=$(printf '%*s' $(( 74 - ${#1} )) '' | sed 's/ /─/g'); printf '  ── %s %s' "$1" "$r"; }
+    elapsed() { duration $(( SECONDS - started_all )); }
+    # One finished step: a line above the live block ("  ✓ lane  step  1m02s"), and a line of this run's
+    # steps for the next run's reference.
+    finish_step() {
+        done_lines="$done_lines$(printf '  %s %-11s %-28s %s' "$1" "$2" "$4" "$(duration "$5")")"$'\n'
+        printf '%s\t%s\t%s\t%s\n' "$2" "$3" "$4" "$5" >> "$logs/$2.steps"
+    }
+    progress() {
+        local tick=0 lines=0 b out done_lines scan steps count k t name step n m mark total usual left most
+        for b in $branches; do printf -v "ref_$b" '%s' "$(lane_ref "$b")"; done
+        while :; do
+            # The run's script is gone (killed outright): stop drawing rather than run on as an orphan.
+            kill -0 "$main_pid" 2>/dev/null || break
+            local finished=false; [ -f "$logs/.done" ] && finished=true
+            out=""; done_lines=""; most=""
+            for b in $branches; do
+                scan=$(lane_scan "$b")
+                steps=$(printf '%s\n' "$scan" | sed '$d')
+                count=$(printf '%s' "$steps" | grep -c '^')
+                IFS=$'\t' read -r _ n m <<< "$(printf '%s\n' "$scan" | tail -n 1)"
+                # k_<lane>: steps seen so far (the k-th is the one running); t_<lane>: when it started.
+                name="k_$b"; k=${!name:-0}; name="t_$b"; t=${!name:-$SECONDS}
+                # Every step before the newest has finished: the running one since t, any seen only now in 0s.
+                while [ "$k" -lt "$count" ]; do
+                    if [ "$k" -gt 0 ]; then
+                        step=$(printf '%s\n' "$steps" | sed -n "${k}p")
+                        finish_step ✓ "$b" "$k" "${step#"$b"::}" $(( SECONDS - t ))
+                        t=$SECONDS
+                    fi
+                    k=$(( k + 1 ))
+                done
+                printf -v "t_$b" '%s' "$t"
+                printf -v "k_$b" '%s' "$k"
+                # The lane has ended: its last step gets the lane's mark.
+                name="closed_$b"
+                if [ -f "$logs/$b.result" ] && [ -z "${!name:-}" ]; then
+                    printf -v "closed_$b" '%s' 1
+                    if [ "$k" -gt 0 ]; then
+                        mark='✓'; [ "$(cat "$logs/$b.status" 2>/dev/null)" = 0 ] || mark='✗'
+                        step=$(printf '%s\n' "$steps" | sed -n "${k}p")
+                        finish_step "$mark" "$b" "$k" "${step#"$b"::}" $(( SECONDS - t ))
+                    fi
+                    $live || done_lines="$done_lines$(printf '  %-11s %s' "$b" "$(cat "$logs/$b.result")")"$'\n'
+                fi
+                [ -f "$logs/$b.result" ] && { $live && out="$out$(printf '  %-11s %s' "$b" "$(cat "$logs/$b.result")")"$'\n'; continue; }
+                step=$(printf '%s\n' "$steps" | tail -n 1); step=${step#"$b"::}
+                name="ref_$b"
+                IFS='|' read -r total usual left <<< "$(lane_estimate "${!name}" "$k" "$step" $(( SECONDS - t )))"
+                [ -n "$left" ] && { [ -z "$most" ] || [ "$left" -gt "$most" ]; } && most=$left
+                if $live; then
+                    out="$out$(lane_line "$b" "$tick" "$step" "$n" "$m" $(( SECONDS - t )) "$k" "$total" "$usual" "$left")"$'\n'
+                else
+                    out="$out · $b $k${total:+/$total} $step${m:+ $n/$m} ($(duration $(( SECONDS - t )))${left:+, ~$(duration "$left") left})"
+                fi
+            done
+            if $live; then
+                [ "$lines" -gt 0 ] && printf '\033[%dA' "$lines"
+                printf '%s\n%s\n%s' "$done_lines" "$(rule "lanes · $(elapsed)${most:+ · ~$(duration "$most") left}")" "$out" | while IFS= read -r l; do printf '\033[2K%s\n' "$l"; done
+                lines=$(( $(echo $branches | wc -w) + 2 ))
+            else
+                printf '%s' "$done_lines"
+                if [ $(( tick % 30 )) -eq 0 ] && [ "$tick" -gt 0 ] && [ -n "$out" ]; then
+                    printf '  [%s]%s %s\n' "$(elapsed)" "${most:+ ~$(duration "$most") left ·}" "${out# · }"
+                fi
+            fi
+            $finished && break
+            sleep 1; tick=$(( tick + 1 ))
+        done
+    }
+    # Ctrl-C (or a kill) stops the whole run. Background jobs of a script ignore SIGINT, so without this the
+    # lanes, their just/java processes and the display would carry on after the script is gone.
+    main_pid=$$
+    pids=""
+    kill_tree() { local c; for c in $(pgrep -P "$1"); do kill_tree "$c"; done; kill "$1" 2>/dev/null; }
+    stop_all() {
+        trap - INT TERM
+        local p
+        for p in $pids ${progress_pid:-}; do kill_tree "$p"; done
+        printf '\n  interrupted\n'
+        exit 130
+    }
+    trap stop_all INT TERM
     echo "  running in parallel: $branches  (logs in test-results/logs/)"
-    for b in $branches; do run "$b" & done
-    wait
+    for b in $branches; do run "$b" & pids="$pids $!"; done
+    $live && printf '\n%s\n' "$(rule 'finished steps')"
+    progress & progress_pid=$!
+    wait $pids
+    touch "$logs/.done"
+    wait "$progress_pid"
+    # This run's steps become the next run's reference for the lanes that passed. A failed lane's list stops
+    # at the failure, so it keeps its previous reference.
+    for b in $branches; do
+        if [ "$(cat "$logs/$b.status" 2>/dev/null)" = 0 ] && [ -f "$logs/$b.steps" ]; then
+            cat "$logs/$b.steps"
+        else
+            lane_ref "$b" | while IFS= read -r l; do printf '%s\t%s\n' "$b" "$l"; done
+        fi
+    done > "$steps_ref.tmp" && mv "$steps_ref.tmp" "$steps_ref"
     failed=""
     for b in $branches; do
         [ "$(cat "$logs/$b.status" 2>/dev/null)" = 0 ] || failed="$failed $b"
@@ -365,7 +513,7 @@ test-all-serial: (doctor "test-all")
 _test-all-serial: clean \
     (_stage-start "bootstrap") javascript::antlr-bundle bootstrap::test-all (_stage-end "bootstrap") \
     (_stage-start "modules-build") modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests (_stage-end "modules-build") \
-    (_stage-start "truffle") truffle::test-all extensions::pure::tds::test-all (_stage-end "truffle") \
+    (_stage-start "truffle") truffle::build extensions::pure::relation::build-tests truffle::test-all extensions::pure::relation::test-all extensions::pure::tds::test-all (_stage-end "truffle") \
     (_stage-start "javascript") javascript::test-all (_stage-end "javascript") \
     (_stage-start "modules-test") modules::test-all (_stage-end "modules-test") \
     (_stage-start "java") java::test-all (_stage-end "java")
@@ -386,6 +534,13 @@ dashboard:
     @{{substep}} 'render test-results/ -> test-results/dashboard.html'
     node {{root}}/tools/test-dashboard/build.mjs
 
+# Draw the Justfiles: every recipe, its dependencies and the CLI it runs Pure with, as a page you open
+# (tools/just-graph/build/just-graph.html). Regenerate it after changing a Justfile.
+just-graph:
+    @{{header}} 'just-graph'
+    @{{substep}} 'just --dump -> tools/just-graph/build/just-graph.html'
+    node {{root}}/tools/just-graph/generate.mjs
+
 # Remove shared/, per-subproject build artifacts, every generated/ tree and the test reports.
 # The dashboard's history.json and builds.json are kept: they are the trend across runs, not
 # one run's output. Every generated/ tree is rebuilt by the build that consumes it
@@ -398,9 +553,10 @@ dashboard:
 # diagram.pdb and pre-rename generated JS once outlived `clean`.
 clean: clean-generated bootstrap::clean truffle::clean javascript::clean java::clean modules::clean extensions::clean
     @{{header}} 'clean'
-    @{{substep}} 'remove shared/ and test-results/ reports'
+    @{{substep}} 'remove shared/, test-results/ reports and the Justfile graph page'
     rm -rf {{out}}
-    find {{root}}/test-results -mindepth 1 -maxdepth 1 ! -name history.json ! -name builds.json -exec rm -rf {} + 2>/dev/null || true
+    rm -rf {{root}}/tools/just-graph/build
+    find {{root}}/test-results -mindepth 1 -maxdepth 1 ! -name history.json ! -name builds.json ! -name lane-steps.tsv -exec rm -rf {} + 2>/dev/null || true
     @{{substep}} 'check that no build output is left'
     left=$(git -C {{root}} ls-files --others --ignored --exclude-standard --directory | grep -E '(^|/)(build|generated|target)/$|dependency-reduced-pom\.xml$|^shared/$' || true); if [ -n "$left" ]; then printf 'clean left build output behind:\n%s\n' "$left" >&2; exit 1; fi
 

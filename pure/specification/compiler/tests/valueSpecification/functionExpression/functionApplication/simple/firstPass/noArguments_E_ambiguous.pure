@@ -1,0 +1,42 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Error
+Ambiguous function call: multiple equally-specific matches found [test::a::f(): Integer[1], test::b::f(): Integer[1]] (at valueSpecification/functionExpression/functionApplication/simple/firstPass/noArguments_E_ambiguous:35c5-35c7)
+
+###Pure
+// Candidates taking no arguments, called with none: the candidates' kinds are compared on no argument.
+import test::a::*;
+import test::b::*;
+
+function test::a::f():Integer[1]
+{
+    1
+}
+
+function test::b::f():Integer[1]
+{
+    2
+}
+
+function test::tst():Integer[1]
+{
+    f();
+}
+
+###CompilerStats
+inferenceRollbacks: 1
+candidateEvaluations: 1
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

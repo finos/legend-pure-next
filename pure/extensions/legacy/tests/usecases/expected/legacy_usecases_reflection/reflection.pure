@@ -1,0 +1,261 @@
+###Pure
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::import::*;
+import meta::pure::functions::date::*;
+import meta::pure::functions::string::*;
+import meta::pure::functions::collection::*;
+import meta::pure::functions::meta::*;
+import meta::pure::functions::constraints::*;
+import meta::pure::functions::lang::*;
+import meta::pure::functions::boolean::*;
+import meta::pure::functions::tools::*;
+import meta::pure::functions::relation::*;
+import meta::pure::functions::io::*;
+import meta::pure::functions::math::*;
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::test::*;
+import meta::pure::functions::multiplicity::*;
+import meta::pure::router::*;
+import meta::pure::service::*;
+import meta::pure::tds::*;
+import meta::pure::tools::*;
+import meta::pure::profiles::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::import::*;
+import platform::pure::functions::date::*;
+import platform::pure::functions::string::*;
+import platform::pure::functions::collection::*;
+import platform::pure::functions::meta::*;
+import platform::pure::functions::constraints::*;
+import platform::pure::functions::lang::*;
+import platform::pure::functions::boolean::*;
+import platform::pure::functions::tools::*;
+import platform::pure::functions::relation::*;
+import platform::pure::functions::io::*;
+import platform::pure::functions::math::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::test::*;
+import platform::pure::functions::multiplicity::*;
+import platform::pure::router::*;
+import platform::pure::service::*;
+import platform::pure::tds::*;
+import platform::pure::tools::*;
+import platform::pure::profiles::*;
+import meta::pure::metamodel::legacyAdapters::*;
+import meta::pure::metamodel::type::legacyAdapters::*;
+import meta::pure::metamodel::type::generics::legacyAdapters::*;
+import meta::pure::metamodel::relationship::legacyAdapters::*;
+import meta::pure::metamodel::valuespecification::legacyAdapters::*;
+import meta::pure::metamodel::multiplicity::legacyAdapters::*;
+import meta::pure::metamodel::function::legacyAdapters::*;
+import meta::pure::metamodel::function::property::legacyAdapters::*;
+import meta::pure::metamodel::extension::legacyAdapters::*;
+import meta::pure::metamodel::import::legacyAdapters::*;
+import meta::pure::functions::date::legacyAdapters::*;
+import meta::pure::functions::string::legacyAdapters::*;
+import meta::pure::functions::collection::legacyAdapters::*;
+import meta::pure::functions::meta::legacyAdapters::*;
+import meta::pure::functions::constraints::legacyAdapters::*;
+import meta::pure::functions::lang::legacyAdapters::*;
+import meta::pure::functions::boolean::legacyAdapters::*;
+import meta::pure::functions::tools::legacyAdapters::*;
+import meta::pure::functions::relation::legacyAdapters::*;
+import meta::pure::functions::io::legacyAdapters::*;
+import meta::pure::functions::math::legacyAdapters::*;
+import meta::pure::functions::asserts::legacyAdapters::*;
+import meta::pure::functions::test::legacyAdapters::*;
+import meta::pure::functions::multiplicity::legacyAdapters::*;
+import meta::pure::router::legacyAdapters::*;
+import meta::pure::service::legacyAdapters::*;
+import meta::pure::tds::legacyAdapters::*;
+import meta::pure::tools::legacyAdapters::*;
+import meta::pure::profiles::legacyAdapters::*;
+
+Profile usecases::reflection::json
+{
+  stereotypes: [ignore];
+  tags: [name];
+}
+
+Enum usecases::reflection::Level
+{
+  JUNIOR,
+  SENIOR
+}
+
+Class usecases::reflection::Entity
+{
+  id: Integer[1];
+
+}
+
+Class usecases::reflection::Address
+{
+  city: String[1];
+  zip: String[0..1];
+
+}
+
+Class usecases::reflection::Person extends usecases::reflection::Entity
+{
+  {usecases::reflection::json.name = 'first_name'} firstName: String[1];
+  lastName: String[1];
+  nickNames: String[*];
+  level: usecases::reflection::Level[1];
+  <<usecases::reflection::json.ignore>> salary: Float[1];
+  address: usecases::reflection::Address[0..1];
+  fullName() {$this.firstName + ' ' + $this.lastName}: String[1];
+}
+
+function usecases::reflection::allProperties(c: meta::pure::metamodel::type::Class<Any>[1]): meta::pure::metamodel::function::property::Property<Nil, Any|*>[*]
+{
+  $c.generalizations.general.rawType->filter(t|$t->instanceOf(meta::pure::bridge::m3::adapt(meta::pure::metamodel::type::Class)->cast(@meta::pure::metamodel::type::Class<Any>)))->map(t|$t->cast(@meta::pure::metamodel::type::Class<Any>)->usecases::reflection::allProperties())->concatenate($c.properties)->map(x: Any[1]|meta::pure::bridge::m3::adapt($x))->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>)
+}
+
+function usecases::reflection::isIgnored(p: meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]): Boolean[1]
+{
+  $p.stereotypes->exists(s|$s == meta::pure::bridge::m3::adapt(usecases::reflection::json)->cast(@meta::pure::metamodel::extension::Profile)->stereotype('ignore'))
+}
+
+function usecases::reflection::jsonName(p: meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]): String[1]
+{
+  let tagged = $p.taggedValues->filter(t|$t.tag == meta::pure::bridge::m3::adapt(usecases::reflection::json)->cast(@meta::pure::metamodel::extension::Profile)->tag('name')).value;
+  if($tagged->isEmpty(), {|$p.name->toOne()}, {|$tagged->toOne()});
+}
+
+function usecases::reflection::toJson(v: Any[1]): String[1]
+{
+  $v->match([s: String[1]|'"' + $s + '"', i: Integer[1]|$i->meta::pure::functions::string::toString(), b: Boolean[1]|$b->meta::pure::functions::string::toString(), e: Enum[1]|'"' + $e->meta::pure::functions::string::toString() + '"', a: Any[1]|$a->usecases::reflection::objectToJson()])
+}
+
+function usecases::reflection::objectToJson(o: Any[1]): String[1]
+{
+  let c = $o->meta::pure::functions::meta::type()->cast(@meta::pure::metamodel::type::Class<Any>);
+  let fields = $c->usecases::reflection::allProperties()->filter(p|$p.owner != meta::pure::bridge::m3::adapt(Any)->cast(@meta::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>) && !$p->usecases::reflection::isIgnored())->map({p|let values = $p->eval($o); let json = if($p.multiplicity->hasToOneUpperBound(), {|if($values->isEmpty(), {|'null'}, {|$values->toOne()->usecases::reflection::toJson()})}, {|$values->map(x|$x->usecases::reflection::toJson())->joinStrings('[', ',', ']')}); '"' + $p->usecases::reflection::jsonName() + '":' + $json;});
+  let derived = $c.qualifiedProperties->filter(q|meta::pure::bridge::m3::adapt($q)->cast(@meta::pure::metamodel::function::Function<Any>)->functionType().parameters->size() == 1)->map(q|'"' + $q.name->toOne() + '":' + $q->evaluate(list($o))->toOne()->usecases::reflection::toJson());
+  '{"@type":"' + $c->elementToPath() + '",' + $fields->concatenate($derived)->joinStrings(',') + '}';
+}
+
+function usecases::reflection::describe(v: meta::pure::metamodel::valuespecification::ValueSpecification[1]): String[1]
+{
+  $v->match([s: meta::pure::metamodel::valuespecification::SimpleFunctionExpression[1]|if($s.func->instanceOf(meta::pure::bridge::m3::adapt(meta::pure::metamodel::function::property::Property)->cast(@meta::pure::metamodel::type::Class<Any>)), {|$s.parametersValues->evaluateAndDeactivate()->at(0)->evaluateAndDeactivate()->usecases::reflection::describe() + '.' + $s.func->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>).name->toOne()}, {|$s.functionName->toOne() + '(' + $s.parametersValues->evaluateAndDeactivate()->map(p|$p->evaluateAndDeactivate()->usecases::reflection::describe())->joinStrings(', ') + ')'}), i: meta::pure::metamodel::valuespecification::InstanceValue[1]|$i.values->evaluateAndDeactivate()->map(x|$x->meta::pure::functions::string::toString())->joinStrings(','), x: meta::pure::metamodel::valuespecification::VariableExpression[1]|'$' + $x.name, a: meta::pure::metamodel::valuespecification::ValueSpecification[1]|'?'])
+}
+
+function usecases::reflection::describeQuery(f: platform::pure::metamodel::function::FunctionDefinition<{usecases::reflection::Person[1]->Boolean[1]}>[1]): String[1]
+{
+  meta::pure::bridge::m3::adapt($f)->cast(@meta::pure::metamodel::function::Function<Any>)->functionType().parameters->evaluateAndDeactivate().name->joinStrings(',') + ' -> ' + meta::pure::bridge::m3::adapt($f)->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>).expressionSequence->evaluateAndDeactivate()->toOne()->usecases::reflection::describe()
+}
+
+function usecases::reflection::select(people: usecases::reflection::Person[*], f: platform::pure::metamodel::function::FunctionDefinition<{usecases::reflection::Person[1]->Boolean[1]}>[1]): String[*]
+{
+  $people->filter(p|$f->eval($p))->map(p|$p.firstName)
+}
+
+function usecases::reflection::withChanged(o: Any[1], name: String[1], value: Any[*]): Any[1]
+{
+  let c = $o->meta::pure::functions::meta::type()->cast(@meta::pure::metamodel::type::Class<Any>);
+  $c->dynamicNew($c->usecases::reflection::allProperties()->map(p|^meta::pure::functions::lang::KeyValue(key=$p.name->toOne(), value=if($p.name == $name, {|$value}, {|$p->eval($o)}))));
+}
+
+function usecases::reflection::stringProperties(c: meta::pure::metamodel::type::Class<Any>[1]): String[*]
+{
+  $c->usecases::reflection::allProperties()->filter(p|$p.genericType.rawType == meta::pure::bridge::m3::adapt(String)->cast(@meta::pure::metamodel::type::PrimitiveType))->map(p|$p.name->toOne())
+}
+
+function usecases::reflection::ada(): usecases::reflection::Person[1]
+{
+  ^usecases::reflection::Person(id=1, firstName='Ada', lastName='Lovelace', nickNames=['a', 'al'], level=usecases::reflection::Level.SENIOR, salary=10.5, address=^usecases::reflection::Address(city='London'))
+}
+
+function usecases::reflection::bob(): usecases::reflection::Person[1]
+{
+  ^usecases::reflection::Person(id=2, firstName='Bob', lastName='Smith', level=usecases::reflection::Level.JUNIOR, salary=3.0)
+}
+
+function <<test.Test>> usecases::reflection::testInheritedPropertiesFirst(): Boolean[1]
+{
+  assertEquals(['classifierGenericType', 'elementOverride', 'id', 'firstName', 'lastName', 'nickNames', 'level', 'salary', 'address'], meta::pure::bridge::m3::adapt(usecases::reflection::Person)->cast(@meta::pure::metamodel::type::Class<usecases::reflection::Person>)->usecases::reflection::allProperties().name)
+}
+
+function <<test.Test>> usecases::reflection::testProfiles(): Boolean[1]
+{
+  let props = meta::pure::bridge::m3::adapt(usecases::reflection::Person)->cast(@meta::pure::metamodel::type::Class<usecases::reflection::Person>)->usecases::reflection::allProperties();
+  assertEquals(['salary'], $props->filter(p|$p->usecases::reflection::isIgnored()).name);
+  assertEquals(['classifierGenericType', 'elementOverride', 'id', 'first_name', 'lastName', 'nickNames', 'level', 'salary', 'address'], $props->map(p|$p->usecases::reflection::jsonName()));
+}
+
+function <<test.Test>> usecases::reflection::testJson(): Boolean[1]
+{
+  assertEquals('{"@type":"usecases::reflection::Person","id":1,"first_name":"Ada","lastName":"Lovelace","nickNames":["a","al"],"level":"SENIOR",' + '"address":{"@type":"usecases::reflection::Address","city":"London","zip":null},"fullName":"Ada Lovelace"}', usecases::reflection::ada()->usecases::reflection::toJson())
+}
+
+function <<test.Test>> usecases::reflection::testLambdaRunAndInspected(): Boolean[1]
+{
+  let q = {p: usecases::reflection::Person[1]|$p.level == usecases::reflection::Level.SENIOR};
+  assertEquals('p -> equal($p.level, extractEnumValue(Level, SENIOR))', $q->usecases::reflection::describeQuery());
+  assertEquals(['Ada'], [usecases::reflection::ada(), usecases::reflection::bob()]->usecases::reflection::select($q));
+}
+
+function <<test.Test>> usecases::reflection::testUntypedLambdaToALegacyFunction(): Boolean[1]
+{
+  assertEquals(['Bob'], [usecases::reflection::ada(), usecases::reflection::bob()]->usecases::reflection::select(p|$p.id > 1))
+}
+
+function <<test.Test>> usecases::reflection::testCopyByReflection(): Boolean[1]
+{
+  let copy = usecases::reflection::ada()->usecases::reflection::withChanged('firstName', 'Grace')->cast(@usecases::reflection::Person);
+  assertEquals('Grace', $copy.firstName);
+  assertEquals('Lovelace', $copy.lastName);
+  assertEquals('London', $copy.address.city);
+  assertEquals('Grace Lovelace', $copy.fullName);
+}
+
+function <<test.Test>> usecases::reflection::testMetamodelEquality(): Boolean[1]
+{
+  assertEquals(['firstName', 'lastName', 'nickNames'], meta::pure::bridge::m3::adapt(usecases::reflection::Person)->cast(@meta::pure::metamodel::type::Class<usecases::reflection::Person>)->usecases::reflection::stringProperties());
+  assert(usecases::reflection::ada()->meta::pure::functions::meta::type() == meta::pure::bridge::m3::adapt(usecases::reflection::Person)->cast(@meta::pure::metamodel::type::Class<usecases::reflection::Person>));
+  assert(usecases::reflection::Level.SENIOR->meta::pure::functions::meta::type() == meta::pure::bridge::m3::adapt(usecases::reflection::Level)->cast(@meta::pure::metamodel::type::Enumeration<usecases::reflection::Level>));
+}
+
+function <<test.Test>> usecases::reflection::testEnumeration(): Boolean[1]
+{
+  assertEquals(['JUNIOR', 'SENIOR'], meta::pure::bridge::m3::adapt(usecases::reflection::Level)->cast(@meta::pure::metamodel::type::Enumeration<usecases::reflection::Level>)->enumValues()->map(e|$e->meta::pure::functions::string::toString()));
+  assertEquals('usecases::reflection::Level', meta::pure::bridge::m3::adapt(usecases::reflection::Level)->cast(@meta::pure::metamodel::type::Enumeration<usecases::reflection::Level>)->elementToPath());
+}
+
+function usecases::reflection::firstStep(f: platform::pure::metamodel::function::FunctionDefinition<{usecases::reflection::Person[1]->Any[*]}>[1]): meta::pure::metamodel::valuespecification::SimpleFunctionExpression[1]
+{
+  meta::pure::bridge::m3::adapt(meta::pure::bridge::m3::adapt($f)->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>).expressionSequence->evaluateAndDeactivate()->toOne()->cast(@meta::pure::metamodel::valuespecification::SimpleFunctionExpression))->cast(@meta::pure::metamodel::valuespecification::SimpleFunctionExpression)
+}
+
+function <<test.Test>> usecases::reflection::testHowACallIsNamed(): Boolean[1]
+{
+  let access = {p: usecases::reflection::Person[1]|$p.firstName}->usecases::reflection::firstStep();
+  assertEmpty($access.functionName);
+  assertEquals('firstName', $access.propertyName->toOne()->evaluateAndDeactivate().values->toOne());
+  assertEmpty($access.qualifiedPropertyName);
+  let qualified = {p: usecases::reflection::Person[1]|$p.fullName}->usecases::reflection::firstStep();
+  assertEmpty($qualified.functionName);
+  assertEmpty($qualified.propertyName);
+  assertEquals('fullName', $qualified.qualifiedPropertyName->toOne()->evaluateAndDeactivate().values->toOne());
+  let call = {p: usecases::reflection::Person[1]|$p.firstName->toUpper()}->usecases::reflection::firstStep();
+  assertEquals('toUpper', $call.functionName);
+  assertEmpty($call.propertyName);
+  assertEmpty($call.originalMilestonedProperty);
+}

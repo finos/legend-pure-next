@@ -42,7 +42,7 @@ public class IONatives
         // `println` in pure spec) can compose without recomputing. Flush after
         // print so `\r`-based progress updates display immediately on
         // line-buffered terminals.
-        natives.put("print_Any_MANY__Integer_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::io::print_Any_MANY__Integer_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             Object val = _E_ValueSpecification.unwrap(args.get(0));
             String s = PureValuePrinter.printForOutput(val);
@@ -60,7 +60,7 @@ public class IONatives
         // this so Pure {@code print} calls inside tests don't pollute stdout
         // while the runner's own progress prints (called outside) remain
         // visible.
-        natives.put("withSilencedPrint_Function_1__T_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::io::withSilencedPrint_Function_1__T_m_", (args, eval, genericType, multiplicity) ->
         {
             Boolean prev = SILENCED.get();
             SILENCED.set(Boolean.TRUE);

@@ -15,6 +15,8 @@
 
 package org.finos.legend.pure.m3.helper;
 
+import platform.pure.metamodel.type.generics.TypeParameter;
+import org.eclipse.collections.api.set.MutableSet;
 import platform.pure.metamodel.function.property.Property;
 import platform.pure.metamodel.type.Class;
 import platform.pure.metamodel.type.generics.GenericType;
@@ -194,14 +196,18 @@ public class _GenericTypeTest
         GenericType intGT = getPropGT("intProp");
         assertTrue(_GenericType.isConcreteInContext(intGT, Sets.mutable.empty()));
 
+        // the scope as the compiler has it: the scope keys of the class's own type parameters
+        MutableSet<String> classScope = _GenericType.scopeKeysOf(myClass._typeParameters().collect(TypeParameter::_owner), myClass._typeParameters().collect(TypeParameter::_name));
         GenericType tpGT = getMyClassTpGT();
-        assertTrue(_GenericType.isConcreteInContext(tpGT, Sets.mutable.with("T")));
+        assertTrue(_GenericType.isConcreteInContext(tpGT, classScope));
         assertFalse(_GenericType.isConcreteInContext(tpGT, Sets.mutable.empty()));
         assertFalse(_GenericType.isConcreteInContext(tpGT, Sets.mutable.with("V")));
+        // another owner's T, named like the class's, is not in its scope
+        assertFalse(_GenericType.isConcreteInContext(tpGT, Sets.mutable.with(_GenericType.scopeKey(new Object(), "T"))));
 
         Property nProp = myClass._properties().detect(p -> "nestedTpProp".equals(p._name()));
         GenericType nestedTpProp = nProp._genericType();
-        assertTrue(_GenericType.isConcreteInContext(nestedTpProp, Sets.mutable.with("T")));
+        assertTrue(_GenericType.isConcreteInContext(nestedTpProp, classScope));
         assertFalse(_GenericType.isConcreteInContext(nestedTpProp, Sets.mutable.empty()));
     }
 

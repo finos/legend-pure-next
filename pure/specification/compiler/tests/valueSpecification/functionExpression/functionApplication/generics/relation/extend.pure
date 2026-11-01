@@ -53,7 +53,7 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:@String@[1], other:@Integer@[
                 Variable p :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#  ~@VariableExpression@  @24:38-24:39
                 Variable r :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#  ~@VariableExpression@  @24:46-24:47
               Lambda(v_automap:#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]) :#LambdaFunction<#{#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
-                DotApplication legal :#String##[1]#  ~@DotApplication@  @24:49-24:54
+                DotApplication column legal :#String##[1]#  ~@DotApplication@  @24:49-24:54
                   Variable v_automap :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#  ~@VariableExpression@
           AtomicValue  'w' :@String@[1]  ~@AtomicValue@  @24:67-24:69
       AtomicValue  'new' :@String@[1]  ~@AtomicValue@  @24:23-24:25

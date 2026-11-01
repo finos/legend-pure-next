@@ -598,7 +598,7 @@ public class ValueSpecificationEvaluator
 
                 case NativeFunction nf ->
                 {
-                    Object resolved = natives.resolve(nf._name());
+                    Object resolved = natives.resolve(natives.id(nf));
                     yield natives.isLazyResolved(resolved)
                             ? natives.invokeLazy(resolved, fe, this)
                             : natives.invokeEager(resolved, evaluateArgs(fe), this,
@@ -788,6 +788,80 @@ public class ValueSpecificationEvaluator
         return staticQP;
     }
 
+    /**
+     * rawEvalProperty(property, object): what the object holds for the property — its stored values, empty
+     * when it was not given any — never a computed default.
+     */
+    public ValueSpecification rawEvalProperty(ValueSpecification propertyVs, ValueSpecification objectVs,
+                                              GenericType genericType, platform.pure.metamodel.multiplicity.Multiplicity multiplicity)
+    {
+        Object property = _E_ValueSpecification.unwrap(propertyVs);
+        String name = ((platform.pure.metamodel.function.property.Property) property)._name();
+        Object object = _E_ValueSpecification.unwrap(objectVs);
+        Object stored;
+        if (object instanceof DynamicInstance di)
+        {
+            stored = di.hasProperty(name) ? di.get(name) : null;
+        }
+        else
+        {
+            // A metamodel object: its accessor returns what it holds (they apply no defaults).
+            Object read = object == null ? PROPERTY_NOT_FOUND : reflectivePropertyGet(object, name);
+            stored = read == PROPERTY_NOT_FOUND ? null : read;
+        }
+        return _E_ValueSpecification.wrap(stored == null ? org.eclipse.collections.api.factory.Lists.mutable.empty() : stored,
+                genericType, multiplicity, this.natives.resolver());
+    }
+
+    /** The default value of `className`'s property `propertyName`, inherited ones included, or null. */
+    private platform.pure.metamodel.function.LambdaFunction defaultValueOf(String className, String propertyName)
+    {
+        Object element = this.natives.resolver().getElement(className);
+        if (!(element instanceof platform.pure.metamodel.type.Class))
+        {
+            return null;
+        }
+        return _Type.linearize((platform.pure.metamodel.type.Type) element, this.natives.resolver())
+                .asLazy()
+                .selectInstancesOf(platform.pure.metamodel.type.Class.class)
+                .select(cls -> cls._properties() != null)
+                .flatCollect(platform.pure.metamodel.type.Class::_properties)
+                .detectOptional(property -> propertyName.equals(property._name()))
+                .map(property -> property._defaultValue() instanceof platform.pure.metamodel.function.LambdaFunction lambda ? lambda : null)
+                .orElse(null);
+    }
+
+    // The defaults being computed, per object: one met again is a default that needs its own value.
+    private final org.eclipse.collections.api.map.MutableMap<Object, org.eclipse.collections.api.set.MutableSet<String>> computingDefaults =
+            org.eclipse.collections.impl.factory.HashingStrategyMaps.mutable.of(org.eclipse.collections.impl.block.factory.HashingStrategies.identityStrategy());
+
+    /**
+     * A default value, computed for the object `di` (`thisVs`): the default is a function of that object
+     * ({Owner[1]->V[1]}), so it is called with it. A default that needs its own value is an error
+     * (testNewDefaultValueCycleIsAnError).
+     */
+    private ValueSpecification evaluateDefaultValue(platform.pure.metamodel.function.LambdaFunction defaultValue, Object object,
+                                                    String classPath, String propertyName, ValueSpecification thisVs)
+    {
+        org.eclipse.collections.api.set.MutableSet<String> computing = computingDefaults.getIfAbsentPut(object, org.eclipse.collections.api.factory.Sets.mutable::empty);
+        if (!computing.add(propertyName))
+        {
+            throw new RuntimeException("default value cycle: " + classPath + "." + propertyName + " is already being computed for this object");
+        }
+        try
+        {
+            return evaluateFunctionDefinition(defaultValue, org.eclipse.collections.api.factory.Lists.mutable.with(thisVs));
+        }
+        finally
+        {
+            computing.remove(propertyName);
+            if (computing.isEmpty())
+            {
+                computingDefaults.remove(object);
+            }
+        }
+    }
+
     private static final Object PROPERTY_NOT_FOUND = new Object();
     private static final Map<Class<?>, Map<String, Method>> METHOD_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -805,6 +879,16 @@ public class ValueSpecificationEvaluator
         // DynamicInstance (from 'new' function) — property access via map
         if (target instanceof DynamicInstance di)
         {
+            // An unset property with a default value: the default, computed now against this object.
+            // Never stored — a copy holds only what was set, and recomputes (testCopyKeepsDefaultValues).
+            if (!di.hasProperty(propertyName) && !"classifierGenericType".equals(propertyName))
+            {
+                platform.pure.metamodel.function.LambdaFunction defaultValue = defaultValueOf(di.getClassPath(), propertyName);
+                if (defaultValue != null)
+                {
+                    return evaluateDefaultValue(defaultValue, di, di.getClassPath(), propertyName, targetVs);
+                }
+            }
             Object propertyValueRaw = "classifierGenericType".equals(propertyName) ? di.getClassifierGenericType() : di.get(propertyName);
             return _E_ValueSpecification.wrap(propertyValueRaw, genericType, multiplicity, this.natives.resolver());
         }
@@ -836,6 +920,21 @@ public class ValueSpecificationEvaluator
                         result = av._value();
                     }
                 }
+            }
+        }
+
+        // A metamodel object that holds nothing for the property: its class's default, if any, computed now —
+        // as for any object (testUnsetDefaultedPropertyIsWrittenAbsent reads TypeParameter.contravariant).
+        if ((result == null || (result instanceof java.util.Collection<?> c && c.isEmpty()))
+                && effectiveTarget instanceof platform.pure.metamodel.type.Any metamodelObject
+                && metamodelObject._classifierGenericType() != null
+                && _GenericType.type(metamodelObject._classifierGenericType()) instanceof platform.pure.metamodel.PackageableElement ownerType)
+        {
+            String classPath = org.finos.legend.pure.execution.natives.meta.ElementPathNatives.elementToPathString(ownerType, "::");
+            platform.pure.metamodel.function.LambdaFunction defaultValue = defaultValueOf(classPath, propertyName);
+            if (defaultValue != null)
+            {
+                return evaluateDefaultValue(defaultValue, metamodelObject, classPath, propertyName, targetVs);
             }
         }
 
@@ -1048,19 +1147,79 @@ public class ValueSpecificationEvaluator
         for (int i = 0; i < n; i++)
         {
             VariableExpression p = params.get(i);
-            if (p == null || p._genericType() == null) continue;
-            platform.pure.metamodel.type.Type pType = _GenericType.type(p._genericType());
-            if (!(pType instanceof platform.pure.metamodel.type.generics.TypeParameter tp)) continue;
-            String tvName = tp._name();
-            if (tvName == null || tvName.isEmpty()) continue;
             ValueSpecification a = args.get(i);
-            if (a == null || a._genericType() == null) continue;
-            platform.pure.metamodel.type.Type resolved = _GenericType.type(a._genericType());
-            if (resolved == null) continue;
+            if (p == null || p._genericType() == null || a == null || a._genericType() == null) continue;
             if (bindings == null) bindings = new java.util.HashMap<>(n);
-            bindings.put(tvName, resolved);
+            bindTypeVariables(p._genericType(), a._genericType(), bindings);
         }
         return bindings;
+    }
+
+    /**
+     * Binds the type parameters in a declared type to what stands in their place in the actual type: T in
+     * `x: T[1]` to the argument's type, and T in `b: Box<T>[1]` — a default's or a qualified property's
+     * `this` — to the argument's type argument, seen as that raw type when it is a subtype: a StringBox
+     * (extends Box<String>) binds T to String (testNewDefaultValueBindsTheClassTypeParameters,
+     * testNewInheritedDefaultValueBindsTheParentTypeParameters).
+     */
+    private void bindTypeVariables(platform.pure.metamodel.type.generics.GenericType declared,
+                                   platform.pure.metamodel.type.generics.GenericType actual,
+                                   java.util.Map<String, Object> bindings)
+    {
+        if (declared == null || actual == null)
+        {
+            return;
+        }
+        platform.pure.metamodel.type.Type declaredType = _GenericType.type(declared);
+        platform.pure.metamodel.type.Type actualType = _GenericType.type(actual);
+        if (declaredType == null || actualType == null)
+        {
+            return;
+        }
+        if (declaredType instanceof platform.pure.metamodel.type.generics.TypeParameter tp)
+        {
+            if (tp._name() != null && !tp._name().isEmpty())
+            {
+                bindings.put(tp._name(), actualType);
+            }
+            return;
+        }
+        platform.pure.metamodel.type.generics.GenericType seen = declaredType == actualType ? actual : asAncestor(actual, declaredType);
+        if (!(declared instanceof platform.pure.metamodel.type.generics.GenericTypeValue d)
+                || !(seen instanceof platform.pure.metamodel.type.generics.GenericTypeValue av)
+                || d._typeArguments() == null || av._typeArguments() == null)
+        {
+            return;
+        }
+        d._typeArguments().zip(av._typeArguments()).forEach(pair -> bindTypeVariables(pair.getOne(), pair.getTwo(), bindings));
+    }
+
+    /**
+     * `actual` seen as its ancestor `ancestor`: a StringBox as Box<String>, a RenamedBox<Integer> (extends
+     * Box<U>) as Box<Integer> — its generalizations walked up, each parent's type arguments made concrete with
+     * the ones below. Null when `ancestor` is not one of its supertypes.
+     */
+    private platform.pure.metamodel.type.generics.GenericType asAncestor(platform.pure.metamodel.type.generics.GenericType actual,
+                                                                       platform.pure.metamodel.type.Type ancestor)
+    {
+        platform.pure.metamodel.type.Type type = actual == null ? null : _GenericType.type(actual);
+        if (type == ancestor)
+        {
+            return actual;
+        }
+        if (!(type instanceof platform.pure.metamodel.type.Class cls) || cls._generalizations() == null)
+        {
+            return null;
+        }
+        org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding typeBindings =
+                org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
+        if (cls._typeParameters() != null && actual instanceof platform.pure.metamodel.type.generics.GenericTypeValue v && v._typeArguments() != null)
+        {
+            cls._typeParameters().zip(v._typeArguments()).forEach(pair -> typeBindings.addTypeBinding(pair.getOne(), pair.getTwo()));
+        }
+        return cls._generalizations().asLazy()
+                .collect(g -> asAncestor(_GenericType.makeAsConcreteAsPossible(g._general(), typeBindings, this.natives.resolver()), ancestor))
+                .detect(java.util.Objects::nonNull);
     }
 
     /**
@@ -1110,8 +1269,7 @@ public class ValueSpecificationEvaluator
             case FunctionDefinition fd -> evaluateFunctionDefinition(fd, args);
             case NativeFunction nf ->
             {
-                String signature = nf._name();
-                yield natives.execute(signature, args, this, nf._returnGenericType(), nf._returnMultiplicity());
+                yield natives.execute(natives.id(nf), args, this, nf._returnGenericType(), nf._returnMultiplicity());
             }
             case platform.pure.metamodel.function.property.AbstractProperty prop ->
             {

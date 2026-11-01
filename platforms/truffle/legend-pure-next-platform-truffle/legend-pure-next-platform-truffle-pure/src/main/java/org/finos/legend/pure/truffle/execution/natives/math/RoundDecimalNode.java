@@ -44,6 +44,14 @@ public final class RoundDecimalNode extends PureNode
     {
         Object v = value.executeGeneric(frame);
         int s = (int) IntegerHelper.asLong(scale.executeGeneric(frame), SIG);
+        return round(v, s);
+    }
+
+    // BigDecimal.setScale reaches BigInteger.squareKaratsuba, which is genuinely recursive:
+    // without a boundary Graal bails out with `Too deep inlining` (see RoundNumberNode).
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static BigDecimal round(Object v, int s)
+    {
         BigDecimal bd;
         if (v instanceof BigDecimal d)
         {

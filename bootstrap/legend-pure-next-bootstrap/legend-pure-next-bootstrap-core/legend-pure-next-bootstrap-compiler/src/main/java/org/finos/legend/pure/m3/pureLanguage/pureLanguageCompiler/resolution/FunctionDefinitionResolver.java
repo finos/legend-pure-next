@@ -24,6 +24,7 @@ import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.EnclosingOwnerParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
@@ -59,7 +60,16 @@ public class FunctionDefinitionResolver
         {
             // pushScope copies, so addToCurrentScope (from registerLetVariable) won't
             // mutate the original funcDef._parameters() list.
-            funcDef._expressionSequence(resolveExpressionSequence(funcDef._expressionSequence(), model, context));
+            // What one statement binds the enclosing owner's parameters to is that statement's own.
+            EnclosingOwnerParametersBinding enclosing = context.compilerContextExtensions(PureLanguageCompilerContext.class).enclosingBindings();
+            funcDef._expressionSequence(funcDef._expressionSequence().collect(vs ->
+            {
+                if (enclosing != null)
+                {
+                    enclosing.clear();
+                }
+                return ValueSpecificationResolver.resolve(vs, model, context);
+            }));
 
             // Validate return type and multiplicity of the last expression.
             // Skip if unresolved (null) — the real error was reported during resolution.

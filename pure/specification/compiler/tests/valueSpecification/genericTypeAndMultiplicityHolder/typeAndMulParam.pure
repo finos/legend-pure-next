@@ -19,7 +19,7 @@ function test::run<T|m>(witness: T[m], probe: Any[*]): T[m]
 }
 
 ###CompiledGraph
-function test::run_T_m__Any_MANY__T_m_(witness:T~test::run_T_m__Any_MANY__T_m_[m], probe:@Any@[*]):T~test::run_T_m__Any_MANY__T_m_[m]  ~UserDefinedFunction<{T~test::run_T_m__Any_MANY__T_m_[m], @Any@[*]->T~test::run_T_m__Any_MANY__T_m_[m]}>
+function test::run_T_m__Any_MANY__T_m_(witness:T~test::run_T_m__Any_MANY__T_m_[m~test::run_T_m__Any_MANY__T_m_], probe:@Any@[*]):T~test::run_T_m__Any_MANY__T_m_[m~test::run_T_m__Any_MANY__T_m_]  ~UserDefinedFunction<{T~test::run_T_m__Any_MANY__T_m_[m~test::run_T_m__Any_MANY__T_m_], @Any@[*]->T~test::run_T_m__Any_MANY__T_m_[m~test::run_T_m__Any_MANY__T_m_]}>
   ArrowInvocation cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_ :#T~test::run_T_m__Any_MANY__T_m_##[m]#  ~@ArrowInvocation@  @18:9-18:20
     typeParam T -> T~test::run_T_m__Any_MANY__T_m_
     mulParam m -> [m]

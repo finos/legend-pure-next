@@ -1,0 +1,7 @@
+###Pure
+function protocol::rangeOfExpressions(n: Integer[1]): Any[*]
+{
+  [:$n];
+  range($n - 1);
+  range(1, $n + 1);
+}

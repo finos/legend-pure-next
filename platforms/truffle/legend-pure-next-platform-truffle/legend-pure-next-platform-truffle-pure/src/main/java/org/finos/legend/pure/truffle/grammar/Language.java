@@ -51,6 +51,10 @@ import org.eclipse.collections.api.map.MapIterable;
  *                          generated from its metamodel (pdb/fbsgen) for an extension — or null when its
  *                          compiled elements have no PDB form. Shipped next to the manifest (`fbs` names
  *                          it); the host's schema is every language's, the always-active ones first.
+ * @param natives           this platform's implementations of the natives the language's module declares, or
+ *                          null when it declares none. The platform's, not the manifest's: a native's body is
+ *                          each host's own, so it is set in code by the module installing the language
+ *                          ({@link #withNatives}), never read from {@code language_*.json}.
  */
 public record Language(
         String name,
@@ -59,8 +63,18 @@ public record Language(
         String sectionParsers,
         String compilerExtension,
         GrammarExtension grammar,
-        String fbsText)
+        String fbsText,
+        org.finos.legend.pure.truffle.execution.natives.NativesExtension natives)
 {
+    /**
+     * This language with its natives on this platform — what the module installing an extension adds to
+     * the manifest it read.
+     */
+    public Language withNatives(org.finos.legend.pure.truffle.execution.natives.NativesExtension natives)
+    {
+        return new Language(name, module, pdbs, sectionParsers, compilerExtension, grammar, fbsText, natives);
+    }
+
     /**
      * Always active: the language has no module to wait for, so its halves are never guarded into
      * silence — true for {@code ###Pure} alone, whose manifest is the one with no {@code module}.
@@ -127,7 +141,8 @@ public record Language(
                         required(Json.string(grammar, "parser"), "grammar.parser", source),
                         required(Json.string(grammar, "entryRule"), "grammar.entryRule", source),
                         name),
-                fbsText(Json.string(json, "fbs"), source, name, loader));
+                fbsText(Json.string(json, "fbs"), source, name, loader),
+                null);
     }
 
     /**

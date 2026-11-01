@@ -231,15 +231,16 @@ function <<test.TestDependency>> platform::extensions::language::java::translati
 // `(file.pure:61c7)` on a stack frame.
 //
 // ONE TABLE PER JAVA FILE, `Foo.java` -> `Foo.java.pos`, each row
-// `<javaLine>\t<sourceId>:<line>:<column>`. Not one shared table: a shared file
+// `<javaLine>\t<sourceId>:<line>:<column>\t<lambdaDepth>`. Not one shared table: a shared file
 // is written by every recipe that emits classes, so the last one to run
 // truncates the others' rows. Per file, a table is written by whichever recipe
 // writes its class, with the same overwrite semantics as the class itself, so
 // the two can never disagree — and the runtime reads one small resource for a
 // frame instead of parsing every class's rows to use one.
 //
-// Only the FIRST marker on a physical line is kept: a frame reports one
-// position, and the leftmost marker is the outermost call on that line.
+// EVERY marker on a physical line is kept, left to right, with how many lambda bodies it sits in: a line can hold
+// a call taking a lambda and the lambda's body, which run in different Java methods (`execute`, `lambda$…`). A frame
+// reports one position — PureStack takes the outermost for a method's frame, the deepest for a lambda's.
 function platform::extensions::language::java::translation::positionFileSuffix(): String[1]
 {
    '.pos'
@@ -272,7 +273,11 @@ function <<access.private>> platform::extensions::language::java::translation::p
    // is Java line 1 — the same numbering a StackTraceElement reports.
    let rows = range($content->size())
       ->filter(i | $content->at($i)->contains($open))
-      ->map(i | ($i + 1)->toString() + '\t' + $content->at($i)->split($open)->at(1)->split('*/')->at(0) + '\n')
+      ->map(i | $content->at($i)->split($open)->tail()->map(m |
+           let marker = $m->split('*/')->at(0);
+           let at     = $marker->indexOf('@');
+           ($i + 1)->toString() + '\t' + $marker->substring($at + 1) + '\t' + $marker->substring(0, $at) + '\n';
+        )->joinStrings(''))
       ->joinStrings('');
    if ($rows == '',
       | '',

@@ -32,45 +32,45 @@ public final class DateNodeFactories
 
     public static void registerAll(NativeRegistry registry)
     {
-        registry.register("year_Date_1__Integer_1_",
+        registry.register("platform::pure::functions::date::year_Date_1__Integer_1_",
                 (args, gt, mul, fe) -> new DateComponentNode(args[0],
                         "year_Date_1__Integer_1_", LocalDateTime::getYear));
 
-        registry.register("monthNumber_Date_1__Integer_1_",
+        registry.register("platform::pure::functions::date::monthNumber_Date_1__Integer_1_",
                 (args, gt, mul, fe) -> new DateComponentNode(args[0],
                         "monthNumber_Date_1__Integer_1_", LocalDateTime::getMonthValue));
 
-        registry.register("dayOfMonth_Date_1__Integer_1_",
+        registry.register("platform::pure::functions::date::dayOfMonth_Date_1__Integer_1_",
                 (args, gt, mul, fe) -> new DateComponentNode(args[0],
                         "dayOfMonth_Date_1__Integer_1_", LocalDateTime::getDayOfMonth));
 
-        registry.register("hour_DateTime_1__Integer_1_",
+        registry.register("platform::pure::functions::date::hour_DateTime_1__Integer_1_",
                 (args, gt, mul, fe) -> new DateComponentNode(args[0],
                         "hour_DateTime_1__Integer_1_", LocalDateTime::getHour));
 
-        registry.register("minute_DateTime_1__Integer_1_",
+        registry.register("platform::pure::functions::date::minute_DateTime_1__Integer_1_",
                 (args, gt, mul, fe) -> new DateComponentNode(args[0],
                         "minute_DateTime_1__Integer_1_", LocalDateTime::getMinute));
 
-        registry.register("second_DateTime_1__Integer_1_",
+        registry.register("platform::pure::functions::date::second_DateTime_1__Integer_1_",
                 (args, gt, mul, fe) -> new DateComponentNode(args[0],
                         "second_DateTime_1__Integer_1_", LocalDateTime::getSecond));
 
-        registry.register("millis_DateTime_1__Integer_1_",
+        registry.register("platform::pure::functions::date::millis_DateTime_1__Integer_1_",
                 (args, gt, mul, fe) -> new DateComponentNode(args[0],
                         "millis_DateTime_1__Integer_1_",
                         ldt -> ldt.getNano() / 1_000_000));
 
-        registry.register("datePart_Date_1__StrictDate_1_",
+        registry.register("platform::pure::functions::date::datePart_Date_1__StrictDate_1_",
                 (args, gt, mul, fe) -> new DatePartNode(args[0], gt, mul));
 
-        registry.register("dateDiff_Date_1__Date_1__DurationUnit_1__Integer_1_",
+        registry.register("platform::pure::functions::date::dateDiff_Date_1__Date_1__DurationUnit_1__Integer_1_",
                 (args, gt, mul, fe) -> new DateDiffNode(args[0], args[1], args[2]));
 
-        registry.register("adjust_Date_1__Integer_1__DurationUnit_1__Date_1_",
+        registry.register("platform::pure::functions::date::adjust_Date_1__Integer_1__DurationUnit_1__Date_1_",
                 (args, gt, mul, fe) -> new AdjustDateNode(args[0], args[1], args[2]));
 
-        registry.register("currentTimeMillis__Integer_1_",
+        registry.register("platform::pure::functions::date::currentTimeMillis__Integer_1_",
                 (args, gt, mul, fe) -> new CurrentTimeMillisNode());
     }
 }

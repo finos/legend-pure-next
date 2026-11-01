@@ -117,17 +117,52 @@ public final class InterpretedExecution implements Execution
                     throw new IllegalStateException("withNatives(registry) takes a fully built NativeRegistry: "
                             + "the runtime's language/grammar extensions and withNativeExtensions would be ignored");
                 }
-                return new InterpretedExecution(context.registry(), this.natives);
+                return new InterpretedExecution(context.registry(), checked(this.natives, context.registry()));
             }
             // M3 + Top grammars are auto-registered by NativeRegistry if not
             // explicitly provided; see NativeRegistry's private constructor.
-            return new InterpretedExecution(context.registry(), NativeRegistry.builder()
+            return new InterpretedExecution(context.registry(), checked(NativeRegistry.builder()
                     .withResolver(context.registry())
                     .withParserExtensions(context.languageExtensions())
                     .withGrammarExtensions(context.grammarExtensions())
                     .withCompilation(context.compilation())
                     .withNativeExtensions(this.nativeExtensions)
-                    .build());
+                    .build(), context.registry()));
+        }
+
+        /**
+         * The natives against what the loaded modules declare, keyed by full id: every native a loaded module
+         * declares is implemented here, and no entry is for an element that is not a native — a function written
+         * in Pure is never replaced. An entry for an element no loaded module has is inert: its module is not
+         * loaded. Only a registry that knows its modules is checked.
+         */
+        private static NativeRegistry checked(NativeRegistry natives, org.finos.legend.pure.m3.module.MetadataAccess registry)
+        {
+            org.eclipse.collections.api.list.MutableList<org.finos.legend.pure.m3.module.Module> modules =
+                    registry instanceof org.finos.legend.pure.m3.module.ModuleRegistry r ? org.eclipse.collections.impl.factory.Lists.mutable.withAll(r.modules())
+                    : registry instanceof org.finos.legend.pure.m3.module.ScopedMetadataAccess s ? s.modules()
+                    : null;
+            if (modules == null)
+            {
+                return natives;
+            }
+            org.eclipse.collections.api.set.SetIterable<String> ids = natives.ids();
+            org.eclipse.collections.api.list.MutableList<String> missing = modules
+                    .flatCollect(module -> org.eclipse.collections.impl.factory.Sets.adapt(module.elementPaths()).select(module::isNativeFunction))
+                    .reject(id -> ids.contains(id) || NativeRegistry.NOT_ON_THIS_PLATFORM.containsKey(id))
+                    .distinct().sortThis();
+            org.eclipse.collections.api.list.MutableList<String> listedAsMissing = ids.select(NativeRegistry.NOT_ON_THIS_PLATFORM::containsKey).toSortedList();
+            org.eclipse.collections.api.list.MutableList<String> notNatives = ids
+                    .select(id -> registry.hasElement(id) && modules.noneSatisfy(module -> module.isNativeFunction(id)))
+                    .toSortedList();
+            if (missing.notEmpty() || notNatives.notEmpty() || listedAsMissing.notEmpty())
+            {
+                throw new IllegalStateException("the natives on the bootstrap do not match the loaded modules"
+                        + (missing.isEmpty() ? "" : "; declared but not implemented: " + missing.makeString(", "))
+                        + (listedAsMissing.isEmpty() ? "" : "; implemented but listed as not on this platform: " + listedAsMissing.makeString(", "))
+                        + (notNatives.isEmpty() ? "" : "; implemented but not natives (a function written in Pure is never replaced): " + notNatives.makeString(", ")));
+            }
+            return natives;
         }
     }
 }

@@ -1,5 +1,22 @@
 {
   "_comment": "Legacy (legend-pure) m3 class -> how it is laid over next's metamodel. 'wraps': next classes it stands for (the first is the one _next is read as); 'abstract': a wrapper mixin with no next counterpart; 'legacyOnly': a plain class with stored properties; 'alias': the next element itself, no wrapper. 'path' relocates a class (legacy Package is root-level). Next paths are relative to platform::pure::metamodel.",
+  "_pendingComment": "Legacy properties with no value yet: each reads as a stub failing with 'not bridged'. The generator fails on a property with no value that is not listed here, and on a listed one that has a value: give each an override in code/m3/overrides.pure (or a shape) and take it off.",
+  "pendingProperties": [
+    "Annotation_modelElements",
+    "ConstraintsOverride_constraintsManager",
+    "FunctionExpression_importGroup",
+    "FunctionType_function",
+    "FunctionType_multiplicityParameters",
+    "FunctionType_typeParameters",
+    "GetterOverride_getterOverrideToMany",
+    "GetterOverride_getterOverrideToOne",
+    "GetterOverride_hiddenPayload",
+    "Test_id",
+    "Test_testable",
+    "Testable_tests",
+    "Type_specializations",
+    "VariableExpression_functionTypeOwner"
+  ],
   "classes": {
     "meta::pure::metamodel::type::Any": { "alias": "type::Any" },
     "meta::pure::metamodel::type::Nil": { "alias": "type::Nil" },
@@ -9,7 +26,7 @@
     "meta::pure::metamodel::type::DataType": { "wraps": ["type::DataType"] },
     "meta::pure::metamodel::type::PrimitiveType": { "wraps": ["type::PrimitiveType"] },
     "meta::pure::metamodel::type::Enumeration": { "wraps": ["type::Enumeration"] },
-    "meta::pure::metamodel::type::Enum": { "wraps": ["type::Enum"] },
+    "meta::pure::metamodel::type::Enum": { "alias": "type::Enum" },
     "meta::pure::metamodel::type::FunctionType": { "wraps": ["type::FunctionType"] },
     "meta::pure::metamodel::type::ElementOverride": { "wraps": ["type::ElementOverride"] },
     "meta::pure::metamodel::type::GetterOverride": { "wraps": ["type::GetterOverride"] },
@@ -94,8 +111,8 @@
 
     "meta::pure::metamodel::relation::GenericTypeOperation": { "wraps": ["relation::GenericTypeOperation"] },
     "meta::pure::metamodel::relation::RelationType": { "wraps": ["relation::RelationType"] },
-    "meta::pure::metamodel::relation::Relation": { "wraps": ["relation::Relation"] },
-    "meta::pure::metamodel::relation::RelationElementAccessor": { "wraps": ["relation::RelationElementAccessor"] },
+    "meta::pure::metamodel::relation::Relation": { "alias": "relation::Relation" },
+    "meta::pure::metamodel::relation::RelationElementAccessor": { "legacyOnly": true },
     "meta::pure::metamodel::relation::Column": { "wraps": ["relation::Column"] }
   },
   "_typesComment": "Legacy non-class types used in property signatures, resolved to next elements (primitives and enumerations are shared, not wrapped).",

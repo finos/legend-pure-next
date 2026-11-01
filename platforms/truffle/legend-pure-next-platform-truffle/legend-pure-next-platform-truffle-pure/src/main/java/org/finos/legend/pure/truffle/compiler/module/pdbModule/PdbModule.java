@@ -214,6 +214,13 @@ public final class PdbModule implements Module
         return "Package".equals(archive.getElementType(path));
     }
 
+    /** From the archive's entry name ({@code elements/<path>.NativeFunction}): nothing is decoded. */
+    @Override
+    public boolean isNativeFunction(String path)
+    {
+        return "NativeFunction".equals(archive.getElementType(path));
+    }
+
     @Override
     public TruffleTypeCache typeCache()
     {

@@ -53,4 +53,14 @@ public class EnclosingOwnerParametersBinding extends ParametersBinding
         typeBindings.computeIfAbsent(typeParam._name(),
                 k -> org.eclipse.collections.impl.factory.Lists.mutable.empty()).add(argGT);
     }
+
+    /**
+     * Forgets the bindings: what one statement of the owner's body binds its parameters to is that
+     * statement's own, not the next one's.
+     */
+    public void clear()
+    {
+        typeBindings.clear();
+        multiplicityBindings.clear();
+    }
 }

@@ -144,8 +144,8 @@ public class FunctionApplicationResolver
                     if (preResolvePlcc == null)
                     {
                         preResolvePlcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
-                        preResolveScopeTypeParams = preResolvePlcc.inScopeTypeParamNames();
-                        preResolveScopeMulParams = preResolvePlcc.inScopeMultiplicityParamNames();
+                        preResolveScopeTypeParams = preResolvePlcc.inScopeTypeParamKeys();
+                        preResolveScopeMulParams = preResolvePlcc.inScopeMultiplicityParamKeys();
                     }
                     boolean isSurfaceResolved = (resolved instanceof FunctionExpression fe)
                             && fe._func() != null
@@ -160,8 +160,10 @@ public class FunctionApplicationResolver
             FunctionApplication preResolvedExpr = (FunctionApplication)
                     ((FunctionApplication) expr._copy())._parametersValues(preResolvedParams);
 
-            // Multiple candidates — sort most-specific-first, then try each with rollback.
-            candidates.sortThis(FunctionIndexEntry.mostSpecificFirst(model));
+            // Multiple candidates — sort most-specific-first against the arguments (a parameter's multiplicity
+            // ranked against its argument's), then try each with rollback.
+            candidates = fittingKinds(candidates, preResolvedParams, model);
+            candidates.sortThis(FunctionIndexEntry.mostSpecificFirst(model, preResolvedParams.collect(ValueSpecification::_multiplicity)));
             MutableList<CompilationError> bestCandidateErrors = null;
             for (FunctionIndexEntry candidateEntry : candidates)
             {
@@ -213,6 +215,32 @@ public class FunctionApplicationResolver
     }
 
     /**
+     * The candidates the kinds of the arguments fit: those none of whose parameters is of a raw type an
+     * argument's known raw type is not of ({@code over(~[id], [~category->ascending()])} is the over taking a
+     * ColSpecArray and SortInfos, whatever their T, which the call taking it binds). An argument not typed yet,
+     * or a parameter or argument typed by a type parameter or a function type, fits any. All of them when none
+     * fits, for the errors to be the candidates'.
+     */
+    private static MutableList<FunctionIndexEntry> fittingKinds(MutableList<FunctionIndexEntry> candidates, MutableList<ValueSpecification> args, MetadataAccess model)
+    {
+        // each parameter with its argument (zip stops at the shorter: no argument, nothing to compare)
+        MutableList<FunctionIndexEntry> fitting = candidates.select(c -> c.functionType()._parameters().zip(args)
+                .allSatisfy(pair -> kindFits(pair.getOne()._genericType(), pair.getTwo()._genericType(), model)));
+        return fitting.isEmpty() ? candidates : fitting;
+    }
+
+    private static boolean kindFits(GenericType paramGT, GenericType argGT, MetadataAccess model)
+    {
+        platform.pure.metamodel.type.Type param = paramGT == null ? null : _GenericType.type(paramGT);
+        platform.pure.metamodel.type.Type arg = argGT == null ? null : _GenericType.type(argGT);
+        return param == null || arg == null
+                || param instanceof TypeParameter || arg instanceof TypeParameter
+                || param instanceof platform.pure.metamodel.type.FunctionType || arg instanceof platform.pure.metamodel.type.FunctionType
+                || org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.isTopType(param)
+                || org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.subtypeOf(arg, param, model);
+    }
+
+    /**
      * Resolve args, collect type/multiplicity bindings, apply bindings to
      * lambdas, validate, and populate resolved parameters on the expression.
      */
@@ -232,8 +260,8 @@ public class FunctionApplicationResolver
                 ._resolvedMultiplicityParameters(null);
 
         MutableList<VariableExpression> funcParams = entry.functionType()._parameters();
-        MutableSet<String> scopeTypeParams = plcc.inScopeTypeParamNames();
-        MutableSet<String> scopeMulParams = plcc.inScopeMultiplicityParamNames();
+        MutableSet<String> scopeTypeParams = plcc.inScopeTypeParamKeys();
+        MutableSet<String> scopeMulParams = plcc.inScopeMultiplicityParamKeys();
 
         try
         {
@@ -544,7 +572,7 @@ public class FunctionApplicationResolver
             // (e.g., V,U from AggregateValue<Trade,V,U>) so that resolveArg's
             // isParamConcreteWithBindings gate passes for child elements
             MutableSet<String> enrichedScopeTypeParams = Sets.mutable.withAll(scopeTypeParams);
-            enrichedScopeTypeParams.addAll(_GenericType.collectReferencedTypeParameterNames(resolvedParamGT));
+            enrichedScopeTypeParams.addAll(_GenericType.collectReferencedTypeParameterKeys(resolvedParamGT));
             context.debug("resolveArg: COLLECTION (%d elements) resolvedParamGT=%s", col._values().size(), lazy(() -> _GenericType.print(resolvedParamGT)));
             context.debugDepthInc();
             Collection newCollection = ((Collection)col._copy())._values(
@@ -612,7 +640,7 @@ public class FunctionApplicationResolver
      * Resolve a single lambda's parameter types and body using the function parameter's
      * expected type and the current type/multiplicity bindings.
      */
-    private static LambdaFunction setMissingLambdaParameterInformation(
+    static LambdaFunction setMissingLambdaParameterInformation(
             LambdaFunction lambda,
             GenericType paramGT,
             ParametersBinding bindings,
@@ -661,7 +689,11 @@ public class FunctionApplicationResolver
             MetadataAccess model,
             CompilationContext context)
     {
-        GenericType argGT = childExpr._genericType();
+        // the child's own type parameters are bound from its function's declared return type (colSpec's
+        // ColSpec<T>), not from its current type, already in terms of the parent's (ColSpec<X⊆T>)
+        GenericType argGT = childExpr._func() instanceof platform.pure.metamodel.function.PackageableFunction childFunc
+                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function.getFunctionType(childFunc, model)._returnType()
+                : childExpr._genericType();
         ParametersBinding childBindings = PlainParametersBinding.empty();
         GenericType resolvedParamGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
         _GenericType.collectTypeParameterBindings(argGT, resolvedParamGT, childBindings);

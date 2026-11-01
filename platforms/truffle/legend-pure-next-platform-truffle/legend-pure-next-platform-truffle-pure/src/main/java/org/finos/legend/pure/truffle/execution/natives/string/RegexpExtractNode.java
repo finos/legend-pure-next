@@ -70,6 +70,7 @@ public final class RegexpExtractNode extends PureNode
         return extract(s, regex, extractAll, (int) group, flags);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean asBoolean(Object v)
     {
         if (v instanceof Boolean b) return b;
@@ -77,6 +78,7 @@ public final class RegexpExtractNode extends PureNode
         return false;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static long asLong(Object v)
     {
         if (v instanceof Long l) return l;

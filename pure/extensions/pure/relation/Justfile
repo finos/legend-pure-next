@@ -1,0 +1,110 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# pure/extensions/pure/relation/Justfile — the relation functions (platform::pure::functions::relation).
+#
+# Direct invocation: just <recipe>     (from pure/extensions/pure/relation/)
+#
+# Inputs:  shared/core.pdb, shared/compiler.pdb (`bootstrap::build`), the TDS extension's build/tds.pdb.
+# Output:  build/relation.pdb (+ build/relation-tests.pdb from `build-tests`)
+#
+# Functions only — no grammar, no section, no metamodel: what the Pure code declares, natives mostly, whose
+# implementations are each platform's (its relation extension module). Compiled on Truffle, whose compiler
+# runs with the languages it is linked against: the tests are written on `#TDS…#` literals, which the TDS
+# extension's island handler compiles, and the bootstrap's compiler has no extension.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+rel_root       := source_directory()
+repo_root      := rel_root / ".." / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+test_results   := repo_root / "test-results"
+rel_out        := rel_root / "build"
+tds_pdb        := repo_root / "pure" / "extensions" / "pure" / "tds" / "build" / "tds.pdb"
+pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+
+verbose := ""
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+header := "h(){ s=\"[extensions-pure-relation::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
+
+# Default: build relation.pdb.
+default: build
+
+# Compile -> build/relation.pdb.
+build: _depCheck
+    @{{header}} 'build'
+    @{{substep}} 'compile pure/extensions/pure/relation -> build/relation.pdb (Truffle)'
+    mkdir -p {{rel_out}}
+    {{pure_truffle}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/parser-mappings.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --base-pdb {{tds_pdb}} \
+        --source {{rel_root}}/code \
+        --output-dir {{rel_out}} {{err_filter}}
+
+# No sibling-extension deps beyond the TDS — alias of `build` for symmetry with the module Justfiles.
+build-all: build
+
+# Compile with tests split into build/relation-tests.pdb (needed by `test-all`).
+build-tests: _depCheck
+    @{{header}} 'build-tests'
+    @{{substep}} 'compile pure/extensions/pure/relation -> build/relation.pdb + relation-tests.pdb (Truffle)'
+    mkdir -p {{rel_out}}
+    {{pure_truffle}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/parser-mappings.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --base-pdb {{tds_pdb}} \
+        --source {{rel_root}}/code \
+        --output-dir {{rel_out}} \
+        --tests split {{err_filter}}
+
+# The relation PCT (platform::pure::functions::relation) and its tests on Truffle.
+test-all: build-tests
+    @{{header}} 'test-all'
+    mkdir -p {{test_results}}/spec/relation/pct
+    @{{substep}} 'runPCTTests over platform::pure::functions::relation (Truffle)'
+    {{pure_truffle}} execute \
+        --root {{repo_root}} \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{rel_out}}/relation-tests.pdb \
+        --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
+        --args "platform::pure::functions::relation" "{{test_results}}/spec/relation/pct/pure@cli-truffle.json" {{err_filter}}
+    mkdir -p {{test_results}}/spec/relation/unit
+    @{{substep}} 'runTests over platform::pure::functions::relation::tests (Truffle)'
+    {{pure_truffle}} execute \
+        --root {{repo_root}} \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{rel_out}}/relation-tests.pdb \
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::functions::relation::tests" "{{test_results}}/spec/relation/unit/pure@cli-truffle.json" {{err_filter}}
+
+clean:
+    rm -rf {{rel_out}}
+
+# Internal: fail loudly if the base PDBs aren't built.
+_depCheck:
+    #!/usr/bin/env bash
+    for pdb in "{{shared_out}}/core.pdb" "{{shared_out}}/compiler.pdb" "{{tds_pdb}}"; do
+        if [[ ! -f "$pdb" ]]; then
+            echo "ERROR: missing $pdb (run \`just bootstrap::build\` and \`just extensions::pure::tds::build\` first)" >&2
+            exit 1
+        fi
+    done
+    test -x {{pure_truffle}} || { echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` first)" >&2; exit 1; }

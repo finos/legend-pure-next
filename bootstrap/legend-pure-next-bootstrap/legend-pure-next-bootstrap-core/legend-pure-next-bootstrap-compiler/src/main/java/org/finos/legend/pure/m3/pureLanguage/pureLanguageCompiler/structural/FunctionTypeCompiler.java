@@ -45,7 +45,7 @@ public final class FunctionTypeCompiler
         }
         if (ft._returnMultiplicity() != null)
         {
-            result._returnMultiplicity(MultiplicityCompiler.compile(ft._returnMultiplicity(), model));
+            result._returnMultiplicity(MultiplicityCompiler.compile(ft._returnMultiplicity(), model, context));
         }
         if (ft._parameters() != null && ft._parameters().notEmpty())
         {

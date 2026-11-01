@@ -29,8 +29,8 @@ function test::tds::enumeration(): Any[*]
 
 ###CompiledGraph
 enumeration m::Color extends Enum  ~Enumeration<m::Color>  @15:1-19:1
-property Red  ~Property<Enumeration<m::Color>, m::Color|1>  = ^m::Color(name='Red')  ~lambda:#LambdaFunction<#{->m::Color[1]}#>#  @17:4-17:6
-property Green  ~Property<Enumeration<m::Color>, m::Color|1>  = ^m::Color(name='Green')  ~lambda:#LambdaFunction<#{->m::Color[1]}#>#  @18:4-18:8
+property Red  ~Property<Enumeration<m::Color>, m::Color|1>  = ^m::Color(name='Red')  ~lambda:#LambdaFunction<#{Enumeration<m::Color>[1]->m::Color[1]}#>#  @17:4-17:6
+property Green  ~Property<Enumeration<m::Color>, m::Color|1>  = ^m::Color(name='Green')  ~lambda:#LambdaFunction<#{Enumeration<m::Color>[1]->m::Color[1]}#>#  @18:4-18:8
 
 function test::tds::enumeration__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
 TDS :platform::extensions::pure::tds::metamodel::TDS<(color:m::Color[1], n:@Integer@[0..1])>[1]  ~platform::extensions::pure::tds::metamodel::TDS<@Any@>  @23:3-27:4

@@ -1,0 +1,5 @@
+###Pure
+function protocol::lambdaReceivers(): Any[*]
+{
+  {a|$a + 1}->eval(1)
+}

@@ -1,0 +1,58 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+import test::*;
+
+Class test::QPL_Holder
+{
+  value: Float[1];
+  // a lambda argument's parameter types are inferred from the qualified property's parameter
+  applied(f: Function<{QPL_Holder[1]->Float[1]}>[1]) {$f->eval($this)}: Float[1];
+}
+
+function test::untypedLambdaArgument(h: QPL_Holder[1]): Float[1]
+{
+  $h.applied(x|$x.value)
+}
+
+###CompiledGraph
+class test::QPL_Holder extends Any  ~Class<test::QPL_Holder>  @18:1-23:1
+  property value :Float[1]  ~Property<test::QPL_Holder, Float|1>
+  qualifiedProperty applied(f:Function<{test::QPL_Holder[1]->Float[1]}>[1]) :Float[1]
+    ArrowInvocation eval_Function_1__T_n__V_m_ :#Float##[1]#  ~@ArrowInvocation@  @22:57-22:69
+      typeParam T -> #test::QPL_Holder#
+      typeParam V -> Float
+      mulParam m -> [1]
+      mulParam n -> #[1]#
+      Variable f :#Function<{test::QPL_Holder[1]->Float[1]}>##[1]#  ~@VariableExpression@  @22:55-22:56
+      Variable this :#test::QPL_Holder##[1]#  ~@VariableExpression@  @22:64-22:68
+
+function test::untypedLambdaArgument_QPL_Holder_1__Float_1_(h:test::QPL_Holder[1]):Float[1]  ~UserDefinedFunction<{test::QPL_Holder[1]->Float[1]}>
+  DotApplication test::QPL_Holder.applied(Function<{test::QPL_Holder[1]->Float[1]}>[1]) :#Float##[1]#  ~@DotApplication@  @27:5-27:24
+    Variable h :#test::QPL_Holder##[1]#  ~@VariableExpression@  @27:3-27:4
+    Lambda(x:#test::QPL_Holder##[1]#) :#LambdaFunction<#{#test::QPL_Holder##[1]#->#Float##[1]#}#>#[1]  ~@AtomicValue@  @27:14-27:23
+      DotApplication test::QPL_Holder.value :#Float##[1]#  ~@DotApplication@  @27:18-27:23
+        Variable x :#test::QPL_Holder##[1]#  ~@VariableExpression@  @27:16-27:17
+
+###ReverseIndex
+platform::pure::functions::lang::eval_Function_1__T_n__V_m_:
+  test::QPL_Holder.applied
+test::QPL_Holder:
+  test::QPL_Holder.applied
+  test::untypedLambdaArgument_QPL_Holder_1__Float_1_
+test::QPL_Holder.applied:
+  test::untypedLambdaArgument_QPL_Holder_1__Float_1_
+test::QPL_Holder.value:
+  test::untypedLambdaArgument_QPL_Holder_1__Float_1_

@@ -1,0 +1,60 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Function references kept as values under a plain Function<Any>, then inspected and run.
+
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::functions::lang::*;
+
+function usecases::functionValues::writers(): Function<Any>[*]
+{
+  [usecases::reflection::toJson_Any_1__String_1_, usecases::reflection::objectToJson_Any_1__String_1_]
+}
+
+function <<test.Test>> usecases::functionValues::testFunctionReferences(): Boolean[1]
+{
+  assertEquals(['toJson', 'objectToJson'], usecases::functionValues::writers()->map(f | $f->cast(@ConcreteFunctionDefinition<Any>).functionName->toOne()));
+  assertEquals('"x"', usecases::functionValues::writers()->at(0)->cast(@Function<{Any[1]->String[1]}>)->eval('x'));
+}
+
+// A lambda given where a plain FunctionDefinition<Any> is expected, to be navigated.
+function usecases::functionValues::firstStep(f: FunctionDefinition<Any>[1]): SimpleFunctionExpression[1]
+{
+  $f.expressionSequence->evaluateAndDeactivate()->toOne()->cast(@SimpleFunctionExpression)
+}
+
+function <<test.Test>> usecases::functionValues::testALambdaAsAPlainFunctionDefinition(): Boolean[1]
+{
+  let call = {p: usecases::reflection::Person[1] | $p.firstName->toUpper()}->usecases::functionValues::firstStep();
+  assertEquals('toUpper', $call.functionName);
+}
+
+// A generic function's reference, kept as a value under a plain Function<Any>.
+function usecases::functionValues::all<T>(xs: T[*]): T[*]
+{
+  $xs
+}
+
+function usecases::functionValues::generics(): Function<Any>[*]
+{
+  usecases::functionValues::all_T_MANY__T_MANY_
+}
+
+function <<test.Test>> usecases::functionValues::testAGenericFunctionReference(): Boolean[1]
+{
+  assertEquals(['all'], usecases::functionValues::generics()->map(f | $f->cast(@ConcreteFunctionDefinition<Any>).functionName->toOne()));
+}

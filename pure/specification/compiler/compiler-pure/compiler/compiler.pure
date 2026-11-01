@@ -726,7 +726,11 @@ function platform::pure::compiler::compile(files:platform::pure::protocol::PureF
     // inner {@code pass3Ctx.elementMap} stays pointer-bearing as a defensive
     // snapshot — anything that needs the resolved graph reads from
     // {@code CompilerContext.elementMap} on the returned context.
+    // Announced and timed: on a large module this runs for a while with no counter of its own.
+    let resolveStart = currentTimeMillis();
+    if($silent, | true, | println('  Resolving pointers (' + $resolvedElements->size()->toString() + ' elements)...'); true;);
     let resolvedElementList = resolveAndReturnGraph($pass3Ctx.elementMap);
+    if($silent, | true, | println('  Resolved pointers in ' + (currentTimeMillis() - $resolveStart)->toString() + ' ms'); true;);
     let finalElementMap = newMap($pass3Ctx.elementMap->keys()->zip($resolvedElementList));
     let finalCtx = ^$pass3Ctx(elementMap = $finalElementMap);
 
@@ -758,7 +762,7 @@ function platform::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunct
           // Set ownerTypeParams/ownerMulParams for pass 3 — matches Java UserDefinedFunctionHandler.thirdPass setEnclosingOwner
           let enclosingBinding = ^EnclosingOwnerParametersBinding(owner = $fn, typeBindings = newMap([]->cast(@Pair<String,List<GenericType>>)), multiplicityBindings = newMap([]->cast(@Pair<String,List<Multiplicity>>)));
           let ctxWithOwner = ^$context(ownerTypeParams = $fn.typeParameters->cast(@TypeParameter), ownerMulParams = $fn.multiplicityParameters->cast(@MultiplicityParameter), enclosingOwnerBinding = $enclosingBinding);
-          let result = platform::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@VariableExpression), $ctxWithOwner->debugSpaceInc());
+          let result = platform::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@VariableExpression), $ctxWithOwner->debugSpaceInc(), true);
           let resultCtx = $result.context;
           // Validate return type and multiplicity of the last expression. Mirrors
           // Java FunctionDefinitionResolver.{validateReturnType, validateReturnMultiplicity}:

@@ -34,6 +34,7 @@ import platform::pure::protocol::grammar::*;
 function platform::pure::functions::printer::protocol::printProtocolClass(c: platform::pure::protocol::grammar::type::Class[1]): String[1]
 {
     'Class ' + printAnnotations($c.stereotypes, $c.taggedValues) + printPackagePointer($c.package) + $c.name +
+        if ($c.typeVariables->isEmpty(), | '', | $c.typeVariables->map(tv | printFunctionParameter($tv))->joinStrings('(', ', ', ')')) +
         printTypeAndMulParams($c.typeParameters, $c.multiplicityParameters) +
         printGeneralizations($c.generalizations) +
         printElementConstraints($c.constraints) +

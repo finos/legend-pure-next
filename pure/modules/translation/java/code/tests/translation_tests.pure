@@ -131,3 +131,17 @@ function <<test.Test>> platform::extensions::language::java::translation::tests:
                   }''';
    assertEquals($expected, translateAndStringify(neg_Integer_1__Integer_1_));
 }
+
+// The coder table is this platform's native registry, keyed by full id: every native the loaded modules declare
+// has a coder (or is lowered by another coder, or listed as not on this platform), and every coder is for a native
+// — a function written in Pure is always translated from its body, never replaced.
+function <<test.Test>> platform::extensions::language::java::translation::tests::testTheCodersAreTheNativesOfTheLoadedModules(): Boolean[1]
+{
+   let coders = conventionsFor('org.example', 'org.finos.legend.pure.platform.java').functionCoders->keys();
+   let notHere = notOnThisPlatform().first;
+   let natives = platform::pure::test::nativeFunctionsUnder(pathToElement('platform')->cast(@Package))->map(n | $n->elementToPath())->removeDuplicates();
+   assertEquals([], $natives->filter(n | !$coders->contains($n) && !loweredNatives()->contains($n) && !$notHere->contains($n))->sort());
+   assertEquals([], $coders->filter(c | $notHere->contains($c))->sort());
+   assertEquals([], $coders->filter(c | platform::pure::functions::meta::lenientPathToElement($c)
+                                           ->filter(e | !$e->instanceOf(platform::pure::metamodel::function::NativeFunction))->isNotEmpty())->sort());
+}

@@ -1,0 +1,251 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Legacy Pure as legend-engine writes it: metamodel navigation merged with execution. A generic JSON writer
+// (properties, inherited ones, profiles, tags, evaluated on the object), a lambda both run and inspected, a copy
+// built by reflection, metamodel objects compared. Expected values are legacy's answers, as legend-pure 5.110.0
+// itself gives them. As legacy code must, an expression is deactivated (evaluateAndDeactivate) before it is navigated.
+
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::functions::lang::*;
+
+// ---------------------------------------------------------------------------------------------------
+// A model, annotated for a generic JSON writer
+// ---------------------------------------------------------------------------------------------------
+
+Profile usecases::reflection::json
+{
+  stereotypes: [ignore];
+  tags: [name];
+}
+
+Enum usecases::reflection::Level
+{
+  JUNIOR, SENIOR
+}
+
+Class usecases::reflection::Entity
+{
+  id: Integer[1];
+}
+
+Class usecases::reflection::Address
+{
+  city: String[1];
+  zip: String[0..1];
+}
+
+Class usecases::reflection::Person extends usecases::reflection::Entity
+{
+  {usecases::reflection::json.name = 'first_name'} firstName: String[1];
+  lastName: String[1];
+  nickNames: String[*];
+  level: usecases::reflection::Level[1];
+  <<usecases::reflection::json.ignore>> salary: Float[1];
+  address: usecases::reflection::Address[0..1];
+  fullName() { $this.firstName + ' ' + $this.lastName }: String[1];
+}
+
+// ---------------------------------------------------------------------------------------------------
+// 1. Navigation: properties, inherited ones first (generalizations), profiles and tags
+// ---------------------------------------------------------------------------------------------------
+
+function usecases::reflection::allProperties(c: Class<Any>[1]): Property<Nil, Any|*>[*]
+{
+  $c.generalizations.general.rawType
+    ->filter(t | $t->instanceOf(Class))
+    ->map(t | $t->cast(@Class<Any>)->usecases::reflection::allProperties())
+    ->concatenate($c.properties)
+}
+
+function usecases::reflection::isIgnored(p: Property<Nil, Any|*>[1]): Boolean[1]
+{
+  $p.stereotypes->exists(s | $s == usecases::reflection::json->stereotype('ignore'))
+}
+
+function usecases::reflection::jsonName(p: Property<Nil, Any|*>[1]): String[1]
+{
+  let tagged = $p.taggedValues->filter(t | $t.tag == usecases::reflection::json->tag('name')).value;
+  if($tagged->isEmpty(), | $p.name->toOne(), | $tagged->toOne());
+}
+
+// ---------------------------------------------------------------------------------------------------
+// 2. Navigation merged with execution: a generic writer evaluating each property on the object
+// ---------------------------------------------------------------------------------------------------
+
+function usecases::reflection::toJson(v: Any[1]): String[1]
+{
+  $v->match([
+    s: String[1] | '"' + $s + '"',
+    i: Integer[1] | $i->toString(),
+    b: Boolean[1] | $b->toString(),
+    e: Enum[1] | '"' + $e->toString() + '"',
+    a: Any[1] | $a->usecases::reflection::objectToJson()
+  ])
+}
+
+function usecases::reflection::objectToJson(o: Any[1]): String[1]
+{
+  let c = $o->type()->cast(@Class<Any>);
+  let fields = $c->usecases::reflection::allProperties()
+    ->filter(p | $p.owner != Any && !$p->usecases::reflection::isIgnored())
+    ->map(p | let values = $p->eval($o);
+              let json = if($p.multiplicity->hasToOneUpperBound(),
+                            | if($values->isEmpty(), | 'null', | $values->toOne()->usecases::reflection::toJson()),
+                            | $values->map(x | $x->usecases::reflection::toJson())->joinStrings('[', ',', ']'));
+              '"' + $p->usecases::reflection::jsonName() + '":' + $json;);
+  let derived = $c.qualifiedProperties
+    ->filter(q | $q->functionType().parameters->size() == 1)
+    ->map(q | '"' + $q.name->toOne() + '":' + $q->evaluate(list($o))->toOne()->usecases::reflection::toJson());
+  '{"@type":"' + $c->elementToPath() + '",' + $fields->concatenate($derived)->joinStrings(',') + '}';
+}
+
+// ---------------------------------------------------------------------------------------------------
+// 3. A lambda both run and inspected
+// ---------------------------------------------------------------------------------------------------
+
+function usecases::reflection::describe(v: ValueSpecification[1]): String[1]
+{
+  $v->match([
+    s: SimpleFunctionExpression[1] |
+       if($s.func->instanceOf(Property),
+          | $s.parametersValues->evaluateAndDeactivate()->at(0)->evaluateAndDeactivate()->usecases::reflection::describe() + '.' + $s.func->cast(@Property<Nil, Any|*>).name->toOne(),
+          | $s.functionName->toOne() + '(' + $s.parametersValues->evaluateAndDeactivate()->map(p | $p->evaluateAndDeactivate()->usecases::reflection::describe())->joinStrings(', ') + ')'),
+    i: InstanceValue[1] | $i.values->evaluateAndDeactivate()->map(x | $x->toString())->joinStrings(','),
+    x: VariableExpression[1] | '$' + $x.name,
+    a: ValueSpecification[1] | '?'
+  ])
+}
+
+function usecases::reflection::describeQuery(f: FunctionDefinition<{usecases::reflection::Person[1]->Boolean[1]}>[1]): String[1]
+{
+  $f->functionType().parameters->evaluateAndDeactivate().name->joinStrings(',') + ' -> ' + $f.expressionSequence->evaluateAndDeactivate()->toOne()->usecases::reflection::describe()
+}
+
+function usecases::reflection::select(people: usecases::reflection::Person[*], f: FunctionDefinition<{usecases::reflection::Person[1]->Boolean[1]}>[1]): String[*]
+{
+  $people->filter(p | $f->eval($p))->map(p | $p.firstName)
+}
+
+// ---------------------------------------------------------------------------------------------------
+// 4. Building by reflection: a copy with one property changed
+// ---------------------------------------------------------------------------------------------------
+
+function usecases::reflection::withChanged(o: Any[1], name: String[1], value: Any[*]): Any[1]
+{
+  let c = $o->type()->cast(@Class<Any>);
+  $c->dynamicNew($c->usecases::reflection::allProperties()->map(p | ^KeyValue(key = $p.name->toOne(), value = if($p.name == $name, | $value, | $p->eval($o)))));
+}
+
+// ---------------------------------------------------------------------------------------------------
+// 5. Comparing metamodel objects, enumerations, function references
+// ---------------------------------------------------------------------------------------------------
+
+function usecases::reflection::stringProperties(c: Class<Any>[1]): String[*]
+{
+  $c->usecases::reflection::allProperties()->filter(p | $p.genericType.rawType == String)->map(p | $p.name->toOne())
+}
+
+
+// ---------------------------------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------------------------------
+
+function usecases::reflection::ada(): usecases::reflection::Person[1]
+{
+  ^usecases::reflection::Person(id = 1, firstName = 'Ada', lastName = 'Lovelace', nickNames = ['a', 'al'], level = usecases::reflection::Level.SENIOR, salary = 10.5,
+              address = ^usecases::reflection::Address(city = 'London'))
+}
+
+function usecases::reflection::bob(): usecases::reflection::Person[1]
+{
+  ^usecases::reflection::Person(id = 2, firstName = 'Bob', lastName = 'Smith', level = usecases::reflection::Level.JUNIOR, salary = 3.0)
+}
+
+function <<test.Test>> usecases::reflection::testInheritedPropertiesFirst(): Boolean[1]
+{
+  assertEquals(['classifierGenericType', 'elementOverride', 'id', 'firstName', 'lastName', 'nickNames', 'level', 'salary', 'address'], usecases::reflection::Person->usecases::reflection::allProperties().name);
+}
+
+function <<test.Test>> usecases::reflection::testProfiles(): Boolean[1]
+{
+  let props = usecases::reflection::Person->usecases::reflection::allProperties();
+  assertEquals(['salary'], $props->filter(p | $p->usecases::reflection::isIgnored()).name);
+  assertEquals(['classifierGenericType', 'elementOverride', 'id', 'first_name', 'lastName', 'nickNames', 'level', 'salary', 'address'], $props->map(p | $p->usecases::reflection::jsonName()));
+}
+
+function <<test.Test>> usecases::reflection::testJson(): Boolean[1]
+{
+  assertEquals('{"@type":"usecases::reflection::Person","id":1,"first_name":"Ada","lastName":"Lovelace","nickNames":["a","al"],"level":"SENIOR",'
+                 + '"address":{"@type":"usecases::reflection::Address","city":"London","zip":null},"fullName":"Ada Lovelace"}',
+               usecases::reflection::ada()->usecases::reflection::toJson());
+}
+
+function <<test.Test>> usecases::reflection::testLambdaRunAndInspected(): Boolean[1]
+{
+  let q = {p: usecases::reflection::Person[1] | $p.level == usecases::reflection::Level.SENIOR};
+  assertEquals('p -> equal($p.level, extractEnumValue(Level, SENIOR))', $q->usecases::reflection::describeQuery());
+  assertEquals(['Ada'], [usecases::reflection::ada(), usecases::reflection::bob()]->usecases::reflection::select($q));
+}
+
+function <<test.Test>> usecases::reflection::testUntypedLambdaToALegacyFunction(): Boolean[1]
+{
+  assertEquals(['Bob'], [usecases::reflection::ada(), usecases::reflection::bob()]->usecases::reflection::select(p | $p.id > 1));
+}
+
+function <<test.Test>> usecases::reflection::testCopyByReflection(): Boolean[1]
+{
+  let copy = usecases::reflection::ada()->usecases::reflection::withChanged('firstName', 'Grace')->cast(@usecases::reflection::Person);
+  assertEquals('Grace', $copy.firstName);
+  assertEquals('Lovelace', $copy.lastName);
+  assertEquals('London', $copy.address.city);
+  assertEquals('Grace Lovelace', $copy.fullName());
+}
+
+function <<test.Test>> usecases::reflection::testMetamodelEquality(): Boolean[1]
+{
+  assertEquals(['firstName', 'lastName', 'nickNames'], usecases::reflection::Person->usecases::reflection::stringProperties());
+  assert(usecases::reflection::ada()->type() == usecases::reflection::Person);
+  assert(usecases::reflection::Level.SENIOR->type() == usecases::reflection::Level);
+}
+
+function <<test.Test>> usecases::reflection::testEnumeration(): Boolean[1]
+{
+  assertEquals(['JUNIOR', 'SENIOR'], usecases::reflection::Level->enumValues()->map(e | $e->toString()));
+  assertEquals('usecases::reflection::Level', usecases::reflection::Level->elementToPath());
+}
+
+function usecases::reflection::firstStep(f: FunctionDefinition<{usecases::reflection::Person[1]->Any[*]}>[1]): SimpleFunctionExpression[1]
+{
+  $f.expressionSequence->evaluateAndDeactivate()->toOne()->cast(@SimpleFunctionExpression)
+}
+
+function <<test.Test>> usecases::reflection::testHowACallIsNamed(): Boolean[1]
+{
+  let access = {p: usecases::reflection::Person[1] | $p.firstName}->usecases::reflection::firstStep();
+  assertEmpty($access.functionName);
+  assertEquals('firstName', $access.propertyName->toOne()->evaluateAndDeactivate().values->toOne());
+  assertEmpty($access.qualifiedPropertyName);
+  let qualified = {p: usecases::reflection::Person[1] | $p.fullName()}->usecases::reflection::firstStep();
+  assertEmpty($qualified.functionName);
+  assertEmpty($qualified.propertyName);
+  assertEquals('fullName', $qualified.qualifiedPropertyName->toOne()->evaluateAndDeactivate().values->toOne());
+  let call = {p: usecases::reflection::Person[1] | $p.firstName->toUpper()}->usecases::reflection::firstStep();
+  assertEquals('toUpper', $call.functionName);
+  assertEmpty($call.propertyName);
+  assertEmpty($call.originalMilestonedProperty);
+}

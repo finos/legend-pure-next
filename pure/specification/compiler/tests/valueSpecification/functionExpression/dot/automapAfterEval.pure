@@ -31,7 +31,7 @@ class test::TPR_Person extends Any  ~Class<test::TPR_Person>  @18:1-22:1
   property firstName :@String@[1]  ~Property<test::TPR_Person, @String@|1>
   property lastName :@String@[1]  ~Property<test::TPR_Person, @String@|1>
 
-function test::testTypeParamResolution_Function_1__Any_MANY_(f:Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]):@Any@[*]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->@Any@[*]}>
+function test::testTypeParamResolution_Function_1__Any_MANY_(f:Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>[1]):@Any@[*]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>[1]->@Any@[*]}>
   FunctionInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@FunctionInvocation@  @26:66-26:74
     typeParam T -> #test::TPR_Person#
     typeParam V -> #String#
@@ -41,7 +41,7 @@ function test::testTypeParamResolution_Function_1__Any_MANY_(f:Function<{Functio
       typeParam V -> #test::TPR_Person#
       mulParam m -> #[*]#
       mulParam n -> #[1]#
-      Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>##[1]#  ~@VariableExpression@  @26:3-26:4
+      Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>##[1]#  ~@VariableExpression@  @26:3-26:4
       Lambda :#LambdaFunction<#{->#test::TPR_Person##[0..1]#}#>#[1]  ~@AtomicValue@  @26:12-26:64
         ArrowInvocation head_T_MANY__T_$0_1$_ :#test::TPR_Person##[0..1]#  ~@ArrowInvocation@  @26:57-26:64
           typeParam T -> #test::TPR_Person#

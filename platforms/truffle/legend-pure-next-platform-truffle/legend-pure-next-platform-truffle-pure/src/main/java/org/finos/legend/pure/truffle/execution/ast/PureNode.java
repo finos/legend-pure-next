@@ -85,7 +85,7 @@ public abstract class PureNode extends Node
         }
         if (value instanceof Number n)
         {
-            return n.longValue();
+            return numberToLong(n);
         }
         com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
         throw new ClassCastException("expected Integer, got: "
@@ -105,13 +105,32 @@ public abstract class PureNode extends Node
         {
             return d;
         }
+        if (value instanceof Long l)
+        {
+            return l.doubleValue();
+        }
         if (value instanceof Number n)
         {
-            return n.doubleValue();
+            return numberToDouble(n);
         }
         com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
         throw new ClassCastException("expected Float, got: "
                 + (value == null ? "null" : value.getClass().getName()));
+    }
+
+    // Graal sees BigDecimal.longValue / doubleValue through these Number calls, and both reach
+    // BigInteger.squareKaratsuba, which is genuinely recursive: without a boundary every lambda using a
+    // default executeLong / executeDouble bails out with `Too deep inlining` (see BinaryNumberNode).
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static long numberToLong(Number n)
+    {
+        return n.longValue();
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static double numberToDouble(Number n)
+    {
+        return n.doubleValue();
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

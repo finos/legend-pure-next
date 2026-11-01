@@ -1,0 +1,5 @@
+###Pure
+function protocol::typeOf<T>(type: GenericTypeAndMultiplicityHolder<T|?>[1]): String[1]
+{
+  'type'
+}

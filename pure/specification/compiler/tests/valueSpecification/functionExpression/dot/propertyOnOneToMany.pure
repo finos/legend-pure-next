@@ -1,0 +1,49 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+import test::*;
+
+Class test::OTM_Person
+{
+  name: String[1];
+}
+
+// A property read on a [1..*] receiver: one bounded below and not above.
+function test::namesOf(people: OTM_Person[1..*]): String[*]
+{
+  $people.name
+}
+
+###CompiledGraph
+class test::OTM_Person extends Any  ~Class<test::OTM_Person>  @18:1-21:1
+  property name :@String@[1]  ~Property<test::OTM_Person, @String@|1>
+
+function test::namesOf_OTM_Person_$1_MANY$__String_MANY_(people:test::OTM_Person[1..*]):@String@[*]  ~UserDefinedFunction<{test::OTM_Person[1..*]->@String@[*]}>
+  FunctionInvocation map_T_m__Function_1__V_m_ :#String##[1..*]#  ~@FunctionInvocation@  @26:10-26:14
+    typeParam T -> #test::OTM_Person#
+    typeParam V -> #String#
+    mulParam m -> #[1..*]#
+    Variable people :#test::OTM_Person##[1..*]#  ~@VariableExpression@  @26:3-26:9
+    Lambda(v_automap:#test::OTM_Person#[1]) :#LambdaFunction<#{#test::OTM_Person#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
+      DotApplication test::OTM_Person.name :#String##[1]#  ~@DotApplication@  @26:10-26:14
+        Variable v_automap :#test::OTM_Person##[1]#  ~@VariableExpression@
+
+###ReverseIndex
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::namesOf_OTM_Person_$1_MANY$__String_MANY_
+test::OTM_Person:
+  test::namesOf_OTM_Person_$1_MANY$__String_MANY_
+test::OTM_Person.name:
+  test::namesOf_OTM_Person_$1_MANY$__String_MANY_

@@ -66,6 +66,7 @@ public final class RegexpIndexOfNode extends PureNode
         return executeLong(frame);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static long asLong(Object v)
     {
         if (v instanceof Long l) return l;

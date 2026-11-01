@@ -65,15 +65,15 @@ public final class AntlrNatives
                                 NativeRegistry repository)
     {
         put(natives, resolver,
-            "getText_AntlrContext_1__String_1_",
+            "platform::pure::functions::meta::antlr::getText_AntlrContext_1__String_1_",
             args -> ((ParseTree) args.get(0)).getText());
 
         put(natives, resolver,
-            "grammarRuleName_AntlrContext_1__String_1_",
+            "platform::pure::functions::meta::antlr::grammarRuleName_AntlrContext_1__String_1_",
             args -> grammarRuleName((ParserRuleContext) args.get(0)));
 
         put(natives, resolver,
-            "getTopLevelChildren_AntlrContext_1__AntlrContext_MANY_",
+            "platform::pure::functions::meta::antlr::getTopLevelChildren_AntlrContext_1__AntlrContext_MANY_",
             args -> {
                 List<ParseTree> children = ((ParserRuleContext) args.get(0)).children;
                 List<Object> out = new ArrayList<>(children == null ? 0 : children.size());
@@ -86,14 +86,14 @@ public final class AntlrNatives
             });
 
         put(natives, resolver,
-            "getChild_AntlrContext_1__String_1__AntlrContext_$0_1$_",
+            "platform::pure::functions::meta::antlr::getChild_AntlrContext_1__String_1__AntlrContext_$0_1$_",
             args -> {
                 Object r = invokeNamed(args.get(0), (String) args.get(1));
                 return r instanceof ParserRuleContext ? r : null;
             });
 
         put(natives, resolver,
-            "getChildren_AntlrContext_1__String_1__AntlrContext_MANY_",
+            "platform::pure::functions::meta::antlr::getChildren_AntlrContext_1__String_1__AntlrContext_MANY_",
             args -> {
                 Object r = invokeNamed(args.get(0), (String) args.get(1));
                 // ANTLR generates `ctx.name()` returning either `XContext` (for
@@ -106,14 +106,14 @@ public final class AntlrNatives
             });
 
         put(natives, resolver,
-            "getTokenText_AntlrContext_1__String_1__String_$0_1$_",
+            "platform::pure::functions::meta::antlr::getTokenText_AntlrContext_1__String_1__String_$0_1$_",
             args -> {
                 Object r = invokeNamed(args.get(0), (String) args.get(1));
                 return r instanceof TerminalNode t ? t.getText() : null;
             });
 
         put(natives, resolver,
-            "getTokenTexts_AntlrContext_1__String_1__String_MANY_",
+            "platform::pure::functions::meta::antlr::getTokenTexts_AntlrContext_1__String_1__String_MANY_",
             args -> {
                 Object r = invokeNamed(args.get(0), (String) args.get(1));
                 if (r instanceof List<?> list) {
@@ -128,37 +128,37 @@ public final class AntlrNatives
             });
 
         put(natives, resolver,
-            "hasChild_AntlrContext_1__String_1__Boolean_1_",
+            "platform::pure::functions::meta::antlr::hasChild_AntlrContext_1__String_1__Boolean_1_",
             args -> invokeNamed(args.get(0), (String) args.get(1)) != null);
 
         put(natives, resolver,
-            "hasToken_AntlrContext_1__String_1__Boolean_1_",
+            "platform::pure::functions::meta::antlr::hasToken_AntlrContext_1__String_1__Boolean_1_",
             args -> {
                 Object r = invokeNamed(args.get(0), (String) args.get(1));
                 return r instanceof TerminalNode;
             });
 
         put(natives, resolver,
-            "getStartLine_AntlrContext_1__Integer_1_",
+            "platform::pure::functions::meta::antlr::getStartLine_AntlrContext_1__Integer_1_",
             args -> (long) ((ParserRuleContext) args.get(0)).getStart().getLine());
 
         put(natives, resolver,
-            "getStartColumn_AntlrContext_1__Integer_1_",
+            "platform::pure::functions::meta::antlr::getStartColumn_AntlrContext_1__Integer_1_",
             args -> (long) ((ParserRuleContext) args.get(0)).getStart().getCharPositionInLine() + 1);
 
         put(natives, resolver,
-            "getStopLine_AntlrContext_1__Integer_1_",
+            "platform::pure::functions::meta::antlr::getStopLine_AntlrContext_1__Integer_1_",
             args -> (long) ((ParserRuleContext) args.get(0)).getStop().getLine());
 
         put(natives, resolver,
-            "getStopColumn_AntlrContext_1__Integer_1_",
+            "platform::pure::functions::meta::antlr::getStopColumn_AntlrContext_1__Integer_1_",
             args -> {
                 ParserRuleContext c = (ParserRuleContext) args.get(0);
                 return (long) c.getStop().getCharPositionInLine() + c.getStop().getText().length();
             });
 
         put(natives, resolver,
-            "getChildTextAt_AntlrContext_1__Integer_1__String_$0_1$_",
+            "platform::pure::functions::meta::antlr::getChildTextAt_AntlrContext_1__Integer_1__String_$0_1$_",
             args -> {
                 ParserRuleContext ctx = (ParserRuleContext) args.get(0);
                 int idx = ((Long) args.get(1)).intValue();
@@ -166,12 +166,12 @@ public final class AntlrNatives
             });
 
         put(natives, resolver,
-            "stripTripleQuotesDedented_String_1__String_1_",
+            "platform::pure::functions::meta::antlr::stripTripleQuotesDedented_String_1__String_1_",
             args -> org.finos.legend.pure.next.parser.shared.TripleStringStripper.strip(
                 (String) args.get(0)));
 
         put(natives, resolver,
-            "parseAntlr_String_1__String_1__String_1__Integer_1__AntlrContext_1_",
+            "platform::pure::functions::meta::antlr::parseAntlr_String_1__String_1__String_1__Integer_1__AntlrContext_1_",
             args -> {
                 String source = (String) args.get(0);
                 String grammar = (String) args.get(1);
@@ -187,7 +187,7 @@ public final class AntlrNatives
             });
 
         put(natives, resolver,
-            "computeFirstNonNewlineLine_AntlrContext_$0_1$__Integer_1_",
+            "platform::pure::functions::meta::antlr::computeFirstNonNewlineLine_AntlrContext_$0_1$__Integer_1_",
             args -> {
                 Object raw = args.get(0);
                 Object ctx = raw instanceof List<?> l ? (l.isEmpty() ? null : l.get(0)) : raw;

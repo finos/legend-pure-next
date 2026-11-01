@@ -68,6 +68,11 @@ Class platform::extensions::language::javascript::translation::TypeVarBinding
    // the multiplicity. Empty when the witness's multiplicity is a concrete
    // multiplicity ([1], [*], [1..*], …) rather than a parameter.
    mulParamName : String[0..1];
+   // When set, the witness is an object of a generic class, and the type parameter is this class's — the
+   // one a default, a qualified property or a constraint is defined on: the type is what the witness's type
+   // arguments bind it to, through its generalizations for a subclass (testNewDefaultValueBindsTheClassTypeParameters,
+   // testNewInheritedDefaultValueBindsTheParentTypeParameters).
+   declaringClass : String[0..1];
 }
 
 // Coder groups split out of defaultConvention's `newMap([...])` literal so
@@ -81,36 +86,49 @@ function platform::extensions::language::javascript::translation::arithmeticCode
    Pair<String, platform::pure::metamodel::function::Function<{ValueSpecification[*], Convention[1] -> Expression[1]}>>[*]
 {
    [
-      pair('plus',        plusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('minus',       minusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('times',       timesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('divide',      divideCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('rem',         remCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('equal',       equalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('lessThan',    lessThanCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('greaterThan', greaterThanCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('and',         andCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('or',          orCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('not',         notCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('greaterThanEqual',  greaterThanEqualCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('lessThanEqual',     lessThanEqualCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('isTrue',            isTrueCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('isFalse',           isFalseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('is',                isCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('if',                ifCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('abs',               absCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('floor',             floorCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('ceiling',           ceilingCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('round',             roundCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('pow',               powCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('sqrt',              sqrtCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('min',               minNativeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('max',               maxNativeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('mod',               modCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('sum',               sumCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('average',           averageCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('sign',              signCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('compare',           compareCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+      pair('platform::pure::functions::math::plus_Decimal_1__Decimal_1__Decimal_1_', plusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::plus_Float_1__Float_1__Float_1_', plusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_', plusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::plus_Number_1__Number_1__Number_1_', plusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::plus_String_1__String_1__String_1_', plusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::minus_Decimal_1__Decimal_1_', minusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::minus_Decimal_1__Decimal_1__Decimal_1_', minusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::minus_Float_1__Float_1_', minusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::minus_Float_1__Float_1__Float_1_', minusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::minus_Integer_1__Integer_1_', minusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::minus_Integer_1__Integer_1__Integer_1_', minusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::minus_Number_1__Number_1_', minusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::minus_Number_1__Number_1__Number_1_', minusCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::times_Decimal_1__Decimal_1__Decimal_1_', timesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::times_Float_1__Float_1__Float_1_', timesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::times_Integer_1__Integer_1__Integer_1_', timesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::times_Number_1__Number_1__Number_1_', timesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::divide_Decimal_1__Decimal_1__Integer_1__Decimal_1_', divideCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::divide_Number_1__Number_1__Float_1_', divideCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::rem_Number_1__Number_1__Number_1_', remCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::boolean::equal_Any_MANY__Any_MANY__Boolean_1_', equalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::boolean::lessThan_Number_1__Number_1__Boolean_1_', lessThanCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::boolean::and_Boolean_1__Boolean_1__Boolean_1_', andCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::boolean::or_Boolean_1__Boolean_1__Boolean_1_', orCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::boolean::not_Boolean_1__Boolean_1_', notCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::boolean::lessThanEqual_Number_1__Number_1__Boolean_1_', lessThanEqualCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::boolean::is_Any_1__Any_1__Boolean_1_', isCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::if_Boolean_1__Function_1__Function_1__T_m_', ifCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::if_Pair_MANY__Function_1__T_m_', ifCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::abs_Decimal_1__Decimal_1_', absCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::abs_Float_1__Float_1_', absCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::abs_Integer_1__Integer_1_', absCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::abs_Number_1__Number_1_', absCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::floor_Number_1__Integer_1_', floorCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::ceiling_Number_1__Integer_1_', ceilingCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::round_Decimal_1__Integer_1__Decimal_1_', roundCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::round_Float_1__Integer_1__Float_1_', roundCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::round_Number_1__Integer_1_', roundCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::pow_Number_1__Number_1__Number_1_', powCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::sqrt_Number_1__Float_1_', sqrtCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::mod_Integer_1__Integer_1__Integer_1_', modCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::sign_Number_1__Integer_1_', signCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::boolean::compare_T_1__T_1__Integer_1_', compareCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
    ];
 }
 
@@ -118,39 +136,47 @@ function platform::extensions::language::javascript::translation::collectionCode
    Pair<String, platform::pure::metamodel::function::Function<{ValueSpecification[*], Convention[1] -> Expression[1]}>>[*]
 {
    [
-      pair('filter',      filterCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('map',         mapCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('fold',        foldCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('take',        takeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('drop',        dropCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('isEmpty',     isEmptyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toOne',       toOneCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('at',                atCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('size',              sizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('head',              headCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('first',             firstCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('last',              lastCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('tail',              tailCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('init',              initCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('reverse',           reverseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('isNotEmpty',        isNotEmptyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('contains',          containsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('concatenate',       concatenateCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('add',               addCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('slice',             sliceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('sort',              sortCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('removeDuplicates',  removeDuplicatesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('indexOf',           indexOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('lastIndexOf',       lastIndexOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('find',              findCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('forAll',            forAllCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('exists',            existsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('firstNonEmpty',     firstNonEmptyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('chunk',             chunkCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('orElse',            orElseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('zip',               zipCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('removeDuplicatesBy', removeDuplicatesByCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toOneMany',         toOneManyCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+      pair('platform::pure::functions::collection::filter_T_MANY__Function_1__T_MANY_', filterCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::map_T_$0_1$__Function_1__V_$0_1$_', mapCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::map_T_MANY__Function_1__V_MANY_', mapCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::map_T_m__Function_1__V_m_', mapCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_', foldCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_', foldCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::take_T_MANY__Integer_1__T_MANY_', takeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::drop_T_MANY__Integer_1__T_MANY_', dropCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::isEmpty_Any_$0_1$__Boolean_1_', isEmptyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::isEmpty_Any_MANY__Boolean_1_', isEmptyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::toOne_T_MANY__String_1__T_1_', toOneCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::toOne_T_MANY__T_1_', toOneCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::at_T_MANY__Integer_1__T_1_', atCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::size_Any_MANY__Integer_1_', sizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::head_T_MANY__T_$0_1$_', headCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::last_T_MANY__T_$0_1$_', lastCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::tail_T_MANY__T_MANY_', tailCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::init_T_MANY__T_MANY_', initCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::reverse_T_m__T_m_', reverseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::isNotEmpty_Any_$0_1$__Boolean_1_', isNotEmptyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::isNotEmpty_Any_MANY__Boolean_1_', isNotEmptyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::contains_Any_MANY__Any_1__Boolean_1_', containsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::contains_String_1__String_1__Boolean_1_', containsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::concatenate_T_MANY__T_MANY__T_MANY_', concatenateCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::add_T_MANY__Integer_1__T_1__T_$1_MANY$_', addCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_', addCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::slice_T_MANY__Integer_1__Integer_1__T_MANY_', sliceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::sort_T_m__Function_$0_1$__Function_$0_1$__T_m_', sortCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::removeDuplicates_T_MANY__Function_$0_1$__Function_$0_1$__T_MANY_', removeDuplicatesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::indexOf_T_MANY__T_1__Integer_1_', indexOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::indexOf_String_1__String_1__Integer_1_', indexOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::indexOf_String_1__String_1__Integer_1__Integer_1_', indexOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::lastIndexOf_String_1__String_1__Integer_1_', lastIndexOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::find_T_MANY__Function_1__T_$0_1$_', findCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::forAll_T_MANY__Function_1__Boolean_1_', forAllCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::exists_T_MANY__Function_1__Boolean_1_', existsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::firstNonEmpty_Function_MANY__T_MANY_', firstNonEmptyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::chunk_String_1__Integer_1__String_MANY_', chunkCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::zip_T_MANY__U_MANY__Pair_MANY_', zipCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::toOneMany_T_MANY__String_1__T_$1_MANY$_', toOneManyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::toOneMany_T_MANY__T_$1_MANY$_', toOneManyCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
    ];
 }
 
@@ -158,34 +184,34 @@ function platform::extensions::language::javascript::translation::stringCoders()
    Pair<String, platform::pure::metamodel::function::Function<{ValueSpecification[*], Convention[1] -> Expression[1]}>>[*]
 {
    [
-      pair('length',      lengthCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toString',    toStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('joinStrings',       joinStringsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('substring',         substringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('startsWith',        startsWithCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('endsWith',          endsWithCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('split',             splitCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('trim',              trimCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toUpper',           toUpperCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toLower',           toLowerCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('parseInteger',      parseIntegerCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('inferType',         inferTypeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('parseFloat',        parseFloatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('parseDecimal',      parseDecimalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('parseBoolean',      parseBooleanCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toUpperCase',       toUpperCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toLowerCase',       toLowerCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('ltrim',             ltrimCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('rtrim',             rtrimCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('reverseString',     reverseStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('matches',           matchesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('replace',           replaceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('regexpLike',        regexpLikeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('regexpReplace',     regexpReplaceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('regexpExtract',     regexpExtractCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('regexpIndexOf',     regexpIndexOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('regexpCount',       regexpCountCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('replaceAll',        replaceAllCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+      pair('platform::pure::functions::string::length_String_1__Integer_1_', lengthCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::toString_Any_1__String_1_', toStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::joinStrings_String_MANY__String_1__String_1__String_1__String_1_', joinStringsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::substring_String_1__Integer_1__Integer_1__String_1_', substringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::substring_String_1__Integer_1__String_1_', substringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::startsWith_String_1__String_1__Boolean_1_', startsWithCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::endsWith_String_1__String_1__Boolean_1_', endsWithCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::split_String_1__String_1__String_MANY_', splitCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::trim_String_1__String_1_', trimCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::toUpper_String_1__String_1_', toUpperCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::toLower_String_1__String_1_', toLowerCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::parseInteger_String_1__Integer_1_', parseIntegerCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::inferType_String_MANY__Type_1_', inferTypeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::parseFloat_String_1__Float_1_', parseFloatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::parseDecimal_String_1__Decimal_1_', parseDecimalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::parseDecimal_String_1__Integer_1__Integer_1__Decimal_1_', parseDecimalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::parseBoolean_String_1__Boolean_1_', parseBooleanCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::ltrim_String_1__String_1_', ltrimCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::rtrim_String_1__String_1_', rtrimCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::reverseString_String_1__String_1_', reverseStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::matches_String_1__String_1__Boolean_1_', matchesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::replace_String_1__String_1__String_1__String_1_', replaceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::regexpLike_String_1__String_1__RegexpParameter_$1_MANY$__Boolean_1_', regexpLikeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::regexpReplace_String_1__String_1__String_1__Boolean_1__RegexpParameter_$1_MANY$__String_1_', regexpReplaceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::regexpExtract_String_1__String_1__Boolean_1__Integer_1__RegexpParameter_$1_MANY$__String_MANY_', regexpExtractCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::regexpIndexOf_String_1__String_1__Integer_1__RegexpParameter_$1_MANY$__Integer_1_', regexpIndexOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::regexpCount_String_1__String_1__RegexpParameter_$1_MANY$__Integer_1_', regexpCountCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::replaceAll_Map_1__Pair_MANY__Map_1_', mapReplaceAllCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
    ];
 }
 
@@ -193,24 +219,18 @@ function platform::extensions::language::javascript::translation::mathCoders():
    Pair<String, platform::pure::metamodel::function::Function<{ValueSpecification[*], Convention[1] -> Expression[1]}>>[*]
 {
    [
-      pair('sin',               sinCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('cos',               cosCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('tan',               tanCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('asin',              asinCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('acos',              acosCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('atan',              atanCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('atan2',             atan2Coder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('cot',               cotCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('sinh',              sinhCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('cosh',              coshCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('tanh',              tanhCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('exp',               expCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('log',               logCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('log10',             log10Coder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('cbrt',              cbrtCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toFloat',           toFloatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toDecimal',         toDecimalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toInteger',         toIntegerCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+      pair('platform::pure::functions::math::sin_Number_1__Float_1_', sinCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::cos_Number_1__Float_1_', cosCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::tan_Number_1__Float_1_', tanCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::asin_Number_1__Float_1_', asinCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::acos_Number_1__Float_1_', acosCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::atan_Number_1__Float_1_', atanCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::atan2_Number_1__Number_1__Float_1_', atan2Coder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::cot_Number_1__Float_1_', cotCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::exp_Number_1__Float_1_', expCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::log_Number_1__Float_1_', logCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::log10_Number_1__Float_1_', log10Coder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::cbrt_Number_1__Float_1_', cbrtCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
    ];
 }
 
@@ -218,45 +238,46 @@ function platform::extensions::language::javascript::translation::assertionAndTy
    Pair<String, platform::pure::metamodel::function::Function<{ValueSpecification[*], Convention[1] -> Expression[1]}>>[*]
 {
    [
-      pair('assert',            assertCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertEquals',      assertEqualsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertEmpty',       assertEmptyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertIs',          assertIsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertIsNot',       assertIsNotCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertFalse',       assertFalseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertTrue',        assertCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertNotEquals',   assertNotEqualsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertSameElements', assertSameElementsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertError',       assertErrorCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertSize',        assertSizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertNotEmpty',    assertNotEmptyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertInstanceOf',  assertInstanceOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('assertEqWithinTolerance', assertEqWithinToleranceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('cast',              castCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('instanceOf',        instanceOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('genericType',       genericTypeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('print',             printCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('println',           printlnCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('format',            formatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toRepresentation',  toRepresentationCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('copy',              copyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('eval',              evalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('new',               newCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('tryEval',           tryEvalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('memoize',           memoizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('match',             matchCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('pathToElement',     pathToElementCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('unescapePureString', unescapePureStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('normalizeDateString', normalizeDateStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('findAllTypes',      findAllTypesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('findFunctionsByNameAndArity', findFunctionsByNameAndArityCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('elementToPath',     elementToPathCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('lenientPathToElement', lenientPathToElementCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('elementPath',       elementPathCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('letFunction',       letFunctionCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('fail',              failCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('evaluate',          evaluateCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('openVariableValues',openVariableValuesCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+      pair('platform::pure::functions::asserts::assert_Boolean_1__Function_1__Boolean_1_', assertCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::asserts::assertError_Function_1__String_1__Integer_$0_1$__Integer_$0_1$__Boolean_1_', assertErrorCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_', castCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_', castCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_', castCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::instanceOf_Any_1__Type_1__Boolean_1_', instanceOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::genericType_Any_MANY__GenericTypeValue_1_', genericTypeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::io::print_Any_MANY__Integer_1__String_1_', printCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::format_String_1__Any_MANY__String_1_', formatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_', copyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::copy_T_1__T_1_', copyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::eval_Function_1__S_n__T_o__U_p__W_q__X_r__Y_s__Z_t__V_m_', evalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::eval_Function_1__T_n__U_p__V_m_', evalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__V_m_', evalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__X_r__V_m_', evalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__X_r__Y_s__V_m_', evalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__X_r__Y_s__Z_t__V_m_', evalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::eval_Function_1__T_n__V_m_', evalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::eval_Function_1__V_m_', evalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_', newCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_', newCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::new_GenericType_1__Any_1_', newCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::tryEval_Function_1__TryResult_1_', tryEvalCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::memoize_AddressableFunction_1__T_n__U_o__V_m_', memoizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::memoize_AddressableFunction_1__T_n__U_o__W_p__V_m_', memoizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::memoize_AddressableFunction_1__T_n__V_m_', memoizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::rawEvalProperty_Property_1__T_1__V_MANY_', rawEvalPropertyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::match_Any_MANY__Function_$1_MANY$__P_o__T_m_', matchCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::match_Any_MANY__Function_$1_MANY$__T_m_', matchCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::pathToElement_String_1__String_1__PackageableElement_1_', pathToElementCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::compiler::structural::valueSpecificationCompiler::unescapePureString_String_1__String_1_', unescapePureStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString_String_1__String_1_', normalizeDateStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::compiler::findAllTypes__Type_MANY_', findAllTypesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::compiler::findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_', findFunctionsByNameAndArityCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::elementToPath_PackageableElement_1__String_1__String_1_', elementToPathCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::lenientPathToElement_String_1__String_1__PackageableElement_$0_1$_', lenientPathToElementCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::elementPath_PackageableElement_1__PackageableElement_$1_MANY$_', elementPathCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::letFunction_String_1__T_m__T_m_', letFunctionCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::evaluate_Function_1__List_MANY__Any_MANY_', evaluateCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::openVariableValues_LambdaFunction_1__Map_1_', openVariableValuesCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
    ];
 }
 
@@ -264,68 +285,69 @@ function platform::extensions::language::javascript::translation::mapDateAndOthe
    Pair<String, platform::pure::metamodel::function::Function<{ValueSpecification[*], Convention[1] -> Expression[1]}>>[*]
 {
    [
-      pair('put',               putCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('putAll',            putAllCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('remove',            removeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('keys',              keysCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('values',            valuesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('get',               getCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('groupBy',           groupByCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('newMap',            newMapCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('removeAll',         removeAllCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('keyValues',         keyValuesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getIfAbsentPutWithKey', getIfAbsentPutWithKeyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getMapStats',       getMapStatsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('keyExpression',     keyExpressionCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('parseDate',         parseDateCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('pair',              pairCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('adjust',            adjustCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('dateDiff',          dateDiffCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('datePart',          datePartCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('year',              yearCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('monthNumber',       monthNumberCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('dayOfMonth',        dayOfMonthCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('hour',              hourCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('minute',            minuteCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('second',            secondCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('millis',            millisCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('currentTimeMillis', currentTimeMillisCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('random',            randomCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('genericTypeHolder', genericTypeHolderCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('compileSource',     compileSourceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::put_Map_1__U_1__V_1__Map_1_', putCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::putAll_Map_1__Map_1__Map_1_', putAllCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::putAll_Map_1__Pair_MANY__Map_1_', putAllCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::remove_Map_1__U_1__Map_1_', removeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::keys_Map_1__U_MANY_', keysCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::values_Map_1__V_MANY_', valuesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::get_Map_1__U_1__V_$0_1$_', getCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::groupBy_X_MANY__Function_1__Map_1_', groupByCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::newMap_Pair_MANY__Map_1_', newMapCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::newMap_Pair_MANY__Property_MANY__Map_1_', newMapCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::removeAll_T_MANY__T_MANY__T_MANY_', removeAllCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::keyValues_Map_1__Pair_MANY_', keyValuesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::getIfAbsentPutWithKey_Map_1__U_1__Function_1__V_$0_1$_', getIfAbsentPutWithKeyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::getMapStats_Map_1__MapStats_$0_1$_', getMapStatsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_', keyExpressionCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_', keyExpressionCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::string::parseDate_String_1__Date_1_', parseDateCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::adjust_Date_1__Integer_1__DurationUnit_1__Date_1_', adjustCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::dateDiff_Date_1__Date_1__DurationUnit_1__Integer_1_', dateDiffCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::datePart_Date_1__StrictDate_1_', datePartCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::year_Date_1__Integer_1_', yearCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::monthNumber_Date_1__Integer_1_', monthNumberCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::dayOfMonth_Date_1__Integer_1_', dayOfMonthCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::hour_DateTime_1__Integer_1_', hourCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::minute_DateTime_1__Integer_1_', minuteCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::second_DateTime_1__Integer_1_', secondCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::millis_DateTime_1__Integer_1_', millisCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::date::currentTimeMillis__Integer_1_', currentTimeMillisCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::math::random__Float_1_', randomCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::genericTypeHolder_T_m__GenericTypeAndMultiplicityHolder_1_', genericTypeHolderCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::compileSource_PureFile_1__String_MANY__CompileSourceResult_1_', compileSourceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       // Keyed on the SHORT name, like every other entry — dispatch tries the
       // whole functionName first but the compiler reports natives by short name.
       // All three are unique repo-wide: the JS eval native is deliberately
       // `compileModule`, not `compile`, so it cannot capture
       // platform::pure::compiler::compile (see native.pure).
-      pair('compileModule',     jsCompileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('withSilencedPrint', withSilencedPrintCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('execute',           jsExecuteCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('drainCompiledSources', jsDrainCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('parse',             parseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('readFileBytes',     readFileBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('entryNames',        entryNamesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('entryBytes',        entryBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('directoryTree',     directoryTreeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('writeFile',         writeFileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('intToLeBytes',      intToLeBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('floatToLeBytes',    floatToLeBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('stringToUtf8Bytes', stringToUtf8BytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('binarySize',        binarySizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('binaryAt',          binaryAtCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('binaryLeUInt',      binaryLeUIntCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('binaryLeInt',       binaryLeIntCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('binaryUtf8',        binaryUtf8Coder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('binarySlice',       binarySliceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('binaryConcat',      binaryConcatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('binaryZeros',       binaryZerosCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('binaryEquals',      binaryEqualsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('binaryToHex',       binaryToHexCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('utf8BytesToString', utf8BytesToStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('leBytesToFloat',    leBytesToFloatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('range',             rangeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('rawType',           rawTypeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('resolveAndReturnGraph', resolveAndReturnGraphCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+      pair('platform::extensions::language::javascript::compileModule_String_1__Any_1_', jsCompileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::io::withSilencedPrint_Function_1__T_m_', withSilencedPrintCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::extensions::language::javascript::execute_Any_1__String_1__Any_MANY__GenericType_$0_1$__Multiplicity_$0_1$__Any_$0_1$__Any_MANY_', jsExecuteCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::extensions::language::javascript::drainCompiledSources__String_MANY_', jsDrainCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::parse_String_1__String_1__PureFile_1_', parseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::io::readFileBytes_String_1__Binary_1_', readFileBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::compiler::pdb::archive::entryNames_Binary_1__String_MANY_', entryNamesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::compiler::pdb::archive::entryBytes_Binary_1__String_1__Binary_1_', entryBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::io::directoryTree_String_1__String_MANY_', directoryTreeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::io::writeFile_String_1__String_1__String_1_', writeFileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::intToLeBytes_Integer_1__Integer_1__Binary_1_', intToLeBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::floatToLeBytes_Float_1__Binary_1_', floatToLeBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::stringToUtf8Bytes_String_1__Binary_1_', stringToUtf8BytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::binarySize_Binary_1__Integer_1_', binarySizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::binaryAt_Binary_1__Integer_1__Byte_1_', binaryAtCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::binaryLeUInt_Binary_1__Integer_1__Integer_1__Integer_1_', binaryLeUIntCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::binaryLeInt_Binary_1__Integer_1__Integer_1__Integer_1_', binaryLeIntCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::binaryUtf8_Binary_1__Integer_1__Integer_1__String_1_', binaryUtf8Coder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::binarySlice_Binary_1__Integer_1__Integer_1__Binary_1_', binarySliceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::binaryConcat_Binary_MANY__Binary_1_', binaryConcatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::binaryZeros_Integer_1__Binary_1_', binaryZerosCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::binaryEquals_Binary_1__Binary_1__Boolean_1_', binaryEqualsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::binaryToHex_Binary_1__String_1_', binaryToHexCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::utf8BytesToString_Binary_1__String_1_', utf8BytesToStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::binary::leBytesToFloat_Binary_1__Float_1_', leBytesToFloatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::collection::range_Integer_1__Integer_1__Integer_1__Integer_MANY_', rangeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::resolveAndReturnGraph_Map_1__PackageableElement_MANY_', resolveAndReturnGraphCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
    ];
 }
 
@@ -336,24 +358,42 @@ function platform::extensions::language::javascript::translation::antlrCoders():
    Pair<String, platform::pure::metamodel::function::Function<{ValueSpecification[*], Convention[1] -> Expression[1]}>>[*]
 {
    [
-      pair('parseAntlr',                parseAntlrCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getText',                   getTextCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('grammarRuleName',           grammarRuleNameCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getChild',                  getChildCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getChildren',               getChildrenCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getTopLevelChildren',       getTopLevelChildrenCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getChildTextAt',            getChildTextAtCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getTokenText',              getTokenTextCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getTokenTexts',             getTokenTextsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('hasChild',                  hasChildCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('hasToken',                  hasTokenCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getStartLine',              getStartLineCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getStartColumn',            getStartColumnCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getStopLine',               getStopLineCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('getStopColumn',             getStopColumnCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('stripTripleQuotesDedented', stripTripleQuotesDedentedCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('computeFirstNonNewlineLine', computeFirstNonNewlineLineCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+      pair('platform::pure::functions::meta::antlr::parseAntlr_String_1__String_1__String_1__Integer_1__AntlrContext_1_', parseAntlrCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getText_AntlrContext_1__String_1_', getTextCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::grammarRuleName_AntlrContext_1__String_1_', grammarRuleNameCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getChild_AntlrContext_1__String_1__AntlrContext_$0_1$_', getChildCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getChildren_AntlrContext_1__String_1__AntlrContext_MANY_', getChildrenCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getTopLevelChildren_AntlrContext_1__AntlrContext_MANY_', getTopLevelChildrenCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getChildTextAt_AntlrContext_1__Integer_1__String_$0_1$_', getChildTextAtCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getTokenText_AntlrContext_1__String_1__String_$0_1$_', getTokenTextCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getTokenTexts_AntlrContext_1__String_1__String_MANY_', getTokenTextsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::hasChild_AntlrContext_1__String_1__Boolean_1_', hasChildCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::hasToken_AntlrContext_1__String_1__Boolean_1_', hasTokenCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getStartLine_AntlrContext_1__Integer_1_', getStartLineCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getStartColumn_AntlrContext_1__Integer_1_', getStartColumnCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getStopLine_AntlrContext_1__Integer_1_', getStopLineCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::getStopColumn_AntlrContext_1__Integer_1_', getStopColumnCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::stripTripleQuotesDedented_String_1__String_1_', stripTripleQuotesDedentedCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::meta::antlr::computeFirstNonNewlineLine_AntlrContext_$0_1$__Integer_1_', computeFirstNonNewlineLineCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
    ];
+}
+
+// The coder translating calls to `f`: coders implement natives only, keyed by the native's full id
+// (platform::pure::functions::collection::size_Any_MANY__Integer_1_) — never a name, so a function written in Pure
+// is always translated from its body, and two natives of one name are never one another's.
+function platform::extensions::language::javascript::translation::coderFor(f: Any[*], conv: Convention[1]): platform::pure::metamodel::function::Function<{ValueSpecification[*], Convention[1] -> Expression[1]}>[0..1]
+{
+   if ($f->size() == 1 && $f->toOne()->instanceOf(platform::pure::metamodel::function::NativeFunction),
+      | $conv.functionCoders->get($f->toOne()->cast(@platform::pure::metamodel::function::NativeFunction<Any>)->elementToPath()),
+      | []);
+}
+
+// The natives this platform does not implement, by full id, each with why: no coder (the coder check fails one that
+// has), and translating a call to one fails saying so.
+function platform::extensions::language::javascript::translation::notOnThisPlatform(): Pair<String, String>[*]
+{
+   [pair('platform::pure::functions::collection::getAll_Class_1__T_MANY_',
+         'there is no store of instances to read: the instances of a class exist only where a query is translated')]
 }
 
 function platform::extensions::language::javascript::translation::defaultConvention(): Convention[1]
@@ -763,14 +803,9 @@ function platform::extensions::language::javascript::translation::translateExpre
                          if ($fe.parametersValues->at(0)->isScalarClassReceiver(),
                             | jsCall(jsAccess($recv, '_' + $fe.functionName), []),
                             | jsAccess(jsCall(jsId('__pdo'), [$recv]), $fe.functionName));))),
-             | // Coder dispatch tolerates fully-qualified function names by
-             //   falling back to the last `::`-separated segment. The canonical
-             //   recompile occasionally produces FQNs (`platform::pure::functions::
-             //   lang::new` instead of `new`).
-             let directHit = $conv.functionCoders->get($fe.functionName);
-             let shortHit = if ($directHit->isNotEmpty(),
-                                | $directHit,
-                                | $conv.functionCoders->get($fe.functionName->split('::')->last()->toOne()));
+             | // Coders implement natives only, keyed by the called native's full id — never the name the call
+             //   is written with, so a function written in Pure is translated from its body.
+             let shortHit = $fe.func->coderFor($conv);
              if ($shortHit->isNotEmpty(),
                  | $shortHit->toOne()->eval($fe.parametersValues, $conv),
                  | // Last-resort: if no coder matches, check whether `func`
@@ -782,7 +817,11 @@ function platform::extensions::language::javascript::translation::translateExpre
                      | let udfName = jsUdfName($fe->resolveUdf()->toOne());
                        jsCall(jsId($udfName),
                               $fe.parametersValues->map(p | $p->translateExpression($conv)));,
-                     | fail('No translator branch for Pure function: ' + $fe.functionName);
+                     | let id = $fe.func->filter(f | $f->instanceOf(platform::pure::metamodel::function::NativeFunction))->map(f | $f->cast(@platform::pure::metamodel::function::NativeFunction<Any>)->elementToPath());
+                       let notHere = notOnThisPlatform()->filter(p | $p.first == $id);
+                       fail(if ($notHere->isNotEmpty(),
+                               | 'The native ' + $notHere->toOne().first + ' is not implemented on the JavaScript platform: ' + $notHere->toOne().second,
+                               | 'No translator branch for Pure function: ' + $fe.functionName));
                        jsId('undefined');
                  )
              );
@@ -839,11 +878,6 @@ function platform::extensions::language::javascript::translation::equalCoder(arg
    // is reference-only; delegate to the runtime `__eq` helper.
    assert($args->size() == 2, | 'equalCoder expects 2 args');
    jsCall(jsId('__eq'), [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv)]);
-}
-
-function platform::extensions::language::javascript::translation::greaterThanCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   binaryInfix($args, '>', $conv);
 }
 
 function platform::extensions::language::javascript::translation::andCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -950,12 +984,9 @@ function platform::extensions::language::javascript::translation::dropCoder(args
 function platform::extensions::language::javascript::translation::toStringCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 1, | 'toStringCoder expects exactly 1 argument');
-   // Float toString needs the "always a decimal point, never exponential"
-   // formatting — and Float vs Integer is only knowable statically (both are
-   // JS number at runtime), so dispatch on the argument's declared type.
-   if ($args->at(0)->isFloatTyped(),
-      | jsCall(jsId('__floatStr'), [translateExpression($args->at(0), $conv)]),
-      | jsCall(jsId('__toString'), [translateExpression($args->at(0), $conv)]));
+   // A Float's "always a decimal point, never exponential" form is decided at run time — a Float is a JS number,
+   // an Integer a bigint — so it holds whatever the argument's declared type (Number included).
+   jsCall(jsId('__toString'), [translateExpression($args->at(0), $conv)]);
 }
 
 // True if the value specification's declared type is Float.
@@ -1573,11 +1604,6 @@ function platform::extensions::language::javascript::translation::headCoder(args
    jsCall(jsId('__head'), [translateExpression($args->at(0), $conv)]);
 }
 
-function platform::extensions::language::javascript::translation::firstCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   $args->headCoder($conv);
-}
-
 function platform::extensions::language::javascript::translation::lastCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 1, | 'lastCoder expects exactly 1 argument');
@@ -1662,32 +1688,20 @@ function platform::extensions::language::javascript::translation::sliceCoder(arg
    jsCall(jsId('__slice'), $args->map(a | $a->translateExpression($conv)));
 }
 
+// The native sort(coll, key, comp) -> __sort: key and comp are each [0..1], read as present or not at run time.
+// __sort applies Pure natural ordering without comp (JS `.sort()` is lexicographic).
 function platform::extensions::language::javascript::translation::sortCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // Overloads: sort(coll) | sort(coll, comp) | sort(coll, key, comp). The
-   // 2-arg form's extra arg is the COMPARATOR (not a key), so pass it as
-   // __sort's third arg. __sort applies Pure natural ordering by default
-   // (JS `.sort()` is lexicographic). comp returns Pure's compare (-1/0/1).
-   let coll = translateExpression($args->at(0), $conv);
-   if ($args->size() <= 1,
-      | jsCall(jsId('__sort'), [$coll]),
-      |if ($args->size() == 2,
-         | jsCall(jsId('__sort'), [$coll, jsId('undefined'), translateExpression($args->at(1), $conv)]),
-         | jsCall(jsId('__sort'), [$coll, translateExpression($args->at(1), $conv), translateExpression($args->at(2), $conv)])));
+   assert($args->size() == 3, | 'sortCoder: the native sort takes 3 arguments, got ' + $args->size()->toString());
+   jsCall(jsId('__sort'), $args->map(a | $a->translateExpression($conv)));
 }
 
+// The native removeDuplicates(coll, key, eql) -> __removeDuplicates: key and eql are each [0..1]. The __asArr lift
+// in the helper lets a single value (a class proxy, a bare number) through.
 function platform::extensions::language::javascript::translation::removeDuplicatesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // 1-arg form: `[...new Set(__asArr(coll))]` (referential dedup).
-   // The `__asArr` lift is what lets a scalar Pure value (a single class PE
-   // proxy, a bare number, …) flow through `new Set(...)`: the bare Proxy
-   // isn't iterable, so without the lift the spread throws "not iterable".
-   // 2-arg form: removeDuplicates(coll, eqFn) — runtime helper that uses the
-   //   supplied predicate to compare pairs.
-   if ($args->size() == 1,
-      | jsArrayLit([jsSpread(jsNew(jsId('Set'), [jsCall(jsId('__asArr'), [translateExpression($args->at(0), $conv)])]))]),
-      | jsCall(jsId('__removeDuplicatesBy'), $args->map(a | $a->translateExpression($conv)))
-   );
+   assert($args->size() == 3, | 'removeDuplicatesCoder: the native removeDuplicates takes 3 arguments, got ' + $args->size()->toString());
+   jsCall(jsId('__removeDuplicates'), $args->map(a | $a->translateExpression($conv)));
 }
 
 function platform::extensions::language::javascript::translation::indexOfCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1860,68 +1874,24 @@ function platform::extensions::language::javascript::translation::sqrtCoder(args
    mathCall($args, 'sqrt', $conv);
 }
 
-function platform::extensions::language::javascript::translation::minNativeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   // Bigint-safe min (Math.min throws on bigint): __minColl over a collection,
-   // __min2 for the 2-arg form. Both preserve the operand type (Integer/Float).
-   if ($args->size() == 1,
-      | jsCall(jsId('__minColl'), [translateExpression($args->at(0), $conv)]),
-      | jsCall(jsId('__min2'), $args->map(a | $a->translateExpression($conv))));
-}
-
-function platform::extensions::language::javascript::translation::maxNativeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   if ($args->size() == 1,
-      | jsCall(jsId('__maxColl'), [translateExpression($args->at(0), $conv)]),
-      | jsCall(jsId('__max2'), $args->map(a | $a->translateExpression($conv))));
-}
-
 function platform::extensions::language::javascript::translation::modCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    jsCall(jsId('__mod'), $args->map(a | $a->translateExpression($conv)));
-}
-
-function platform::extensions::language::javascript::translation::sumCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   // sum(coll): bigint-safe (Integer seed stays bigint, Float stays number).
-   jsCall(jsId('__sumColl'), [translateExpression($args->at(0), $conv)]);
-}
-
-function platform::extensions::language::javascript::translation::averageCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   // average(coll) -> Float; coerces bigint elements to Number internally.
-   jsCall(jsId('__avgColl'), [translateExpression($args->at(0), $conv)]);
 }
 
 // ----------------------------------------------------------------------------
 // Comparison + identity coders.
 // ----------------------------------------------------------------------------
 
-function platform::extensions::language::javascript::translation::greaterThanEqualCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   binaryInfix($args, '>=', $conv);
-}
-
 function platform::extensions::language::javascript::translation::lessThanEqualCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    binaryInfix($args, '<=', $conv);
 }
 
-function platform::extensions::language::javascript::translation::isTrueCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   jsBinary(translateExpression($args->at(0), $conv), '===', jsBoolLit(true));
-}
-
-function platform::extensions::language::javascript::translation::isFalseCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   jsBinary(translateExpression($args->at(0), $conv), '===', jsBoolLit(false));
-}
-
-// is(a, b) -> reference equality. JS === is fine for primitives, and for objects
-// it's reference identity, matching Pure semantics.
+// is(a, b) -> __is: reference identity, a Pure element being the same whatever its JS shape.
 function platform::extensions::language::javascript::translation::isCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   binaryInfix($args, '===', $conv);
+   jsCall(jsId('__is'), $args->map(a | $a->translateExpression($conv)));
 }
 
 // ----------------------------------------------------------------------------
@@ -1966,66 +1936,6 @@ function platform::extensions::language::javascript::translation::assertCoder(ar
                   | translateExpression($args->at(1), $conv),
                   | jsStrLit('assertion failed'));
    assertHelper($cond, $msg);
-}
-
-function platform::extensions::language::javascript::translation::assertEqualsCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   // Emit each argument ONCE. __assertEq binds them as parameters and builds the
-   // message only on failure; previously `actual` was emitted twice (comparison
-   // + eagerly-built message), re-running the expression on every passing
-   // assertion. See __assertEq in runtime-lib.
-   assert($args->size() >= 2, | 'assertEqualsCoder needs at least 2 args');
-   jsCall(jsId('__assertEq'), [translateExpression($args->at(0), $conv),
-                               translateExpression($args->at(1), $conv)]);
-}
-
-function platform::extensions::language::javascript::translation::assertNotEqualsCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   let expected = translateExpression($args->at(0), $conv);
-   let actual   = translateExpression($args->at(1), $conv);
-   assertHelper(jsNot(jsCall(jsId('__eq'), [$expected, $actual])), jsStrLit('assertNotEquals failed'));
-}
-
-function platform::extensions::language::javascript::translation::assertEmptyCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   let x = translateExpression($args->at(0), $conv);
-   // Empty = undefined OR (Array.isArray && length === 0)
-   let cond = jsBinary(
-      jsBinary($x, '===', jsId('undefined')),
-      '||',
-      jsBinary(
-         jsCall(jsAccess(jsId('Array'), 'isArray'), [$x]),
-         '&&',
-         jsBinary(jsAccess($x, 'length'), '===', jsNumLit('0'))
-      )
-   );
-   assertHelper($cond, jsStrLit('assertEmpty failed'));
-}
-
-function platform::extensions::language::javascript::translation::assertIsCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   // assertIs is reference identity in Pure. Delegate to the runtime helper:
-   // raw JS `===` fails for two `__pathToElement('p')` lookups that produce
-   // different reference shapes (a `{name, path}` literal vs a __pureResolve
-   // proxy), while `__assertIs` falls back to `.path` / `.name` matching for
-   // the PE-stub case and throws a detailed `expected … is …` message on
-   // mismatch (instead of the generic `assertIs failed`).
-   let expected = translateExpression($args->at(0), $conv);
-   let actual   = translateExpression($args->at(1), $conv);
-   jsCall(jsId('__assertIs'), [$expected, $actual]);
-}
-
-function platform::extensions::language::javascript::translation::assertIsNotCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   let expected = translateExpression($args->at(0), $conv);
-   let actual   = translateExpression($args->at(1), $conv);
-   assertHelper(jsBinary($expected, '!==', $actual), jsStrLit('assertIsNot failed'));
-}
-
-function platform::extensions::language::javascript::translation::assertFalseCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   let x = translateExpression($args->at(0), $conv);
-   assertHelper(jsBinary($x, '===', jsBoolLit(false)), jsStrLit('assertFalse failed'));
 }
 
 // ----------------------------------------------------------------------------
@@ -2077,6 +1987,19 @@ function platform::extensions::language::javascript::translation::isToManyMult(m
       | let cm = $m->cast(@platform::pure::metamodel::multiplicity::ConcreteMultiplicity);
         $cm.upperBound->isEmpty() || $cm.upperBound->toOne().value->toOne() > 1;
    );
+}
+
+// Return `conv` with the type parameters of `cls` witnessed by `thisName`, the object a default or a
+// qualified property is computed for: each is that object's type argument at its index. Witnesses `conv`
+// already has (a qualified property's own function-level ones) win.
+function platform::extensions::language::javascript::translation::withClassTypeParamWitness(conv: Convention[1], cls: platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>[1], thisName: String[1]): Convention[1]
+{
+   let witness = $cls.typeParameters->map(p |
+      pair($p.name->toOne(),
+           ^TypeVarBinding(witnessVar = $thisName, isCollection = false, declaringClass = $cls->elementToPath())));
+   if ($witness->isEmpty(), | $conv,
+      | let existing = if ($conv.typeVarWitness->isEmpty(), | [], | $conv.typeVarWitness->toOne()->keyValues());
+        ^$conv(typeVarWitness = newMap($witness->concatenate($existing))););
 }
 
 // Return `conv` with its `typeVarWitness` set from a function's parameters:
@@ -2290,8 +2213,13 @@ function platform::extensions::language::javascript::translation::emitConstraint
                                        | $t->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>).generalizations,
                                        | $t->cast(@platform::pure::metamodel::type::PrimitiveType).generalizations);
              let owner = $path->split('::')->last()->toOne();
+             // a class's own constraints read its type parameters off the object they check
+             // (testNewConstraintBindsTheClassTypeParameters)
+             let ownConv = if ($isClass,
+                              | $conv->withClassTypeParamWitness($t->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>), safeJsName('this')),
+                              | $conv);
              let ownStmts = range(0, $constraints->size())->map(i |
-                emitOneConstraintCheck($constraints->at($i), $i, $owner, $typeVars, $siteTypeVarValues, $conv)
+                emitOneConstraintCheck($constraints->at($i), $i, $owner, $typeVars, $siteTypeVarValues, $ownConv)
              );
              let inheritedStmts = $generalizations->map(g |
                 let general    = $g.general;
@@ -2389,7 +2317,10 @@ function platform::extensions::language::javascript::translation::castTypeParamE
       | let b = $binding->toOne();
         // __commonType is collection-safe (single witness -> its own type), so use
         // it for any witness multiplicity (scalar T[1], sequence T[*], or param T[m]).
-        jsCall(jsId('__cast'), [$src, jsCall(jsId('__commonType'), [jsId($b.witnessVar)])]););
+        if ($b.declaringClass->isNotEmpty(),
+           | jsCall(jsId('__castToClassTypeParameter'), [$src, jsId($b.witnessVar), jsStrLit($b.declaringClass->toOne()), jsStrLit($tp.name->toOne())]),
+           | jsCall(jsId('__cast'), [$src, jsCall(jsId('__commonType'), [jsId($b.witnessVar)])]));
+   );
 }
 
 function platform::extensions::language::javascript::translation::castResolvedExpr(t: platform::pure::metamodel::type::Type[1], src: Expression[1], conv: Convention[1]): Expression[1]
@@ -2443,13 +2374,6 @@ function platform::extensions::language::javascript::translation::printCoder(arg
    jsCall(jsId('__print'), [translateExpression($args->at(0), $conv)]);
 }
 
-// println(x) -> __println(x): print's formatted-string output with a
-// trailing `\n`. Mirrors the Pure spec definition `print(v) + print('\n')`.
-function platform::extensions::language::javascript::translation::printlnCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   jsCall(jsId('__println'), [translateExpression($args->at(0), $conv)]);
-}
-
 // format(tpl, args) — Pure's signature is `format(String[1], Any[*]):String[1]`.
 // The `args:Any[*]` slot arrives as a single Collection value (not splatted),
 // so we pass `$args->at(1)` straight through to the runtime helper.
@@ -2460,16 +2384,6 @@ function platform::extensions::language::javascript::translation::formatCoder(ar
       | translateExpression($args->at(1), $conv),
       | jsArrayLit([]));
    jsCall(jsId('__format'), [$tpl, $rest]);
-}
-
-// toRepresentation(x) -> JSON.stringify or a primitive's literal form.
-function platform::extensions::language::javascript::translation::toRepresentationCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   // Float representation is the same as its toString (decimal point, no
-   // exponential) — quotes only apply to String. See isFloatTyped/toStringCoder.
-   if ($args->at(0)->isFloatTyped(),
-      | jsCall(jsId('__floatStr'), [translateExpression($args->at(0), $conv)]),
-      | jsCall(jsId('__toRepresentation'), [translateExpression($args->at(0), $conv)]));
 }
 
 // copy(obj, kvList) -> { ...obj, k1: v1, ... }. The spread must come FIRST so
@@ -2617,51 +2531,10 @@ function platform::extensions::language::javascript::translation::assertErrorCod
    jsCall($arrow, [$thunk, $msg]);
 }
 
-// assertSize(coll, n[, msg]) -> assertEquals on coll.length === n.
-function platform::extensions::language::javascript::translation::assertSizeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   // As assertEqualsCoder: emit the collection ONCE. __assertSize does the
-   // Array.isArray/length branch internally, so the expression is not duplicated.
-   assert($args->size() >= 2, | 'assertSizeCoder expects at least 2 args');
-   jsCall(jsId('__assertSize'), [translateExpression($args->at(0), $conv),
-                                 translateExpression($args->at(1), $conv)]);
-}
-
-function platform::extensions::language::javascript::translation::assertNotEmptyCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   let x = translateExpression($args->at(0), $conv);
-   let cond = jsBinary(
-      jsBinary($x, '!==', jsId('undefined')),
-      '&&',
-      jsTernary(
-         jsCall(jsAccess(jsId('Array'), 'isArray'), [$x]),
-         jsBinary(jsAccess($x, 'length'), '>', jsNumLit('0')),
-         jsBoolLit(true)
-      )
-   );
-   assertHelper($cond, jsStrLit('assertNotEmpty failed'));
-}
-
-// assertInstanceOf(value, type) — without runtime classifier metadata we can't
-// fully verify, so we conservatively pass (matches our instanceOfCoder).
-function platform::extensions::language::javascript::translation::assertInstanceOfCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   assertHelper(jsBoolLit(true), jsStrLit('assertInstanceOf passed (best-effort)'));
-}
-
 // chunk(coll, n) -> [coll.slice(0,n), coll.slice(n,2n), ...]. Use runtime helper.
 function platform::extensions::language::javascript::translation::chunkCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    jsCall(jsId('__chunk'), $args->map(a | $a->translateExpression($conv)));
-}
-
-// orElse(scalar, default) -> scalar ?? default
-function platform::extensions::language::javascript::translation::orElseCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   assert($args->size() == 2, | 'orElseCoder expects 2 args');
-   // Pure orElse falls back on an EMPTY sequence (not on null/falsiness), so
-   // `[]`/empty -> default while a present '' or 0 is kept. `??` wouldn't.
-   jsCall(jsId('__orElse'), [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv)]);
 }
 
 // zip(a, b) -> a.map((x,i) => [x, b[i]]).slice(0, Math.min(a.length, b.length))
@@ -2669,6 +2542,14 @@ function platform::extensions::language::javascript::translation::zipCoder(args:
 {
    assert($args->size() == 2, | 'zipCoder expects 2 args');
    jsCall(jsId('__zip'), $args->map(a | $a->translateExpression($conv)));
+}
+
+// rawEvalProperty(property, object) — what the object holds for the property, never its default
+// (`__rawEvalProperty`, lang/eval/rawEvalProperty.pure).
+function platform::extensions::language::javascript::translation::rawEvalPropertyCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   assert($args->size() == 2, | 'rawEvalPropertyCoder expects 2 arguments (the property, the object)');
+   jsCall(jsId('__rawEvalProperty'), $args->map(a | $a->translateExpression($conv)));
 }
 
 // memoize(f, args...) — `__memoize` evaluates f through `__eval` once per execution for a given
@@ -2891,11 +2772,11 @@ function platform::extensions::language::javascript::translation::variantCoders(
    Pair<String, platform::pure::metamodel::function::Function<{ValueSpecification[*], Convention[1] -> Expression[1]}>>[*]
 {
    [
-      pair('fromJson',  fromJsonCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toJson',    toJsonCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toVariant', toVariantCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('to',        variantToCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('toMany',    variantToManyCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+      pair('platform::pure::functions::variant::convert::fromJson_String_1__Variant_1_', fromJsonCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::variant::convert::toJson_Variant_1__String_1_', toJsonCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::variant::convert::toVariant_Any_MANY__Variant_1_', toVariantCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::variant::convert::to_Variant_$0_1$__GenericTypeAndMultiplicityHolder_1__T_$0_1$_', variantToCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::variant::convert::toMany_Variant_$0_1$__GenericTypeAndMultiplicityHolder_1__T_MANY_', variantToManyCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
    ];
 }
 
@@ -2986,18 +2867,6 @@ function platform::extensions::language::javascript::translation::newInstanceOf(
                      expression = jsId($mangledClass), arguments = [])->cast(@Expression));
 }
 
-function platform::extensions::language::javascript::translation::pairCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   assert($args->size() == 2, | 'pairCoder expects exactly 2 args');
-   // An instance of Pair, not a bare literal: a scalar Class-typed receiver is read through its
-   // accessor, so a literal here answers `acc._first is not a function` wherever a Pair is read.
-   // `__multiIf` is the biggest consumer, via `[pair(|cond, |val), ...]`.
-   newInstanceOf('platform$pure$functions$collection$Pair', [
-      jsEntry('first',  translateExpression($args->at(0), $conv)),
-      jsEntry('second', translateExpression($args->at(1), $conv))
-   ]);
-}
-
 // Date arithmetic — delegate to runtime helpers. The translator can't
 // reproduce Pure's date semantics exactly but most PCT tests use simple
 // add-days/diff-days shapes.
@@ -3032,37 +2901,6 @@ function platform::extensions::language::javascript::translation::asinCoder(args
 function platform::extensions::language::javascript::translation::acosCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'acos', $conv); }
 function platform::extensions::language::javascript::translation::atanCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'atan', $conv); }
 function platform::extensions::language::javascript::translation::atan2Coder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'atan2', $conv); }
-function platform::extensions::language::javascript::translation::sinhCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'sinh', $conv); }
-function platform::extensions::language::javascript::translation::coshCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'cosh', $conv); }
-function platform::extensions::language::javascript::translation::tanhCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'tanh', $conv); }
-function platform::extensions::language::javascript::translation::expCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'exp', $conv); }
-function platform::extensions::language::javascript::translation::logCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'log', $conv); }
-function platform::extensions::language::javascript::translation::log10Coder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'log10', $conv); }
-function platform::extensions::language::javascript::translation::cbrtCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'cbrt', $conv); }
-
-// cot = 1 / tan.
-function platform::extensions::language::javascript::translation::cotCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   jsBinary(jsNumLit('1'), '/', mathCall($args, 'tan', $conv));
-}
-
-// Numeric conversions — JS conflates Integer/Float, so toFloat/toDecimal/
-// toInteger are mostly identity (toInteger truncates).
-function platform::extensions::language::javascript::translation::toFloatCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   jsCall(jsId('Number'), [translateExpression($args->at(0), $conv)]);
-}
-function platform::extensions::language::javascript::translation::toDecimalCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   // Pure toDecimal -> Decimal (Big).
-   jsCall(jsId('__dec'), [translateExpression($args->at(0), $conv)]);
-}
-function platform::extensions::language::javascript::translation::toIntegerCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   // Pure toInteger -> Integer (bigint); __bi truncates a Float/String to bigint.
-   jsCall(jsId('__bi'), [translateExpression($args->at(0), $conv)]);
-}
-
 // ----------------------------------------------------------------------------
 // Date getters — strip the `%` tag and read the corresponding JS Date field.
 // ----------------------------------------------------------------------------
@@ -3153,46 +2991,10 @@ function platform::extensions::language::javascript::translation::parseBooleanCo
    jsCall(jsId('__parseBoolean'), [translateExpression($args->at(0), $conv)]);
 }
 
-// removeDuplicatesBy(coll, eqOrKey) — same runtime helper as removeDuplicates
-// with a function arg.
-function platform::extensions::language::javascript::translation::removeDuplicatesByCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   jsCall(jsId('__removeDuplicatesBy'), $args->map(a | $a->translateExpression($conv)));
-}
-
-// fail(msg) — throws. Emit a runtime helper so we can express the throw
-// statement (the TS metamodel has no ThrowStatement primitive).
-function platform::extensions::language::javascript::translation::failCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   let msg = if ($args->size() >= 1,
-      | translateExpression($args->at(0), $conv),
-      | jsStrLit('fail() called'));
-   jsCall(jsId('__fail'), [$msg]);
-}
-
-// assertEqWithinTolerance(expected, actual, tol[, msg[, formatArgs]]) —
-// |expected - actual| <= tol. Pure has 3/4/5-arg overloads; we accept any
-// shape with arg[3] (msg) and arg[4] (formatArgs) optional.
-function platform::extensions::language::javascript::translation::assertEqWithinToleranceCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   assert($args->size() >= 3, | 'assertEqWithinToleranceCoder expects at least 3 args');
-   let expected = translateExpression($args->at(0), $conv);
-   let actual   = translateExpression($args->at(1), $conv);
-   let tol      = translateExpression($args->at(2), $conv);
-   // Coerce operands to Number (tolerance compare is Float-domain); Math.abs and
-   // `bigint - number` both throw on a bigint Integer operand.
-   let cond = jsBinary(
-      jsCall(jsAccess(jsId('Math'), 'abs'), [jsBinary(jsCall(jsId('__num'), [$expected]), '-', jsCall(jsId('__num'), [$actual]))]),
-      '<=',
-      jsCall(jsId('__num'), [$tol])
-   );
-   assertHelper($cond, jsStrLit('assertEqWithinTolerance failed'));
-}
-
-// toOneMany(coll) -> identity in JS (Pure asserts the coll has >= 1 element).
+// toOneMany(coll[, message]) -> __toOneMany: the collection itself, failing when it is empty.
 function platform::extensions::language::javascript::translation::toOneManyCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   translateExpression($args->at(0), $conv);
+   jsCall(jsId('__toOneMany'), $args->map(a | $a->translateExpression($conv)));
 }
 
 // letFunction(name, value) in *expression* position — when a let appears
@@ -3227,11 +3029,10 @@ function platform::extensions::language::javascript::translation::randomCoder(ar
    jsCall(jsAccess(jsId('Math'), 'random'), []);
 }
 
-// replaceAll(s, from, to) -> s.replaceAll(from, to). Pure's `replace` already
-// has "replace-all" semantics; `replaceAll` is the same.
-function platform::extensions::language::javascript::translation::replaceAllCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+// replaceAll(map, pairs): a Pure map is immutable, so a new map of exactly the pairs.
+function platform::extensions::language::javascript::translation::mapReplaceAllCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   jsCall(jsId('__replace'), $args->map(a | $a->translateExpression($conv)));
+   jsCall(jsId('__newMap'), [$args->at(1)->translateExpression($conv)]);
 }
 
 // removeAll(map, keys) -> { ...map } minus listed keys.
@@ -3258,10 +3059,8 @@ function platform::extensions::language::javascript::translation::getIfAbsentPut
 // getMapStats(map) -> stats object stub.
 function platform::extensions::language::javascript::translation::getMapStatsCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   jsObject([
-      jsEntry('size', jsAccess(jsCall(jsId('__mapKeys'),
-                                       [translateExpression($args->at(0), $conv)]), 'length'))
-   ]);
+   // none: a Pure map is immutable and keeps no statistics
+   jsId('undefined');
 }
 
 // keyExpression(name, value, optional add) -> {name, expression: value, add?}.
@@ -3363,14 +3162,6 @@ function platform::extensions::language::javascript::translation::parseCoder(arg
 function platform::extensions::language::javascript::translation::rangeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    jsCall(jsId('__range'), $args->map(a | $a->translateExpression($conv)));
-}
-
-// rawType(gt: GenericType) — return .type slot when the GT is a
-// GenericTypeValue (or subclass), else empty.
-function platform::extensions::language::javascript::translation::rawTypeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   assert($args->size() == 1, | 'rawTypeCoder expects (genericType)');
-   jsCall(jsId('__rawType'), [$args->at(0)->translateExpression($conv)]);
 }
 
 // resolveAndReturnGraph(elements) — Map<String, PE>[1] -> PE[*]. On the
@@ -3502,14 +3293,6 @@ function platform::extensions::language::javascript::translation::directoryTreeC
 }
 
 
-// identityCoder — generic pass-through for metadata helpers
-// (useNodeAsScalar, useAsScalar, tagAs, castAsHint) where the JS runtime
-// has no semantic counterpart.
-function platform::extensions::language::javascript::translation::identityCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   translateExpression($args->at(0), $conv);
-}
-
 // openVariableValues(lambda) -> Map<String, List<Any>> built from the open
 // variables captured on the wrapped arrow (see wrapLambdaWithAst / __lambda).
 function platform::extensions::language::javascript::translation::openVariableValuesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -3529,21 +3312,6 @@ function platform::extensions::language::javascript::translation::extractMatchAr
       },
       other: ValueSpecification[1] | fail('extractMatchArmLambda: unsupported arm shape'); $other->cast(@platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>);
    ]);
-}
-
-function platform::extensions::language::javascript::translation::assertSameElementsCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   // assertSameElements(expected, actual) — order-insensitive multiset
-   // equality. Delegate to the `__sameElements` runtime helper: it walks both
-   // sides through `__asArr` (scalar/array/undefined → array), then pairs
-   // elements via `__eq` (which short-circuits on reference identity). The
-   // earlier sort-then-JSON form broke on bidirectional association cycles
-   // because the cyclic JSON representation depends on the traversal entry
-   // point — `expected` and `actual` produced different strings even when
-   // they pointed at the same instance.
-   let expected = translateExpression($args->at(0), $conv);
-   let actual   = translateExpression($args->at(1), $conv);
-   assertHelper(jsCall(jsId('__sameElements'), [$expected, $actual]), jsStrLit('assertSameElements failed'));
 }
 
 function platform::extensions::language::javascript::translation::translateAtomicValue(a: AtomicValue[1], conv: Convention[1]): Expression[1]
@@ -3656,12 +3424,8 @@ function platform::extensions::language::javascript::translation::functionRefToA
 {
    let arity = $funcType.parameters->size();
    let argNames = range(0, $arity)->map(i | '__a' + $i->toString());
-   // Resolve coder by short name (strip `_TypeSig` suffix).
-   let funcName = if ($f->instanceOf(platform::pure::metamodel::PackageableElement),
-      | $f->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()->split('::')->last()->toOne(),
-      | 'unknown');
-   let shortName = $funcName->split('_')->at(0);
-   let coder = $conv.functionCoders->get($shortName);
+   // A native passed as a value: its coder, by full id, fed synthetic arguments.
+   let coder = $f->coderFor($conv);
    let arrow = if ($coder->isNotEmpty(),
       | // Native function with a coder: feed it synthetic `__aN`
         // VariableExpressions so the coder renders its inline form.
@@ -4279,6 +4043,41 @@ function platform::extensions::language::javascript::translation::allPropertyNam
    $direct->concatenate($supers->map(s | $s->allPropertyNames()))->removeDuplicates();
 }
 
+// The properties of `cls` that have a default value, inherited ones included — the most specific
+// declaration of each name.
+function platform::extensions::language::javascript::translation::defaultedProperties(
+   cls: platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>[1]): platform::pure::metamodel::function::property::Property<Nil,Any|*>[*]
+{
+   let direct = $cls.properties->filter(p | $p.defaultValue->isNotEmpty());
+   let supers = $cls.generalizations
+      ->map(g | $g.general->platform::pure::metamodel::type::rawType())
+      ->filter(ty | $ty->isNotEmpty() && $ty->toOne()->instanceOf(platform::pure::metamodel::type::Class))
+      ->map(ty | $ty->toOne()->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>));
+   let inherited = $supers->map(s | $s->defaultedProperties())->filter(p | !$direct.name->contains($p.name->toOne()));
+   $direct->concatenate($inherited);
+}
+
+// A property with a default value: an object that never set it reads the default, computed then
+// against the object (a default is a function of it, {Owner[1]->V[1]}). It lives on the prototype as
+// a getter, so a value the object holds — an own field, which the setter defines — shadows it, and a
+// copy, which copies own fields only, computes its own (testCopyKeepsDefaultValues).
+function platform::extensions::language::javascript::translation::defaultAccessors(
+   cls: platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>[1],
+   p: platform::pure::metamodel::function::property::Property<Nil,Any|*>[1],
+   conv: Convention[1]): platform::extensions::language::javascript::metamodel::ClassMember[*]
+{
+   let name = $p.name->toOne();
+   // an inherited default reads the type parameters of the class that declares it
+   let declaring = $p.owner->filter(o | $o->instanceOf(platform::pure::metamodel::type::Class))->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>);
+   let compute = $p.defaultValue->toOne()->translatePureValueToTs($conv->withClassTypeParamWitness(if ($declaring->isEmpty(), | $cls, | $declaring->toOne()), safeJsName('this')));
+   [
+      jsGetter($name, jsBlock([jsReturn(jsCall(jsId('__default'), [jsThis(), jsStrLit($cls->elementToPath()), jsStrLit($name), $compute]))]))
+         ->cast(@platform::extensions::language::javascript::metamodel::ClassMember),
+      jsSetter($name, jsParam('value'), jsBlock([jsExprStmt(jsCall(jsId('__defineOwn'), [jsThis(), jsStrLit($name), jsId('value')]))]))
+         ->cast(@platform::extensions::language::javascript::metamodel::ClassMember)
+   ];
+}
+
 // The accessor for one property: `_<name>()` reads the slot, `_<name>(value)` writes it and returns
 // the receiver.
 //
@@ -4340,7 +4139,8 @@ function platform::extensions::language::javascript::translation::translateClass
    // Prototype methods say the same thing without the cost: they declare every property the class
    // holds and put not one key on an instance.
    let accessors = $cls->allPropertyNames()
-      ->map(n | propertyAccessor($n)->cast(@platform::extensions::language::javascript::metamodel::ClassMember));
+      ->map(n | propertyAccessor($n)->cast(@platform::extensions::language::javascript::metamodel::ClassMember))
+      ->concatenate($cls->defaultedProperties()->map(p | $cls->defaultAccessors($p, $conv)));
    // GUARDED, and not exported. A top-level `class X {}` is a global LEXICAL binding when a host
    // runs the file through `vm.runInThisContext` (which is how the lean parser host loads generated
    // modules, after stripping `export `), so the same class arriving twice in one process is a hard
@@ -4392,15 +4192,18 @@ function platform::extensions::language::javascript::translation::translateQpEnt
    let qpParams = $qpFn.parameters->map(p | jsParam(safeJsName($p.name)));
    let qpBody   = $qpFn.expressionSequence;
    let receiverName = safeJsName($qpFn.parameters->at(0).name);
+   // its class's type parameters are the receiver's type arguments (testQualifiedPropertyBindsTheClassTypeParameters)
+   let owner = $q.owner->filter(o | $o->instanceOf(platform::pure::metamodel::type::Class))->map(o | $o->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>));
+   let bodyConv = if ($owner->isEmpty(), | $conv, | $conv->withClassTypeParamWitness($owner->toOne(), $receiverName));
    let tvBindings = range(0, $typeVars->size())->map(i |
       jsLet(safeJsName($typeVars->at($i).name->toOne()),
             jsCall(jsId('__readTypeVar'), [jsId($receiverName), jsNumLit($i->toString())]))
          ->cast(@platform::extensions::language::javascript::metamodel::Statement)
    );
    let qpArrow  = if ($tvBindings->isEmpty() && $qpBody->size() == 1,
-                       | jsArrowExpr($qpParams, translateExpression($qpBody->toOne(), $conv)),
+                       | jsArrowExpr($qpParams, translateExpression($qpBody->toOne(), $bodyConv)),
                        | jsArrowBlock($qpParams,
-                            jsBlock($tvBindings->concatenate($qpBody->buildJsFunctionBody($conv).statements))));
+                            jsBlock($tvBindings->concatenate($qpBody->buildJsFunctionBody($bodyConv).statements))));
    jsObject([jsEntry('name', jsStrLit($qpName)),
              jsEntry('eval', $qpArrow)]);
 }
@@ -4512,3 +4315,15 @@ function platform::extensions::language::javascript::translation::translateState
       other: ValueSpecification[1] | jsExprStmt(translateExpression($other, $conv))
    ]);
 }
+
+function platform::extensions::language::javascript::translation::expCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'exp', $conv); }
+function platform::extensions::language::javascript::translation::logCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'log', $conv); }
+function platform::extensions::language::javascript::translation::log10Coder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'log10', $conv); }
+function platform::extensions::language::javascript::translation::cbrtCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1] { mathCall($args, 'cbrt', $conv); }
+
+// cot = 1 / tan.
+function platform::extensions::language::javascript::translation::cotCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsBinary(jsNumLit('1'), '/', mathCall($args, 'tan', $conv));
+}
+

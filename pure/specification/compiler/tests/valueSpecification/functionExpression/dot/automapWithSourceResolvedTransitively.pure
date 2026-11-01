@@ -40,7 +40,7 @@ class test::TPR_Person extends Any  ~Class<test::TPR_Person>  @18:1-22:1
 function test::myCheck_Any_MANY__Any_MANY__Boolean_1_(expected:@Any@[*], actual:@Any@[*]):@Boolean@[1]  ~UserDefinedFunction<{@Any@[*], @Any@[*]->@Boolean@[1]}>
   AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @26:3-26:6
 
-function test::testTypeParamResolution_Function_1__Boolean_1_(f:Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]):@Boolean@[1]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->@Boolean@[1]}>
+function test::testTypeParamResolution_Function_1__Boolean_1_(f:Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y~test::testTypeParamResolution_Function_1__Boolean_1_]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y~test::testTypeParamResolution_Function_1__Boolean_1_]}>[1]):@Boolean@[1]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y~test::testTypeParamResolution_Function_1__Boolean_1_]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y~test::testTypeParamResolution_Function_1__Boolean_1_]}>[1]->@Boolean@[1]}>
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::TPR_Person##[0..1]#  ~@FunctionInvocation@  @31:3-31:75
     typeParam T -> #test::TPR_Person#
     mulParam m -> #[0..1]#
@@ -50,7 +50,7 @@ function test::testTypeParamResolution_Function_1__Boolean_1_(f:Function<{Functi
       typeParam V -> #test::TPR_Person#
       mulParam m -> #[0..1]#
       mulParam n -> #[1]#
-      Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>##[1]#  ~@VariableExpression@  @31:13-31:14
+      Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y~test::testTypeParamResolution_Function_1__Boolean_1_]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y~test::testTypeParamResolution_Function_1__Boolean_1_]}>##[1]#  ~@VariableExpression@  @31:13-31:14
       Lambda :#LambdaFunction<#{->#test::TPR_Person##[0..1]#}#>#[1]  ~@AtomicValue@  @31:22-31:74
         ArrowInvocation head_T_MANY__T_$0_1$_ :#test::TPR_Person##[0..1]#  ~@ArrowInvocation@  @31:67-31:74
           typeParam T -> #test::TPR_Person#

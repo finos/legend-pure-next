@@ -16,6 +16,7 @@
 package org.finos.legend.pure.m3.module.pdbModule.archive;
 
 import com.google.flatbuffers.FlatBufferBuilder;
+import org.eclipse.collections.impl.utility.Iterate;
 import platform.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ModuleManifest;
@@ -47,6 +48,19 @@ import java.util.zip.ZipOutputStream;
  */
 public class CompressedArchiveWriter
 {
+    private String progressLabel;
+
+    /**
+     * Shows a progress bar labelled {@code label} while the elements are serialized: what a CLI compile
+     * shows while it writes a PDB. Drawn like Pure's {@code platform::pure::ui::progress} bar, whose
+     * "37%  (59/155)" counter the test-all display reads. Without it the writer prints nothing.
+     */
+    public CompressedArchiveWriter withProgress(String label)
+    {
+        this.progressLabel = label;
+        return this;
+    }
+
     /**
      * Write all elements into a ZIP archive, using extensions for element
      * serialization and language-specific archive sections.
@@ -91,9 +105,13 @@ public class CompressedArchiveWriter
             // children live in the companion -tests PDB); filtering belongs
             // to the element COLLECTORS, not here.
             java.util.TreeMap<String, Object[]> pending = new java.util.TreeMap<>();
+            int total = progressLabel == null ? 0 : Iterate.sizeOf(elements);
+            int done = 0;
+            startProgress(total);
             for (PackageableElement element : elements)
             {
                 String path = elementPath(element);
+                tickProgress(++done, total, path);
                 String typeName = null;
                 byte[] data = null;
                 for (PDBExtension ext : extensions)
@@ -112,6 +130,7 @@ public class CompressedArchiveWriter
                 }
                 pending.put(path, new Object[]{typeName, data});
             }
+            finishProgress();
 
             for (java.util.Map.Entry<String, Object[]> e : pending.entrySet())
             {
@@ -225,5 +244,42 @@ public class CompressedArchiveWriter
     private String elementPath(PackageableElement element)
     {
         return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(element);
+    }
+
+    // The progress bar (see withProgress), drawn as platform::pure::ui::progress draws it: a header, then a
+    // bar line and a status line redrawn in place.
+    private void startProgress(int total)
+    {
+        if (progressLabel != null)
+        {
+            System.out.print(progressLabel + " (" + total + " elements)\n\n\n\u001B[2A");
+            System.out.flush();
+        }
+    }
+
+    private void tickProgress(int done, int total, String current)
+    {
+        if (progressLabel == null || total == 0)
+        {
+            return;
+        }
+        int pct = done * 100 / total;
+        if (done == 1 || done == total || pct != (done - 1) * 100 / total)
+        {
+            int filled = done * 30 / total;
+            String status = current.length() > 78 ? "…" + current.substring(current.length() - 77) : current;
+            System.out.print("\r\u001B[K[" + "█".repeat(filled) + "░".repeat(30 - filled) + "] " + pct + "%  (" + done + "/" + total + ")"
+                    + "\u001B[B\r\u001B[K  " + status + "\u001B[K\u001B[A\r");
+            System.out.flush();
+        }
+    }
+
+    private void finishProgress()
+    {
+        if (progressLabel != null)
+        {
+            System.out.print("\u001B[B\r\u001B[K\u001B[B\r");
+            System.out.flush();
+        }
     }
 }

@@ -71,7 +71,7 @@ public final class PackageableFunctionCompiler
         _Function.validateFunctionParameters(result._parameters(), context, SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model));
 
         result._returnGenericType(GenericTypeCompiler.compile(grammar._returnGenericType(), imports, model, context))
-              ._returnMultiplicity(MultiplicityCompiler.compile(grammar._returnMultiplicity(), model))
+              ._returnMultiplicity(MultiplicityCompiler.compile(grammar._returnMultiplicity(), model, context))
               ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model))
               ._classifierGenericType(
                   _GenericType.buildUserDefinedGenericType((Type) model.getElement(

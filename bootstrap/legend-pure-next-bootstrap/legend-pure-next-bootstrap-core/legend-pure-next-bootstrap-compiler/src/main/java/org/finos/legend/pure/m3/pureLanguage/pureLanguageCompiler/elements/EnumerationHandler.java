@@ -87,10 +87,18 @@ public final class EnumerationHandler
                     ._classifierGenericType(enumGT)
                     ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), context.getSourceId(), model));
 
-            // Create a parameterless lambda whose body is the AtomicValue
+            // A lambda whose body is the AtomicValue. Like every default it takes the object the
+            // property belongs to — here the enumeration — as `this` (Property.defaultValue is
+            // {Owner[1]->V[1]}); the value does not use it.
+            platform.pure.metamodel.valuespecification.VariableExpressionImpl thisVar =
+                    org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression.newVariableExpression(model)
+                            ._name("this")
+                            ._genericType(enumerationOfE)
+                            ._multiplicity(pureOne);
 
             // ClassifierGenericType -----
             platform.pure.metamodel.type.FunctionTypeImpl ft = _FunctionType.newFunctionType(model);
+            ft._parameters(Lists.mutable.with(thisVar));
             ft._returnType(enumGT);
             ft._returnMultiplicity(pureOne);
             InferredGenericTypeImpl classifierGenericType = _GenericType.buildInferredGenericType((Type) model.getElement("platform::pure::metamodel::function::LambdaFunction"), model)
@@ -99,6 +107,7 @@ public final class EnumerationHandler
             // ClassifierGenericType -----
 
             LambdaFunctionImpl defaultValueLambda = new LambdaFunctionImpl();
+            defaultValueLambda._parameters(Lists.mutable.with(thisVar));
             defaultValueLambda._expressionSequence(Lists.mutable.with(
                     new AtomicValueImpl(model)
                                 ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), context.getSourceId(), model))

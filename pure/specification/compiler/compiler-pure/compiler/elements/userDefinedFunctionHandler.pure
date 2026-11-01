@@ -93,7 +93,7 @@ function platform::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:
     let rGenType = $rResult.value->toOne();
     let ctx3 = $rResult.context;
 
-    let rMMult = $fn.returnMultiplicity->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+    let rMMult = $fn.returnMultiplicity->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($ctx3);
 
     let finalGenType = compileFunctionClassifierGenericType(UserDefinedFunction, $compiledParams, $rGenType, $rMMult);
 

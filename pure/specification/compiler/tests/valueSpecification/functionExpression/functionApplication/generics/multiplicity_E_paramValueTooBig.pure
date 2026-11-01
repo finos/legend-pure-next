@@ -7,7 +7,7 @@ function pl(a:String[1], b:String[1]):String[1]{$a+$b}
 function test():Any[*]{f(['a','b'])->pl('ok')}
 
 ###CompilerStats
-inferenceRollbacks: 5
-candidateEvaluations: 7
+inferenceRollbacks: 1
+candidateEvaluations: 3
 rollbackSites:
   MULTI_CANDIDATE_PRE_RESOLVE = 1

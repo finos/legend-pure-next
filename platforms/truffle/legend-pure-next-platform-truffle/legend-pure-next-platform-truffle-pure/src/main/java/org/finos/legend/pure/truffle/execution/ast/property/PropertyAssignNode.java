@@ -98,6 +98,7 @@ public final class PropertyAssignNode extends Node
      *  lambdas. */
     private org.finos.legend.pure.truffle.compiler.module.PureClassInfo cachedClassInfo;
     private Class<?> cachedPropType;
+    private boolean cachedHasDefault;
 
     public Object executeWithValue(Object value, Object target)
     {
@@ -118,12 +119,19 @@ public final class PropertyAssignNode extends Node
             if (info != cachedClassInfo)
             {
                 propType = info.propTypes().get(propertyName);
+                cachedHasDefault = org.finos.legend.pure.truffle.execution.PureLanguage.get(this).defaultValueOf(info.purePath, propertyName) != null;
                 cachedClassInfo = info;
                 cachedPropType = propType;
             }
             Object coerced = propType != null
                     ? org.finos.legend.pure.truffle.execution.PropertyCoercion.coerce(value, propType)
                     : value;
+            // A property with a default set to empty holds empty: a null slot is a property never given a
+            // value, which reads its default (testNewOptionalDefaultSetToEmptyIsEmpty).
+            if (coerced == null && cachedHasDefault)
+            {
+                coerced = org.finos.legend.pure.truffle.execution.types.PureSequence.EMPTY;
+            }
             // writeSlot (not a raw slots[] store): grows the array when the
             // PDO was constructed mid-bootstrap with a stale slot count.
             pdo.writeSlot(boundSlot, coerced);

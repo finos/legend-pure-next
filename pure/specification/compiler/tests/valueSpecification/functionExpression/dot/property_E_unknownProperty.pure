@@ -15,7 +15,7 @@ Class test::MyClass
 }
 
 ###CompilerStats
-inferenceRollbacks: 6
-candidateEvaluations: 5
+inferenceRollbacks: 3
+candidateEvaluations: 2
 rollbackSites:
   MULTI_CANDIDATE_PRE_RESOLVE = 1

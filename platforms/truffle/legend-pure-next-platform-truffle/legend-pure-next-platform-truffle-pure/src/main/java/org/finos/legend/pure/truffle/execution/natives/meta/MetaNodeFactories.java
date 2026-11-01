@@ -41,11 +41,11 @@ public final class MetaNodeFactories
         // --- Lazy meta natives (construction stack + key expressions) ---
         // These take the FunctionExpression directly (not lowered args)
         // because they control evaluation order.
-        registry.register("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_",
+        registry.register("platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_",
                 (args, gt, mul, fe) -> new NewWithKeysNode(
                         "new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_",
                         args[0], decomposeAssignments(args[1]), args[1]));
-        registry.register("copy_T_1__KeyExpression_MANY__T_1_",
+        registry.register("platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_",
                 (args, gt, mul, fe) -> new CopyWithKeysNode(
                         "copy_T_1__KeyExpression_MANY__T_1_",
                         args[0], decomposeAssignments(args[1])));
@@ -53,37 +53,35 @@ public final class MetaNodeFactories
         // --- Meta natives ---
 
         // instanceOf(Any[1], Type[1]) : Boolean[1]
-        registry.register("instanceOf_Any_1__Type_1__Boolean_1_",
+        registry.register("platform::pure::functions::meta::instanceOf_Any_1__Type_1__Boolean_1_",
                 (args, gt, mul, fe) -> new InstanceOfNode(args[0], args[1]));
 
         // type(Any[*]) : Type[1]
-        registry.register("type_Any_MANY__Type_1_",
-                (args, gt, mul, fe) -> new TypeNode(args[0], gt, mul));
 
         // genericType(Any[*]) : GenericTypeValue[1]
-        registry.register("genericType_Any_MANY__GenericTypeValue_1_",
+        registry.register("platform::pure::functions::meta::genericType_Any_MANY__GenericTypeValue_1_",
                 (args, gt, mul, fe) -> new GenericTypeNode(args[0], gt, mul));
 
         // genericTypeHolder(T[m]) : GenericTypeAndMultiplicityHolder[1]
-        registry.register("genericTypeHolder_T_m__GenericTypeAndMultiplicityHolder_1_",
+        registry.register("platform::pure::functions::meta::genericTypeHolder_T_m__GenericTypeAndMultiplicityHolder_1_",
                 (args, gt, mul, fe) -> new GenericTypeHolderNode(args[0], gt, mul));
 
         // new(GenericTypeAndMultiplicityHolder[1]) : T[1] — no key expressions
-        registry.register("new_GenericTypeAndMultiplicityHolder_1__T_1_",
+        registry.register("platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_",
                 (args, gt, mul, fe) -> new NewSimpleNode(args[0]));
 
         // new(GenericType[1]) : Any[1]
-        registry.register("new_GenericType_1__Any_1_",
+        registry.register("platform::pure::functions::lang::new_GenericType_1__Any_1_",
                 (args, gt, mul, fe) -> new NewGenericTypeNode(args[0]));
 
         // keyExpression — 2-arg and 3-arg variants
-        registry.register("keyExpression_String_1__Any_MANY__KeyExpression_1_",
+        registry.register("platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_",
                 (args, gt, mul, fe) -> new KeyExpressionNode(args, gt, mul));
-        registry.register("keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_",
+        registry.register("platform::pure::functions::lang::keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_",
                 (args, gt, mul, fe) -> new KeyExpressionNode(args, gt, mul));
 
         // copy(T[1]) : T[1] — simple copy with no overrides
-        registry.register("copy_T_1__T_1_",
+        registry.register("platform::pure::functions::lang::copy_T_1__T_1_",
                 (args, gt, mul, fe) -> new CopySimpleNode(args[0]));
 
         // cast variants — all three signatures share one CastNode
@@ -91,73 +89,61 @@ public final class MetaNodeFactories
         // holder are user-specified vs `?`. The runtime check is the same;
         // CastNode skips T or m validation when its respective slot is
         // UndefinedGenericType / UndefinedMultiplicity.
-        registry.register("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_",
+        registry.register("platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_",
                 (args, gt, mul, fe) -> new CastNode(args[0], args[1]));
-        registry.register("cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_",
+        registry.register("platform::pure::functions::lang::cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_",
                 (args, gt, mul, fe) -> new CastNode(args[0], args[1]));
-        registry.register("cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_",
+        registry.register("platform::pure::functions::lang::cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_",
                 (args, gt, mul, fe) -> new CastNode(args[0], args[1]));
 
         // evaluateAndDeactivate — passthrough
-        registry.register("evaluateAndDeactivate_Any_m__Any_m_",
-                (args, gt, mul, fe) -> new EvaluateAndDeactivateNode(args[0]));
-        registry.register("evaluateAndDeactivate",
-                (args, gt, mul, fe) -> new EvaluateAndDeactivateNode(args[0]));
 
         // openVariableValues(LambdaFunction[1]) : Map<String, List<Any>>[1]
         // — reads RawClosure capture frame, builds one List entry per name.
-        registry.register("openVariableValues_LambdaFunction_1__Map_1_",
+        registry.register("platform::pure::functions::meta::openVariableValues_LambdaFunction_1__Map_1_",
                 (args, gt, mul, fe) -> new OpenVariableValuesNode(args[0]));
 
         // truffleAstFor(LambdaFunction[1]) : String[1] — lowers the lambda to a
         // Truffle RootNode (via PureContext.callTargetForLambda) and returns
         // NodeUtil.printTreeToString. Powers the Truffle gallery.
-        registry.register("truffleAstFor_LambdaFunction_1__String_1_",
+        registry.register("platform::extensions::language::truffle::truffleAstFor_LambdaFunction_1__String_1_",
                 (args, gt, mul, fe) -> new TruffleAstForNode(args[0]));
 
         // --- Element path natives ---
 
         // pathToElement(String[1], String[1]) : PackageableElement[1]
-        registry.register("pathToElement_String_1__String_1__PackageableElement_1_",
+        registry.register("platform::pure::functions::meta::pathToElement_String_1__String_1__PackageableElement_1_",
                 (args, gt, mul, fe) -> new PathToElementNode(args, gt, mul));
 
         // elementToPath(PackageableElement[1], String[1]) : String[1]
-        registry.register("elementToPath_PackageableElement_1__String_1__String_1_",
+        registry.register("platform::pure::functions::meta::elementToPath_PackageableElement_1__String_1__String_1_",
                 (args, gt, mul, fe) -> new ElementToPathNode(args, gt, mul));
 
         // elementToPath(PackageableElement[1]) : String[1]
-        registry.register("elementToPath_PackageableElement_1__String_1_",
-                (args, gt, mul, fe) -> new ElementToPathNode(args, gt, mul));
-        registry.register("elementToPath",
-                (args, gt, mul, fe) -> new ElementToPathNode(args, gt, mul));
 
         // elementToPath(Type[1], String[1]) : String[1]
-        registry.register("elementToPath_Type_1__String_1__String_1_",
-                (args, gt, mul, fe) -> new ElementToPathNode(args, gt, mul));
 
         // lenientPathToElement — returns null instead of throwing
-        registry.register("lenientPathToElement_String_1__String_1__PackageableElement_$0_1$_",
+        registry.register("platform::pure::functions::meta::lenientPathToElement_String_1__String_1__PackageableElement_$0_1$_",
                 (args, gt, mul, fe) -> new PathToElementNode(args, gt, mul, true));
 
         // elementPath — element ancestry chain
-        registry.register("elementPath_PackageableElement_1__PackageableElement_$1_MANY$_",
+        registry.register("platform::pure::functions::meta::elementPath_PackageableElement_1__PackageableElement_$1_MANY$_",
                 (args, gt, mul, fe) -> new ElementPathNode(args[0]));
 
         // newClass — creates a new Class at runtime
-        registry.register("newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_",
-                (args, gt, mul, fe) -> new NewClassNode(args[0], args[1]));
 
         // newEnumeration is implemented in Pure (see newEnumeration.pure) —
         // no Truffle native node needed.
 
         // parse — invokes the Pure parser (TODO: implement without DynamicInstance)
-        registry.register("parse_String_1__String_1__PureFile_1_",
+        registry.register("platform::pure::functions::meta::parse_String_1__String_1__PureFile_1_",
                 (args, gt, mul, fe) -> new ParseNode(args[0], args[1]));
 
         // compileSource — dynamic compilation: dispatches into the INTERPRETED
         // Pure compiler (compiler.pdb must be loaded) and returns the compiled
         // elements as self-contained values; mutates no global state.
-        registry.register("compileSource_PureFile_1__String_MANY__CompileSourceResult_1_",
+        registry.register("platform::pure::functions::meta::compileSource_PureFile_1__String_MANY__CompileSourceResult_1_",
                 (args, gt, mul, fe) -> new CompileSourceNode(args[0], args[1]));
 
         // resolveAndReturnGraph — deep-copies the input element map and resolves
@@ -165,17 +151,17 @@ public final class MetaNodeFactories
         // the end of platform::pure::compiler::compile so every caller (Truffle
         // runtime, PDB writer, IDE, Pure recompile callers in canonical.pure)
         // receives a pointer-free graph at the compile boundary.
-        registry.register("resolveAndReturnGraph_Map_1__PackageableElement_MANY_",
+        registry.register("platform::pure::functions::meta::resolveAndReturnGraph_Map_1__PackageableElement_MANY_",
                 (args, gt, mul, fe) -> new ResolveAndReturnGraphNode(args[0]));
 
         // findFunctionsByNameAndArity — compiler native: search resolver for functions
-        registry.register("findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_",
+        registry.register("platform::pure::compiler::findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_",
                 (args, gt, mul, fe) -> new FindFunctionsByNameAndArityNode(args[0], args[1]));
 
         // findAllTypes — compiler native: enumerate every PE Type across all
         // loaded modules. Used by buildLinearizationCache to seed the cache
         // without relying on the package tree (which is split per module).
-        registry.register("findAllTypes__Type_MANY_",
+        registry.register("platform::pure::compiler::findAllTypes__Type_MANY_",
                 (args, gt, mul, fe) -> new FindAllTypesNode());
     }
 

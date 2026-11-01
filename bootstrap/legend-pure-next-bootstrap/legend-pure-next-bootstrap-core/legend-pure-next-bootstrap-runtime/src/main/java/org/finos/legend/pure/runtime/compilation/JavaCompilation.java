@@ -76,11 +76,15 @@ public final class JavaCompilation implements Compilation
         {
             for (String path : module.elementPaths())
             {
-                if (this.registry.hasElement(path))
+                PackageableElement element = module.getElement(path);
+                // A Package is written even when a base module has one at its path: the source module's
+                // package tree is its own, so that Package lists only this module's children — a shadow
+                // the registry merges into the base's. Dropped, those children would be under no parent
+                // (a walk down `children`, the test runners', would never reach them).
+                if (this.registry.hasElement(path) && !(element instanceof platform.pure.metamodel.Package))
                 {
                     continue;
                 }
-                PackageableElement element = module.getElement(path);
                 if (element != null)
                 {
                     elements.add(element);

@@ -80,7 +80,9 @@ function platform::pure::compiler::structural::propertyCompiler::compileProperty
           let finalProp = if($protocolProperty.defaultValue->isEmpty(),
               | $builtProp,
               | let defaultLambda = $protocolProperty.defaultValue->toOne()->cast(@platform::pure::protocol::grammar::function::LambdaFunction);
-                let defaultResult = $defaultLambda->compileLambda($annotCtx, [], [], []);
+                // The class's type parameters are in scope in its defaults, as in pass 3 for its qualified
+                // properties (class/property/defaultValue_typeParameter).
+                let defaultResult = $defaultLambda->compileLambda(^$annotCtx(ownerTypeParams = $owner.typeParameters->cast(@TypeParameter)), [], [], []);
                 if($defaultResult.values->isEmpty(),
                     | $builtProp,
                     | ^$builtProp(defaultValue = $defaultResult.values->at(0)->cast(@AtomicValue).value->toOne()->cast(@LambdaFunction<Any>))
@@ -113,12 +115,9 @@ function platform::pure::compiler::structural::propertyCompiler::resolveProperty
         if($prop.defaultValue->isEmpty(),
             | ^$acc(values += $prop),
             | let siCtx = if($prop.sourceInformation->isEmpty(), | '', | platform::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($prop.sourceInformation, $accCtx));
-              // Validate: lower bound must be >= 1 for properties with defaults
-              let lowerBound = platform::pure::compiler::helper::multiplicity::multiplicityLowerBound($prop.multiplicity->toOne());
-              let ctx1 = if($lowerBound == 0,
-                  | ^$accCtx(errors += 'Property with a default value cannot have a multiplicity with a lower bound of 0' + $siCtx),
-                  | $accCtx
-              );
+              // Any multiplicity can have a default: a property not given a value reads its default, and one
+              // given a value, empty included, reads that value (testNewOptionalDefaultSetToEmptyIsEmpty).
+              let ctx1 = $accCtx;
               // Resolve the default value lambda
               let lambda = $prop.defaultValue->toOne()->cast(@LambdaFunction<Any>);
               if($lambda.expressionSequence->isEmpty() || $ctx1.errors->size() > $accCtx.errors->size(),
@@ -144,7 +143,9 @@ function platform::pure::compiler::structural::propertyCompiler::resolveProperty
                     );
                     let dvResolvedCtx = $resolveResult.context;
                     let ctx2 = ^$dvResolvedCtx(currentElementPath = $savedDvPath);
-                    let resolvedLambda = platform::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification)));
+                    // A default is a function of the object it is read on: `this` is its parameter, so its
+                    // type is {Owner[1]->V[1]} (Property.defaultValue in m3) and a host calls it with the object.
+                    let resolvedLambda = platform::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(parameters = $thisVar, expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification)));
                     let resolvedProp = ^$prop(defaultValue = $resolvedLambda);
                     // Validate type and multiplicity of the resolved default value
                     let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);

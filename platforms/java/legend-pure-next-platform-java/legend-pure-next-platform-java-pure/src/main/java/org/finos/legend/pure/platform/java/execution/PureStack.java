@@ -50,7 +50,12 @@ public final class PureStack
      * empty map: a class without a table is the normal case for anything compiled
      * at run time, and it must not re-read the classpath on every frame.
      */
-    private static final Map<String, Map<Integer, String>> TABLES = new ConcurrentHashMap<>();
+    private static final Map<String, Map<Integer, List<Position>>> TABLES = new ConcurrentHashMap<>();
+
+    /** One marker of a table row: a Pure position, and how many lambda bodies its code sits in. */
+    private record Position(String at, int lambdaDepth)
+    {
+    }
 
     private PureStack()
     {
@@ -132,7 +137,7 @@ public final class PureStack
         // the enclosing function is the frame below it, so repeating it here would
         // diverge from the text they all emit.
         String named = element.getMethodName().startsWith("lambda$") ? "lambda" : path;
-        String position = positionOf(className.substring(0, lastDot + 1) + outer, element.getLineNumber());
+        String position = positionOf(className.substring(0, lastDot + 1) + outer, element.getLineNumber(), element.getMethodName().startsWith("lambda$"));
         return position == null ? named : named + " (" + position + ")";
     }
 
@@ -140,13 +145,19 @@ public final class PureStack
      * The Pure position the given line of a generated class came from, as
      * {@code file.pure:61c7}, or null when it is not recorded.
      */
-    private static String positionOf(String className, int javaLine)
+    private static String positionOf(String className, int javaLine, boolean inLambda)
     {
-        String raw = TABLES.computeIfAbsent(className, PureStack::readTable).get(javaLine);
-        if (raw == null)
+        // A line can hold a call taking a lambda and that lambda's body: a lambda's frame takes the deepest marker,
+        // a method's the outermost (the first, left to right).
+        List<Position> positions = TABLES.computeIfAbsent(className, PureStack::readTable).get(javaLine);
+        if (positions == null || positions.isEmpty())
         {
             return null;
         }
+        // maxBy and minBy keep the first of equals: left to right on the line
+        String raw = (inLambda
+                ? org.eclipse.collections.impl.factory.Lists.adapt(positions).maxBy(Position::lambdaDepth)
+                : org.eclipse.collections.impl.factory.Lists.adapt(positions).minBy(Position::lambdaDepth)).at();
         // The table stores `sourceId:line:column`; a frame reads `sourceId:lineCcolumn`.
         // Split from the RIGHT, because a sourceId is a path and may hold a colon.
         int column = raw.lastIndexOf(':');
@@ -154,9 +165,9 @@ public final class PureStack
     }
 
     /** One class's table, empty when it has none. */
-    private static Map<Integer, String> readTable(String className)
+    private static Map<Integer, List<Position>> readTable(String className)
     {
-        Map<Integer, String> table = new HashMap<>();
+        Map<Integer, List<Position>> table = new HashMap<>();
         String resource = '/' + className.replace('.', '/') + ".java.pos";
         try (InputStream in = PureStack.class.getResourceAsStream(resource))
         {
@@ -167,10 +178,12 @@ public final class PureStack
             BufferedReader lines = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
             for (String line = lines.readLine(); line != null; line = lines.readLine())
             {
-                int tab = line.indexOf('\t');
-                if (tab > 0)
+                // `<javaLine>\t<position>\t<lambdaDepth>`; a row without a depth is at depth 0
+                String[] cells = line.split("\t");
+                if (cells.length >= 2)
                 {
-                    table.put(Integer.parseInt(line.substring(0, tab)), line.substring(tab + 1));
+                    table.computeIfAbsent(Integer.parseInt(cells[0]), k -> new ArrayList<>())
+                            .add(new Position(cells[1], cells.length > 2 ? Integer.parseInt(cells[2]) : 0));
                 }
             }
         }

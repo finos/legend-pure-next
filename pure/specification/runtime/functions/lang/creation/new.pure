@@ -426,3 +426,189 @@ function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewHolder
         );
     ));
 }
+
+// Default values: what a property holds when the object does not set it. A default is computed when the
+// property is read, with `$this` the object read, so it may depend on the object's other properties — and
+// may reach the object itself.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::WithDefaults
+{
+    value: Integer[1] = 1;
+    str: String[1] = 'ok';
+    advanced: String[1] = $this.str + 'bla';
+    self: WithDefaults[1] = $this;
+    boom: String[1] = []->cast(@String)->toOne('default evaluated');
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewAppliesDefaultValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(1, $f->eval(|^WithDefaults().value));
+    assertEquals('ok', $f->eval(|^WithDefaults().str));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueReadsThis<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('okbla', $f->eval(|^WithDefaults().advanced));
+    assertEquals('setbla', $f->eval(|^WithDefaults(str = 'set').advanced));
+}
+
+// Class<T>.properties is typed Property<T, Any|*>: a default read through it takes the object, with no cast.
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueReadThroughProperties<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('setbla', $f->eval(|WithDefaults.properties->filter(p | $p.name == 'advanced')->toOne().defaultValue->toOne()->eval(^WithDefaults(str = 'set'))));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewExplicitValueOverridesDefault<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(2, $f->eval(|^WithDefaults(value = 2).value));
+    assertEquals('given', $f->eval(|^WithDefaults(advanced = 'given').advanced));
+}
+
+// Computed when read, not when the object is built: building succeeds, and only reading the property
+// evaluates its default.
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueIsComputedWhenRead<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('ok', $f->eval(|^WithDefaults().str));
+    assertError(|$f->eval(|^WithDefaults().boom), 'default evaluated');
+}
+
+// A default may reach the object it belongs to: the cycle closes on that same object.
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueClosesACycle<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|let w = ^WithDefaults(); $w->is($w.self.self);));
+}
+
+// Defaults that need each other's value: reading one evaluates the other, which needs the first again.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::WithCyclicDefaults
+{
+    a: String[1] = $this.b;
+    b: String[1] = $this.a;
+}
+
+// A default that needs its own value is an error — reading on would never end.
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueCycleIsAnError<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertError(|$f->eval(|^WithCyclicDefaults().a), 'default value cycle: platform::pure::functions::lang::tests::new::WithCyclicDefaults.a is already being computed for this object');
+    assertEquals('given', $f->eval(|^WithCyclicDefaults(b = 'given').a));
+}
+
+// Optional and many properties can have a default too. Not mentioning one gives its default; setting it to a
+// value gives that value, empty included.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::WithOptionalDefaults
+{
+    maybe: String[0..1] = 'default';
+    many: String[*] = ['a', 'b'];
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewOptionalDefaultApplies<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('default', $f->eval(|^WithOptionalDefaults().maybe));
+    assertEquals(['a', 'b'], $f->eval(|^WithOptionalDefaults().many));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewOptionalDefaultSetToEmptyIsEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEmpty($f->eval(|^WithOptionalDefaults(maybe = []).maybe));
+    assertEmpty($f->eval(|^WithOptionalDefaults(many = []).many));
+    assertEquals('given', $f->eval(|^WithOptionalDefaults(maybe = 'given').maybe));
+}
+
+// A default, like a qualified property, is computed for an object with its class's type parameters bound to
+// the object's type arguments — as a generic function's are to its arguments' — so cast(@T) checks against them.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::GenericDefault<T>
+{
+    value: Any[1];
+    typed: T[1] = $this.value->cast(@T);
+    typedQualified() { $this.value->cast(@T) }: T[1];
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewDefaultValueBindsTheClassTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('x', $f->eval(|^GenericDefault<String>(value = 'x').typed));
+    assertError(|$f->eval(|^GenericDefault<Integer>(value = 'x').typed), 'Cast exception: String cannot be cast to Integer');
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testQualifiedPropertyBindsTheClassTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('x', $f->eval(|^GenericDefault<String>(value = 'x').typedQualified));
+    assertError(|$f->eval(|^GenericDefault<Integer>(value = 'x').typedQualified), 'Cast exception: String cannot be cast to Integer');
+}
+
+// A constraint is checked against the object with its class's type parameters bound to the object's type
+// arguments, like a default or a qualified property: cast(@T) in it checks against them.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::ConstrainedBox<T>
+[
+    typed: $this.value->cast(@T)->isNotEmpty()
+]
+{
+    value: Any[1];
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewConstraintBindsTheClassTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('x', $f->eval(|^ConstrainedBox<String>(value = 'x').value));
+    assertError(|$f->eval(|^ConstrainedBox<Integer>(value = 'x')), 'Cast exception: String cannot be cast to Integer');
+}
+
+// What a class inherits from a generic parent — a default, a qualified property, a constraint — reads the
+// parent's type parameters as the object's type arguments bind them through its generalizations: a
+// StringBox (extends GenericDefault<String>) binds T to String; a RenamedBox<U> (extends GenericDefault<U>)
+// built as RenamedBox<Integer> binds T to Integer.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::StringBox extends GenericDefault<String>
+{
+}
+
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::RenamedBox<U> extends GenericDefault<U>
+{
+}
+
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::StringConstrainedBox extends ConstrainedBox<String>
+{
+}
+
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::RenamedConstrainedBox<U> extends ConstrainedBox<U>
+{
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewInheritedDefaultValueBindsTheParentTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('x', $f->eval(|^StringBox(value = 'x').typed));
+    assertError(|$f->eval(|^StringBox(value = 1).typed), 'Cast exception: Integer cannot be cast to String');
+    assertEquals(1, $f->eval(|^RenamedBox<Integer>(value = 1).typed));
+    assertError(|$f->eval(|^RenamedBox<Integer>(value = 'x').typed), 'Cast exception: String cannot be cast to Integer');
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testInheritedQualifiedPropertyBindsTheParentTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('x', $f->eval(|^StringBox(value = 'x').typedQualified));
+    assertError(|$f->eval(|^StringBox(value = 1).typedQualified), 'Cast exception: Integer cannot be cast to String');
+    assertEquals(1, $f->eval(|^RenamedBox<Integer>(value = 1).typedQualified));
+    assertError(|$f->eval(|^RenamedBox<Integer>(value = 'x').typedQualified), 'Cast exception: String cannot be cast to Integer');
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewInheritedConstraintBindsTheParentTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('x', $f->eval(|^StringConstrainedBox(value = 'x').value));
+    assertError(|$f->eval(|^StringConstrainedBox(value = 1)), 'Cast exception: Integer cannot be cast to String');
+    assertEquals(1, $f->eval(|^RenamedConstrainedBox<Integer>(value = 1).value));
+    assertError(|$f->eval(|^RenamedConstrainedBox<Integer>(value = 'x')), 'Cast exception: String cannot be cast to Integer');
+}
+
+// Building an object checks the constraints of its class and of every class it extends.
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::Counted
+[
+    positive: $this.count > 0
+]
+{
+    count: Integer[1];
+}
+
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::NamedCounted extends Counted
+{
+    name: String[1];
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewChecksInheritedConstraints<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(1, $f->eval(|^NamedCounted(count = 1, name = 'a').count));
+    assertError(|$f->eval(|^NamedCounted(count = 0, name = 'a')), 'Constraint :[positive] violated in the Class Counted');
+}

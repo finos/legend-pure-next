@@ -352,8 +352,8 @@ function platform::pure::functions::printer::compiled::printCompiledColSpecSugar
 {
     let params = $fi.parametersValues;
     if([pair(| $name == 'colSpec',                                          | '~' + printCompiledColSpecBody($params, $ctx)),
-        pair(| $name == 'funcColSpec' || $name == 'funcColSpec2',           | '~' + extractCompiledAtomicString($params->at(1)) + ' : ' + printCompiledValueSpec($params->at(0), $ctx)),
-        pair(| $name == 'aggColSpec' || $name == 'aggColSpec2',             | '~' + extractCompiledAtomicString($params->at(2)) + ' : ' + printCompiledValueSpec($params->at(0), $ctx) + ' : ' + printCompiledValueSpec($params->at(1), $ctx)),
+        pair(| $name == 'funcColSpec' || $name == 'funcColSpec2',           | '~' + printCompiledColumnName(extractCompiledAtomicString($params->at(1))) + ' : ' + printCompiledValueSpec($params->at(0), $ctx)),
+        pair(| $name == 'aggColSpec' || $name == 'aggColSpec2',             | '~' + printCompiledColumnName(extractCompiledAtomicString($params->at(2))) + ' : ' + printCompiledValueSpec($params->at(0), $ctx) + ' : ' + printCompiledValueSpec($params->at(1), $ctx)),
         pair(| $name == 'colSpecArray',                                     | printCompiledColSpecArraySugar($params, $ctx)),
         pair(| $name == 'funcColSpecArray' || $name == 'funcColSpecArray2', | printCompiledFuncColSpecArraySugar($params, $ctx)),
         pair(| $name == 'aggColSpecArray' || $name == 'aggColSpecArray2',   | printCompiledAggColSpecArraySugar($params, $ctx))],
@@ -366,8 +366,8 @@ function platform::pure::functions::printer::compiled::printCompiledColSpecBody(
 {
     let nameStr = extractCompiledAtomicString($params->at(0));
     if ($params->size() < 2,
-        | $nameStr,
-        | $nameStr + extractCompiledColSpecTypeSuffix($params->at(1), $ctx)
+        | printCompiledColumnName($nameStr),
+        | printCompiledColumnName($nameStr) + extractCompiledColSpecTypeSuffix($params->at(1), $ctx)
     );
 }
 
@@ -438,12 +438,12 @@ function platform::pure::functions::printer::compiled::compiledColSpecArrayEntry
     let nameStr = extractCompiledAtomicString($nameVal);
     let matching = $cols->filter(c | !$c.name->isEmpty() && $c.name->toOne() == $nameStr);
     if ($matching->isEmpty(),
-        | $nameStr,
+        | printCompiledColumnName($nameStr),
         | let col = $matching->at(0);
           let colCgt = $col->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
           if ($colCgt.typeArguments->size() < 2,
-              | $nameStr,
-              | $nameStr + ':' + printGenericType($colCgt.typeArguments->at(1), $ctx) + compiledColSpecMulSuffix($colCgt.multiplicityArguments)
+              | printCompiledColumnName($nameStr),
+              | printCompiledColumnName($nameStr) + ':' + printGenericType($colCgt.typeArguments->at(1), $ctx) + compiledColSpecMulSuffix($colCgt.multiplicityArguments)
           );
     );
 }
@@ -489,7 +489,7 @@ function platform::pure::functions::printer::compiled::innerCompiledFuncColSpecE
     $e->match([
         fi: FunctionInvocation[1] |
             if ($fi.parametersValues->size() >= 2,
-                | extractCompiledAtomicString($fi.parametersValues->at(1)) + ' : ' + printCompiledValueSpec($fi.parametersValues->at(0), $ctx),
+                | printCompiledColumnName(extractCompiledAtomicString($fi.parametersValues->at(1))) + ' : ' + printCompiledValueSpec($fi.parametersValues->at(0), $ctx),
                 | printCompiledValueSpec($e, $ctx);
             ),
         any: ValueSpecification[1] | printCompiledValueSpec($any, $ctx)
@@ -508,7 +508,7 @@ function platform::pure::functions::printer::compiled::innerCompiledAggColSpecEn
     $e->match([
         fi: FunctionInvocation[1] |
             if ($fi.parametersValues->size() >= 3,
-                | extractCompiledAtomicString($fi.parametersValues->at(2)) + ' : ' + printCompiledValueSpec($fi.parametersValues->at(0), $ctx) + ' : ' + printCompiledValueSpec($fi.parametersValues->at(1), $ctx),
+                | printCompiledColumnName(extractCompiledAtomicString($fi.parametersValues->at(2))) + ' : ' + printCompiledValueSpec($fi.parametersValues->at(0), $ctx) + ' : ' + printCompiledValueSpec($fi.parametersValues->at(1), $ctx),
                 | printCompiledValueSpec($e, $ctx);
             ),
         any: ValueSpecification[1] | printCompiledValueSpec($any, $ctx)
@@ -517,6 +517,13 @@ function platform::pure::functions::printer::compiled::innerCompiledAggColSpecEn
 
 // Pull the string payload out of a string-typed AtomicValue. (The colSpec
 // name argument is always a string-typed AtomicValue.)
+// A column's name as written: as it is when it is a plain identifier, otherwise in single quotes with its
+// escapes, as a string literal is ('\'a\'' for the column 'a', quotes included).
+function platform::pure::functions::printer::compiled::printCompiledColumnName(name: String[1]): String[1]
+{
+    if ($name->matches('[A-Za-z_][A-Za-z0-9_]*'), | $name, | '\'' + escapeStringLiteral($name) + '\'');
+}
+
 function platform::pure::functions::printer::compiled::extractCompiledAtomicString(v: ValueSpecification[1]): String[1]
 {
     $v->match([
@@ -679,8 +686,10 @@ function platform::pure::functions::printer::compiled::printCompiledArrowInvocat
 // make sense here; the receiver disambiguates).
 function platform::pure::functions::printer::compiled::printCompiledDotApplication(dot: DotApplication[1], ctx: PrintContext[1]): String[1]
 {
+    // a name that is not an identifier in quotes, with its escapes ($x.'\'a\''); `~` is the parent reference
+    let name = if ($dot.functionName == '~', | '~', | printCompiledColumnName($dot.functionName->toOne()));
     if ($dot.parametersValues->isEmpty(),
-        | '.' + $dot.functionName,
+        | '.' + $name,
         | let receiver = printCompiledValueSpec($dot.parametersValues->at(0), $ctx);
           let rest = $dot.parametersValues->drop(1);
           // QualifiedProperty calls need `()` even with no extra args — the
@@ -688,8 +697,8 @@ function platform::pure::functions::printer::compiled::printCompiledDotApplicati
           // (zero-arg QualifiedProperty invocation) by the parens.
           let isQp = isCompiledQualifiedPropertyCall($dot);
           if ($rest->isEmpty() && !$isQp,
-              | $receiver + '.' + $dot.functionName,
-              | $receiver + '.' + $dot.functionName + $rest->map(p | printCompiledValueSpec($p, $ctx))->joinStrings('(', ', ', ')')
+              | $receiver + '.' + $name,
+              | $receiver + '.' + $name + $rest->map(p | printCompiledValueSpec($p, $ctx))->joinStrings('(', ', ', ')')
           );
     );
 }

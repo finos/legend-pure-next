@@ -1,0 +1,44 @@
+###Pure
+import pack::*;
+
+Class pack::Animal
+{
+}
+
+Class pack::Dog extends Animal
+{
+}
+
+Class pack::Owner
+{
+  pet: Animal[1] = ^Dog();
+  nickname: String[0..1] = [];
+  tags: String[*] = [];
+}
+
+###CompiledGraph
+class pack::Animal extends Any  ~Class<pack::Animal>  @4:1-6:1
+
+class pack::Dog extends pack::Animal  ~Class<pack::Dog>  @8:1-10:1
+
+class pack::Owner extends Any  ~Class<pack::Owner>  @12:1-17:1
+  property pet :pack::Animal[1]  ~Property<pack::Owner, pack::Animal|1>
+    defaultValue Lambda(this:pack::Owner[1])  ~#LambdaFunction<#{pack::Owner[1]->#pack::Dog##[1]#}#>#
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#pack::Dog##[1]#  ~@FunctionInvocation@  @14:20-14:25
+        typeParam T -> pack::Dog
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<pack::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<pack::Dog|1>  @14:20-14:25
+  property nickname :@String@[0..1]  ~Property<pack::Owner, @String@|0..1>
+    defaultValue Lambda(this:pack::Owner[1])  ~#LambdaFunction<#{pack::Owner[1]->#Nil#[0]}#>#
+      Collection :#Nil#[0]  ~@Collection@  @15:28-15:29
+  property tags :@String@[*]  ~Property<pack::Owner, @String@|*>
+    defaultValue Lambda(this:pack::Owner[1])  ~#LambdaFunction<#{pack::Owner[1]->#Nil#[0]}#>#
+      Collection :#Nil#[0]  ~@Collection@  @16:21-16:22
+
+###ReverseIndex
+pack::Animal:
+  pack::Dog
+  pack::Owner.pet
+pack::Dog:
+  pack::Owner.pet
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_:
+  pack::Owner.pet

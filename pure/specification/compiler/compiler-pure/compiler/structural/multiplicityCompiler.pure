@@ -31,6 +31,18 @@ function platform::pure::compiler::structural::multiplicityCompiler::compileMult
     ]);
 }
 
+// A multiplicity as compileMultiplicity compiles it, a multiplicity parameter the one in scope of its name
+// (its owner's, context.ownerMulParams) — mirrors Java MultiplicityCompiler.resolveOrCreateMultiplicityParameter.
+function platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(m:platform::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1], context:platform::pure::compiler::CompilerContext[1]):Multiplicity[1]
+{
+    $m->compileMultiplicity()->match([
+        mp:MultiplicityParameter[1] |
+            let fromOwner = $context.ownerMulParams->filter(p | $p.name == $mp.name);
+            if($fromOwner->isNotEmpty(), | $fromOwner->toOne(), | $mp);,
+        o:Multiplicity[1] | $o
+    ]);
+}
+
 function platform::pure::compiler::structural::multiplicityCompiler::compileConcreteMultiplicity(pMult:platform::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]):Multiplicity[1]
 {
     if($pMult.upperBound->isEmpty(),

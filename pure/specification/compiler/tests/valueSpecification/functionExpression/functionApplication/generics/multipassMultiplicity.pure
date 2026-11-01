@@ -13,7 +13,7 @@ function test::tst(): Boolean[1]
 }
 
 ###CompiledGraph
-native function test::mp_Function_1__Function_1__String_m__Boolean_1_(g:Function<{@Integer@[p]->@Boolean@[1]}>[1], f:Function<{@String@[m]->@Integer@[p]}>[1], v:@String@[m]):@Boolean@[1]  ~NativeFunction<{Function<{@Integer@[p]->@Boolean@[1]}>[1], Function<{@String@[m]->@Integer@[p]}>[1], @String@[m]->@Boolean@[1]}>
+native function test::mp_Function_1__Function_1__String_m__Boolean_1_(g:Function<{@Integer@[p~test::mp_Function_1__Function_1__String_m__Boolean_1_]->@Boolean@[1]}>[1], f:Function<{@String@[m~test::mp_Function_1__Function_1__String_m__Boolean_1_]->@Integer@[p~test::mp_Function_1__Function_1__String_m__Boolean_1_]}>[1], v:@String@[m~test::mp_Function_1__Function_1__String_m__Boolean_1_]):@Boolean@[1]  ~NativeFunction<{Function<{@Integer@[p~test::mp_Function_1__Function_1__String_m__Boolean_1_]->@Boolean@[1]}>[1], Function<{@String@[m~test::mp_Function_1__Function_1__String_m__Boolean_1_]->@Integer@[p~test::mp_Function_1__Function_1__String_m__Boolean_1_]}>[1], @String@[m~test::mp_Function_1__Function_1__String_m__Boolean_1_]->@Boolean@[1]}>
 
 native function test::toNum_String_1__Integer_MANY_(x:@String@[1]):@Integer@[*]  ~NativeFunction<{@String@[1]->@Integer@[*]}>
 

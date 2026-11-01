@@ -98,12 +98,13 @@ public final class NativeRegistry
     }
 
     /**
-     * Returns the specialized factory for {@code signature}, or {@code null}
-     * if the signature is still on the bridge.
+     * The factory implementing the native function {@code nativeFunction}: registered under its full id
+     * ({@code platform::pure::functions::relation::size_Relation_1__Integer_1_}), never its name alone — two
+     * natives of one name in different packages are never one another's. Null when none is registered.
      */
-    public Factory lookup(String signature)
+    public Factory lookupNative(Object nativeFunction, org.finos.legend.pure.truffle.compiler.module.MetadataAccess resolver)
     {
-        return factories.get(signature);
+        return factories.get(org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(nativeFunction, resolver));
     }
 
     public boolean isEmpty()
@@ -114,5 +115,30 @@ public final class NativeRegistry
     public int size()
     {
         return factories.size();
+    }
+
+    /**
+     * The signatures registered — what an extension's natives are checked against its module's declarations.
+     */
+    public org.eclipse.collections.api.set.SetIterable<String> signatures()
+    {
+        return org.eclipse.collections.impl.factory.Sets.adapt(factories.keySet()).toImmutable();
+    }
+
+    /**
+     * Every factory of {@code other}, added to this registry. A signature already here is an error: two
+     * implementations of one native would leave which one runs to registration order.
+     */
+    public NativeRegistry registerAll(NativeRegistry other)
+    {
+        org.eclipse.collections.impl.factory.Maps.adapt(other.factories).forEachKeyValue((signature, factory) ->
+        {
+            if (factories.containsKey(signature))
+            {
+                throw new IllegalStateException("the native " + signature + " is implemented twice on this platform");
+            }
+            factories.put(signature, factory);
+        });
+        return this;
     }
 }
