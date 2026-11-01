@@ -18,15 +18,18 @@ set quiet := true
 set shell := ["bash", "-c"]
 
 mod tds "tds/Justfile"
+mod relation "relation/Justfile"
 
 default: build
 
+# relation is not here: it compiles on Truffle (its tests are written on `#TDS…#` literals), so it builds
+# after Truffle does — see the root Justfile.
 build: tds::build
 
 build-tests: tds::build-tests
 
 build-all: build
 
-test-all: tds::test-all
+test-all: tds::test-all relation::test-all
 
-clean: tds::clean
+clean: tds::clean relation::clean

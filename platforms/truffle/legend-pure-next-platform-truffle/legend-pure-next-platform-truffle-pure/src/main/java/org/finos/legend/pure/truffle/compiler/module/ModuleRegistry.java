@@ -661,8 +661,12 @@ public final class ModuleRegistry implements MetadataAccess
                 k, "platform::pure::metamodel::Package");
         if (existingIsPkg && newIsPkg)
         {
-            // Benign Package collision — keep existing anchor; the sub-Package's
-            // own resolveAndMerge handles the deeper children merge.
+            // Benign Package collision — keep the existing one, with the newcomer's children folded into
+            // it: a walk down `children` (the PCT runner's) reaches the kept sub-Package directly, never
+            // through getElement, so a merge left to the sub-Package's own resolveAndMerge would hide every
+            // element the newcomer's module adds below it.
+            foldChildrenInto((org.finos.legend.pure.truffle.execution.PureDynamicObject) existing,
+                    (org.finos.legend.pure.truffle.execution.PureDynamicObject) k);
             return;
         }
         throw new IllegalStateException(

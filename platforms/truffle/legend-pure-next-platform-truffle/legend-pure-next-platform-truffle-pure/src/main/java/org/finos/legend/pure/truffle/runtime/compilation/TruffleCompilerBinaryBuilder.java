@@ -223,11 +223,11 @@ public final class TruffleCompilerBinaryBuilder
                 throw new RuntimeException("Pure compilation failed with " + allErrors.size() + " error(s)");
             }
 
-            // Filter Package elements that already live in the anchor (first
-            // base PDB) — compile-pure's `buildPackages` expands paths to all
-            // ancestors (`platform`, `platform::pure`, …) and core.pdb already owns
-            // those, so re-emitting them would diverge from bootstrap's output.
-            // Non-Package elements always pass through.
+            // Every Package is written: compile-pure's `buildPackages` builds this
+            // module's own package tree (`platform`, `platform::pure`, … holding only
+            // its elements), so a Package a base PDB also has is a shadow the registry
+            // folds into the base's — dropped, its children would be under no parent
+            // (a walk down `children`, the PCT runner's, would never reach them).
             // Accepts both typed XPDBHelper (instanceof PackageableElement) and
             // PureDynamicObject (_Any.pureTypeOf returns Pure path) since
             // TrufflePdbWriter.write now accepts Iterable<?>.
@@ -235,7 +235,6 @@ public final class TruffleCompilerBinaryBuilder
             Object elementsObj = invokeAccessor(result, "_elements");
             if (elementsObj instanceof PureSequence elementsSeq)
             {
-                PdbModule anchor = loaders.isEmpty() ? null : loaders.get(0);
                 for (int i = 0; i < elementsSeq.size(); i++)
                 {
                     Object el = elementsSeq.getBoxed(i);
@@ -243,12 +242,6 @@ public final class TruffleCompilerBinaryBuilder
                     String pureType = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeOf(el);
                     if (pureType == null) continue;
                     String path = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(el, resolver);
-                    boolean isPkg = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(el,
-                            "platform::pure::metamodel::Package");
-                    if (isPkg && anchor != null && anchor.hasElement(path))
-                    {
-                        continue;
-                    }
                     elementsByPath.put(path, el);
                 }
             }

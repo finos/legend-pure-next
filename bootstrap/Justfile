@@ -274,7 +274,7 @@ test-java: (_mvn "with-tests")
 # remain visible.
 
 # Every specification run of the bootstrap host (self-host excluded: see `spec-compiler-selfhost`).
-spec: spec-compiler spec-pdb check-fbs-parity spec-functions spec-pct spec-pdb-golden spec-printer-compiled spec-printer-protocol
+spec: spec-compiler spec-pdb check-fbs-parity spec-functions spec-package-tree spec-pct spec-pdb-golden spec-printer-compiled spec-printer-protocol
 
 # Needs core-tests.pdb (runTests is <<test.TestDependency>>, classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
@@ -289,6 +289,22 @@ spec-functions:
         --pdb {{shared_out}}/compiler-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
         --args "platform::pure::functions" "{{test_results}}/spec/functions/pure@cli-bootstrap.json" {{err_filter}}
+
+# An extension's tests are found by walking the package tree from `platform`, which core owns: the TDS
+# extension's PDBs (compiled by `pure-bootstrap compile`) list their packages below core's, and this host's
+# registry merges them at every depth. Its one test of the TDS tests: the others compile TDS islands, which
+# need the extension's compiler — a language this host does not have.
+spec-package-tree:
+    @{{header}} 'spec-package-tree'
+    @{{substep}} 'testTheTdsTestsAreReachableFromTheRoot (assumes `just build` was run)'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{repo_root}}/pure/extensions/pure/tds/build/tds.pdb \
+        --pdb {{repo_root}}/pure/extensions/pure/tds/build/tds-tests.pdb \
+        --function "platform::extensions::pure::tds::tests::testTheTdsTestsAreReachableFromTheRoot__Boolean_1_" {{err_filter}}
 
 # Needs core-tests.pdb and compiler-tests.pdb for the same reason as spec-functions.
 # Standalone Pure PCT tests over platform::pure::functions (assumes `just build` was run).

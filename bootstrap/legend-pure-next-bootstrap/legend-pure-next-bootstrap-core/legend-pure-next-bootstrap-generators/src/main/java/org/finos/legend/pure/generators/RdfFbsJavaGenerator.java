@@ -1328,7 +1328,9 @@ public class RdfFbsJavaGenerator
         sb.append("        else if (obj instanceof platform.pure.metamodel.pointer.TempCompilerPointer tcp)\n");
         sb.append("        {\n");
         sb.append("            kind = 0; // PackageableElement-style pointer (path only)\n");
-        sb.append("            segments = new String[]{tcp._path()};\n");
+        // A root PackagePointer carries path '' (a top-level package's parent); on the wire the root is '::',
+        // its name — as the Pure writer (writerHelper's pointerKindAndSegs) and a Java-compiled graph write it.
+        sb.append("            segments = new String[]{tcp._path().isEmpty() ? \"::\" : tcp._path()};\n");
         sb.append("        }\n");
         sb.append("        else if (obj instanceof platform.pure.metamodel.function.property.QualifiedProperty qp && qp._owner() instanceof PackageableElement owner)\n");
         sb.append("        {\n");

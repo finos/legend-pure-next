@@ -32,5 +32,6 @@
     <modules>
         <module>legend-pure-next-platform-truffle-extensions-diagram</module>
         <module>legend-pure-next-platform-truffle-extensions-tds</module>
+        <module>legend-pure-next-platform-truffle-extensions-relation</module>
     </modules>
 </project>

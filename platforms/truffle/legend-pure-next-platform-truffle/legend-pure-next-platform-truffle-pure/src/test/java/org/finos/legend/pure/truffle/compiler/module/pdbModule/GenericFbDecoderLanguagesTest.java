@@ -28,7 +28,7 @@ public class GenericFbDecoderLanguagesTest
 {
     private static Language extension(String name, String fbs)
     {
-        return new Language(name, name, Lists.immutable.empty(), null, null, null, fbs);
+        return new Language(name, name, Lists.immutable.empty(), null, null, null, fbs, null);
     }
 
     @Test

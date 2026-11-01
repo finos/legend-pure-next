@@ -53,10 +53,10 @@ class TestPureExecution
         // alongside their non-test dependencies.
         PdbModule coreModule = new PdbModule(
                 BootstrapModule.locateCorePdb(),
-                PdbModule.Mode.COMPILATION);
+                PdbModule.Mode.EXECUTION);
         PdbModule coreTestsModule = new PdbModule(
                 BootstrapModule.locateCoreTestsPdb(),
-                PdbModule.Mode.COMPILATION);
+                PdbModule.Mode.EXECUTION);
 
         // Attach the modules to a registry (required for getElement to work)
         org.finos.legend.pure.m3.module.ModuleRegistry registry = new org.finos.legend.pure.m3.module.ModuleRegistry(java.util.List.of(coreModule, coreTestsModule));
@@ -64,8 +64,11 @@ class TestPureExecution
 
         // Resolve through the tests module (it declares core as a dependency
         // in its manifest) so both pdbs are visible during execution.
+        // Executed as `pure-bootstrap execute` runs: the registry is the resolver, so a walk down `children`
+        // reaches what every loaded module contributes at each depth (a module-scoped view resolves a core
+        // package's children within core alone, missing the tests' shadows).
         PureRuntime execution = PureRuntime.builder()
-                .withRegistry(new org.finos.legend.pure.m3.module.ScopedMetadataAccess(coreTestsModule, registry))
+                .withRegistry(registry)
                 .build();
 
         List<DynamicTest> tests = new ArrayList<>();

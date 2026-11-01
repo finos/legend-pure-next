@@ -476,7 +476,51 @@ public final class PureRuntime
                     allGrammars.add(language.grammar());
                 }
             });
-            return new PureRuntime(registry, natives, allGrammars, sourceRoots, polyglotOptions, languages);
+            return new PureRuntime(registry, withLanguageNatives(), allGrammars, sourceRoots, polyglotOptions, languages);
+        }
+
+        /**
+         * The host's natives and every language's own — in a new registry, the host's left as it was given.
+         *
+         * <p>Each language's are checked against what its module DECLARES, when that module is loaded: a
+         * native it declares with no implementation here, or an implementation of a native it does not
+         * declare, fails the build naming both — rather than a call failing later, or a stale implementation
+         * lingering. A language whose module is not loaded (yet) still has its natives installed, so the
+         * module can arrive late; it is checked when it is there.</p>
+         */
+        private NativeRegistry withLanguageNatives()
+        {
+            NativeRegistry all = NativeRegistry.empty().registerAll(natives);
+            languages.select((language) -> language.natives() != null).forEach((language) ->
+            {
+                NativeRegistry own = NativeRegistry.empty();
+                language.natives().registerAll(own);
+                org.finos.legend.pure.truffle.compiler.module.Module module =
+                        language.module() == null ? null : registry.module(language.module());
+                if (module != null)
+                {
+                    org.eclipse.collections.api.set.SetIterable<String> declared = declaredNatives(module);
+                    org.eclipse.collections.api.set.SetIterable<String> missing = declared.difference(own.signatures());
+                    org.eclipse.collections.api.set.SetIterable<String> undeclared = own.signatures().difference(declared);
+                    if (missing.notEmpty() || undeclared.notEmpty())
+                    {
+                        throw new IllegalStateException("the " + language.name() + " language's natives on Truffle do not match its module '"
+                                + module.name() + "'"
+                                + (missing.isEmpty() ? "" : "; declared but not implemented: " + missing.toSortedList().makeString(", "))
+                                + (undeclared.isEmpty() ? "" : "; implemented but not declared: " + undeclared.toSortedList().makeString(", ")));
+                    }
+                }
+                all.registerAll(own);
+            });
+            return all;
+        }
+
+        /** The full ids of the native functions {@code module} declares: how a language's natives are keyed. */
+        private static org.eclipse.collections.api.set.SetIterable<String> declaredNatives(org.finos.legend.pure.truffle.compiler.module.Module module)
+        {
+            return org.eclipse.collections.impl.factory.Sets.adapt(module.elementPaths())
+                    .select((path) -> org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(module.getElement(path),
+                            "platform::pure::metamodel::function::NativeFunction"));
         }
 
         /**

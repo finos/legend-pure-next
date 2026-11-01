@@ -41,16 +41,14 @@ final class ColumnReads
         Object genericType = receiver == null ? null : _Any.read(receiver, "genericType");
         Object type = genericType == null ? null : _Any.read(genericType, "type");
         Object columns = type == null ? null : _Any.read(type, "columns");
-        if (columns instanceof PureSequence seq)
+        Object column = columns instanceof PureSequence seq && seq.size() > 0 && name != null
+                ? org.eclipse.collections.impl.list.Interval.zeroTo(seq.size() - 1)
+                        .collect(seq::getBoxed)
+                        .detect(c -> name.equals(_Any.read(c, "name")))
+                : null;
+        if (column != null)
         {
-            for (int i = 0; i < seq.size(); i++)
-            {
-                Object column = seq.getBoxed(i);
-                if (name != null && name.equals(_Any.read(column, "name")))
-                {
-                    return column;
-                }
-            }
+            return column;
         }
         throw new IllegalStateException("PDB reader: the column read '" + name + "' has no column of that name in its receiver's relation type");
     }

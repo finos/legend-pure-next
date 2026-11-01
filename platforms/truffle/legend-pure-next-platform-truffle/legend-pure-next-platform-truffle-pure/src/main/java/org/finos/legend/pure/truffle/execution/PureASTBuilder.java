@@ -828,7 +828,8 @@ public final class PureASTBuilder
                 if (inlined != null) return inlined;
             }
         }
-        NativeRegistry.Factory factory = specialized.lookup(signature);
+        NativeRegistry.Factory factory = specialized.lookupNative(nf,
+                org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver());
         if (factory != null)
         {
             Object gt = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_GENERIC_TYPE);

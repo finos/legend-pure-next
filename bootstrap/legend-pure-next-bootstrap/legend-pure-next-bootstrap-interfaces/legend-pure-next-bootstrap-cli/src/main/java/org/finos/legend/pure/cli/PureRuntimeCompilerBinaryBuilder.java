@@ -165,7 +165,6 @@ public final class PureRuntimeCompilerBinaryBuilder
         // twice (unlikely, but cheap insurance).
         LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
         List<PackageableElement> els = compResult.elements();
-        Module anchor = modules.isEmpty() ? null : modules.get(0);
         for (Object el : els)
         {
             if (!(el instanceof PackageableElement pe))
@@ -177,18 +176,10 @@ public final class PureRuntimeCompilerBinaryBuilder
             {
                 continue;
             }
-            // Mirror the Java compiler's package-emission rule: skip Package
-            // elements that already exist in the anchor (core) PDB. Compile-
-            // pure expands every element's package path to all ancestors —
-            // `platform::pure::compiler::helper::class` brings in `platform::pure`,
-            // `platform`, etc. — and those ancestors live in core.pdb, so
-            // re-emitting them would diverge from the bootstrap output.
-            // Non-Package elements always pass through.
-            if (pe instanceof platform.pure.metamodel.Package
-                    && anchor != null && anchor.hasElement(path))
-            {
-                continue;
-            }
+            // Every Package is written, as the Java compiler's are: compile-pure builds this module's own
+            // package tree (`platform`, `platform::pure`, … holding only its elements), so a Package a base
+            // PDB also has is a shadow the registry merges into the base's — dropped, its children would be
+            // under no parent.
             elementsByPath.put(path, pe);
         }
 

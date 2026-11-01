@@ -145,7 +145,7 @@ public final class EvalNode extends PureNode
     {
         String signature = (String) org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(nf, SLOT_NAME);
         NativeRegistry registry = evaluator.astBuilder().specialized();
-        NativeRegistry.Factory factory = registry.lookup(signature);
+        NativeRegistry.Factory factory = registry.lookupNative(nf, evaluator.resolver());
         if (factory == null)
         {
             throw new RuntimeException("eval: no specialized node for native: " + signature);

@@ -216,7 +216,7 @@ setup:
 #     it first ships a jar without the schema ("languages/diagram.fbs is not on the class path");
 #   - Truffle's generate-pdb-reader runs on java.pdb, translation-shared.pdb and java-translation{,-tests}.pdb
 #     ("NoSuchFileException: .../java.pdb" on a clean checkout).
-build: doctor bootstrap::build modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::build javascript::build
+build: doctor bootstrap::build modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::build extensions::pure::relation::build-tests javascript::build
 
 # Top-level `build` already chains every subproject's `build` in dep order — alias for symmetry with sub-Justfiles' `build-all`.
 build-all: build
@@ -232,7 +232,7 @@ test: doctor
 # The suites `test` runs. modules::build stages the translator pdbs
 # javascript::test's generate step needs (see `build` ordering note, which is also why protocol, the
 # extensions and the modules come before truffle::test).
-_test: bootstrap::test modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::test javascript::test java::test-all
+_test: bootstrap::test modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::test extensions::pure::relation::test-all javascript::test java::test-all
 
 # Delete every generated/ directory so the suites below cannot pass against
 # stale output. These are all gitignored build artifacts, each with a recipe
@@ -297,7 +297,7 @@ _test-all: clean (_stage-start "build") _test-all-build (_stage-end "build") _te
 _test-all-build: javascript::antlr-bundle \
     bootstrap::test-java bootstrap::stage bootstrap::build-compiler-pdb \
     modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests \
-    truffle::test-java modules::language_java::build-tests
+    truffle::test-java extensions::pure::relation::build-tests modules::language_java::build-tests
 
 # The suites, five branches at once, each a separate `just` writing test-results/logs/<branch>.log;
 # a branch prints one line when it finishes, and the last lines of its log if it failed.
@@ -321,7 +321,7 @@ _test-all-suites:
     mkdir -p "$logs"
     j() { just --justfile "{{justfile()}}" "$@"; }
     branch_bootstrap()  { j bootstrap::spec && j --no-deps bootstrap::spec-compiler-selfhost; }
-    branch_truffle()    { j truffle::spec truffle::spec-compiler-selfhost truffle::native::test-all && j --no-deps truffle::usage-example && j --no-deps extensions::pure::tds::test-all; }
+    branch_truffle()    { j truffle::spec truffle::spec-compiler-selfhost truffle::native::test-all && j --no-deps truffle::usage-example && j --no-deps extensions::pure::tds::test-all && j --no-deps extensions::pure::relation::test-all; }
     branch_javascript() { j javascript::test-all modules::translation_javascript::test-all; }
     branch_modules()    { j --no-deps modules::language_java::test-all modules::language_javascript::test-all modules::translation_shared::test-all; }
     branch_java()       { j java::test-all; }
@@ -513,7 +513,7 @@ test-all-serial: (doctor "test-all")
 _test-all-serial: clean \
     (_stage-start "bootstrap") javascript::antlr-bundle bootstrap::test-all (_stage-end "bootstrap") \
     (_stage-start "modules-build") modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests (_stage-end "modules-build") \
-    (_stage-start "truffle") truffle::test-all extensions::pure::tds::test-all (_stage-end "truffle") \
+    (_stage-start "truffle") truffle::build extensions::pure::relation::build-tests truffle::test-all extensions::pure::relation::test-all extensions::pure::tds::test-all (_stage-end "truffle") \
     (_stage-start "javascript") javascript::test-all (_stage-end "javascript") \
     (_stage-start "modules-test") modules::test-all (_stage-end "modules-test") \
     (_stage-start "java") java::test-all (_stage-end "java")
