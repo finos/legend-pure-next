@@ -73,7 +73,7 @@ public final class PureASTBuilder
     public static final org.eclipse.collections.api.map.ImmutableMap<String, String> NOT_ON_THIS_PLATFORM =
             org.eclipse.collections.api.factory.Maps.mutable.<String, String>empty()
                     .withKeyValue("platform::pure::functions::collection::getAll_Class_1__T_MANY_",
-                            "there is no store of instances to read: a class's instances exist only where a query is translated")
+                            "there is no store of instances to read: the instances of a class exist only where a query is translated")
                     .withKeyValue("platform::extensions::language::javascript::compileModule_String_1__Any_1_",
                             "running JavaScript needs a JavaScript engine: the JavaScript host has one")
                     .withKeyValue("platform::extensions::language::javascript::drainCompiledSources__String_MANY_",

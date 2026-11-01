@@ -506,7 +506,7 @@ public final class PureRuntime
                     org.eclipse.collections.api.set.SetIterable<String> undeclared = own.signatures().difference(declared);
                     if (missing.notEmpty() || undeclared.notEmpty())
                     {
-                        throw new IllegalStateException("the " + language.name() + " language's natives on Truffle do not match its module '"
+                        throw new IllegalStateException("the natives of the language '" + language.name() + "' on Truffle do not match its module '"
                                 + module.name() + "'"
                                 + (missing.isEmpty() ? "" : "; declared but not implemented: " + missing.toSortedList().makeString(", "))
                                 + (undeclared.isEmpty() ? "" : "; implemented but not declared: " + undeclared.toSortedList().makeString(", ")));

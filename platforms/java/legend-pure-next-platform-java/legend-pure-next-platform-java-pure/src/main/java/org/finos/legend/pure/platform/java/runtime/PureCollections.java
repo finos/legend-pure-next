@@ -121,7 +121,8 @@ public final class PureCollections
                 ? naturalOrder()
                 : (x, y) -> Long.signum(((Number) ((BiFunction) c).apply(x, y)).longValue());
         Comparator by = k == null ? order : Comparator.comparing((Function) k, order);
-        return values.stream().sorted(by).toList();
+        // toSortedList is a stable sort, as the other platforms are
+        return org.eclipse.collections.impl.factory.Lists.mutable.withAll(values).sortThis(by);
     }
 
     /** A {@code [0..1]} value: itself, or null when it holds none. */

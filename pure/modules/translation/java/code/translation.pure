@@ -3750,7 +3750,7 @@ function platform::extensions::language::java::translation::loweredNatives(): St
 function platform::extensions::language::java::translation::notOnThisPlatform(): Pair<String, String>[*]
 {
    [pair('platform::pure::functions::collection::getAll_Class_1__T_MANY_',
-         'there is no store of instances to read: a class\'s instances exist only where a query is translated')]
+         'there is no store of instances to read: the instances of a class exist only where a query is translated')]
 }
 
 // random() : Float[1] — at least 0 and below 1.

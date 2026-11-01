@@ -195,16 +195,46 @@ public final class PureStrings
     public static int regexpFlags(Object parameters)
     {
         List<?> values = parameters instanceof List<?> list ? list : List.of(parameters);
-        return values.stream()
-                .map(v -> v instanceof Enum<?> e ? e.name() : String.valueOf(v))
-                .mapToInt(name -> switch (name)
+        return org.eclipse.collections.impl.factory.Lists.adapt(values)
+                .collect(v -> v instanceof Enum<?> e ? e.name() : String.valueOf(v))
+                .injectInto(0, (flags, name) -> flags | switch (name)
                 {
                     case "CASE_INSENSITIVE" -> Pattern.CASE_INSENSITIVE;
                     case "MULTILINE" -> Pattern.MULTILINE;
                     case "NON_NEWLINE_SENSITIVE" -> Pattern.DOTALL;
                     default -> 0;
-                })
-                .reduce(0, (a, b) -> a | b);
+                });
+    }
+
+    /** The successive matches of {@code regex} in {@code s}, read lazily. */
+    private static org.eclipse.collections.api.LazyIterable<java.util.regex.MatchResult> matches(String s, String regex, int flags)
+    {
+        Matcher m = Pattern.compile(regex, flags).matcher(s);
+        return org.eclipse.collections.impl.utility.LazyIterate.adapt(() -> new java.util.Iterator<java.util.regex.MatchResult>()
+        {
+            private Boolean found;
+
+            @Override
+            public boolean hasNext()
+            {
+                if (found == null)
+                {
+                    found = m.find();
+                }
+                return found;
+            }
+
+            @Override
+            public java.util.regex.MatchResult next()
+            {
+                if (!hasNext())
+                {
+                    throw new java.util.NoSuchElementException();
+                }
+                found = null;
+                return m.toMatchResult();
+            }
+        });
     }
 
     /** {@code regexpIndexOf(s, regex, group, parameters)}: where the first match (of {@code group}) starts, or -1. */
@@ -217,7 +247,7 @@ public final class PureStrings
     /** {@code regexpCount(s, regex, parameters)}: the number of non-overlapping matches. */
     public static long regexpCount(String s, String regex, int flags)
     {
-        return Pattern.compile(regex, flags).matcher(s).results().count();
+        return matches(s, regex, flags).size();
     }
 
     /** {@code regexpReplace(s, regex, replacement, replaceAll, parameters)}. */
@@ -233,10 +263,10 @@ public final class PureStrings
      */
     public static List<String> regexpExtract(String s, String regex, boolean extractAll, long group, int flags)
     {
-        return Pattern.compile(regex, flags).matcher(s).results()
-                .limit(extractAll ? Long.MAX_VALUE : 1)
-                .map(match -> match.group((int) group))
-                .filter(java.util.Objects::nonNull)
+        return matches(s, regex, flags)
+                .take(extractAll ? Integer.MAX_VALUE : 1)
+                .collect(match -> match.group((int) group))
+                .select(java.util.Objects::nonNull)
                 .toList();
     }
 }

@@ -154,9 +154,10 @@ public final class PureStack
         {
             return null;
         }
-        String raw = inLambda
-                ? positions.stream().max(java.util.Comparator.comparingInt(Position::lambdaDepth)).orElseThrow().at()
-                : positions.stream().min(java.util.Comparator.comparingInt(Position::lambdaDepth)).orElseThrow().at();
+        // maxBy and minBy keep the first of equals: left to right on the line
+        String raw = (inLambda
+                ? org.eclipse.collections.impl.factory.Lists.adapt(positions).maxBy(Position::lambdaDepth)
+                : org.eclipse.collections.impl.factory.Lists.adapt(positions).minBy(Position::lambdaDepth)).at();
         // The table stores `sourceId:line:column`; a frame reads `sourceId:lineCcolumn`.
         // Split from the RIGHT, because a sourceId is a path and may hold a colon.
         int column = raw.lastIndexOf(':');

@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Stream;
 
 /**
  * A language's natives on this platform are checked, when the runtime is built, against what its module
@@ -87,10 +86,17 @@ public class PureRuntimeLanguageNativesTest
 
     private static Path sharedPdb(String name)
     {
-        return Stream.iterate(Path.of("").toAbsolutePath(), dir -> dir != null, Path::getParent)
-                .map(dir -> dir.resolve("shared").resolve(name))
-                .filter(Files::exists)
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("no shared/" + name + " above the working directory"));
+        return sharedPdbAbove(Path.of("").toAbsolutePath(), name);
+    }
+
+    /** {@code shared/<name>} in {@code dir} or the nearest directory above it. */
+    private static Path sharedPdbAbove(Path dir, String name)
+    {
+        if (dir == null)
+        {
+            throw new IllegalStateException("no 'shared/" + name + "' above the working directory");
+        }
+        Path pdb = dir.resolve("shared").resolve(name);
+        return Files.exists(pdb) ? pdb : sharedPdbAbove(dir.getParent(), name);
     }
 }
