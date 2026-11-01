@@ -197,7 +197,7 @@ public final class PureStrings
         List<?> values = parameters instanceof List<?> list ? list : List.of(parameters);
         return org.eclipse.collections.impl.factory.Lists.adapt(values)
                 .collect(v -> v instanceof Enum<?> e ? e.name() : String.valueOf(v))
-                .injectInto(0, (flags, name) -> flags | switch (name)
+                .injectInto(0, (int flags, String name) -> flags | switch (name)
                 {
                     case "CASE_INSENSITIVE" -> Pattern.CASE_INSENSITIVE;
                     case "MULTILINE" -> Pattern.MULTILINE;
