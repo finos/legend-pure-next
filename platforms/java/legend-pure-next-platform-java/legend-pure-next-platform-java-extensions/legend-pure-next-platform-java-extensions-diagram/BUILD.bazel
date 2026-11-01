@@ -1,0 +1,58 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The diagram language on the Java platform: its translated runtime (//platforms/java:diagram_generated) and language class.
+
+load("@rules_java//java:defs.bzl", "java_import", "java_library")
+load("//tools/bazel:antlr.bzl", "antlr_srcjar")
+
+antlr_srcjar(
+    name = "antlr_sources",
+    srcs = ["//pure/extensions/diagram:grammar_antlr"],
+    grammar_dir = "pure/extensions/diagram/code/grammar/antlr",
+    grammars = [("", ["DiagramLexer.g4", "DiagramParser.g4"])],
+    package = "org.finos.legend.pure.platform.java.extensions.diagram",
+)
+
+java_import(
+    name = "positions",
+    jars = ["//platforms/java:diagram_generated-positions.jar"],
+)
+
+_LANGUAGE_RESOURCES = {
+    "language_diagram.json": "//pure/extensions/diagram:language_diagram.json",
+    "diagram.fbs": "//pure/extensions/diagram:generated/diagram.fbs",
+}
+
+genrule(
+    name = "language_resources",
+    srcs = _LANGUAGE_RESOURCES.values(),
+    outs = ["languages/" + name for name in _LANGUAGE_RESOURCES.keys()],
+    cmd = " ".join(["cp $(execpath %s) $(RULEDIR)/languages/%s;" % (label, name) for name, label in _LANGUAGE_RESOURCES.items()]),
+)
+
+java_library(
+    name = "extension",
+    srcs = glob(["src/main/java/**/*.java"]) + ["//platforms/java:diagram_generated.srcjar", ":antlr_sources"],
+    resource_strip_prefix = package_name(),
+    resources = [":language_resources"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [":positions"],
+    deps = [
+        "//platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-pure:engine",
+        "@maven//:org_antlr_antlr4_runtime",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+    ],
+)

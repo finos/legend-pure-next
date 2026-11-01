@@ -1,0 +1,155 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The M3 generators: m3.ttl to m3.pure, m3.fbs and the protocol model (Maven: the generate-* executions of this pom).
+
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("//tools/bazel:junit5.bzl", "junit5_test")
+
+# The jar carries the generated specification and m3.ttl under generated-specification/, as Maven packages it
+# (package-generated-spec): the compiler reads m3.ttl from the classpath. The generators read none of it, so building
+# them never waits on their own output.
+java_library(
+    name = "generators_classes",
+    srcs = glob(["src/main/java/**/*.java"]),
+    deps = [
+        "@maven//:org_apache_jena_jena_arq",
+        "@maven//:org_apache_jena_jena_core",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+    ],
+)
+
+java_library(
+    name = "generators",
+    resource_strip_prefix = package_name(),
+    resources = [
+        ":generated_specification",
+        "generated-specification/m3.ttl",
+    ],
+    visibility = ["//visibility:public"],
+    exports = [":generators_classes"],
+    runtime_deps = [":generators_classes"],
+)
+
+genrule(
+    name = "m3_ttl_resource",
+    srcs = ["//pure/specification:m3.ttl"],
+    outs = ["generated-specification/m3.ttl"],
+    cmd = "cp $< $@",
+)
+
+[java_binary(
+    name = main,
+    main_class = "org.finos.legend.pure.specification.generation." + main,
+    visibility = ["//visibility:public"],
+    runtime_deps = [":generators_classes"],
+) for main in [
+    "RdfPureGenerator",
+    "RdfFbsSchemaGenerator",
+    "M3ProtocolGenerator",
+]]
+
+# The Java generators: the M3 and protocol classes (RdfJavaGenerator), the FlatBuffer readers (RdfFbsJavaGenerator).
+[java_binary(
+    name = main,
+    main_class = "org.finos.legend.pure.generators." + main,
+    visibility = ["//visibility:public"],
+    runtime_deps = [":generators_classes"],
+) for main in [
+    "RdfJavaGenerator",
+    "RdfFbsJavaGenerator",
+]]
+
+junit5_test(
+    name = "tests",
+    # The bootstrap own tests run on demand (spec Section 3).
+    tags = ["bootstrap", "manual"],
+    srcs = glob(["src/test/java/**/*.java"]),
+    data = [
+        "//pure/specification:m3-fbs-field-ids.txt",
+        "//pure/specification:m3.ttl",
+    ],
+    deps = [
+        ":generators_classes",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+    ],
+)
+
+# The generated specification, laid out as Maven lays out target/generated-specification.
+
+genrule(
+    name = "m3_pure",
+    srcs = ["//pure/specification:m3.ttl"],
+    outs = ["generated-specification/m3.pure"],
+    cmd = "$(location :RdfPureGenerator) $(location //pure/specification:m3.ttl) $@ > /dev/null",
+    tools = [":RdfPureGenerator"],
+)
+
+# The schema, and the field-ID registry it was generated with: the tracked registry is an input, never written.
+genrule(
+    name = "m3_fbs",
+    srcs = [
+        "//pure/specification:m3.ttl",
+        "//pure/specification:m3-fbs-field-ids.txt",
+        "//pure/specification:m3_fbs_addition.fbs",
+    ],
+    outs = [
+        "generated-specification/m3.fbs",
+        "m3-fbs-field-ids.txt",
+    ],
+    cmd = " ".join([
+        "$(location :RdfFbsSchemaGenerator)",
+        "$(location //pure/specification:m3.ttl)",
+        "$(RULEDIR)/generated-specification",
+        "--ids $(location //pure/specification:m3-fbs-field-ids.txt)",
+        "--ids-out $(location m3-fbs-field-ids.txt)",
+        "$(location //pure/specification:m3_fbs_addition.fbs)",
+        "> /dev/null",
+    ]),
+    tools = [":RdfFbsSchemaGenerator"],
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "m3_protocol_ttl",
+    srcs = [
+        "//pure/specification:m3.ttl",
+        "//pure/specification:m3_protocol_addition.ttl",
+    ],
+    outs = ["generated-specification/m3_protocol.ttl"],
+    cmd = "$(location :M3ProtocolGenerator) $(location //pure/specification:m3.ttl) $@ $(location //pure/specification:m3_protocol_addition.ttl) > /dev/null",
+    tools = [":M3ProtocolGenerator"],
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "m3_protocol_pure",
+    srcs = [":m3_protocol_ttl"],
+    outs = ["generated-specification/protocol/m3_protocol.pure"],
+    cmd = "$(location :RdfPureGenerator) $(location :m3_protocol_ttl) $@ > /dev/null",
+    tools = [":RdfPureGenerator"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "generated_specification",
+    srcs = [
+        "generated-specification/m3.fbs",
+        "generated-specification/m3.pure",
+        "generated-specification/m3_protocol.ttl",
+        "generated-specification/protocol/m3_protocol.pure",
+    ],
+    visibility = ["//visibility:public"],
+)

@@ -8,5 +8,8 @@
   ],
   "testDependencies": [
     "core-tests"
+  ],
+  "tests": [
+    {"suite": "unit", "runner": "tests", "target": "platform::extensions::language::java::translation"}
   ]
 }

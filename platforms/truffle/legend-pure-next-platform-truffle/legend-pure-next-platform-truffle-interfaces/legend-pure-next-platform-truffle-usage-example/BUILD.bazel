@@ -1,0 +1,51 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Embedding Truffle: name the language, compile a source held in a string, call a function it defines
+# (just: truffle::usage-example).
+
+load("@rules_java//java:defs.bzl", "java_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+java_binary(
+    name = "usage-example",
+    srcs = glob(["src/main/java/**/*.java"]),
+    # What it loads, at the paths the language manifests give, below the directory holding shared/core.pdb.
+    data = [
+        "//:shared",
+        "//pure/extensions/diagram:build/diagram.pdb",
+        "//pure/extensions/diagram:generated/diagram.fbs",
+        "//pure/extensions/pure/tds:build/tds.pdb",
+        "//pure/extensions/pure/tds:generated/tds.fbs",
+    ],
+    main_class = "org.finos.legend.pure.truffle.example.UsageExample",
+    deps = [
+        "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure:truffle-pure",
+        "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-extensions/legend-pure-next-platform-truffle-extensions-diagram:extension",
+        "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-extensions/legend-pure-next-platform-truffle-extensions-tds:extension",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+        "@maven//:org_graalvm_polyglot_polyglot",
+    ],
+)
+
+# The example runs (just: truffle::usage-example in test-all): it asserts nothing, but an example that stopped
+# working cannot go unnoticed.
+sh_test(
+    name = "usage-example_runs",
+    tags = ["job:truffle-self-host"],
+    srcs = ["//tools/bazel:runs.sh"],
+    args = ["$(rootpath :usage-example)"],
+    data = [":usage-example"],
+)

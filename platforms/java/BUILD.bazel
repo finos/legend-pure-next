@@ -1,0 +1,177 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The Java platform runtime, translated from Pure on the Truffle CLI (just: java::generate-*): the engine (types, the
+# PDB reader, the translator, the functions, the tests), and the diagram and TDS extensions.
+
+load("//tools/bazel:hosts.bzl", "host_specs", "pdb_read_backs")
+load(":translation.bzl", "java_translation_srcjar")
+
+_CORE = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb"
+
+_CORE_TESTS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb"
+
+_COMPILER = "//pure/specification:compiler.pdb"
+
+_COMPILER_TESTS = "//pure/specification:compiler-tests.pdb"
+
+_PARSER_MAPPINGS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb"
+
+# The Java translator.
+_TRANSLATOR = [
+    "//pure/modules/language/java:build/java.pdb",
+    "//pure/modules/translation/shared:build/translation-shared.pdb",
+    "//pure/modules/translation/java:build/java-translation.pdb",
+    "//pure/modules/translation/java:build/java-translation-tests.pdb",
+]
+
+_T = "platform::extensions::language::java::translation::"
+
+_WITH_TESTS = [_CORE, _CORE_TESTS, _COMPILER, _COMPILER_TESTS, _PARSER_MAPPINGS] + _TRANSLATOR
+
+_WITHOUT_COMPILER_TESTS = [_CORE, _CORE_TESTS, _COMPILER, _PARSER_MAPPINGS] + _TRANSLATOR
+
+java_translation_srcjar(
+    name = "engine_generated",
+    steps = [
+        # generate-types
+        (_WITH_TESTS, _T + "platform::generatePlatformTypes_String_1__String_1__String_1_", ["platform::pure::metamodel,platform::pure::functions,platform::pure::compiler::test", "org.finos.legend.pure.m3"], ""),
+        # generate-pdb
+        (_WITHOUT_COMPILER_TESTS, _T + "translatePackagesToJava_String_1__String_1_", ["platform::pure::compiler::pdb"], ""),
+        # generate-translator
+        (_WITHOUT_COMPILER_TESTS, _T + "translatePackagesToJava_String_1__String_1_", ["platform::extensions::language::java::translation"], ""),
+        # generate-functions
+        (_WITH_TESTS, _T + "translatePackagesToJava_String_1__String_1_", ["platform::pure::functions,platform::pure::test,platform::pure::parser::mappings,platform::pure::compiler::test"], ""),
+        # generate-tests
+        (_WITH_TESTS, _T + "translateTestPackagesToJava_String_1__String_1_", ["platform::pure::functions,platform::pure::compiler::pdb"], ""),
+        (_WITH_TESTS, _T + "platform::generateExtensionTypeFactory_String_1__String_1__String_1__String_1_", ["platform::pure::compiler::test::islands::metamodel", "org.finos.legend.pure.m3", "org.finos.legend.pure.m3.platform.pure.compiler.test.islands.IslandTestPdbTypes"], "org/finos/legend/pure/m3/platform/pure/compiler/test/islands/"),
+        (_WITH_TESTS, _T + "platform::generatePlatformTypesWithTests_String_1__String_1__String_1_", ["platform::pure::functions,platform::pure::compiler::pdb", "org.finos.legend.pure.m3"], ""),
+    ],
+)
+
+[java_translation_srcjar(
+    name = name + "_generated",
+    steps = [
+        (_WITHOUT_COMPILER_TESTS + [pdb], _T + "translatePackagesToJava_String_1__String_1_", [package], keep),
+        (_WITHOUT_COMPILER_TESTS + [pdb, _COMPILER_TESTS, tests_pdb], _T + "translateTestPackagesToJava_String_1__String_1_", [package], keep),
+        (_WITHOUT_COMPILER_TESTS + [pdb], _T + "platform::generateExtensionTypeFactory_String_1__String_1__String_1__String_1_", [package + "::metamodel", "org.finos.legend.pure.m3", factory], keep),
+    ],
+) for name, pdb, tests_pdb, package, factory, keep in [
+    (
+        "diagram",
+        "//pure/extensions/diagram:build/diagram.pdb",
+        "//pure/extensions/diagram:build/diagram-tests.pdb",
+        "platform::extensions::pure::diagram",
+        "org.finos.legend.pure.m3.platform.extensions.pure.diagram.DiagramPdbTypes",
+        "org/finos/legend/pure/m3/platform/extensions/pure/diagram/",
+    ),
+    (
+        "tds",
+        "//pure/extensions/pure/tds:build/tds.pdb",
+        "//pure/extensions/pure/tds:build/tds-tests.pdb",
+        "platform::extensions::pure::tds",
+        "org.finos.legend.pure.m3.platform.extensions.pure.tds.TdsPdbTypes",
+        "org/finos/legend/pure/m3/platform/extensions/pure/tds/",
+    ),
+]]
+
+# What a run of the Java platform reads at its repository-relative paths (the root of its runfiles): the language
+# PDBs and schemas (//:shared, the extensions build/ and generated/), and the platform own modules (PlatformModules).
+filegroup(
+    name = "runtime_data",
+    srcs = [
+        "//:shared",
+        "//pure/extensions/diagram:build/diagram.pdb",
+        "//pure/extensions/diagram:generated/diagram.fbs",
+        "//pure/extensions/pure/tds:build/tds.pdb",
+        "//pure/extensions/pure/tds:generated/tds.fbs",
+        "//pure/modules/language/java:build/java.pdb",
+        "//pure/modules/translation/java:build/java-translation.pdb",
+        "//pure/modules/translation/shared:build/translation-shared.pdb",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Every suite of every owner on the Java platform (tools/bazel/hosts.bzl): '<owner>_<suite>_platform'.
+host_specs(host = "java")
+
+# The extension goldens read back by the Java platform decoder (just: java::spec-diagram-pdb, ::spec-tds-pdb).
+
+pdb_read_backs(
+    fixtures = {
+        "diagram/" + name: "m::D"
+        for name in [
+            "propertyAndAssociation",
+            "complexGeometry",
+            "complexTypeProperties",
+        ]
+    },
+    function = "platform::extensions::pure::diagram::tests::readBack_String_1__String_1__String_1_",
+    host = "java",
+    owner = "diagram",
+)
+
+pdb_read_backs(
+    fixtures = {
+        "tds/" + name: "test::tds::%s__Any_MANY_" % name
+        for name in [
+            "typedHeader",
+            "inferredColumns",
+            "mixedInference",
+            "quotedNamesAndCells",
+            "enumeration",
+            "quotedValues",
+            "manyMultiplicity",
+            "primitiveExtension",
+        ]
+    },
+    function = "platform::extensions::pure::tds::tests::readBack_String_1__String_1__String_1_",
+    host = "java",
+    owner = "tds",
+)
+
+# The Java platform gallery (just: java::gallery), which publish-gallery deploys. The platform reads its PDBs below
+# --root at their repository paths: the action stages them so, in a root of its own.
+_JAVA_CLI = "//platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-interfaces/legend-pure-next-platform-java-cli:pure-java"
+
+_GALLERY_DATA = [
+    ":runtime_data",
+    _CORE_TESTS,
+    "//pure/modules/translation/java:build/java-translation-tests.pdb",
+]
+
+genrule(
+    name = "gallery",
+    srcs = _GALLERY_DATA,
+    outs = ["java-platform-gallery.html"],
+    cmd = """
+        set -e
+        ROOT=$$(mktemp -d)
+        EXEC=(%s)
+        REPO=(%s)
+        for i in "$${!EXEC[@]}"; do mkdir -p "$$ROOT/$$(dirname "$${REPO[$$i]}")"; cp "$${EXEC[$$i]}" "$$ROOT/$${REPO[$$i]}"; done
+        $(execpath %s) --root $$ROOT --pdb $$ROOT/shared/core-tests.pdb \\
+            --pdb $$ROOT/pure/modules/translation/java/build/java-translation-tests.pdb \\
+            --function "platform::extensions::language::java::translation::gallery::renderGallery_String_1__String_1_" \\
+            --args "platform::pure::functions" > $@ 2> /dev/null
+        test -s $@
+    """ % (
+        " ".join(["$(execpaths %s)" % label for label in _GALLERY_DATA]),
+        " ".join(["$(rootpaths %s)" % label for label in _GALLERY_DATA]),
+        _JAVA_CLI,
+    ),
+    tags = ["job:translations"],
+    tools = [_JAVA_CLI],
+    visibility = ["//visibility:public"],
+)

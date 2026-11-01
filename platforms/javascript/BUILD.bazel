@@ -1,0 +1,340 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The JavaScript platform: the runtime translated from Pure, its parsers and bundles, and its suites.
+
+load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
+load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_run_binary")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@npm//platforms/javascript:esbuild/package_json.bzl", esbuild = "bin")
+load("//tools/bazel:hosts.bzl", "host_specs")
+load("//tools/bazel:pure.bzl", "pure_generate")
+
+npm_link_all_packages(name = "node_modules")
+
+exports_files([
+    "package.json",
+    "pnpm-lock.yaml",
+])
+
+# ---------------------------------------------------------------------------------------------------------------------
+# The runtime translated from Pure to JavaScript (just: javascript::generate, generate-core, generate-pdb-reader,
+# generate-translator, generate-extensions-code, parser-mappings-bundle), each package with every PDB the platform
+# translates against (just: emit_pdbs). The extensions: their LANGUAGES[].translate, from their language manifests.
+
+_CORE = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler"
+
+_EMIT_PDBS = [
+    _CORE + ":core.pdb",
+    _CORE + ":core-tests.pdb",
+    "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
+    "//pure/specification:compiler.pdb",
+    "//pure/specification:compiler-tests.pdb",
+    "//pure/modules/language/javascript:build/javascript.pdb",
+    "//pure/modules/language/javascript:build/javascript-tests.pdb",
+    "//pure/modules/translation/shared:build/translation-shared.pdb",
+    "//pure/modules/translation/shared:build/translation-shared-tests.pdb",
+    "//pure/modules/translation/javascript:build/javascript-translation.pdb",
+    "//pure/modules/translation/javascript:build/javascript-translation-tests.pdb",
+    "//pure/extensions/diagram:build/diagram.pdb",
+    "//pure/extensions/diagram:build/diagram-tests.pdb",
+    "//pure/extensions/pure/tds:build/tds.pdb",
+    "//pure/extensions/pure/tds:build/tds-tests.pdb",
+]
+
+_PDB = "platform::extensions::language::javascript::translation::pdb::"
+
+_CODE = _PDB + "translatePackageToJs_String_1__String_1_"
+
+_TESTS = _PDB + "translatePackageTestsToJs_String_1__String_1_"
+
+_ALL = _PDB + "translatePackageAllToJs_String_1__String_1_"
+
+# {file below generated/: (package, translator)}
+_TRANSLATED = {
+    "pure/compiler/compiler.js": ("platform::pure::compiler", _CODE),
+    "pure/compiler/compiler-tests.js": ("platform::pure::compiler", _TESTS),
+    "pure/compiler/metamodel.js": ("platform::pure::metamodel", _CODE),
+    "pure/compiler/metamodel-tests.js": ("platform::pure::metamodel", _TESTS),
+    "pure/compiler/pdb.js": ("platform::pure::compiler::pdb", _CODE),
+    "pure/grammar/protocol.js": ("platform::pure::protocol", _CODE),
+    "pure/grammar/protocol-tests.js": ("platform::pure::protocol", _TESTS),
+    "pure/grammar/parser.js": ("platform::pure::parser::mappings", _CODE),
+    "pure/runtime/functions.js": ("platform::pure::functions", _CODE),
+    "pure/runtime/functions-tests.js": ("platform::pure::functions", _TESTS),
+    "ui.js": ("platform::pure::ui", _CODE),
+    "test.js": ("platform::pure::test", _ALL),
+    "pure/runtime/translator/shared.js": ("platform::extensions::pure::translation", _CODE),
+    "pure/runtime/translator/shared-tests.js": ("platform::extensions::pure::translation", _TESTS),
+    "pure/runtime/translator/javascript.js": ("platform::extensions::language::javascript", _CODE),
+    "pure/runtime/translator/javascript-tests.js": ("platform::extensions::language::javascript", _TESTS),
+    "pure/runtime/translator/translation.js": ("platform::extensions::language::javascript::translation", _CODE),
+    "pure/runtime/translator/translation-tests.js": ("platform::extensions::language::javascript::translation", _TESTS),
+    "extensions/diagram/compiler/metamodel.js": ("platform::extensions::pure::diagram::metamodel", _ALL),
+    "extensions/diagram/grammar/protocol.js": ("platform::extensions::pure::diagram::protocol", _ALL),
+    "extensions/diagram/pdb/gen.js": ("platform::extensions::pure::diagram::pdb::gen", _ALL),
+    "extensions/diagram/grammar/parser.js": ("platform::extensions::pure::diagram::parser", _ALL),
+    "extensions/diagram/compiler/compiler.js": ("platform::extensions::pure::diagram::compiler", _ALL),
+    "extensions/diagram/tests.js": ("platform::extensions::pure::diagram::tests", _ALL),
+    "extensions/pure/relation/relation.js": ("platform::pure::functions::relation", _ALL),
+    "extensions/pure/relation/tests.js": ("platform::pure::functions::relation::tests", _ALL),
+    "extensions/pure/tds/compiler/metamodel.js": ("platform::extensions::pure::tds::metamodel", _ALL),
+    "extensions/pure/tds/compiler/compiler.js": ("platform::extensions::pure::tds::compiler", _ALL),
+    "extensions/pure/tds/pdb/gen.js": ("platform::extensions::pure::tds::pdb::gen", _ALL),
+    "extensions/pure/tds/tests.js": ("platform::extensions::pure::tds::tests", _ALL),
+}
+
+# The relation extension is translated from its own PDBs, which just: emit_pdbs leaves out (its translation was
+# then empty: 'no translated function' for every relation test).
+_RELATION_PDBS = [
+    "//pure/extensions/pure/relation:build/relation.pdb",
+    "//pure/extensions/pure/relation:build/relation-tests.pdb",
+]
+
+[pure_generate(
+    name = "translate_" + out.removesuffix(".js").replace("/", "_"),
+    out = "generated/" + out,
+    args = [package],
+    function = function,
+    pdbs = _EMIT_PDBS + (_RELATION_PDBS if out.startswith("extensions/pure/relation/") else []),
+) for out, (package, function) in _TRANSLATED.items()]
+
+# The languages the platform knows, from the specification and extension manifests (just: generate-extensions):
+# bin/generate-languages.mjs over a tree holding only what it reads, the manifests and the schemas they name.
+_LANGUAGE_INPUTS = {
+    "pure/specification/language_pure.json": "//pure/specification:language_pure.json",
+    "pure/specification/language_test.json": "//pure/specification:language_test.json",
+    "pure/extensions/diagram/language_diagram.json": "//pure/extensions/diagram:language_diagram.json",
+    "pure/extensions/pure/relation/language_relation.json": "//pure/extensions/pure/relation:language_relation.json",
+    "pure/extensions/pure/tds/language_tds.json": "//pure/extensions/pure/tds:language_tds.json",
+    "shared/specification/m3.fbs": "//:shared/specification/m3.fbs",
+    "shared/specification/islandTest.fbs": "//:shared/specification/islandTest.fbs",
+    "pure/extensions/diagram/generated/diagram.fbs": "//pure/extensions/diagram:generated/diagram.fbs",
+    "pure/extensions/pure/tds/generated/tds.fbs": "//pure/extensions/pure/tds:generated/tds.fbs",
+}
+
+_LANGUAGE_OUTPUTS = [
+    "generated/languages.js",
+    "generated/extensions/antlr-modules.js",
+    "generated/pure/language_pure.js",
+    "generated/pure/language_test.js",
+    "generated/extensions/diagram/language_diagram.js",
+    "generated/extensions/pure/relation/language_relation.js",
+    "generated/extensions/pure/tds/language_tds.js",
+]
+
+genrule(
+    name = "languages",
+    srcs = _LANGUAGE_INPUTS.values() + ["bin/generate-languages.mjs"],
+    outs = _LANGUAGE_OUTPUTS,
+    cmd = """
+        set -e
+        T=$$(mktemp -d)
+        %s
+        $(NODE_PATH) $(execpath bin/generate-languages.mjs) $$T/repo $$T/generated > /dev/null
+        %s
+    """ % (
+        " ".join(["mkdir -p $$(dirname $$T/repo/%s) && cp $(execpath %s) $$T/repo/%s;" % (path, label, path) for path, label in _LANGUAGE_INPUTS.items()]),
+        " ".join(["cp $$T/%s $(execpath %s);" % (out, out) for out in _LANGUAGE_OUTPUTS]),
+    ),
+    toolchains = ["@nodejs_toolchains//:resolved_toolchain"],
+    tools = ["@nodejs_toolchains//:resolved_toolchain"],
+)
+
+# The JavaScript parsers (just: antlr-generate-parsers), with the ANTLR the antlr4ng-cli package bundles, as just
+# runs it: from each grammar directory, so each parser names its grammar by file name.
+_PARSERS = {
+    "pure/specification/grammar/antlr": ("generated/pure/grammar/antlr", ["TopLexer", "TopParser"]),
+    "pure/specification/grammar/antlr/m3": ("generated/pure/grammar/antlr", ["M3Lexer", "M3Parser"]),
+    "pure/extensions/diagram/code/grammar/antlr": ("generated/extensions/diagram/grammar/antlr", ["DiagramLexer", "DiagramParser"]),
+}
+
+genrule(
+    name = "parsers",
+    srcs = [
+        ":node_modules/antlr4ng-cli/dir",
+        "//pure/extensions/diagram:grammar_antlr",
+        "//pure/specification:grammar_antlr",
+    ],
+    outs = ["%s/%s.%s" % (out, grammar, ext) for out, grammars in _PARSERS.values() for grammar in grammars for ext in ["js", "interp", "tokens"]],
+    cmd = """
+        set -e
+        JAR=$$PWD/$$(ls $(execpath :node_modules/antlr4ng-cli/dir)/antlr4-*-complete.jar | head -1)
+        JAVA=$$PWD/$(JAVA)
+        %s
+    """ % "\n        ".join([
+        "OUT=$$PWD/$(RULEDIR)/%s; mkdir -p $$OUT; (cd %s && $$JAVA -jar $$JAR -Dlanguage=JavaScript -no-listener -no-visitor -o $$OUT -lib $$OUT %s)" % (
+            out,
+            grammar_dir,
+            " ".join([g + ".g4" for g in grammars]),
+        )
+        for grammar_dir, (out, grammars) in _PARSERS.items()
+    ]),
+    toolchains = ["@bazel_tools//tools/jdk:current_java_runtime"],
+    tools = ["@bazel_tools//tools/jdk:current_java_runtime"],
+)
+
+# Everything the runtime is: its sources, everything generated, and the runtime helpers of the JavaScript
+# translator, at their repository-relative paths; tools copy them to the output tree, where they meet.
+filegroup(
+    name = "generated",
+    srcs = [":languages", ":parsers"] + [":translate_" + out.removesuffix(".js").replace("/", "_") for out in _TRANSLATED.keys()],
+)
+
+_RUNTIME_SOURCES = glob(["src/**"]) + [
+    ":generated",
+    ":node_modules/antlr4",
+    "//pure/modules/translation/javascript/js:runtime_lib",
+]
+
+# The parser bundles (just: antlr-bundle, parser-mappings-bundle), which load-parser.js loads.
+[esbuild.esbuild(
+    name = name,
+    srcs = _RUNTIME_SOURCES,
+    outs = ["build/" + out],
+    args = ["src/core/grammar/" + entry, "--bundle", "--format=iife"] + extra + [
+        "--platform=neutral",
+        "--conditions=browser",
+        "--target=es2020",
+        "--outfile=build/" + out,
+        "--log-level=warning",
+    ],
+    chdir = package_name(),
+) for name, entry, out, extra in [
+    ("antlr_bundle", "antlr-entry.js", "antlr-bundle.js", ["--global-name=PureAntlr"]),
+    ("parser_mappings_bundle", "parser-mappings-entry.js", "parser-mappings-bundle.js", []),
+]]
+
+# The JavaScript CLI, pure-js (just: bin/pure-js), run from the output tree with everything the runtime loads.
+js_binary(
+    name = "pure-js",
+    data = _RUNTIME_SOURCES + [
+        ":antlr_bundle",
+        ":parser_mappings_bundle",
+    ],
+    entry_point = "src/interfaces/cli/cli.js",
+    node_options = ["--stack-size=4000"],
+    visibility = ["//visibility:public"],
+)
+
+# Every suite of every owner on the JavaScript platform (tools/bazel/hosts.bzl): '<owner>_<suite>_cli'.
+host_specs(host = "javascript")
+
+# The platform's own tests (just: javascript::test, test-compiler, test-execution, test-host-api, usage-example,
+# test-diagram, test-section-hint, test-source-store, test-ide), each a script run from the output tree, with its
+# report among the test outputs at javascript/<area>/<name>.json, as just writes it in test-results/.
+_TEST_DATA = _RUNTIME_SOURCES + [
+    ":antlr_bundle",
+    ":parser_mappings_bundle",
+    "//:shared",
+    "//pure/extensions/diagram:test_data_in_bin",
+    "//pure/extensions/pure/tds:test_data_in_bin",
+    "//pure/specification:all_in_bin",
+] + _RELATION_PDBS + [pdb for pdb in _EMIT_PDBS if pdb not in _RUNTIME_SOURCES]
+
+# {test: (script, report, tags)}
+_NODE_TESTS = {
+    "grammar": ("src/core/grammar/tests/grammar-tests.js", "javascript/core/grammar-tests.json", []),
+    "compiler": ("src/core/compiler/tests/compiler-tests.js", "javascript/core/compiler-tests.json", []),
+    "execution": ("src/core/execution/tests/pct-tests.js", "javascript/core/pct-tests.json", []),
+    "host-api": ("src/core/tests/host-api-tests.js", "javascript/core/host-api-tests.json", []),
+    "usage-example": ("src/interfaces/usage-example/usage-example.js", "", []),
+    "diagram": ("src/interfaces/web/diagram/tests/diagram-tests.js", "javascript/core/diagram-tests.json", []),
+    "section-hint": ("src/interfaces/web/tests/section-hint-tests.js", "javascript/core/section-hint-tests.json", []),
+    "source-store": ("src/interfaces/web/tests/source-store-tests.js", "javascript/core/source-store-tests.json", []),
+    # A headless Chrome over the web IDE: Chrome from the machine (CHROME_PATH or its usual place), so unsandboxed.
+    "ide": ("src/interfaces/web/tests/ide-tests.js", "javascript/web/ide-tests.json", ["local", "requires-chrome"]),
+}
+
+[js_binary(
+    name = name + "_script",
+    data = _TEST_DATA + ([":monaco"] if name == "ide" else []),
+    entry_point = script,
+    node_options = ["--stack-size=4000"],
+    testonly = True,
+) for name, (script, _, _) in _NODE_TESTS.items()]
+
+[sh_test(
+    name = name + "_tests",
+    srcs = ["//tools/bazel:run-suite.sh"],
+    args = [report or "javascript/%s/none.json" % name, "$(rootpath :%s_script)" % name] + (["--report", "{report}"] if report else []),
+    data = [":%s_script" % name],
+    tags = tags + ["job:translations/javascript"],
+) for name, (_, report, tags) in _NODE_TESTS.items()]
+
+# The Monaco editor the web IDE loads from build/vs (just: web-deps): the min/vs directory of its package.
+copy_to_directory(
+    name = "monaco",
+    srcs = [":node_modules/monaco-editor/dir"],
+    out = "build/vs",
+    include_srcs_patterns = ["**/min/vs/**"],
+    replace_prefixes = {"**/min/vs/": ""},
+)
+
+# The JavaScript translation gallery (just: javascript::gallery), which publish-gallery deploys.
+_GALLERY_PDBS = [
+    _CORE + ":core.pdb",
+    _CORE + ":core-tests.pdb",
+    "//pure/specification:compiler.pdb",
+    "//pure/modules/language/javascript:build/javascript.pdb",
+    "//pure/modules/translation/shared:build/translation-shared.pdb",
+    "//pure/modules/translation/javascript:build/javascript-translation.pdb",
+    "//pure/modules/translation/javascript:build/javascript-translation-tests.pdb",
+]
+
+js_run_binary(
+    name = "gallery",
+    srcs = _GALLERY_PDBS,
+    args = ["execute"] + [a for pdb in _GALLERY_PDBS for a in ["--pdb", "$(rootpath %s)" % pdb]] + [
+        "--function",
+        "platform::extensions::language::javascript::translation::gallery::renderGallery_String_1__String_1_",
+        "--args",
+        "platform::pure::functions",
+    ],
+    stdout = "javascript-translation-gallery.html",
+    tags = ["job:translations"],
+    tool = ":pure-js",
+    visibility = ["//visibility:public"],
+)
+
+# The browser IDE as publish-gallery deploys it (build.yml: Stage the browser IDE): its pages and runtime, the
+# Monaco editor, and the PDBs and schemas the languages declare, at their repository paths below ide-site/.
+copy_to_directory(
+    name = "ide_site",
+    srcs = glob(["src/interfaces/web/**", "src/core/**"]) + [
+        ":antlr_bundle",
+        ":generated",
+        ":monaco",
+        ":parser_mappings_bundle",
+        "//:shared",
+        "//pure/extensions/diagram:build/diagram.pdb",
+        "//pure/extensions/pure/relation:build/relation.pdb",
+        "//pure/extensions/pure/tds:build/tds.pdb",
+        "//pure/modules/language/javascript:build/javascript.pdb",
+        "//pure/modules/translation/javascript:build/javascript-translation.pdb",
+        "//pure/modules/translation/javascript/js:runtime_lib",
+        "//pure/modules/translation/shared:build/translation-shared.pdb",
+        "//pure/specification:grammar/antlr/m3/M3Lexer.g4",
+    ],
+    out = "ide-site",
+    # Locales and the other languages' grammars are never loaded by the page.
+    exclude_srcs_patterns = [
+        "**/build/vs/basic-languages/**",
+        "**/build/vs/nls.messages.*.js",
+        "shared/*-tests.pdb",
+    ],
+    root_paths = [],
+    tags = ["job:translations"],
+)

@@ -1,5 +1,8 @@
 {
   "name": "java",
   "packagePattern": "(platform::(extensions::language|pure))(::.*)?",
-  "dependencies": ["core"]
+  "dependencies": ["core"],
+  "tests": [
+    {"suite": "unit", "runner": "tests", "target": "platform::extensions::language::java"}
+  ]
 }

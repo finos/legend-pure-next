@@ -1,0 +1,45 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The setup of a Bazel job: Node (the report tools), and the Bazel caches of the job it needs, restored. The job
+# saves its own with actions/cache/save, when a job downstream needs them.
+name: Bazel job
+description: Restore the Bazel disk and repository caches, and set up Node and the ci configuration.
+inputs:
+  restore-from:
+    description: The job whose caches to restore (this run first, then the latest of any run).
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Restore the Bazel caches
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ~/.cache/bazel-disk
+          ~/.cache/bazel-repo
+        key: bazel-${{ runner.os }}-${{ github.run_id }}-${{ inputs.restore-from }}
+        restore-keys: |
+          bazel-${{ runner.os }}-${{ github.run_id }}-
+          bazel-${{ runner.os }}-main-
+          bazel-${{ runner.os }}-
+
+    - name: Use the ci configuration
+      shell: bash
+      run: echo "common --config=ci" >> .bazelrc.user

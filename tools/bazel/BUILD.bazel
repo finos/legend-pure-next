@@ -1,0 +1,93 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@rules_java//java:defs.bzl", "java_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+# Build helpers (junit5.bzl, srcjar.bzl), flatc, and the field-ID registry check.
+
+# Each tracked field-ID registry: a test that it holds every ID its schema generation assigned, and the command that
+# writes them back. {name: (tracked, generated)}.
+_FBS_ID_REGISTRIES = {
+    "fbs_ids": (
+        "//pure/specification:m3-fbs-field-ids.txt",
+        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:m3-fbs-field-ids.txt",
+    ),
+    "diagram_fbs_ids": (
+        "//pure/extensions/diagram:diagram-fbs-field-ids.txt",
+        "//pure/extensions/diagram:generated/diagram-fbs-field-ids.txt",
+    ),
+    "island_fbs_ids": (
+        "//pure/specification:compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt",
+        "//pure/specification:compiler/generated/islandTest-fbs-field-ids.txt",
+    ),
+    "tds_fbs_ids": (
+        "//pure/extensions/pure/tds:tds-fbs-field-ids.txt",
+        "//pure/extensions/pure/tds:generated/tds-fbs-field-ids.txt",
+    ),
+}
+
+[sh_test(
+    name = name + "_up_to_date",
+    tags = ["job:bootstrap"],
+    srcs = ["fbs-ids-up-to-date.sh"],
+    args = [
+        "$(rootpath %s)" % tracked,
+        "$(rootpath %s)" % generated,
+        "bazel run //:update_" + name,
+    ],
+    data = [
+        tracked,
+        generated,
+    ],
+) for name, (tracked, generated) in _FBS_ID_REGISTRIES.items()]
+
+[sh_binary(
+    name = "update_" + name,
+    srcs = ["update-fbs-ids.sh"],
+    args = [
+        "$(rootpath %s)" % generated,
+        tracked.removeprefix("//").replace(":", "/"),
+    ],
+    data = [generated],
+    visibility = ["//:__pkg__"],
+) for name, (tracked, generated) in _FBS_ID_REGISTRIES.items()]
+
+# flatc for the machine a build runs on.
+alias(
+    name = "flatc",
+    actual = select({
+        "@platforms//os:linux": "@flatc_linux//:flatc",
+        "@platforms//os:macos": "@flatc_macos//:flatc",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+# The ANTLR tool (antlr.bzl).
+java_binary(
+    name = "antlr",
+    main_class = "org.antlr.v4.Tool",
+    visibility = ["//visibility:public"],
+    runtime_deps = ["@maven//:org_antlr_antlr4"],
+)
+
+exports_files(
+    [
+        "pdb-diff.sh",
+        "run-suite.sh",
+        "runs.sh",
+    ],
+    visibility = ["//visibility:public"],
+)

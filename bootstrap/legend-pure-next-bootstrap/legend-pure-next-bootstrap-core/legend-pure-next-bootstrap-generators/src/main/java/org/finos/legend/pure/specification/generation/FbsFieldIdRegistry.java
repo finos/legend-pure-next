@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -168,6 +169,16 @@ public final class FbsFieldIdRegistry
         {
             return;
         }
+        saveTo(path);
+        dirty = false;
+    }
+
+    /**
+     * Write the registry to {@code out}, changed or not, leaving the file it was loaded from as it is: how a build that
+     * never writes its sources (Bazel) gets the updated registry as an output.
+     */
+    public void saveTo(Path out) throws IOException
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("# FlatBuffer field-ID registry — keeps wire format stable across builds.\n");
         sb.append("# Auto-maintained by RdfFbsSchemaGenerator. Append-only.\n");
@@ -185,11 +196,10 @@ public final class FbsFieldIdRegistry
                                     .append('=').append(fEntry.getValue()).append('\n'));
             sb.append('\n');
         }
-        if (path.getParent() != null)
+        if (out.getParent() != null)
         {
-            Files.createDirectories(path.getParent());
+            Files.createDirectories(out.getParent());
         }
-        Files.writeString(path, sb.toString(), StandardCharsets.UTF_8);
-        dirty = false;
+        Files.writeString(out, sb.toString(), StandardCharsets.UTF_8);
     }
 }

@@ -1,0 +1,143 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The M3 compiler: the metamodel classes and FlatBuffer accessors generated from m3.ttl and m3.fbs, and core.pdb /
+# core-tests.pdb, built by the compiler from pure/specification/runtime (Maven: the executions of this pom).
+
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("//tools/bazel:junit5.bzl", "junit5_test")
+load("//tools/bazel:srcjar.bzl", "generated_srcjar")
+
+_GENERATORS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators"
+
+_M3_FBS = _GENERATORS + ":generated-specification/m3.fbs"
+
+generated_srcjar(
+    name = "m3_classes",
+    srcs = ["//pure/specification:m3.ttl"],
+    cmd = "$(execpath %s:RdfJavaGenerator) $(execpath //pure/specification:m3.ttl) $$OUT_DIR org.finos.legend.pure.m3.generated --metamodel" % _GENERATORS,
+    tools = [_GENERATORS + ":RdfJavaGenerator"],
+)
+
+generated_srcjar(
+    name = "fbs_accessors",
+    srcs = [_M3_FBS],
+    cmd = "$(execpath //tools/bazel:flatc) --java -o $$OUT_DIR $(execpath %s)" % _M3_FBS,
+    tools = ["//tools/bazel:flatc"],
+)
+
+generated_srcjar(
+    name = "fbs_java",
+    srcs = [
+        "//pure/specification:m3.ttl",
+        _M3_FBS,
+    ],
+    cmd = "$(execpath %s:RdfFbsJavaGenerator) $(execpath //pure/specification:m3.ttl) $(execpath %s) $$OUT_DIR" % (_GENERATORS, _M3_FBS),
+    tools = [_GENERATORS + ":RdfFbsJavaGenerator"],
+)
+
+java_library(
+    name = "compiler_classes",
+    srcs = glob(["src/main/java/**/*.java"]) + [
+        ":fbs_accessors",
+        ":fbs_java",
+        ":m3_classes",
+    ],
+    exports = [
+        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-parser:grammar-parser",
+        _GENERATORS + ":generators",
+        "@maven//:com_google_flatbuffers_flatbuffers_java",
+    ],
+    deps = [
+        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-parser:grammar-parser",
+        _GENERATORS + ":generators",
+        "@maven//:com_google_flatbuffers_flatbuffers_java",
+        "@maven//:org_antlr_antlr4_runtime",
+        "@maven//:org_apache_jena_jena_arq",
+        "@maven//:org_apache_jena_jena_core",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+        "@maven//:org_jspecify_jspecify",
+    ],
+    # Jena logs through commons-logging, bridged to SLF4J: a dependency of jena-arq under Maven, an edge the
+    # resolver of rules_jvm_external does not keep.
+    runtime_deps = ["@maven//:org_slf4j_jcl_over_slf4j"],
+)
+
+java_binary(
+    name = "SpecificationBinaryBuilder",
+    main_class = "org.finos.legend.pure.m3.SpecificationBinaryBuilder",
+    runtime_deps = [":compiler_classes"],
+)
+
+# core.pdb and core-tests.pdb (build-core-pdb): the runtime sources and the generated protocol model, split by
+# <<test.*>> stereotypes.
+genrule(
+    name = "core_pdbs",
+    srcs = [
+        "//pure/specification:m3.ttl",
+        # Found by walking up from the first source directory.
+        "//pure/specification:module.json",
+        "//pure/specification:runtime_sources",
+        _GENERATORS + ":generated-specification/protocol/m3_protocol.pure",
+    ],
+    outs = [
+        "core.pdb",
+        "core-tests.pdb",
+    ],
+    cmd = """
+        set -e
+        T=$$(mktemp -d)
+        PROTOCOL=$$(dirname $(execpath %s:generated-specification/protocol/m3_protocol.pure))
+        $(execpath :SpecificationBinaryBuilder) --m3-ttl $(execpath //pure/specification:m3.ttl) --output-dir $$T --tests split \
+            pure/specification/runtime/functions pure/specification/runtime/featureTests pure/specification/runtime/ui \
+            pure/specification/runtime/test pure/specification/runtime/printer $$PROTOCOL > /dev/null
+        cp $$T/core.pdb $(RULEDIR)/core.pdb
+        cp $$T/core-tests.pdb $(RULEDIR)/core-tests.pdb
+    """ % _GENERATORS,
+    tools = [":SpecificationBinaryBuilder"],
+    visibility = ["//visibility:public"],
+)
+
+# The compiler jar: its classes, with core.pdb and core-tests.pdb at its root, as Maven packages them.
+java_library(
+    name = "compiler",
+    resource_strip_prefix = package_name(),
+    resources = [
+        ":core.pdb",
+        ":core-tests.pdb",
+    ],
+    visibility = ["//visibility:public"],
+    exports = [":compiler_classes"],
+    runtime_deps = [":compiler_classes"],
+)
+
+# The test classes are the compiler test jar later modules reuse ('tests_lib').
+junit5_test(
+    name = "tests",
+    # The bootstrap own tests run on demand (spec Section 3).
+    tags = ["bootstrap", "manual"],
+    srcs = glob(["src/test/java/**/*.java"]),
+    data = [
+        "//pure/extensions/diagram:compiler_pdb_goldens",
+        "//pure/specification:all",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":compiler",
+        "@maven//:org_apache_jena_jena_core",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+    ],
+)

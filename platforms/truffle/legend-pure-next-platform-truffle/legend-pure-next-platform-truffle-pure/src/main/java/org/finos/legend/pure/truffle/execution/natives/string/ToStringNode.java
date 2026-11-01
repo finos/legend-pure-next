@@ -203,7 +203,8 @@ public final class ToStringNode extends PureNode
             String s = Double.toString(d);
             if (s.contains("E") || s.contains("e"))
             {
-                String plain = new java.math.BigDecimal(s).toPlainString();
+                // The digits of the value: no trailing zero from the mantissa (1.0E-12 is 0.000000000001)
+                String plain = new java.math.BigDecimal(s).stripTrailingZeros().toPlainString();
                 // Ensure .0 suffix for integer values
                 if (!plain.contains("."))
                 {

@@ -2,5 +2,11 @@
   "name": "tds",
   "packagePattern": "(platform::extensions::pure::tds)(::.*)?",
   "dependencies": ["core", "compiler"],
-  "testDependencies": ["core-tests", "compiler-tests"]
+  "testDependencies": ["core-tests", "compiler-tests"],
+  "tests": [
+    {"suite": "compiler", "runner": "compiler", "target": "tests/compiler"},
+    {"suite": "printer", "runner": "printerCompiled", "target": "tests/compiler"},
+    {"suite": "unit", "runner": "tests", "target": "platform::extensions::pure::tds::tests"},
+    {"suite": "pdb", "runner": "pdbGolden", "target": "tests/compiler"}
+  ]
 }

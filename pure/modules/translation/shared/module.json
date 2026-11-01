@@ -1,5 +1,8 @@
 {
   "name": "translation-shared",
   "packagePattern": "(platform::extensions::pure::translation)(::.*)?",
-  "dependencies": ["core", "compiler"]
+  "dependencies": ["core", "compiler"],
+  "tests": [
+    {"suite": "unit", "runner": "tests", "target": "platform::extensions::pure::translation::canonical::tests"}
+  ]
 }

@@ -1,0 +1,48 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The repository root: repository-wide commands.
+
+# Write the field-ID registries a model change needs back to the source tree (tools/bazel: update_*).
+[alias(
+    name = "update_" + name,
+    actual = "//tools/bazel:update_" + name,
+) for name in [
+    "diagram_fbs_ids",
+    "fbs_ids",
+    "island_fbs_ids",
+    "tds_fbs_ids",
+]]
+
+# The PDBs and schemas the Java tests and the suites find in a 'shared' directory, as just stages them in
+# <repo>/shared: a test runs from the root of its runfiles, where these land. The source directory 'shared' is never
+# read (REPO.bazel).
+_SHARED = {
+    "core.pdb": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb",
+    "core-tests.pdb": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb",
+    "compiler.pdb": "//pure/specification:compiler.pdb",
+    "compiler-tests.pdb": "//pure/specification:compiler-tests.pdb",
+    "parser-mappings.pdb": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
+    # The schemas, side by side: a reader given m3.fbs finds the test island fragment beside it.
+    "specification/m3.fbs": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:generated-specification/m3.fbs",
+    "specification/islandTest.fbs": "//pure/specification:compiler/generated/islandTest.fbs",
+}
+
+genrule(
+    name = "shared",
+    srcs = _SHARED.values(),
+    outs = ["shared/" + name for name in _SHARED.keys()],
+    cmd = " ".join(["cp $(execpath %s) $(RULEDIR)/shared/%s;" % (label, name) for name, label in _SHARED.items()]),
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,49 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+common --enable_bzlmod
+
+# No bazel-* links at the root: the one to the execroot mirrors the workspace, .git included, and IDEs then find a
+# second Git root in it. Outputs are at `bazel info bazel-bin` / `bazel info bazel-testlogs`.
+common --experimental_convenience_symlinks=ignore
+
+# JDK 25, as the Maven build compiles and runs with, on GraalVM, as Maven runs with a GraalVM JAVA_HOME: Truffle
+# needs its JIT, in tests and as the tool that compiles the modules (tools/bazel/graalvm.bzl).
+common --java_language_version=25
+common --java_runtime_version=graalvm_25
+common --tool_java_language_version=25
+common --tool_java_runtime_version=graalvm_25
+
+# The checks javac runs are the Maven build ones: no Error Prone, which Bazel runs by default.
+build --javacopt=-XepDisableAllChecks
+build --host_javacopt=-XepDisableAllChecks
+
+test --test_output=errors
+# Reports stay files, so tools/bazel/collect-reports.mjs copies them as they are.
+test --nozip_undeclared_test_outputs
+
+# Tiers (spec Section 3). Every non-manual test runs on a pull request. Manual tests are never in //...: the bootstrap
+# and self-host jobs name them, e.g. bazel test $(bazel query 'attr(tags, selfhost, //...)').
+test:required --test_tag_filters=-manual
+
+# CI (.github/workflows/build.yml): a disk cache and a repository cache, which each job restores from the job it
+# needs and saves for the jobs that need it (actions/cache), in place of a remote cache.
+common:ci --disk_cache=~/.cache/bazel-disk
+common:ci --repository_cache=~/.cache/bazel-repo
+common:ci --experimental_disk_cache_gc_max_size=6G
+common:ci --color=yes
+common:ci --curses=no
+common:ci --show_progress_rate_limit=30
+
+try-import %workspace%/.bazelrc.user

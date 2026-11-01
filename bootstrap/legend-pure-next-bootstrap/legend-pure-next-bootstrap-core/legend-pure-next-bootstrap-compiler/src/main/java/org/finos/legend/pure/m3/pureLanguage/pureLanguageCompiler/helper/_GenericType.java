@@ -1252,8 +1252,12 @@ public class _GenericType
                 newType = _RelationType.reconcileInferred(expectedRT, actualRT, model);
             }
 
-            MutableList<GenericType> reconciledArgs = expectedV._typeArguments().zip(actualV._typeArguments())
-                    .collect(pair -> reconcileInferred(pair.getOne(), pair.getTwo(), model));
+            // Paired only when both sides have every argument, as the Pure reconcileInferred does: a raw expected
+            // type (a binding that lost them, `G` for `G<?>`) keeps the arguments of the actual, which a zip would
+            // drop (valueSpecification/atomicValue/element/classWithTypeParameterThroughLambdaCall).
+            MutableList<GenericType> reconciledArgs = expectedV._typeArguments().size() == actualV._typeArguments().size()
+                    ? expectedV._typeArguments().zip(actualV._typeArguments()).collect(pair -> reconcileInferred(pair.getOne(), pair.getTwo(), model))
+                    : actualV._typeArguments();
             MutableList<Multiplicity> reconciledMulArgs = actualV._multiplicityArguments();
             // Canonical-anchor preservation: when the rebuild would produce a
             // leaf GT (no type/mult/typeVar args) wrapping a named PE rawType
