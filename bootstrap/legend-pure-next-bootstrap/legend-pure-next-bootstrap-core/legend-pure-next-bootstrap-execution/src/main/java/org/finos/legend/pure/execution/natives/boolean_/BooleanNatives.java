@@ -30,18 +30,18 @@ public class BooleanNatives
                                 Map<String, LazyNativeImpl> lazyNatives,
                                 MetadataAccess resolver)
     {
-        natives.put("equal_Any_MANY__Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::boolean::equal_Any_MANY__Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             Object a = _E_ValueSpecification.unwrap(args.get(0));
             Object b = _E_ValueSpecification.unwrap(args.get(1));
             return _E_ValueSpecification.wrap(NativeRegistry.pureEquals(a, b, resolver), genericType, multiplicity, resolver);
         });
 
-        natives.put("not_Boolean_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::boolean::not_Boolean_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(!((Boolean) _E_ValueSpecification.unwrap(args.get(0))), genericType, multiplicity, resolver));
 
         // and/or — short-circuit: registered as lazy natives
-        lazyNatives.put("and_Boolean_1__Boolean_1__Boolean_1_", (fe, eval) ->
+        lazyNatives.put("platform::pure::functions::boolean::and_Boolean_1__Boolean_1__Boolean_1_", (fe, eval) ->
         {
             boolean first = (Boolean) _E_ValueSpecification.unwrap(eval.evaluate(fe._parametersValues().get(0)));
             if (!first)
@@ -52,7 +52,7 @@ public class BooleanNatives
             return _E_ValueSpecification.wrap(second, fe._genericType(), fe._multiplicity(), resolver);
         });
 
-        lazyNatives.put("or_Boolean_1__Boolean_1__Boolean_1_", (fe, eval) ->
+        lazyNatives.put("platform::pure::functions::boolean::or_Boolean_1__Boolean_1__Boolean_1_", (fe, eval) ->
         {
             boolean first = (Boolean) _E_ValueSpecification.unwrap(eval.evaluate(fe._parametersValues().get(0)));
             if (first)
@@ -64,7 +64,7 @@ public class BooleanNatives
         });
 
         // is — identity comparison
-        natives.put("is_Any_1__Any_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::boolean::is_Any_1__Any_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             Object a = _E_ValueSpecification.unwrap(args.get(0));
             Object b = _E_ValueSpecification.unwrap(args.get(1));
@@ -85,7 +85,7 @@ public class BooleanNatives
         });
 
         // compare — order comparison
-        natives.put("compare_T_1__T_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::boolean::compare_T_1__T_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             Object a = _E_ValueSpecification.unwrap(args.get(0));
             Object b = _E_ValueSpecification.unwrap(args.get(1));

@@ -49,12 +49,12 @@ public class BinaryNatives
                                 MetadataAccess resolver)
     {
         // binarySize(Binary[1]) : Integer[1] — O(1), the builder's write cursor.
-        natives.put("binarySize_Binary_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::binarySize_Binary_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((long) bytes(args.get(0)).length, genericType, multiplicity, resolver));
 
         // binaryAt(Binary[1], Integer[1]) : Byte[1] — O(1), the reader's inner
         // loop. Unsigned by construction, so no constraint evaluation.
-        natives.put("binaryAt_Binary_1__Integer_1__Byte_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::binaryAt_Binary_1__Integer_1__Byte_1_", (args, eval, genericType, multiplicity) ->
         {
             byte[] b = bytes(args.get(0));
             int i = index(args.get(1), b.length, "binaryAt");
@@ -62,26 +62,26 @@ public class BinaryNatives
         });
 
         // binaryLeUInt / binaryLeInt — the reader's innermost loop.
-        natives.put("binaryLeUInt_Binary_1__Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::binaryLeUInt_Binary_1__Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(
                         leUInt(bytes(args.get(0)), (int) asLong(args.get(1)), (int) asLong(args.get(2))),
                         genericType, multiplicity, resolver));
 
-        natives.put("binaryLeInt_Binary_1__Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::binaryLeInt_Binary_1__Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(
                         leInt(bytes(args.get(0)), (int) asLong(args.get(1)), (int) asLong(args.get(2))),
                         genericType, multiplicity, resolver));
 
         // binaryUtf8(Binary[1], Integer[1], Integer[1]) : String[1] — decode a
         // RANGE, so reading a string out of a buffer needs no slice first.
-        natives.put("binaryUtf8_Binary_1__Integer_1__Integer_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::binaryUtf8_Binary_1__Integer_1__Integer_1__String_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(
                         new String(bytes(args.get(0)), (int) asLong(args.get(1)), (int) asLong(args.get(2)),
                                 StandardCharsets.UTF_8),
                         genericType, multiplicity, resolver));
 
         // binarySlice(Binary[1], Integer[1], Integer[1]) : Binary[1] — half-open.
-        natives.put("binarySlice_Binary_1__Integer_1__Integer_1__Binary_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::binarySlice_Binary_1__Integer_1__Integer_1__Binary_1_", (args, eval, genericType, multiplicity) ->
         {
             byte[] b = bytes(args.get(0));
             long from = asLong(args.get(1));
@@ -96,7 +96,7 @@ public class BinaryNatives
         });
 
         // binaryConcat(Binary[*]) : Binary[1] — one pass, one allocation.
-        natives.put("binaryConcat_Binary_MANY__Binary_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::binaryConcat_Binary_MANY__Binary_1_", (args, eval, genericType, multiplicity) ->
         {
             Object raw = _E_ValueSpecification.unwrap(args.get(0));
             List<?> parts = raw instanceof List<?> l ? l : java.util.Collections.singletonList(raw);
@@ -117,7 +117,7 @@ public class BinaryNatives
         });
 
         // binaryZeros(Integer[1]) : Binary[1] — padding, one allocation.
-        natives.put("binaryZeros_Integer_1__Binary_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::binaryZeros_Integer_1__Binary_1_", (args, eval, genericType, multiplicity) ->
         {
             long n = asLong(args.get(0));
             if (n < 0)
@@ -128,18 +128,18 @@ public class BinaryNatives
         });
 
         // binaryEquals(Binary[1], Binary[1]) : Boolean[1] — content equality.
-        natives.put("binaryEquals_Binary_1__Binary_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::binaryEquals_Binary_1__Binary_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(
                         java.util.Arrays.equals(bytes(args.get(0)), bytes(args.get(1))),
                         genericType, multiplicity, resolver));
 
         // binaryToHex(Binary[1]) : String[1] — uppercase, no `0x` prefix.
-        natives.put("binaryToHex_Binary_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::binaryToHex_Binary_1__String_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(toHex(bytes(args.get(0))), genericType, multiplicity, resolver));
 
         // intToLeBytes(Integer[1], Integer[1]) : Binary[1] — little-endian
         // two's complement in exactly `width` bytes.
-        natives.put("intToLeBytes_Integer_1__Integer_1__Binary_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::intToLeBytes_Integer_1__Integer_1__Binary_1_", (args, eval, genericType, multiplicity) ->
         {
             long value = asLong(args.get(0));
             int width = (int) asLong(args.get(1));
@@ -148,7 +148,7 @@ public class BinaryNatives
 
         // floatToLeBytes(Float[1]) : Binary[1] — the 8 IEEE-754 bytes, exactly
         // what FlatBufferBuilder.addDouble writes for an fbs `double`.
-        natives.put("floatToLeBytes_Float_1__Binary_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::floatToLeBytes_Float_1__Binary_1_", (args, eval, genericType, multiplicity) ->
         {
             double value = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
             return _E_ValueSpecification.wrap(
@@ -156,7 +156,7 @@ public class BinaryNatives
         });
 
         // leBytesToFloat(Binary[1]) : Float[1] — the inverse.
-        natives.put("leBytesToFloat_Binary_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::leBytesToFloat_Binary_1__Float_1_", (args, eval, genericType, multiplicity) ->
         {
             byte[] b = bytes(args.get(0));
             long bits = 0;
@@ -168,7 +168,7 @@ public class BinaryNatives
         });
 
         // stringToUtf8Bytes(String[1]) : Binary[1].
-        natives.put("stringToUtf8Bytes_String_1__Binary_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::stringToUtf8Bytes_String_1__Binary_1_", (args, eval, genericType, multiplicity) ->
         {
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             return _E_ValueSpecification.wrap(
@@ -176,7 +176,7 @@ public class BinaryNatives
         });
 
         // utf8BytesToString(Binary[1]) : String[1] — the inverse.
-        natives.put("utf8BytesToString_Binary_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::binary::utf8BytesToString_Binary_1__String_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(
                         new String(bytes(args.get(0)), StandardCharsets.UTF_8),
                         genericType, multiplicity, resolver));

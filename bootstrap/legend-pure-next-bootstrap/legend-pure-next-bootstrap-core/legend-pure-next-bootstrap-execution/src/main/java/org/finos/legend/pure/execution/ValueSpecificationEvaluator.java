@@ -598,7 +598,7 @@ public class ValueSpecificationEvaluator
 
                 case NativeFunction nf ->
                 {
-                    Object resolved = natives.resolve(nf._name());
+                    Object resolved = natives.resolve(natives.id(nf));
                     yield natives.isLazyResolved(resolved)
                             ? natives.invokeLazy(resolved, fe, this)
                             : natives.invokeEager(resolved, evaluateArgs(fe), this,
@@ -1269,8 +1269,7 @@ public class ValueSpecificationEvaluator
             case FunctionDefinition fd -> evaluateFunctionDefinition(fd, args);
             case NativeFunction nf ->
             {
-                String signature = nf._name();
-                yield natives.execute(signature, args, this, nf._returnGenericType(), nf._returnMultiplicity());
+                yield natives.execute(natives.id(nf), args, this, nf._returnGenericType(), nf._returnMultiplicity());
             }
             case platform.pure.metamodel.function.property.AbstractProperty prop ->
             {

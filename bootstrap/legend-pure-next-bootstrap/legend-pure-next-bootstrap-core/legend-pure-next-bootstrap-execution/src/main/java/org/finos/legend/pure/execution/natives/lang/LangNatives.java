@@ -36,7 +36,7 @@ public class LangNatives
                                 MetadataAccess resolver)
     {
         // letFunction — binds a variable in the current scope
-        natives.put("letFunction_String_1__T_m__T_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::letFunction_String_1__T_m__T_m_", (args, eval, genericType, multiplicity) ->
         {
             String varName = (String) _E_ValueSpecification.unwrap(args.get(0));
             ValueSpecification value = args.get(1);
@@ -45,7 +45,7 @@ public class LangNatives
         });
 
         // if — branches return their own typed VS; pass through unchanged
-        natives.put("if_Boolean_1__Function_1__Function_1__T_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::if_Boolean_1__Function_1__Function_1__T_m_", (args, eval, genericType, multiplicity) ->
         {
             boolean condition = (Boolean) _E_ValueSpecification.unwrap(args.get(0));
             ValueSpecification branch = condition ? args.get(1) : args.get(2);
@@ -62,7 +62,7 @@ public class LangNatives
         // Pair stores raw (unwrapped) values — pair.get("first") returns
         // the bare Closure/LambdaFunction, not a ValueSpecification — so
         // we re-wrap before handing to executeFunction.
-        natives.put("if_Pair_MANY__Function_1__T_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::if_Pair_MANY__Function_1__T_m_", (args, eval, genericType, multiplicity) ->
         {
             for (ValueSpecification pairVS : _E_ValueSpecification.toCollection(args.get(0), resolver)._values())
             {
@@ -89,38 +89,47 @@ public class LangNatives
         });
 
         // eval natives — return VS directly from the evaluator
-        natives.put("eval_Function_1__V_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::eval_Function_1__V_m_", (args, eval, genericType, multiplicity) ->
             eval.executeFunction(args.get(0), List.of())
         );
 
-        natives.put("eval_Function_1__T_n__U_p__V_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::eval_Function_1__T_n__U_p__V_m_", (args, eval, genericType, multiplicity) ->
             eval.executeFunction(args.get(0), args.subList(1, args.size()))
         );
 
-        natives.put("eval_Function_1__T_n__U_p__W_q__V_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__V_m_", (args, eval, genericType, multiplicity) ->
             eval.executeFunction(args.get(0), args.subList(1, args.size()))
         );
 
-        natives.put("eval_Function_1__T_n__V_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::eval_Function_1__T_n__V_m_", (args, eval, genericType, multiplicity) ->
             eval.executeFunction(args.get(0), args.subList(1, args.size()))
         );
+
+        // eval with four to seven parameters: each arity is a native of its own
+        org.eclipse.collections.api.factory.Lists.immutable.of(
+                "platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__X_r__V_m_",
+                "platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__X_r__Y_s__V_m_",
+                "platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__X_r__Y_s__Z_t__V_m_",
+                "platform::pure::functions::lang::eval_Function_1__S_n__T_o__U_p__W_q__X_r__Y_s__Z_t__V_m_")
+            .forEach(id -> natives.put(id, (args, eval, genericType, multiplicity) ->
+                eval.executeFunction(args.get(0), args.subList(1, args.size()))));
 
         // rawEvalProperty(property, object) : the values the object holds for the property, never its default
-        natives.put("rawEvalProperty_Property_1__T_1__V_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::rawEvalProperty_Property_1__T_1__V_MANY_", (args, eval, genericType, multiplicity) ->
             eval.rawEvalProperty(args.get(0), args.get(1), genericType, multiplicity)
         );
 
         // memoize(f, args...) : f->eval(args...), once per execution for a given function and arguments
         NativeImpl memoize = (args, eval, genericType, multiplicity) -> eval.memoize(args.get(0), args.subList(1, args.size()));
-        natives.put("memoize_AddressableFunction_1__T_n__V_m_", memoize);
-        natives.put("memoize_AddressableFunction_1__T_n__U_o__V_m_", memoize);
-        natives.put("memoize_AddressableFunction_1__T_n__U_o__W_p__V_m_", memoize);
+        natives.put("platform::pure::functions::lang::memoize_AddressableFunction_1__T_n__V_m_", memoize);
+        natives.put("platform::pure::functions::lang::memoize_AddressableFunction_1__T_n__U_o__V_m_", memoize);
+        natives.put("platform::pure::functions::lang::memoize_AddressableFunction_1__T_n__U_o__W_p__V_m_", memoize);
 
         // tryEval(Function<{->V[m]}>[1]) : TryResult<V|m>[1]
         // Run the closure catching any exception. On success: TryResult.value
         // is the closure's return; failure is empty. On failure: TryResult.value
         // unset, failure carries an Error(message, stack).
-        natives.put("tryEval_Function_1__TryResult_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::tryEval_Function_1__TryResult_1_", (args, eval, genericType, multiplicity) ->
         {
             DynamicInstance tryResult = new DynamicInstance("platform::pure::functions::lang::TryResult");
             // genericType is the TryResult<V|m> classifier from the call site —
@@ -157,7 +166,7 @@ public class LangNatives
         });
 
         // evaluate(Function[1], List[*]) : Any[*]
-        natives.put("evaluate_Function_1__List_MANY__Any_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::evaluate_Function_1__List_MANY__Any_MANY_", (args, eval, genericType, multiplicity) ->
         {
             List<ValueSpecification> fnArgs = new ArrayList<>();
             for (ValueSpecification item : _E_ValueSpecification.toCollection(args.get(1), resolver)._values())
@@ -192,7 +201,7 @@ public class LangNatives
         });
 
         // match — type- and multiplicity-based dispatch
-        natives.put("match_Any_MANY__Function_$1_MANY$__T_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::match_Any_MANY__Function_$1_MANY$__T_m_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
             int valueCount = getValueCount(_E_ValueSpecification.unwrap(args.get(0)));
@@ -238,7 +247,7 @@ public class LangNatives
         });
 
         // match with extra parameter — match(Any[*], Function[1..*], P[o]) : T[m]
-        natives.put("match_Any_MANY__Function_$1_MANY$__P_o__T_m_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::lang::match_Any_MANY__Function_$1_MANY$__P_o__T_m_", (args, eval, genericType, multiplicity) ->
         {
             platform.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
             int valueCount = getValueCount(_E_ValueSpecification.unwrap(args.get(0)));

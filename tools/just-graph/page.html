@@ -1,0 +1,311 @@
+<!doctype html>
+<!--
+  ©2026 JP Morgan Chase & Co. All rights reserved.
+  Licensed under the Apache License, Version 2.0 (the "License"); see tools/just-graph/generate.mjs.
+
+  The page tools/just-graph/generate.mjs fills in: the recipes of every Justfile, drawn as the graph of one
+  recipe's dependencies (what it needs) or dependents (what needs it). No library and no network: the layout
+  is a small layered one (columns by distance from the recipe, rows ordered to keep edges short).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Justfile Graph</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #d9d9d4; --edge: #9a9a94;
+    --accent: #2f6fdb; --select: #f2b705;
+    --c-bootstrap: #e07b39; --c-truffle: #3d7be0; --c-javascript: #d9b400; --c-maven: #8a5cc7;
+    --c-node: #3aa66b; --c-mixed: #c94f7c; --c-none: #b9b9b2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161615; --panel: #1f1f1d; --text: #ececea; --muted: #9b9b95; --line: #34342f; --edge: #6f6f69;
+      --accent: #6aa0ff; --select: #f2c94c; --c-none: #5c5c57;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161615; --panel: #1f1f1d; --text: #ececea; --muted: #9b9b95; --line: #34342f; --edge: #6f6f69;
+    --accent: #6aa0ff; --select: #f2c94c; --c-none: #5c5c57;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { display: grid; grid-template-columns: 300px 1fr 380px; height: 100vh; }
+  aside, .details { background: var(--panel); border-right: 1px solid var(--line); overflow: auto; padding: 12px; }
+  .details { border-right: 0; border-left: 1px solid var(--line); }
+  h1 { font-size: 15px; margin: 0 0 8px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 14px 0 6px; }
+  input[type=search] { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg); color: var(--text); }
+  .results { list-style: none; margin: 6px 0 0; padding: 0; max-height: 40vh; overflow: auto; }
+  .results li { padding: 3px 6px; border-radius: 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .results li:hover, .results li.on { background: var(--bg); }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 4px 0; }
+  .seg button { border: 1px solid var(--line); background: var(--bg); color: var(--text); padding: 4px 8px; cursor: pointer; }
+  .seg button:first-child { border-radius: 6px 0 0 6px; } .seg button:last-child { border-radius: 0 6px 6px 0; }
+  .seg button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+  main { position: relative; overflow: hidden; }
+  svg { width: 100%; height: 100%; display: block; cursor: grab; }
+  svg.drag { cursor: grabbing; }
+  .node rect { stroke: var(--line); stroke-width: 1; }
+  .node text { fill: var(--text); font-size: 12px; pointer-events: none; }
+  .node .mod { fill: var(--muted); font-size: 10px; }
+  .node.root rect.box { stroke: var(--accent); stroke-width: 2.5; }
+  .node.sel rect.box { stroke: var(--select); stroke-width: 3; }
+  .node { cursor: pointer; }
+  .edge { fill: none; stroke: var(--edge); stroke-width: 1.2; }
+  .edge.call { stroke-dasharray: 4 3; }
+  .edge.hot { stroke: var(--accent); stroke-width: 2; }
+  .hint { position: absolute; left: 12px; bottom: 10px; color: var(--muted); font-size: 12px; background: var(--panel);
+    padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); }
+  .details pre { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; overflow: auto;
+    font: 11.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; }
+  .details .k { color: var(--muted); }
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 9px; font-size: 11px; color: #fff; margin-right: 4px; }
+  .links a { color: var(--accent); cursor: pointer; text-decoration: none; display: block; padding: 1px 0; }
+  .empty { color: var(--muted); }
+  .theme { position: absolute; right: 10px; top: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto 60vh auto; height: auto; }
+    aside, .details { border: 0; border-bottom: 1px solid var(--line); padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <h1>Justfile graph</h1>
+    <div class="empty" id="stamp"></div>
+    <h2>Recipe</h2>
+    <input type="search" id="q" placeholder="build, test-all, truffle::spec…" autocomplete="off">
+    <ul class="results" id="results"></ul>
+    <h2>Show</h2>
+    <div class="row seg" id="mode">
+      <button data-mode="down" class="on" title="What this recipe needs">Dependencies</button>
+      <button data-mode="up" title="What needs this recipe">Dependents</button>
+    </div>
+    <div class="row"><label><input type="checkbox" id="calls" checked> <code>just …</code> run from bodies (dashed)</label></div>
+    <div class="row"><label><input type="checkbox" id="private"> private recipes (<code>_…</code>)</label></div>
+    <div class="row"><label>depth <input type="range" id="depth" min="1" max="30" value="30"> <span id="depthv">all</span></label></div>
+    <h2>Runs Pure with</h2>
+    <div class="legend" id="legend"></div>
+  </aside>
+  <main>
+    <svg id="svg" role="img" aria-label="recipe graph"><g id="viewport"><g id="edges"></g><g id="nodes"></g></g></svg>
+    <button class="theme" id="theme" title="Toggle theme">◐</button>
+    <div class="hint">click: details · double-click: graph from it · drag: pan · wheel: zoom</div>
+  </main>
+  <section class="details" id="details"><div class="empty">Click a recipe.</div></section>
+</div>
+<script>
+const DATA = /*__DATA__*/null;
+const COLOR = { bootstrap: "--c-bootstrap", truffle: "--c-truffle", "bootstrap|truffle": "--c-mixed", javascript: "--c-javascript",
+                maven: "--c-maven", node: "--c-node" };
+const LABEL = { bootstrap: "bootstrap CLI", truffle: "Truffle CLI", "bootstrap|truffle": "bootstrap or Truffle (pure_rt)",
+                javascript: "JavaScript CLI", maven: "Maven", node: "node / pnpm" };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const byId = new Map(DATA.nodes.map((n) => [n.id, n]));
+const out = new Map(), into = new Map();
+for (const e of DATA.edges) {
+  (out.get(e.from) ?? out.set(e.from, []).get(e.from)).push(e);
+  (into.get(e.to) ?? into.set(e.to, []).get(e.to)).push(e);
+}
+const state = { root: null, mode: "down", calls: true, priv: false, depth: 30, sel: null };
+const load = () => { try { return JSON.parse(localStorage.getItem("just-graph") || "{}"); } catch { return {}; } };
+const save = () => { try { localStorage.setItem("just-graph", JSON.stringify({ root: state.root, mode: state.mode, calls: state.calls, priv: state.priv })); } catch {} };
+Object.assign(state, load());
+if (!state.root || !byId.has(state.root)) state.root = (DATA.nodes.find((n) => n.name === "build") ?? DATA.nodes[0]).id;
+
+document.getElementById("stamp").textContent = `${DATA.nodes.length} recipes · ${new Date(DATA.generated).toLocaleString()}`;
+document.getElementById("legend").innerHTML = Object.keys(LABEL).map((k) => `<span><i class="swatch" style="background:var(${COLOR[k]})"></i>${LABEL[k]}</span>`).join("")
+  + `<span><i class="swatch" style="background:var(--c-none)"></i>none</span>`;
+
+// The recipes reachable from the root in the chosen direction. A hidden (private) recipe is walked through, so
+// what it leads to stays connected to what leads to it.
+function subgraph() {
+  const next = (id) => (state.mode === "down" ? out : into).get(id) ?? [];
+  const other = (e) => (state.mode === "down" ? e.to : e.from);
+  const visible = (id) => state.priv || !byId.get(id).name.split("::").pop().startsWith("_") || id === state.root;
+  const depth = new Map([[state.root, 0]]), edges = new Map();
+  const queue = [state.root];
+  while (queue.length) {
+    const id = queue.shift();
+    if (depth.get(id) >= state.depth) continue;
+    // through hidden recipes: the visible ones beyond them, each with the kind of the first hop
+    const reach = [], seen = new Set();
+    const walk = (from, kind) => {
+      for (const e of next(from)) {
+        if (!state.calls && e.kind === "call") continue;
+        const to = other(e);
+        if (seen.has(to)) continue;
+        seen.add(to);
+        if (visible(to)) reach.push({ to, kind: kind ?? e.kind }); else walk(to, kind ?? e.kind);
+      }
+    };
+    walk(id, null);
+    for (const { to, kind } of reach) {
+      const key = state.mode === "down" ? `${id}>${to}` : `${to}>${id}`;
+      if (!edges.has(key)) edges.set(key, { from: state.mode === "down" ? id : to, to: state.mode === "down" ? to : id, kind });
+      if (!depth.has(to)) { depth.set(to, depth.get(id) + 1); queue.push(to); }
+    }
+  }
+  return { depth, edges: [...edges.values()] };
+}
+
+function layout({ depth, edges }) {
+  // columns by distance from the root; rows ordered by the mean row of their neighbours, a few sweeps
+  const cols = [];
+  for (const [id, d] of depth) (cols[d] ??= []).push(id);
+  cols.forEach((c) => c.sort((a, b) => byId.get(a).name.localeCompare(byId.get(b).name)));
+  const nbrs = new Map();
+  for (const e of edges) {
+    (nbrs.get(e.from) ?? nbrs.set(e.from, []).get(e.from)).push(e.to);
+    (nbrs.get(e.to) ?? nbrs.set(e.to, []).get(e.to)).push(e.from);
+  }
+  const pos = new Map();
+  const index = () => cols.forEach((c) => c.forEach((id, i) => pos.set(id, i)));
+  index();
+  for (let sweep = 0; sweep < 6; sweep++) {
+    const range = sweep % 2 ? [...cols.keys()].reverse() : [...cols.keys()];
+    for (const ci of range) {
+      if (!cols[ci]) continue;
+      const bary = (id) => { const ns = (nbrs.get(id) ?? []).filter((n) => depth.get(n) !== ci); return ns.length ? ns.reduce((s, n) => s + pos.get(n), 0) / ns.length : pos.get(id); };
+      cols[ci].sort((a, b) => bary(a) - bary(b));
+      index();
+    }
+  }
+  const W = 210, H = 34, GX = 80, GY = 12;
+  const tallest = Math.max(...cols.map((c) => (c ? c.length : 0)));
+  const xy = new Map();
+  cols.forEach((c, ci) => {
+    if (!c) return;
+    const offset = ((tallest - c.length) * (H + GY)) / 2;
+    c.forEach((id, i) => xy.set(id, { x: ci * (W + GX), y: offset + i * (H + GY), w: W, h: H }));
+  });
+  return { xy, W, H, width: cols.length * (W + GX), height: tallest * (H + GY) };
+}
+
+const svg = document.getElementById("svg"), vp = document.getElementById("viewport");
+let view = { x: 0, y: 0, k: 1 };
+const applyView = () => vp.setAttribute("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const short = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+
+function draw() {
+  save();
+  const g = subgraph(), L = layout(g);
+  const fill = (n) => (n.clis.length === 0 ? css("--c-none") : n.clis.length > 1 ? css("--c-mixed") : css(COLOR[n.clis[0]]));
+  document.getElementById("edges").innerHTML = g.edges.map((e) => {
+    const a = L.xy.get(e.from), b = L.xy.get(e.to);
+    if (!a || !b) return "";
+    const [s, t] = state.mode === "down" ? [a, b] : [a, b];
+    const x1 = s.x + s.w, y1 = s.y + s.h / 2, x2 = t.x, y2 = t.y + t.h / 2;
+    const back = x2 <= x1;
+    const d = back ? `M${x1},${y1} C${x1 + 60},${y1 - 40} ${x2 - 60},${y2 - 40} ${x2},${y2}` : `M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}`;
+    return `<path class="edge ${e.kind}" data-from="${esc(e.from)}" data-to="${esc(e.to)}" d="${d}"/>`;
+  }).join("");
+  document.getElementById("nodes").innerHTML = [...L.xy].map(([id, p]) => {
+    const n = byId.get(id), parts = n.name.split("::"), recipe = parts.pop(), mod = parts.join("::") || "(root)";
+    return `<g class="node${id === state.root ? " root" : ""}${id === state.sel ? " sel" : ""}" data-id="${esc(id)}" transform="translate(${p.x},${p.y})">
+      <rect class="box" width="${p.w}" height="${p.h}" rx="6" fill="${css("--panel")}"/>
+      <rect width="6" height="${p.h}" rx="3" fill="${fill(n)}" stroke="none"/>
+      <text x="13" y="14">${esc(short(recipe, 28))}${n.parameters.length ? " …" : ""}</text>
+      <text class="mod" x="13" y="27">${esc(short(mod, 34))}</text>
+      <title>${esc(n.name)}${n.clis.length ? " — " + n.clis.join(", ") : ""}</title></g>`;
+  }).join("");
+  // fit
+  const r = svg.getBoundingClientRect();
+  const k = Math.min(1.2, (r.width - 40) / Math.max(L.width, 1), (r.height - 60) / Math.max(L.height, 1));
+  view = { k: Math.max(k, 0.15), x: 20, y: Math.max(20, (r.height - L.height * Math.max(k, 0.15)) / 2) };
+  applyView();
+  if (!state.sel) details(state.root);
+}
+
+function details(id) {
+  const n = byId.get(id), el = document.getElementById("details");
+  const list = (edges, side) => edges.length ? edges.map((e) => `<a data-go="${esc(e[side])}">${e.kind === "call" ? "↪ " : ""}${esc(byId.get(e[side]).name)}${e.args && e.args.length ? ` (${esc(e.args.join(", "))})` : ""}</a>`).join("") : `<span class="empty">none</span>`;
+  el.innerHTML = `<h1>${esc(n.name)}</h1>
+    <div class="row">${n.clis.map((c) => `<span class="tag" style="background:var(${COLOR[c]})">${esc(LABEL[c])}</span>`).join("") || '<span class="empty">runs no Pure CLI</span>'}</div>
+    ${n.commands.length ? `<div><span class="k">commands:</span> ${esc(n.commands.join(", "))}</div>` : ""}
+    <div><span class="k">file:</span> ${esc(n.file)}</div>
+    ${n.paths.length > 1 ? `<div><span class="k">also mounted as:</span> ${esc(n.paths.filter((p) => p !== n.name).join(", "))}</div>` : ""}
+    ${n.parameters.length ? `<div><span class="k">parameters:</span> ${esc(n.parameters.join(" "))}</div>` : ""}
+    ${n.doc ? `<h2>Doc</h2><div>${esc(n.doc)}</div>` : ""}
+    <h2>Needs</h2><div class="links">${list(out.get(id) ?? [], "to")}</div>
+    <h2>Needed by</h2><div class="links">${list(into.get(id) ?? [], "from")}</div>
+    <h2>Body</h2>${n.body ? `<pre>${esc(n.body)}</pre>` : '<span class="empty">no body</span>'}
+    <div class="row" style="margin-top:10px"><button data-root="${esc(id)}">Graph from this recipe</button></div>`;
+}
+
+document.getElementById("details").addEventListener("click", (ev) => {
+  const go = ev.target.closest("[data-go]"), root = ev.target.closest("[data-root]");
+  if (go) { state.sel = go.dataset.go; details(state.sel); highlight(); }
+  if (root) { state.root = root.dataset.root; state.sel = null; draw(); }
+});
+function highlight() {
+  document.querySelectorAll(".node").forEach((g) => g.classList.toggle("sel", g.dataset.id === state.sel));
+  document.querySelectorAll(".edge").forEach((p) => p.classList.toggle("hot", p.dataset.from === state.sel || p.dataset.to === state.sel));
+}
+let clickTimer = null;
+svg.addEventListener("click", (ev) => {
+  const g = ev.target.closest(".node");
+  if (!g || moved) return;
+  clearTimeout(clickTimer);
+  clickTimer = setTimeout(() => { state.sel = g.dataset.id; details(state.sel); highlight(); }, 180);
+});
+svg.addEventListener("dblclick", (ev) => {
+  const g = ev.target.closest(".node");
+  if (!g) return;
+  clearTimeout(clickTimer);
+  state.root = g.dataset.id; state.sel = null; draw();
+});
+let dragging = null, moved = false;
+svg.addEventListener("pointerdown", (ev) => { dragging = { x: ev.clientX - view.x, y: ev.clientY - view.y }; moved = false; svg.classList.add("drag"); });
+window.addEventListener("pointermove", (ev) => { if (!dragging) return; moved = true; view.x = ev.clientX - dragging.x; view.y = ev.clientY - dragging.y; applyView(); });
+window.addEventListener("pointerup", () => { dragging = null; svg.classList.remove("drag"); setTimeout(() => (moved = false), 0); });
+svg.addEventListener("wheel", (ev) => {
+  ev.preventDefault();
+  const r = svg.getBoundingClientRect(), mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  const f = Math.exp(-ev.deltaY * 0.0015), k = Math.min(3, Math.max(0.08, view.k * f));
+  view.x = mx - ((mx - view.x) * k) / view.k; view.y = my - ((my - view.y) * k) / view.k; view.k = k; applyView();
+}, { passive: false });
+
+const q = document.getElementById("q"), results = document.getElementById("results");
+function search() {
+  const s = q.value.trim().toLowerCase();
+  const hits = DATA.nodes.filter((n) => (state.priv || !n.name.split("::").pop().startsWith("_")) && (!s || n.paths.some((p) => p.toLowerCase().includes(s))))
+    .sort((a, b) => a.name.split("::").length - b.name.split("::").length || a.name.localeCompare(b.name)).slice(0, 200);
+  results.innerHTML = hits.map((n) => `<li data-id="${esc(n.id)}" class="${n.id === state.root ? "on" : ""}" title="${esc(n.name)}"><i class="swatch" style="background:${n.clis.length === 0 ? "var(--c-none)" : n.clis.length > 1 ? "var(--c-mixed)" : `var(${COLOR[n.clis[0]]})`}"></i> ${esc(n.name)}</li>`).join("");
+}
+q.addEventListener("input", search);
+results.addEventListener("click", (ev) => { const li = ev.target.closest("li"); if (li) { state.root = li.dataset.id; state.sel = null; search(); draw(); } });
+document.getElementById("mode").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  state.mode = b.dataset.mode;
+  document.querySelectorAll("#mode button").forEach((x) => x.classList.toggle("on", x === b));
+  draw();
+});
+document.getElementById("calls").addEventListener("change", (ev) => { state.calls = ev.target.checked; draw(); });
+document.getElementById("private").addEventListener("change", (ev) => { state.priv = ev.target.checked; search(); draw(); });
+document.getElementById("depth").addEventListener("input", (ev) => {
+  state.depth = +ev.target.value; document.getElementById("depthv").textContent = state.depth >= 30 ? "all" : state.depth; draw();
+});
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = dark ? "light" : "dark"; draw();
+});
+document.getElementById("calls").checked = state.calls;
+document.getElementById("private").checked = state.priv;
+document.querySelectorAll("#mode button").forEach((x) => x.classList.toggle("on", x.dataset.mode === state.mode));
+window.addEventListener("resize", draw);
+search();
+draw();
+</script>
+</body>
+</html>

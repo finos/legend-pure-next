@@ -182,22 +182,12 @@ check("NativeRegistry rejects a signature with no runtime-lib hook", () => {
     assert.throws(() => new NativeRegistry().register("nope_String_1__String_1_", () => () => ""), /no runtime-lib hook/);
 });
 
-check("every host native signature is a native declared in the loaded PDBs", () => {
-    const declaredIn = {
-        [SIG.COMPILE_SOURCE]: "platform::pure::functions::meta",
-        [SIG.EVALUATE]: "platform::pure::functions::lang",
-        [SIG.JS_COMPILE_MODULE]: "platform::extensions::language::javascript",
-        [SIG.JS_EXECUTE]: "platform::extensions::language::javascript",
-        [SIG.JS_DRAIN_COMPILED_SOURCES]: "platform::extensions::language::javascript",
-        [SIG.READ_FILE_BYTES]: "platform::pure::functions::io",
-        [SIG.DIRECTORY_TREE]: "platform::pure::functions::io",
-        [SIG.WRITE_FILE]: "platform::pure::functions::io",
-        [SIG.ENTRY_NAMES]: "platform::pure::compiler::pdb::archive",
-        [SIG.ENTRY_BYTES]: "platform::pure::compiler::pdb::archive",
-        ...Object.fromEntries(SIG.ANTLR_NATIVES.map(([, signature]) => [signature, "platform::pure::functions::meta::antlr"])),
-    };
-    for (const [signature, pkg] of Object.entries(declaredIn)) {
-        assert.ok(host.hasElement(`${pkg}::${signature}`), `${pkg}::${signature} is not declared`);
+check("every host native is a native declared in the loaded PDBs, by its full id", () => {
+    const ids = [SIG.COMPILE_SOURCE, SIG.EVALUATE, SIG.JS_COMPILE_MODULE, SIG.JS_EXECUTE, SIG.JS_DRAIN_COMPILED_SOURCES,
+                 SIG.READ_FILE_BYTES, SIG.DIRECTORY_TREE, SIG.WRITE_FILE, SIG.ENTRY_NAMES, SIG.ENTRY_BYTES,
+                 ...SIG.ANTLR_NATIVES.map(([, id]) => id)];
+    for (const id of ids) {
+        assert.ok(host.hasElement(id), `${id} is not declared`);
     }
 });
 

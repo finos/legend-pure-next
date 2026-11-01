@@ -49,9 +49,10 @@ import java.util.Objects;
 /**
  * Registry of Java implementations for Pure native functions.
  *
- * <p>Each native function is registered by its full mangled signature
- * (e.g. {@code "plus_String_1__String_1__String_1_"}) so that each
- * overload has a distinct, type-specific implementation.</p>
+ * <p>Each native function is registered by its full id — its package and mangled signature
+ * (e.g. {@code "platform::pure::functions::string::plus_String_MANY__String_1_"}) — so that each
+ * overload has a distinct, type-specific implementation, and two natives of one name in different
+ * packages are never one another's.</p>
  */
 public class NativeRegistry
 {
@@ -220,7 +221,34 @@ public class NativeRegistry
         return new Builder();
     }
 
-    /** Register an eager native under its mangled signature. */
+    /**
+     * The natives this platform does not implement, by full id, each with why: declared, never registered (the
+     * execution's check fails an entry for one), and a call to one fails saying so.
+     */
+    public static final org.eclipse.collections.api.map.ImmutableMap<String, String> NOT_ON_THIS_PLATFORM =
+            org.eclipse.collections.api.factory.Maps.mutable.<String, String>empty()
+                    .withKeyValue("platform::pure::functions::collection::getAll_Class_1__T_MANY_",
+                            "there is no store of instances to read: a class's instances exist only where a query is translated")
+                    .withKeyValue("platform::extensions::language::java::compileAndExecute_String_1__String_1__String_1__Any_MANY__Any_MANY_",
+                            "compiling Java at run time needs a Java compiler: Truffle and the Java platform have one")
+                    .withKeyValue("platform::extensions::language::truffle::truffleAstFor_LambdaFunction_1__String_1_",
+                            "a Truffle AST exists on Truffle only")
+                    .withKeyValue("platform::extensions::language::javascript::compileModule_String_1__Any_1_",
+                            "running JavaScript needs a JavaScript engine: the JavaScript host has one")
+                    .withKeyValue("platform::extensions::language::javascript::drainCompiledSources__String_MANY_",
+                            "running JavaScript needs a JavaScript engine: the JavaScript host has one")
+                    .withKeyValue("platform::extensions::language::javascript::execute_Any_1__String_1__Any_MANY__GenericType_$0_1$__Multiplicity_$0_1$__Any_$0_1$__Any_MANY_",
+                            "running JavaScript needs a JavaScript engine: the JavaScript host has one")
+                    .toImmutable();
+
+
+    /** The full ids registered, eager and lazy — what the execution's check compares with the loaded modules. */
+    public org.eclipse.collections.api.set.SetIterable<String> ids()
+    {
+        return org.eclipse.collections.impl.factory.Sets.mutable.withAll(natives.keySet()).withAll(lazyNatives.keySet());
+    }
+
+    /** Register an eager native under its full id. */
     public NativeRegistry register(String signature, NativeImpl impl)
     {
         natives.put(signature, impl);
@@ -265,6 +293,20 @@ public class NativeRegistry
     private final java.util.concurrent.ConcurrentHashMap<String, Binding> bindingCache =
             new java.util.concurrent.ConcurrentHashMap<>();
 
+    private final java.util.concurrent.ConcurrentHashMap<platform.pure.metamodel.function.NativeFunction, String> idCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The key {@code nativeFunction} is implemented under: its full id
+     * ({@code platform::pure::functions::collection::size_Any_MANY__Integer_1_}), never its name alone — two
+     * natives of one name in different packages are never one another's. Cached: the evaluator asks on every call.
+     */
+    public String id(platform.pure.metamodel.function.NativeFunction nativeFunction)
+    {
+        return idCache.computeIfAbsent(nativeFunction,
+                _PackageableElement::path);
+    }
+
     private Binding binding(String signature)
     {
         Binding b = bindingCache.get(signature);
@@ -296,7 +338,9 @@ public class NativeRegistry
         Binding b = binding(signature);
         if (b == null)
         {
-            throw new RuntimeException("No native implementation for: " + signature);
+            throw new RuntimeException(NOT_ON_THIS_PLATFORM.containsKey(signature)
+                    ? "The native " + signature + " is not implemented on the bootstrap: " + NOT_ON_THIS_PLATFORM.get(signature)
+                    : "No native implementation for: " + signature);
         }
         return b;
     }

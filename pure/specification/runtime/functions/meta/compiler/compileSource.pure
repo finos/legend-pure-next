@@ -56,7 +56,7 @@ function <<PCT.test, PCT.requiresCompiler>> platform::pure::functions::meta::tes
         let file = platform::pure::functions::meta::parse('csFromFile',
                       'function cs::pf::triple(x:Integer[1]):Integer[1] { $x * 3 }');
         let r = platform::pure::functions::meta::compileSource($file, 'core');
-        assert($r.errors->isEmpty());
+        assert($r.errors->isEmpty(), | $r.errors->joinStrings('\n'));
         $r.elements->filter(e | $e->instanceOf(PackageableFunction))->cast(@PackageableFunction<Any>)->toOne()
             ->evaluate([^List<Integer>(values=2)])->cast(@Integer)->toOne();
     ));
@@ -68,7 +68,7 @@ function <<PCT.test, PCT.requiresCompiler>> platform::pure::functions::meta::tes
     assertEquals(['cs::t1', 'cs::t1::twice_Integer_1__Integer_1_'], $f->eval(|
         let r = platform::pure::functions::meta::compileSource('csReturns',
                      'function cs::t1::twice(x:Integer[1]):Integer[1] { $x * 2 }', 'core');
-        assert($r.errors->isEmpty());
+        assert($r.errors->isEmpty(), | $r.errors->joinStrings('\n'));
         // the compiled packages and the function come back as values, in path order
         $r.elements->map(e | $e->elementToPath())->sort()->filter(p | $p != 'cs');
     ));

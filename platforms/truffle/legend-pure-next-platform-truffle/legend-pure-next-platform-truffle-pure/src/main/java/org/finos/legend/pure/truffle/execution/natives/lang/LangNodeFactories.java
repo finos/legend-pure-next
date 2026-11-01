@@ -35,7 +35,7 @@ public final class LangNodeFactories
 
     public static void registerIfOnly(NativeRegistry registry)
     {
-        registry.register("if_Boolean_1__Function_1__Function_1__T_m_", LangNodeFactories::buildIfNode);
+        registry.register("platform::pure::functions::lang::if_Boolean_1__Function_1__Function_1__T_m_", LangNodeFactories::buildIfNode);
     }
 
     /** Static-mode (inlined then/else bodies) when both branches are literal
@@ -49,7 +49,7 @@ public final class LangNodeFactories
 
     public static void registerAll(NativeRegistry registry)
     {
-        registry.register("if_Boolean_1__Function_1__Function_1__T_m_", LangNodeFactories::buildIfNode);
+        registry.register("platform::pure::functions::lang::if_Boolean_1__Function_1__Function_1__T_m_", LangNodeFactories::buildIfNode);
 
         // Multi-clause if — declared `native` in if.pure. Two operating modes:
         //   - Static: the args are a literal pair-list ({@code [pair(|c1, |b1),
@@ -62,7 +62,7 @@ public final class LangNodeFactories
         //     of pairs, etc.). The {@link MultiIfNode} runtime constructor
         //     walks the {@code Pair[*]} at execution time, reading each pair's
         //     {@code first}/{@code second} lambdas via slot.
-        registry.register("if_Pair_MANY__Function_1__T_m_",
+        registry.register("platform::pure::functions::lang::if_Pair_MANY__Function_1__T_m_",
                 (args, gt, mul, fe) ->
                 {
                     PureNode staticForm = org.finos.legend.pure.truffle.execution.PureLanguage.get(null)
@@ -70,37 +70,45 @@ public final class LangNodeFactories
                     return staticForm != null ? staticForm : new MultiIfNode(args[0], args[1]);
                 });
 
-        // eval — all four overloads use the same variable-arity EvalNode
-        registry.register("eval_Function_1__V_m_",
+        // eval — every overload uses the same variable-arity EvalNode
+        registry.register("platform::pure::functions::lang::eval_Function_1__V_m_",
                 (args, gt, mul, fe) -> new EvalNode(args));
-        registry.register("eval_Function_1__T_n__V_m_",
+        registry.register("platform::pure::functions::lang::eval_Function_1__T_n__V_m_",
                 (args, gt, mul, fe) -> new EvalNode(args));
-        registry.register("eval_Function_1__T_n__U_p__V_m_",
+        registry.register("platform::pure::functions::lang::eval_Function_1__T_n__U_p__V_m_",
                 (args, gt, mul, fe) -> new EvalNode(args));
-        registry.register("eval_Function_1__T_n__U_p__W_q__V_m_",
+        registry.register("platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__V_m_",
+                (args, gt, mul, fe) -> new EvalNode(args));
+        registry.register("platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__X_r__V_m_",
+                (args, gt, mul, fe) -> new EvalNode(args));
+        registry.register("platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__X_r__Y_s__V_m_",
+                (args, gt, mul, fe) -> new EvalNode(args));
+        registry.register("platform::pure::functions::lang::eval_Function_1__T_n__U_p__W_q__X_r__Y_s__Z_t__V_m_",
+                (args, gt, mul, fe) -> new EvalNode(args));
+        registry.register("platform::pure::functions::lang::eval_Function_1__S_n__T_o__U_p__W_q__X_r__Y_s__Z_t__V_m_",
                 (args, gt, mul, fe) -> new EvalNode(args));
 
         // rawEvalProperty(property, object) : the values the object holds for the property, never its default
-        registry.register("rawEvalProperty_Property_1__T_1__V_MANY_",
+        registry.register("platform::pure::functions::lang::rawEvalProperty_Property_1__T_1__V_MANY_",
                 (args, gt, mul, fe) -> new RawEvalPropertyNode(args));
 
         // memoize(f, args...) : f->eval(args...), once per execution for a given function and arguments
-        registry.register("memoize_AddressableFunction_1__T_n__V_m_",
+        registry.register("platform::pure::functions::lang::memoize_AddressableFunction_1__T_n__V_m_",
                 (args, gt, mul, fe) -> new MemoizeNode(args));
-        registry.register("memoize_AddressableFunction_1__T_n__U_o__V_m_",
+        registry.register("platform::pure::functions::lang::memoize_AddressableFunction_1__T_n__U_o__V_m_",
                 (args, gt, mul, fe) -> new MemoizeNode(args));
-        registry.register("memoize_AddressableFunction_1__T_n__U_o__W_p__V_m_",
+        registry.register("platform::pure::functions::lang::memoize_AddressableFunction_1__T_n__U_o__W_p__V_m_",
                 (args, gt, mul, fe) -> new MemoizeNode(args));
 
         // tryEval — run closure, return TryResult<V|m> (value or Error).
-        registry.register("tryEval_Function_1__TryResult_1_",
+        registry.register("platform::pure::functions::lang::tryEval_Function_1__TryResult_1_",
                 (args, gt, mul, fe) -> new TryEvalNode(args[0]));
 
         // and/or — short-circuit boolean. Registry check now preempts
         // the isLazy check in PureASTBuilder, so these get wired.
-        registry.register("and_Boolean_1__Boolean_1__Boolean_1_",
+        registry.register("platform::pure::functions::boolean::and_Boolean_1__Boolean_1__Boolean_1_",
                 (args, gt, mul, fe) -> new AndNode(args[0], args[1]));
-        registry.register("or_Boolean_1__Boolean_1__Boolean_1_",
+        registry.register("platform::pure::functions::boolean::or_Boolean_1__Boolean_1__Boolean_1_",
                 (args, gt, mul, fe) -> new OrNode(args[0], args[1]));
 
         // match — both overloads (with and without extra parameter).
@@ -111,14 +119,14 @@ public final class LangNodeFactories
         // constant-string-compare {@code @ExplodeLoop}. Otherwise falls
         // back to the generic {@link MatchNode} that walks branches via
         // the {@code @TruffleBoundary} {@code matchesBranch}.
-        registry.register("match_Any_MANY__Function_$1_MANY$__T_m_",
+        registry.register("platform::pure::functions::lang::match_Any_MANY__Function_$1_MANY$__T_m_",
                 (args, gt, mul, fe) ->
                 {
                     PureNode spec = org.finos.legend.pure.truffle.execution.PureLanguage.get(null)
                             .astBuilder().tryLowerMatch(fe);
                     return spec != null ? spec : new MatchNode(args);
                 });
-        registry.register("match_Any_MANY__Function_$1_MANY$__P_o__T_m_",
+        registry.register("platform::pure::functions::lang::match_Any_MANY__Function_$1_MANY$__P_o__T_m_",
                 (args, gt, mul, fe) ->
                 {
                     PureNode spec = org.finos.legend.pure.truffle.execution.PureLanguage.get(null)
@@ -127,7 +135,7 @@ public final class LangNodeFactories
                 });
 
         // evaluate(Function[1], List[*]) — unwraps List values before dispatch
-        registry.register("evaluate_Function_1__List_MANY__Any_MANY_",
+        registry.register("platform::pure::functions::lang::evaluate_Function_1__List_MANY__Any_MANY_",
                 (args, gt, mul, fe) -> new EvaluateNode(args));
 
         // letFunction is handled exclusively by PureASTBuilder.lowerFrameLet;

@@ -155,8 +155,19 @@ function classify(out, tableType) {
     if (Cls && typeof Cls === "object") {
         const E = globalThis["platform$pure$metamodel$type$Enum"];
         if (typeof E === "function") Object.setPrototypeOf(out, E.prototype);
+        return out;
     }
+    // A class this host has not loaded (the in-process PCT translates platform::pure::functions only): the generic
+    // accessor prototype runtime-lib provides, so `_type()` on a decoded generic type answers as on a loaded one.
+    if (globalThis.__accessorPrototype) Object.setPrototypeOf(out, globalThis.__accessorPrototype);
     return out;
+}
+
+// The classifier of a value the reader synthesises (a pointer, an annotation): a GenericTypeValue built by the
+// runtime (__newCgt), which answers the generated accessors (`_type()`) as a decoded one does.
+function typeRef(cls) {
+    const slots = { type: globalThis.__pureResolve(cls) };
+    return typeof globalThis.__newCgt === "function" ? globalThis.__newCgt(slots) : slots;
 }
 
 export function marshal(sx, v, stack = []) {
@@ -172,7 +183,7 @@ export function marshal(sx, v, stack = []) {
             return classify({
                 profile: globalThis.__pureResolve(arr.slice(0, -1).join("::")),
                 value: arr[arr.length - 1],
-                classifierGenericType: { type: globalThis.__pureResolve(cls) },
+                classifierGenericType: typeRef(cls),
             });
         }
         // (Qualified)Property pointers are TempCompilerPointers, not elements: the
@@ -185,7 +196,7 @@ export function marshal(sx, v, stack = []) {
             const ptr = classify({
                 path: ownerPath,
                 element: member,
-                classifierGenericType: { type: globalThis.__pureResolve(cls) },
+                classifierGenericType: typeRef(cls),
             });
             // Property-shaped reads resolve lazily through the owner element
             // (e.g. the translator's findAssociationPartner walks

@@ -16,3 +16,9 @@
 import platform::pure::test::pct::*;
 
 native function <<functionType.SideEffectFunction, PCT.function>> platform::pure::functions::math::random():Float[1];
+
+function <<PCT.test>> platform::pure::functions::math::tests::random::testRandomIsAtLeastZeroAndBelowOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let r = $f->eval(|random());
+    assert($r >= 0.0 && $r < 1.0);
+}

@@ -534,6 +534,13 @@ dashboard:
     @{{substep}} 'render test-results/ -> test-results/dashboard.html'
     node {{root}}/tools/test-dashboard/build.mjs
 
+# Draw the Justfiles: every recipe, its dependencies and the CLI it runs Pure with, as a page you open
+# (tools/just-graph/build/just-graph.html). Regenerate it after changing a Justfile.
+just-graph:
+    @{{header}} 'just-graph'
+    @{{substep}} 'just --dump -> tools/just-graph/build/just-graph.html'
+    node {{root}}/tools/just-graph/generate.mjs
+
 # Remove shared/, per-subproject build artifacts, every generated/ tree and the test reports.
 # The dashboard's history.json and builds.json are kept: they are the trend across runs, not
 # one run's output. Every generated/ tree is rebuilt by the build that consumes it
@@ -546,8 +553,9 @@ dashboard:
 # diagram.pdb and pre-rename generated JS once outlived `clean`.
 clean: clean-generated bootstrap::clean truffle::clean javascript::clean java::clean modules::clean extensions::clean
     @{{header}} 'clean'
-    @{{substep}} 'remove shared/ and test-results/ reports'
+    @{{substep}} 'remove shared/, test-results/ reports and the Justfile graph page'
     rm -rf {{out}}
+    rm -rf {{root}}/tools/just-graph/build
     find {{root}}/test-results -mindepth 1 -maxdepth 1 ! -name history.json ! -name builds.json ! -name lane-steps.tsv -exec rm -rf {} + 2>/dev/null || true
     @{{substep}} 'check that no build output is left'
     left=$(git -C {{root}} ls-files --others --ignored --exclude-standard --directory | grep -E '(^|/)(build|generated|target)/$|dependency-reduced-pom\.xml$|^shared/$' || true); if [ -n "$left" ]; then printf 'clean left build output behind:\n%s\n' "$left" >&2; exit 1; fi

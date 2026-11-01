@@ -58,7 +58,33 @@ public final class PureASTBuilder
     private static final int SLOT_LOWER_BOUND = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("lowerBound");
     private static final int SLOT_UPPER_BOUND = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("upperBound");
     private static final String LET_FUNCTION_SIGNATURE = "letFunction_String_1__T_m__T_m_";
-    private static final String PAIR_SIGNATURE = "pair_U_1__V_1__Pair_1_";
+
+    /**
+     * The natives this builder lowers itself, by full id, rather than through the native registry: what the
+     * runtime's check counts as implemented without an entry.
+     */
+    public static final org.eclipse.collections.api.set.ImmutableSet<String> LOWERED_NATIVES =
+            org.eclipse.collections.api.factory.Sets.immutable.of("platform::pure::functions::lang::letFunction_String_1__T_m__T_m_");
+
+    /**
+     * The natives this platform does not implement, by full id, each with why: declared, never registered (the
+     * runtime's check fails an entry for one), and a call to one fails saying so.
+     */
+    public static final org.eclipse.collections.api.map.ImmutableMap<String, String> NOT_ON_THIS_PLATFORM =
+            org.eclipse.collections.api.factory.Maps.mutable.<String, String>empty()
+                    .withKeyValue("platform::pure::functions::collection::getAll_Class_1__T_MANY_",
+                            "there is no store of instances to read: a class's instances exist only where a query is translated")
+                    .withKeyValue("platform::extensions::language::javascript::compileModule_String_1__Any_1_",
+                            "running JavaScript needs a JavaScript engine: the JavaScript host has one")
+                    .withKeyValue("platform::extensions::language::javascript::drainCompiledSources__String_MANY_",
+                            "running JavaScript needs a JavaScript engine: the JavaScript host has one")
+                    .withKeyValue("platform::extensions::language::javascript::execute_Any_1__String_1__Any_MANY__GenericType_$0_1$__Multiplicity_$0_1$__Any_$0_1$__Any_MANY_",
+                            "running JavaScript needs a JavaScript engine: the JavaScript host has one")
+                    .toImmutable();
+
+    // The pairs a multi-if is written with, `pair(|condition, |value)`: by full id, so only core's pair is read
+    // as a branch — the static form takes its two lambdas apart instead of building the Pair to take it apart.
+    private static final String PAIR_ID = "platform::pure::functions::collection::pair_U_1__V_1__Pair_1_";
 
     private final NativeRegistry specialized;
 
@@ -501,7 +527,8 @@ public final class PureASTBuilder
             if (!org.finos.legend.pure.truffle.compiler.helper._Any.isType(pairFunc,
                     "platform::pure::metamodel::function::FunctionDefinition",
                     org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver())
-                    || !PAIR_SIGNATURE.equals(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(pairFunc, SLOT_NAME)))
+                    || !PAIR_ID.equals(org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(pairFunc,
+                            org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver())))
             {
                 return null;
             }
@@ -836,9 +863,15 @@ public final class PureASTBuilder
             Object mul = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_MULTIPLICITY);
             return factory.create(lowerArgs(fe), gt, mul, fe);
         }
+        String id = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(nf,
+                org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver());
+        if (NOT_ON_THIS_PLATFORM.containsKey(id))
+        {
+            throw new RuntimeException("The native " + id + " is not implemented on Truffle: " + NOT_ON_THIS_PLATFORM.get(id));
+        }
         // All signatures should be registered. If we reach here, it's a
         // new native added without a corresponding Truffle node.
-        throw new RuntimeException("No specialized Truffle node for native: " + signature);
+        throw new RuntimeException("No specialized Truffle node for native: " + id);
     }
 
     /**

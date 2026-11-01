@@ -42,3 +42,18 @@ function <<PCT.test>> platform::pure::functions::lang::tests::toOneMany::testToO
     assertEquals(1, $f->eval(|[1, 2, 3]->head()->toOneMany()));
     assertEquals([2, 3], $f->eval(|[1, 2, 3]->filter(x | $x > 1)->toOneMany()));
 }
+
+function <<PCT.test>> platform::pure::functions::lang::tests::toOneMany::testToOneManyWithMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(['a', 'b'], $f->eval(|['a', 'b']->toOneMany('no values')));
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::toOneMany::testToOneManyWithMessageFailsOnNothing<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertError(|$f->eval(|[]->cast(@String)->toOneMany('no values')), 'no values');
+}
+
+function <<PCT.test>> platform::pure::functions::lang::tests::toOneMany::testToOneManyFailsOnNothing<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertError(|$f->eval(|[]->cast(@String)->toOneMany()), 'toOneMany expected at least 1 element, got 0');
+}

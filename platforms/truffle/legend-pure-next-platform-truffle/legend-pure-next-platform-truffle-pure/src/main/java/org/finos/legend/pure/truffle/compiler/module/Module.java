@@ -58,4 +58,11 @@ public interface Module extends MetadataAccess
         return hasElement(path) && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
                 getElement(path), "platform::pure::metamodel::Package");
     }
+
+    /** Whether this module's element at {@code path} is a native function — what a native registry entry implements. */
+    default boolean isNativeFunction(String path)
+    {
+        return hasElement(path) && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
+                getElement(path), "platform::pure::metamodel::function::NativeFunction");
+    }
 }

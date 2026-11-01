@@ -33,57 +33,57 @@ public class MathNatives
                                 MetadataAccess resolver)
     {
         // plus
-        natives.put("plus_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((Long) _E_ValueSpecification.unwrap(args.get(0)) + (Long) _E_ValueSpecification.unwrap(args.get(1)),
                         genericType, multiplicity, resolver));
 
-        natives.put("plus_Float_1__Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::plus_Float_1__Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((Double) _E_ValueSpecification.unwrap(args.get(0)) + (Double) _E_ValueSpecification.unwrap(args.get(1)),
                         genericType, multiplicity, resolver));
 
-        natives.put("plus_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::plus_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 + ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
                         genericType, multiplicity, resolver));
 
         // minus
-        natives.put("minus_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::minus_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((Long) _E_ValueSpecification.unwrap(args.get(0)) - (Long) _E_ValueSpecification.unwrap(args.get(1)),
                         genericType, multiplicity, resolver));
 
-        natives.put("minus_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::minus_Float_1__Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap((Double) _E_ValueSpecification.unwrap(args.get(0)) - (Double) _E_ValueSpecification.unwrap(args.get(1)),
+                        genericType, multiplicity, resolver));
+
+        // random() : Float[1] — at least 0 and below 1
+        natives.put("platform::pure::functions::math::random__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(java.util.concurrent.ThreadLocalRandom.current().nextDouble(), genericType, multiplicity, resolver));
+
+        natives.put("platform::pure::functions::math::minus_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 - ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
                         genericType, multiplicity, resolver));
 
         // times
-        natives.put("times_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::times_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((Long) _E_ValueSpecification.unwrap(args.get(0)) * (Long) _E_ValueSpecification.unwrap(args.get(1)),
                         genericType, multiplicity, resolver));
 
         // lessThan, greaterThan, lessThanEqual, greaterThanEqual
-        natives.put("lessThan_Number_1__Number_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::boolean::lessThan_Number_1__Number_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 < ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
                         genericType, multiplicity, resolver));
 
-        natives.put("greaterThan_Number_1__Number_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
-                _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
-                                > ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
-                        genericType, multiplicity, resolver));
 
-        natives.put("lessThanEqual_Number_1__Number_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::boolean::lessThanEqual_Number_1__Number_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 <= ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
                         genericType, multiplicity, resolver));
 
-        natives.put("greaterThanEqual_Number_1__Number_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
-                _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
-                                >= ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
-                        genericType, multiplicity, resolver));
 
         // abs(Number[1]) : Number[1]
-        natives.put("abs_Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::abs_Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
         {
             Number n = (Number) _E_ValueSpecification.unwrap(args.get(0));
             if (_Type.subtypeOf(_GenericType.type(args.get(0)._genericType()), (Type) resolver.getElement("platform::pure::metamodel::type::primitives::Integer"), resolver))
@@ -94,25 +94,25 @@ public class MathNatives
         });
 
         // divide(Number[1], Number[1]) : Float[1]
-        natives.put("divide_Number_1__Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::divide_Number_1__Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 / ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
                         genericType, multiplicity, resolver));
 
         // minus(Integer[1]) : Integer[1] — single-arg negate
-        natives.put("minus_Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::minus_Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(-((Number) _E_ValueSpecification.unwrap(args.get(0))).longValue(), genericType, multiplicity, resolver));
 
         // minus(Float[1]) : Float[1] — single-arg negate
-        natives.put("minus_Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::minus_Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(-((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue(), genericType, multiplicity, resolver));
 
         // minus(Decimal[1]) : Decimal[1] — single-arg negate
-        natives.put("minus_Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::minus_Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(asBigDecimal(args.get(0)).negate(), genericType, multiplicity, resolver));
 
         // minus(Number[1]) : Number[1] — single-arg negate
-        natives.put("minus_Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::minus_Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
         {
             Number n = (Number) _E_ValueSpecification.unwrap(args.get(0));
             if (_Type.subtypeOf(_GenericType.type(args.get(0)._genericType()), (Type) resolver.getElement("platform::pure::metamodel::type::primitives::Integer"), resolver))
@@ -123,24 +123,24 @@ public class MathNatives
         });
 
         // abs(Integer[1]) : Integer[1]
-        natives.put("abs_Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::abs_Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.abs(((Long) _E_ValueSpecification.unwrap(args.get(0)))), genericType, multiplicity, resolver));
 
         // abs(Float[1]) : Float[1]
-        natives.put("abs_Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::abs_Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.abs(((Double) _E_ValueSpecification.unwrap(args.get(0)))), genericType, multiplicity, resolver));
 
         // abs(Decimal[1]) : Decimal[1]
-        natives.put("abs_Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::abs_Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(asBigDecimal(args.get(0)).abs(), genericType, multiplicity, resolver));
 
         // times(Float[1], Float[1]) : Float[1]
-        natives.put("times_Float_1__Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::times_Float_1__Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((Double) _E_ValueSpecification.unwrap(args.get(0)) * (Double) _E_ValueSpecification.unwrap(args.get(1)),
                         genericType, multiplicity, resolver));
 
         // times(Number[1], Number[1]) : Number[1]
-        natives.put("times_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::times_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
         {
             Number a = (Number) _E_ValueSpecification.unwrap(args.get(0));
             Number b = (Number) _E_ValueSpecification.unwrap(args.get(1));
@@ -154,22 +154,22 @@ public class MathNatives
         });
 
         // times(Decimal[1], Decimal[1]) : Decimal[1]
-        natives.put("times_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::times_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(asBigDecimal(args.get(0)).multiply(asBigDecimal(args.get(1))),
                         genericType, multiplicity, resolver));
 
         // plus(Decimal[1], Decimal[1]) : Decimal[1]
-        natives.put("plus_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::plus_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(asBigDecimal(args.get(0)).add(asBigDecimal(args.get(1))),
                         genericType, multiplicity, resolver));
 
         // minus(Decimal[1], Decimal[1]) : Decimal[1]
-        natives.put("minus_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::minus_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(asBigDecimal(args.get(0)).subtract(asBigDecimal(args.get(1))),
                         genericType, multiplicity, resolver));
 
         // divide(Decimal[1], Decimal[1], Integer[1]) : Decimal[1]
-        natives.put("divide_Decimal_1__Decimal_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::divide_Decimal_1__Decimal_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
         {
             int scale = ((Number) _E_ValueSpecification.unwrap(args.get(2))).intValue();
             return _E_ValueSpecification.wrap(
@@ -178,21 +178,21 @@ public class MathNatives
         });
 
         // ceiling(Number[1]) : Integer[1]
-        natives.put("ceiling_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::ceiling_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
             return _E_ValueSpecification.wrap((long) Math.ceil(v), genericType, multiplicity, resolver);
         });
 
         // floor(Number[1]) : Integer[1]
-        natives.put("floor_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::floor_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
             return _E_ValueSpecification.wrap((long) Math.floor(v), genericType, multiplicity, resolver);
         });
 
         // round(Number[1]) : Integer[1]
-        natives.put("round_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::round_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
             long result = java.math.BigDecimal.valueOf(v)
@@ -201,7 +201,7 @@ public class MathNatives
         });
 
         // round(Float[1], Integer[1]) : Float[1]
-        natives.put("round_Float_1__Integer_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::round_Float_1__Integer_1__Float_1_", (args, eval, genericType, multiplicity) ->
         {
             double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
             int scale = ((Number) _E_ValueSpecification.unwrap(args.get(1))).intValue();
@@ -211,7 +211,7 @@ public class MathNatives
         });
 
         // round(Decimal[1], Integer[1]) : Decimal[1]
-        natives.put("round_Decimal_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::round_Decimal_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
         {
             int scale = ((Number) _E_ValueSpecification.unwrap(args.get(1))).intValue();
             return _E_ValueSpecification.wrap(
@@ -220,17 +220,17 @@ public class MathNatives
         });
 
         // sqrt(Number[1]) : Float[1]
-        natives.put("sqrt_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::sqrt_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.sqrt(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
         // cbrt(Number[1]) : Float[1]
-        natives.put("cbrt_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::cbrt_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.cbrt(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
         // pow(Number[1], Number[1]) : Number[1]
-        natives.put("pow_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::pow_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
         {
             double base = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
             double exp = ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue();
@@ -238,7 +238,7 @@ public class MathNatives
         });
 
         // mod(Integer[1], Integer[1]) : Integer[1]
-        natives.put("mod_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::mod_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             long a = (Long) _E_ValueSpecification.unwrap(args.get(0));
             long b = (Long) _E_ValueSpecification.unwrap(args.get(1));
@@ -248,7 +248,7 @@ public class MathNatives
         });
 
         // rem(Number[1], Number[1]) : Number[1]
-        natives.put("rem_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::rem_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
         {
             Number a = (Number) _E_ValueSpecification.unwrap(args.get(0));
             Number b = (Number) _E_ValueSpecification.unwrap(args.get(1));
@@ -269,7 +269,7 @@ public class MathNatives
         });
 
         // sign(Number[1]) : Integer[1]
-        natives.put("sign_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::sign_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
         {
             double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
             long s = v > 0 ? 1L : (v < 0 ? -1L : 0L);
@@ -277,37 +277,37 @@ public class MathNatives
         });
 
         // Trigonometric functions
-        natives.put("sin_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::sin_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.sin(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
-        natives.put("cos_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::cos_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.cos(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
-        natives.put("tan_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::tan_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.tan(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
-        natives.put("cot_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::cot_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
         {
             double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
             return _E_ValueSpecification.wrap(1.0 / Math.tan(v), genericType, multiplicity, resolver);
         });
 
-        natives.put("asin_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::asin_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.asin(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
-        natives.put("acos_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::acos_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.acos(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
-        natives.put("atan_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::atan_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.atan(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
-        natives.put("atan2_Number_1__Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::atan2_Number_1__Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
         {
             double y = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
             double x = ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue();
@@ -315,15 +315,15 @@ public class MathNatives
         });
 
         // Exponential / logarithmic
-        natives.put("log_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::log_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.log(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
-        natives.put("log10_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::log10_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.log10(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
-        natives.put("exp_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::math::exp_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.exp(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 

@@ -99,23 +99,12 @@ public final class NativeRegistry
 
     /**
      * The factory implementing the native function {@code nativeFunction}: registered under its full id
-     * ({@code platform::pure::functions::relation::size_Relation_1__Integer_1_}) — how an extension's natives
-     * are, so that two natives of one name in different packages are never one another's — else under its
-     * name alone, how core's are. Null when neither is registered.
+     * ({@code platform::pure::functions::relation::size_Relation_1__Integer_1_}), never its name alone — two
+     * natives of one name in different packages are never one another's. Null when none is registered.
      */
     public Factory lookupNative(Object nativeFunction, org.finos.legend.pure.truffle.compiler.module.MetadataAccess resolver)
     {
-        Factory byId = factories.get(org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(nativeFunction, resolver));
-        return byId != null ? byId : factories.get((String) org.finos.legend.pure.truffle.compiler.helper._Any.read(nativeFunction, "name"));
-    }
-
-    /**
-     * Returns the specialized factory for {@code signature}, or {@code null}
-     * if the signature is still on the bridge.
-     */
-    public Factory lookup(String signature)
-    {
-        return factories.get(signature);
+        return factories.get(org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(nativeFunction, resolver));
     }
 
     public boolean isEmpty()

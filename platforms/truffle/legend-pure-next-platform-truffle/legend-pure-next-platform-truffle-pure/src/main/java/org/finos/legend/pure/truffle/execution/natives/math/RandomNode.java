@@ -12,39 +12,26 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package org.finos.legend.pure.truffle.execution.natives.math;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.execution.ast.PureNode;
 
-@NodeInfo(shortName = "greaterThanNum")
-public final class GreaterThanNumberNode extends PureNode
+/** {@code random() : Float[1]} — at least 0 and below 1. */
+@NodeInfo(shortName = "random")
+public final class RandomNode extends PureNode
 {
-    private static final String SIG = "greaterThan_Number_1__Number_1__Boolean_1_";
-
-    @Child
-    private PureNode left;
-
-    @Child
-    private PureNode right;
-
-    public GreaterThanNumberNode(PureNode left, PureNode right)
-    {
-        this.left = left;
-        this.right = right;
-    }
-
-    @Override
-    public boolean executeBoolean(VirtualFrame frame)
-    {
-        return left.executeDouble(frame) > right.executeDouble(frame);
-    }
-
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        return executeBoolean(frame);
+        return next();
+    }
+
+    @TruffleBoundary
+    private static double next()
+    {
+        return java.util.concurrent.ThreadLocalRandom.current().nextDouble();
     }
 }

@@ -29,24 +29,16 @@ public final class AssertNodeFactories
 
     public static void registerAll(NativeRegistry registry)
     {
-        registry.register("assert_Boolean_1__Function_1__Boolean_1_",
+        registry.register("platform::pure::functions::asserts::assert_Boolean_1__Function_1__Boolean_1_",
                 (args, gt, mul, fe) -> new AssertNode(args[0], args[1]));
 
-        registry.register("assert_Boolean_1__Boolean_1_",
-                (args, gt, mul, fe) -> new AssertNode(args[0], null));
 
-        registry.register("assertError_Function_1__String_1__Integer_$0_1$__Integer_$0_1$__Boolean_1_",
+        registry.register("platform::pure::functions::asserts::assertError_Function_1__String_1__Integer_$0_1$__Integer_$0_1$__Boolean_1_",
                 (args, gt, mul, fe) -> new AssertErrorNode(args[0], args[1],
                         args.length > 2 ? args[2] : null,
                         args.length > 3 ? args[3] : null));
 
-        registry.register("assertEqual_Any_MANY__Any_MANY__Boolean_1_",
-                (args, gt, mul, fe) -> new AssertEqualNode(args[0], args[1]));
 
-        registry.register("assertFalse_Boolean_1__Boolean_1_",
-                (args, gt, mul, fe) -> new AssertFalseNode(args[0], null));
 
-        registry.register("assertFalse_Boolean_1__String_1__Boolean_1_",
-                (args, gt, mul, fe) -> new AssertFalseNode(args[0], args[1]));
     }
 }

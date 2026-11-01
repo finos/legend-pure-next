@@ -71,6 +71,12 @@ public final class ScopedMetadataAccess implements MetadataAccess
         return self.getMetadataAccessExtension(clz).withAll(this.dependencies.flatCollect(x -> x.getMetadataAccessExtension(clz)).select(Objects::nonNull));
     }
 
+    /** The module this view compiles and its dependencies: what it sees. */
+    public MutableList<Module> modules()
+    {
+        return Lists.mutable.with(this.self).withAll(this.dependencies);
+    }
+
     @Override
     public java.util.Set<String> moduleNames()
     {

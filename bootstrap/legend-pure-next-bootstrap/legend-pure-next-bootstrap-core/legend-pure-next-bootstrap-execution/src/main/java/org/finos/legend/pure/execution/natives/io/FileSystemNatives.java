@@ -48,7 +48,7 @@ public class FileSystemNatives
     {
         // directoryTree(String[1]) : String[*]
         // Returns all regular file paths (recursively) under the given directory, sorted.
-        natives.put("directoryTree_String_1__String_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::io::directoryTree_String_1__String_MANY_", (args, eval, genericType, multiplicity) ->
         {
             String root = (String) _E_ValueSpecification.unwrap(args.get(0));
             List<String> paths;
@@ -80,7 +80,7 @@ public class FileSystemNatives
         // readFileBytes(String[1]) : Binary[1] — the file's raw bytes, as a host
         // byte array. No per-byte boxing: a multi-megabyte .pdb used to become
         // millions of boxed values crossing this boundary.
-        natives.put("readFileBytes_String_1__Binary_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::io::readFileBytes_String_1__Binary_1_", (args, eval, genericType, multiplicity) ->
         {
             String path = (String) _E_ValueSpecification.unwrap(args.get(0));
             try
@@ -96,7 +96,7 @@ public class FileSystemNatives
 
         // writeFile(String[1], String[1]) : String[1]
         // Writes content to the file, creating parent directories and replacing any existing file; returns the path.
-        natives.put("writeFile_String_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::io::writeFile_String_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             String path = (String) _E_ValueSpecification.unwrap(args.get(0));
             String content = (String) _E_ValueSpecification.unwrap(args.get(1));

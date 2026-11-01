@@ -31,7 +31,7 @@ public final class IONodeFactories
     {
         // print returns String[1] now (writes AND returns the formatted
         // value) so println can compose without a separate formatter native.
-        registry.register("print_Any_MANY__Integer_1__String_1_",
+        registry.register("platform::pure::functions::io::print_Any_MANY__Integer_1__String_1_",
                 (args, gt, mul, fe) -> new PrintNode(args[0], args[1]));
 
         // println is a Pure function (`print(v) + print('\n')`) — no
@@ -42,22 +42,22 @@ public final class IONodeFactories
         // print's stdout side effect for the duration of the closure.
         // Used by test runners to silence individual test bodies while
         // keeping the progress UI visible.
-        registry.register("withSilencedPrint_Function_1__T_m_",
+        registry.register("platform::pure::functions::io::withSilencedPrint_Function_1__T_m_",
                 (args, gt, mul, fe) -> new WithSilencedPrintNode(args[0]));
 
-        registry.register("readFileBytes_String_1__Binary_1_",
+        registry.register("platform::pure::functions::io::readFileBytes_String_1__Binary_1_",
                 (args, gt, mul, fe) -> new ReadFileBytesNode(args[0]));
 
-        registry.register("writeFile_String_1__String_1__String_1_",
+        registry.register("platform::pure::functions::io::writeFile_String_1__String_1__String_1_",
                 (args, gt, mul, fe) -> new WriteFileNode(args[0], args[1]));
 
-        registry.register("entryNames_Binary_1__String_MANY_",
+        registry.register("platform::pure::compiler::pdb::archive::entryNames_Binary_1__String_MANY_",
                 (args, gt, mul, fe) -> new EntryNamesNode(args[0]));
 
-        registry.register("entryBytes_Binary_1__String_1__Binary_1_",
+        registry.register("platform::pure::compiler::pdb::archive::entryBytes_Binary_1__String_1__Binary_1_",
                 (args, gt, mul, fe) -> new EntryBytesNode(args[0], args[1]));
 
-        registry.register("directoryTree_String_1__String_MANY_",
+        registry.register("platform::pure::functions::io::directoryTree_String_1__String_MANY_",
                 (args, gt, mul, fe) -> new DirectoryTreeNode(args[0]));
     }
 }

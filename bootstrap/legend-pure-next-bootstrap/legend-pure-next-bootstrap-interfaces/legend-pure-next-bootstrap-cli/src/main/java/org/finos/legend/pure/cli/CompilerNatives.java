@@ -36,7 +36,7 @@ public class CompilerNatives implements NativesExtension
     {
         MetadataAccess resolver = registry.resolver();
         // platform::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
-        registry.register("findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_", (args, eval, genericType, multiplicity) ->
+        registry.register("platform::pure::compiler::findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_", (args, eval, genericType, multiplicity) ->
         {
             String name = (String) _E_ValueSpecification.unwrap(args.get(0));
             long arity = (Long) _E_ValueSpecification.unwrap(args.get(1));

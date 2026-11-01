@@ -114,3 +114,12 @@ function <<PCT.test>> platform::pure::functions::lang::tests::eval::testProperty
         $prop->eval($instance);
     ));
 }
+
+// Every arity is a native of its own: each is implemented, not only the short ones.
+function <<PCT.test>> platform::pure::functions::lang::tests::eval::testEvalWithFourToSevenParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(10, $f->eval(|{a:Integer[1], b:Integer[1], c:Integer[1], d:Integer[1] | $a + $b + $c + $d}->eval(1, 2, 3, 4)));
+    assertEquals(15, $f->eval(|{a:Integer[1], b:Integer[1], c:Integer[1], d:Integer[1], e:Integer[1] | $a + $b + $c + $d + $e}->eval(1, 2, 3, 4, 5)));
+    assertEquals(21, $f->eval(|{a:Integer[1], b:Integer[1], c:Integer[1], d:Integer[1], e:Integer[1], g:Integer[1] | $a + $b + $c + $d + $e + $g}->eval(1, 2, 3, 4, 5, 6)));
+    assertEquals(28, $f->eval(|{a:Integer[1], b:Integer[1], c:Integer[1], d:Integer[1], e:Integer[1], g:Integer[1], h:Integer[1] | $a + $b + $c + $d + $e + $g + $h}->eval(1, 2, 3, 4, 5, 6, 7)));
+}

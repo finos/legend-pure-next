@@ -69,7 +69,7 @@ public class CompilerNatives implements NativesExtension
                 .withExtensions(extensions)
                 .build();
 
-        registry.register("parse_String_1__String_1__PureFile_1_", (args, eval, genericType, multiplicity) ->
+        registry.register("platform::pure::functions::meta::parse_String_1__String_1__PureFile_1_", (args, eval, genericType, multiplicity) ->
         {
             String sourceId = (String) _E_ValueSpecification.unwrap(args.get(0));
             String content = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -101,7 +101,7 @@ public class CompilerNatives implements NativesExtension
         // DATA on the result, not exceptions. `dependencies` names loaded
         // modules; an unknown name is a caller bug and throws (message pinned
         // by the PCT contract tests).
-        registry.register("compileSource_PureFile_1__String_MANY__CompileSourceResult_1_", (args, eval, genericType, multiplicity) ->
+        registry.register("platform::pure::functions::meta::compileSource_PureFile_1__String_MANY__CompileSourceResult_1_", (args, eval, genericType, multiplicity) ->
         {
             for (platform.pure.metamodel.valuespecification.ValueSpecification depVS
                     : _E_ValueSpecification.toCollection(args.get(1), resolver)._values())
@@ -139,7 +139,7 @@ public class CompilerNatives implements NativesExtension
         });
 
         // platform::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
-        registry.register("findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_", (args, eval, genericType, multiplicity) ->
+        registry.register("platform::pure::compiler::findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_", (args, eval, genericType, multiplicity) ->
         {
             String name = (String) _E_ValueSpecification.unwrap(args.get(0));
             long arity = (Long) _E_ValueSpecification.unwrap(args.get(1));
@@ -158,7 +158,7 @@ public class CompilerNatives implements NativesExtension
         // Enumerates every Type-typed PackageableElement across all loaded
         // modules. Used by buildLinearizationCache to seed the cache without
         // relying on package-tree traversal (which is split per module).
-        registry.register("findAllTypes__Type_MANY_", (args, eval, genericType, multiplicity) ->
+        registry.register("platform::pure::compiler::findAllTypes__Type_MANY_", (args, eval, genericType, multiplicity) ->
         {
             List<platform.pure.metamodel.valuespecification.ValueSpecification> wrapped = new ArrayList<>();
             for (String path : resolver.elementPaths())
@@ -174,7 +174,7 @@ public class CompilerNatives implements NativesExtension
 
         // platform::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString(dateStr:String[1]):String[1]
         // Normalizes date literals: zero-pads components and converts timezone offsets to UTC.
-        registry.register("normalizeDateString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        registry.register("platform::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = (String) _E_ValueSpecification.unwrap(args.get(0));
             String result = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(dateStr);
@@ -191,7 +191,7 @@ public class CompilerNatives implements NativesExtension
         // (shallow), and rewritten slot values are written onto the copy via
         // fluent setters. Identity-based cycle tracking keeps the metamodel's
         // back-edges (e.g. PE.package → Package.children → same PE) finite.
-        registry.register("resolveAndReturnGraph_Map_1__PackageableElement_MANY_", (args, eval, genericType, multiplicity) ->
+        registry.register("platform::pure::functions::meta::resolveAndReturnGraph_Map_1__PackageableElement_MANY_", (args, eval, genericType, multiplicity) ->
         {
             org.finos.legend.pure.execution.PureMap pureMap =
                     (org.finos.legend.pure.execution.PureMap) _E_ValueSpecification.unwrap(args.get(0));

@@ -33,7 +33,7 @@ public class AssertNatives
                                 MetadataAccess resolver)
     {
         // assert(Boolean[1], Function<{->String[1]}>[1]) : Boolean[1]
-        natives.put("assert_Boolean_1__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::asserts::assert_Boolean_1__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             boolean condition = (Boolean) _E_ValueSpecification.unwrap(args.get(0));
             if (!condition)
@@ -46,18 +46,9 @@ public class AssertNatives
         });
 
         // assert(Boolean[1]) : Boolean[1]
-        natives.put("assert_Boolean_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
-        {
-            boolean condition = (Boolean) _E_ValueSpecification.unwrap(args.get(0));
-            if (!condition)
-            {
-                throw new PureAssertionError("Assert failed");
-            }
-            return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
-        });
 
         // assertError(Function<{->Any[*]}>[1], String[1], Integer[0..1], Integer[0..1]) : Boolean[1]
-        natives.put("assertError_Function_1__String_1__Integer_$0_1$__Integer_$0_1$__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::asserts::assertError_Function_1__String_1__Integer_$0_1$__Integer_$0_1$__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             String expectedMessage = (String) _E_ValueSpecification.unwrap(args.get(1));
             try
@@ -80,38 +71,9 @@ public class AssertNatives
         });
 
         // assertEqual(Any[*], Any[*]) : Boolean[1]
-        natives.put("assertEqual_Any_MANY__Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
-        {
-            ValueSpecification expected = args.get(0);
-            ValueSpecification actual = args.get(1);
-            if (!NativeRegistry.pureEquals(expected, actual, resolver))
-            {
-                throw new PureAssertionError("assertEqual failed:\nexpected: " + NativeRegistry.pureToString(expected) + "\nactual:   " + NativeRegistry.pureToString(actual));
-            }
-            return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
-        });
 
         // assertFalse(Boolean[1]) : Boolean[1]
-        natives.put("assertFalse_Boolean_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
-        {
-            boolean value = (Boolean) _E_ValueSpecification.unwrap(args.get(0));
-            if (value)
-            {
-                throw new PureAssertionError("assertFalse failed: value was true");
-            }
-            return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
-        });
 
         // assertFalse(Boolean[1], String[1]) : Boolean[1]
-        natives.put("assertFalse_Boolean_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
-        {
-            boolean value = (Boolean) _E_ValueSpecification.unwrap(args.get(0));
-            if (value)
-            {
-                String msg = (String) _E_ValueSpecification.unwrap(args.get(1));
-                throw new PureAssertionError(msg);
-            }
-            return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
-        });
     }
 }

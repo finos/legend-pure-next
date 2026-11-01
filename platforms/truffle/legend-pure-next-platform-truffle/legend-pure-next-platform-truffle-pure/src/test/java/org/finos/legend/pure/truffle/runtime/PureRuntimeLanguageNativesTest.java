@@ -57,6 +57,27 @@ public class PureRuntimeLanguageNativesTest
     }
 
     @Test
+    public void anEntryForAFunctionWrittenInPureFailsTheBuild() throws IOException
+    {
+        // assert(Boolean[1]) has a Pure body: no entry may stand in for it, whoever registers it
+        String writtenInPure = "platform::pure::functions::asserts::assert_Boolean_1__Boolean_1_";
+        ModuleRegistry registry = new ModuleRegistry().register(PdbModule.open(sharedPdb("core.pdb")));
+        IllegalStateException e = Assertions.assertThrows(IllegalStateException.class,
+                () -> PureRuntime.builder().withRegistry(registry)
+                        .withNatives(NativeRegistry.createDefault().register(writtenInPure, (args, gt, mul, fe) -> null))
+                        .build());
+        Assertions.assertTrue(e.getMessage().contains("implemented but not natives (a function written in Pure is never replaced): " + writtenInPure), e.getMessage());
+    }
+
+    @Test
+    public void everyNativeTheLoadedModulesDeclareIsImplemented() throws IOException
+    {
+        // the default natives against core: complete, and nothing else
+        ModuleRegistry registry = new ModuleRegistry().register(PdbModule.open(sharedPdb("core.pdb")));
+        PureRuntime.builder().withRegistry(registry).withNatives(NativeRegistry.createDefault()).build().close();
+    }
+
+    @Test
     public void theNativesOfALanguageWhoseModuleIsNotLoadedAreInstalledUnchecked()
     {
         PureRuntime runtime = PureRuntime.builder().withRegistry(new ModuleRegistry()).withNatives(NativeRegistry.createDefault())

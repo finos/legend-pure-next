@@ -30,7 +30,7 @@ public final class JavaCompileNodeFactories
 
     public static void registerAll(NativeRegistry registry)
     {
-        registry.register("compileAndExecute_String_1__String_1__String_1__Any_MANY__Any_MANY_",
+        registry.register("platform::extensions::language::java::compileAndExecute_String_1__String_1__String_1__Any_MANY__Any_MANY_",
                 (args, gt, mul, fe) -> new CompileAndExecuteNode(args[0], args[1], args[2], args[3]));
     }
 }

@@ -32,3 +32,11 @@ function <<test.TestDependency>> platform::pure::test::walkChildren(pkg:Package[
        | $named,
        | $named->filter(c | $c->instanceOf(Package))->cast(@Package)->map(p | platform::pure::test::walkChildren($p, $names->tail())));
 }
+
+// Every native function below `pkg`, reached through `children` — what a platform's natives are checked against.
+function <<test.TestDependency>> platform::pure::test::nativeFunctionsUnder(pkg:Package[1]):platform::pure::metamodel::function::NativeFunction<Any>[*]
+{
+    let children = $pkg.children->map(c | platform::pure::test::resolveChild($c));
+    $children->filter(c | $c->instanceOf(platform::pure::metamodel::function::NativeFunction))->cast(@platform::pure::metamodel::function::NativeFunction<Any>)
+        ->concatenate($children->filter(c | $c->instanceOf(Package))->cast(@Package)->map(p | platform::pure::test::nativeFunctionsUnder($p)));
+}

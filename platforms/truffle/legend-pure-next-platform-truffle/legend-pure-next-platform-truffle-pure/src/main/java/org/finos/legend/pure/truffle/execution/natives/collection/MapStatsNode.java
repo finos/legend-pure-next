@@ -12,34 +12,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package org.finos.legend.pure.truffle.execution.natives.meta;
+package org.finos.legend.pure.truffle.execution.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.execution.ast.PureNode;
+import org.finos.legend.pure.truffle.execution.types.PureSequence;
 
-/**
- * {@code evaluateAndDeactivate(Any[m]) : Any[m]}.
- *
- * <p>Pass-through node that returns its child's value as-is. In the Pure
- * interpreter this is used to force evaluation of lazy expressions, but in
- * the Truffle runtime all expressions are already evaluated eagerly.</p>
- */
-@NodeInfo(shortName = "evaluateAndDeactivate")
-public final class EvaluateAndDeactivateNode extends PureNode
+/** {@code getMapStats(Map[1]) : MapStats[0..1]} — none: a Pure map is immutable and keeps no statistics. */
+@NodeInfo(shortName = "getMapStats")
+public final class MapStatsNode extends PureNode
 {
     @Child
-    private PureNode child;
+    private PureNode mapArg;
 
-    public EvaluateAndDeactivateNode(PureNode child)
+    public MapStatsNode(PureNode mapArg)
     {
-        this.child = child;
+        this.mapArg = mapArg;
     }
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        return child.executeGeneric(frame);
+        mapArg.executeGeneric(frame);
+        return PureSequence.EMPTY;
     }
 }

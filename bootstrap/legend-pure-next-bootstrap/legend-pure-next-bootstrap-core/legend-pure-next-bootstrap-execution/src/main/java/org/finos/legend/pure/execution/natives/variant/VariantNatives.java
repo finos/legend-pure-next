@@ -61,21 +61,21 @@ public class VariantNatives
                                 MetadataAccess resolver)
     {
         // fromJson(String[1]) : Variant[1]
-        natives.put("fromJson_String_1__Variant_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::variant::convert::fromJson_String_1__Variant_1_", (args, eval, genericType, multiplicity) ->
         {
             String json = (String) _E_ValueSpecification.unwrap(args.get(0));
             return _E_ValueSpecification.wrap(new PureVariant(JsonValue.parse(json)), genericType, multiplicity, resolver);
         });
 
         // toJson(Variant[1]) : String[1]
-        natives.put("toJson_Variant_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::variant::convert::toJson_Variant_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             PureVariant variant = (PureVariant) _E_ValueSpecification.unwrap(args.get(0));
             return _E_ValueSpecification.wrap(variant.getValue().toJson(), genericType, multiplicity, resolver);
         });
 
         // toVariant(Any[*]) : Variant[1]
-        natives.put("toVariant_Any_MANY__Variant_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::variant::convert::toVariant_Any_MANY__Variant_1_", (args, eval, genericType, multiplicity) ->
         {
             List<? extends ValueSpecification> values = _E_ValueSpecification.toCollection(args.get(0), resolver)._values();
             JsonValue json;
@@ -100,7 +100,7 @@ public class VariantNatives
         });
 
         // to(Variant[0..1], GenericTypeAndMultiplicityHolder<T|?>[1]) : T[0..1] — genericType is the resolved T
-        natives.put("to_Variant_$0_1$__GenericTypeAndMultiplicityHolder_1__T_$0_1$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::variant::convert::to_Variant_$0_1$__GenericTypeAndMultiplicityHolder_1__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
             PureVariant variant = unwrapVariant(args.get(0));
             if (variant == null)
@@ -112,7 +112,7 @@ public class VariantNatives
         });
 
         // toMany(Variant[0..1], GenericTypeAndMultiplicityHolder<T|?>[1]) : T[*] — genericType is the resolved T
-        natives.put("toMany_Variant_$0_1$__GenericTypeAndMultiplicityHolder_1__T_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::variant::convert::toMany_Variant_$0_1$__GenericTypeAndMultiplicityHolder_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             PureVariant variant = unwrapVariant(args.get(0));
             if (variant == null)

@@ -37,7 +37,7 @@ public class ElementPathNatives
                                 MetadataAccess resolver)
     {
         // pathToElement(String[1], String[1]) : PackageableElement[1]
-        natives.put("pathToElement_String_1__String_1__PackageableElement_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::meta::pathToElement_String_1__String_1__PackageableElement_1_", (args, eval, genericType, multiplicity) ->
         {
             String path = (String) _E_ValueSpecification.unwrap(args.get(0));
             String separator = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -74,7 +74,7 @@ public class ElementPathNatives
         });
 
         // lenientPathToElement(String[1], String[1]) : PackageableElement[0..1]
-        natives.put("lenientPathToElement_String_1__String_1__PackageableElement_$0_1$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::meta::lenientPathToElement_String_1__String_1__PackageableElement_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
             String path = (String) _E_ValueSpecification.unwrap(args.get(0));
             String separator = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -90,7 +90,7 @@ public class ElementPathNatives
         });
 
         // elementToPath(PackageableElement[1], String[1], Boolean[1]) : String[1]
-        natives.put("elementToPath_PackageableElement_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::meta::elementToPath_PackageableElement_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             Object element = _E_ValueSpecification.unwrap(args.get(0));
             Object separatorObj = _E_ValueSpecification.unwrap(args.get(1));
@@ -123,7 +123,7 @@ public class ElementPathNatives
         });
 
         // elementPath(PackageableElement[1]) : PackageableElement[1..*]
-        natives.put("elementPath_PackageableElement_1__PackageableElement_$1_MANY$_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::meta::elementPath_PackageableElement_1__PackageableElement_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
             Object element = _E_ValueSpecification.unwrap(args.get(0));
             List<Object> path = new ArrayList<>();
@@ -167,32 +167,8 @@ public class ElementPathNatives
             }
             return _E_ValueSpecification.wrap(String.valueOf(element), genericType, multiplicity, resolver);
         };
-        natives.put("elementToPath_PackageableElement_1__String_1_", elementToPath);
-        natives.put("elementToPath", elementToPath);
 
         // elementToPath(Type[1], String[1]) : String[1]
-        natives.put("elementToPath_Type_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
-        {
-            Object element = _E_ValueSpecification.unwrap(args.get(0));
-            Object separatorObj = _E_ValueSpecification.unwrap(args.get(1));
-            String separator = separatorObj != null ? separatorObj.toString() : "::";
-            // TempCompilerPointer carries its canonical path directly; don't walk
-            // the package chain (its package/name fields are unset).
-            if (element instanceof TempCompilerPointer p)
-            {
-                String path = p._path();
-                if (!"::".equals(separator))
-                {
-                    path = path.replace("::", separator);
-                }
-                return _E_ValueSpecification.wrap(path, genericType, multiplicity, resolver);
-            }
-            if (element instanceof PackageableElement pe)
-            {
-                return _E_ValueSpecification.wrap(elementToPathString(pe, separator, resolver), genericType, multiplicity, resolver);
-            }
-            return _E_ValueSpecification.wrap("", genericType, multiplicity, resolver);
-        });
     }
 
     // =========================================================================

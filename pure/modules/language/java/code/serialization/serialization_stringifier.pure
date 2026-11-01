@@ -28,6 +28,9 @@ Class platform::extensions::language::java::serialization::Stringifier
    stack            : platform::extensions::language::java::metamodel::Class[*];
    tab              : String[1];
    tabDepth         : Integer[1];
+   // How many lambda bodies the code being written sits in: a position marker carries it, so a stack frame that
+   // runs in a lambda's body picks that body's position on a line it shares with the call taking the lambda.
+   lambdaDepth      : Integer[0..1];
    scope            : Scope[1];
    foldLevel        : Integer[1];
    wipLine          : String[*];

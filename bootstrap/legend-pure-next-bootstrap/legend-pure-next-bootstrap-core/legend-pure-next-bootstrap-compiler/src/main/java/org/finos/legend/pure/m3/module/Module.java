@@ -57,4 +57,10 @@ public interface Module extends ModuleDefinition, MetadataAccess
     {
         return Set.of();
     }
+
+    /** Whether this module's element at {@code path} is a native function — what a native registry entry implements. */
+    default boolean isNativeFunction(String path)
+    {
+        return hasElement(path) && getElement(path) instanceof platform.pure.metamodel.function.NativeFunction;
+    }
 }

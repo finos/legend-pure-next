@@ -476,7 +476,9 @@ public final class PureRuntime
                     allGrammars.add(language.grammar());
                 }
             });
-            return new PureRuntime(registry, withLanguageNatives(), allGrammars, sourceRoots, polyglotOptions, languages);
+            NativeRegistry all = withLanguageNatives();
+            checkNatives(all);
+            return new PureRuntime(registry, all, allGrammars, sourceRoots, polyglotOptions, languages);
         }
 
         /**
@@ -515,12 +517,40 @@ public final class PureRuntime
             return all;
         }
 
+        /**
+         * The natives against what the loaded modules declare, keyed by full id: every native a loaded module
+         * declares is implemented here (an entry, or lowered by the AST builder itself), and no entry is for an
+         * element that is not a native — a function written in Pure is never replaced. An entry for an element
+         * no loaded module has is inert: its module is not loaded.
+         */
+        private void checkNatives(NativeRegistry all)
+        {
+            org.eclipse.collections.api.list.MutableList<org.finos.legend.pure.truffle.compiler.module.Module> modules =
+                    org.eclipse.collections.impl.factory.Lists.mutable.withAll(registry.modules());
+            org.eclipse.collections.api.list.MutableList<String> missing = modules
+                    .flatCollect((module) -> org.eclipse.collections.impl.factory.Sets.adapt(module.elementPaths()).select(module::isNativeFunction))
+                    .reject((id) -> all.signatures().contains(id) || org.finos.legend.pure.truffle.execution.PureASTBuilder.LOWERED_NATIVES.contains(id)
+                            || org.finos.legend.pure.truffle.execution.PureASTBuilder.NOT_ON_THIS_PLATFORM.containsKey(id))
+                    .distinct().sortThis();
+            org.eclipse.collections.api.list.MutableList<String> listedAsMissing = all.signatures()
+                    .select(org.finos.legend.pure.truffle.execution.PureASTBuilder.NOT_ON_THIS_PLATFORM::containsKey)
+                    .toSortedList();
+            org.eclipse.collections.api.list.MutableList<String> notNatives = all.signatures()
+                    .select((id) -> registry.hasElement(id) && modules.noneSatisfy((module) -> module.isNativeFunction(id)))
+                    .toSortedList();
+            if (missing.notEmpty() || notNatives.notEmpty() || listedAsMissing.notEmpty())
+            {
+                throw new IllegalStateException("the natives on Truffle do not match the loaded modules"
+                        + (missing.isEmpty() ? "" : "; declared but not implemented: " + missing.makeString(", "))
+                        + (listedAsMissing.isEmpty() ? "" : "; implemented but listed as not on this platform: " + listedAsMissing.makeString(", "))
+                        + (notNatives.isEmpty() ? "" : "; implemented but not natives (a function written in Pure is never replaced): " + notNatives.makeString(", ")));
+            }
+        }
+
         /** The full ids of the native functions {@code module} declares: how a language's natives are keyed. */
         private static org.eclipse.collections.api.set.SetIterable<String> declaredNatives(org.finos.legend.pure.truffle.compiler.module.Module module)
         {
-            return org.eclipse.collections.impl.factory.Sets.adapt(module.elementPaths())
-                    .select((path) -> org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(module.getElement(path),
-                            "platform::pure::metamodel::function::NativeFunction"));
+            return org.eclipse.collections.impl.factory.Sets.adapt(module.elementPaths()).select(module::isNativeFunction);
         }
 
         /**

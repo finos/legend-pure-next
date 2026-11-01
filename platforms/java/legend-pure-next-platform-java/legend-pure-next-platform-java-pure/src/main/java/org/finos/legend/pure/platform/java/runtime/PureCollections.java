@@ -52,6 +52,19 @@ public final class PureCollections
     }
 
     /**
+     * {@code toOneMany(values[, message])}: the values, or an error when there are none — with {@code message},
+     * evaluated only then, else as the other platforms word it.
+     */
+    public static List toOneMany(List<?> values, Supplier<?> message)
+    {
+        if (values.isEmpty())
+        {
+            throw new RuntimeException(message == null ? "toOneMany expected at least 1 element, got 0" : String.valueOf(message.get()));
+        }
+        return values;
+    }
+
+    /**
      * {@code map(coll, f)}: Pure's map concatenates the results — a to-many result is flattened and an empty one
      * (null) dropped.
      */
@@ -95,6 +108,28 @@ public final class PureCollections
     }
 
     /** {@code compare(a, b)} of values of unrelated types: by their Java class name first, as on the Truffle runtime. */
+    /**
+     * The native {@code sort(col, key, comp)}: {@code key} and {@code comp} are each {@code [0..1]} — a function, or
+     * none (null, or the empty list a {@code [0..1]} value holds when empty). Without {@code comp}, natural order;
+     * with {@code key}, the values compare by their keys. Stable, as the other platforms are.
+     */
+    public static List sort(List<?> values, Object key, Object comp)
+    {
+        Object k = one(key);
+        Object c = one(comp);
+        Comparator order = c == null
+                ? naturalOrder()
+                : (x, y) -> Long.signum(((Number) ((BiFunction) c).apply(x, y)).longValue());
+        Comparator by = k == null ? order : Comparator.comparing((Function) k, order);
+        return values.stream().sorted(by).toList();
+    }
+
+    /** A {@code [0..1]} value: itself, or null when it holds none. */
+    private static Object one(Object value)
+    {
+        return value instanceof List<?> list ? (list.isEmpty() ? null : list.get(0)) : value;
+    }
+
     public static long compare(Object a, Object b)
     {
         int c = a.getClass().getName().compareTo(b.getClass().getName());
