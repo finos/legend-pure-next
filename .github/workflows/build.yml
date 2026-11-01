@@ -720,6 +720,10 @@ jobs:
       - name: Truffle test
         run: just truffle::test
 
+      # Compiled and tested by the Truffle CLI just built: see the translations job.
+      - name: Relation extension (Truffle)
+        run: just extensions::pure::relation::test-all
+
       - name: Truffle self-host
         run: just truffle::spec-compiler-selfhost
 
@@ -1290,6 +1294,13 @@ jobs:
         run: |
           just modules::protocol::build
           just extensions::build-tests
+
+      # The relation functions are compiled by a real platform's CLI — Truffle's, restored above with
+      # truffle-artifacts: their tests are written on `#TDS…#` literals, which only a platform's compiler
+      # (it runs with the language extensions) compiles. Every host loads relation.pdb with the extensions.
+      - name: Build the relation extension (Truffle)
+        if: matrix.target == 'javascript' || matrix.target == 'java'
+        run: just extensions::pure::relation::build-tests
 
       - name: Translation ${{ matrix.target }}
         working-directory: pure/modules/translation/${{ matrix.target }}
