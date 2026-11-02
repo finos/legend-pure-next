@@ -31,7 +31,8 @@
 #   publish-gallery → all-green
 #
 # Jobs hand their work on through the Bazel disk cache (.bazelrc config ci): bootstrap and truffle save
-# theirs, the jobs that need them restore it, and main saves the one every run starts from. The manual tiers (tags
+# theirs, the jobs that need them restore it, main saves the one every run starts from, and all-green deletes the run's
+# own once it passes. The downloads are one repository cache, shared by every job and run (.github/actions/bazel). The manual tiers (tags
 # bootstrap, selfhost) are not in //..., so not in a local `bazel test //...`, but CI runs them on every run, in
 # parallel. The test dashboard reads each job's reports as before (tools/bazel/collect-reports.mjs).
 name: Build CI
@@ -118,9 +119,22 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up Bazel
+        id: bazel
         uses: ./.github/actions/bazel
         with:
           restore-from: bootstrap
+
+      # The downloads of every job, saved once per key: this job fetches those it does not need itself.
+      - name: Fetch every external dependency
+        if: steps.bazel.outputs.repository-cache-hit != 'true'
+        run: bazel fetch //...
+
+      - name: Save the Bazel repository cache
+        if: steps.bazel.outputs.repository-cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/bazel-repo
+          key: ${{ steps.bazel.outputs.repository-cache-key }}
 
       - name: Check every required test belongs to one job
         run: tools/bazel/check-job-coverage.sh
@@ -150,14 +164,12 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
 
-      - name: Save the Bazel caches for the jobs that need this one
+      - name: Save the Bazel disk cache for the jobs that need this one
         if: always()
         uses: actions/cache/save@v4
         with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: bazel-${{ runner.os }}-${{ github.run_id }}-bootstrap
+          path: ~/.cache/bazel-disk
+          key: bazel-disk-${{ runner.os }}-${{ github.run_id }}-bootstrap
 
   bootstrap-self-host:
     name: "Bootstrap tier (${{ matrix.part }})"
@@ -318,14 +330,12 @@ jobs:
         run: bazel test --build_tests_only --test_tag_filters=job:truffle //...
 
       # The cache the next run on any branch starts from.
-      - name: Save the Bazel caches for later runs
+      - name: Save the Bazel disk cache for later runs
         if: github.ref == 'refs/heads/main'
         uses: actions/cache/save@v4
         with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: bazel-${{ runner.os }}-main-${{ github.run_id }}
+          path: ~/.cache/bazel-disk
+          key: bazel-disk-${{ runner.os }}-main-${{ github.run_id }}
 
       - name: Collect dashboard reports
         if: always()
@@ -342,14 +352,12 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
 
-      - name: Save the Bazel caches for the jobs that need this one
+      - name: Save the Bazel disk cache for the jobs that need this one
         if: always()
         uses: actions/cache/save@v4
         with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: bazel-${{ runner.os }}-${{ github.run_id }}-truffle
+          path: ~/.cache/bazel-disk
+          key: bazel-disk-${{ runner.os }}-${{ github.run_id }}-truffle
 
   truffle-native:
     name: Truffle native image (${{ matrix.suite }})
@@ -697,6 +705,9 @@ jobs:
       - publish-gallery
     if: always()
     runs-on: ubuntu-24.04
+    # Deleting this run's caches (the token of a pull request from a fork cannot: it keeps them, to age out).
+    permissions:
+      actions: write
     steps:
       - name: Verify all dependencies succeeded
         env:
@@ -707,3 +718,25 @@ jobs:
             exit 1
           fi
           echo "All required checks passed."
+
+      # A passed run needs its job-to-job disk caches no more (a failed one keeps them, for a re-run of its failed
+      # jobs); on main, only this run's 'main' cache is kept, the one the next runs start from.
+      - name: Delete the disk caches no later run needs
+        if: github.event.pull_request.head.repo.fork != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OS: ${{ runner.os }}
+          RUN: ${{ github.run_id }}
+          ON_MAIN: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          stale() {
+            gh cache list --limit 100 --key "bazel-disk-$OS-$RUN-" --json key --jq '.[].key'
+            if [[ "$ON_MAIN" == "true" ]]; then
+              gh cache list --limit 100 --key "bazel-disk-$OS-main-" --json key --jq ".[].key | select(. != \"bazel-disk-$OS-main-$RUN\")"
+            fi
+          }
+          stale | while read -r key; do
+            echo "deleting the cache '$key'"
+            gh cache delete "$key"
+          done

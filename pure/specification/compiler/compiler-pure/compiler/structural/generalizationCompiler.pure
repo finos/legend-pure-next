@@ -28,6 +28,14 @@ function platform::pure::compiler::structural::generalizationCompiler::compileGe
             a : Any[1]        | []->cast(@TypeParameter)
         ]
     );
+    // Its multiplicity parameters too, so that one a super type names ('{U[1]->V[m]}') is the class's own, owner
+    // included, as Java's ClassHandler resolves it; the enclosing scope is restored after.
+    let mulParams = $skeleton->match(
+        [
+            c : Class<Any>[1] | $c.multiplicityParameters->cast(@platform::pure::metamodel::multiplicity::MultiplicityParameter),
+            a : Any[1]        | []->cast(@platform::pure::metamodel::multiplicity::MultiplicityParameter)
+        ]
+    );
     // Platform fix in MetaNatives.new auto-anchors ^Generalization(...) classifier
     // at canonical GenericType_Generalization (UDPGT), matching Java's
     // GeneralizationImpl(model) ctor.
@@ -39,7 +47,7 @@ function platform::pure::compiler::structural::generalizationCompiler::compileGe
               )],
               context = $context
           ),
-        | $protocolGeneralizations->fold({g, acc |
+        | let compiled = $protocolGeneralizations->fold({g, acc |
               let gtResult = $g.general->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParams, 'super type', $ownerContext);
               ^$acc(
                   values += ^Generalization(
@@ -48,6 +56,7 @@ function platform::pure::compiler::structural::generalizationCompiler::compileGe
                   ),
                   context = $gtResult.context
               );
-          }, ^CompilerListResult<Generalization>(context = $context))
+          }, ^CompilerListResult<Generalization>(context = ^$context(ownerMulParams = $mulParams)));
+          ^$compiled(context = ^$compiled.context(ownerMulParams = $context.ownerMulParams));
     );
 }

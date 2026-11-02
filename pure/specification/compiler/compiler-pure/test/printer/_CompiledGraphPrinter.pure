@@ -587,7 +587,8 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::printT
                             // pointer's `.path` is used directly. shortPath has its
                             // own pointer arm that reads `.path` instead of `.name`.
                             ptr:TempCompilerPointer[1] | $ptr->cast(@PackageableElement)->shortPath(),
-                            tp:TypeParameter[1] | $tp.name + if($tp.owner->isEmpty(), | '', | '~' + $tp.owner->toOne()->match([ pe:PackageableElement[1] | $pe->shortPath(), a:Any[1] | '?' ])),
+                            // A contravariant one as it is declared, '-U'.
+                            tp:TypeParameter[1] | if($tp.contravariant == true, | '-', | '') + $tp.name + if($tp.owner->isEmpty(), | '', | '~' + $tp.owner->toOne()->match([ pe:PackageableElement[1] | $pe->shortPath(), a:Any[1] | '?' ])),
                             ft:FunctionType[1] |
                                 let pStr = $ft.parameters->cast(@VariableExpression)->map(p | $p.genericType->toOne()->printType() + $p.multiplicity->toOne()->printMul())->joinStrings(', ');
                                 let rStr = $ft.returnType->toOne()->printType() + $ft.returnMultiplicity->toOne()->printMul();

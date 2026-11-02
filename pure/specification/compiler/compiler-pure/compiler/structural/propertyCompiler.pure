@@ -77,20 +77,23 @@ function platform::pure::compiler::structural::propertyCompiler::compileProperty
               taggedValues = $tvResult.values,
               sourceInformation = compileSourceInformation($protocolProperty.p_sourceInformation, $context)
           );
-          let finalProp = if($protocolProperty.defaultValue->isEmpty(),
-              | $builtProp,
+          let defaultCompiled = if($protocolProperty.defaultValue->isEmpty(),
+              | pair($builtProp, $annotCtx),
               | let defaultLambda = $protocolProperty.defaultValue->toOne()->cast(@platform::pure::protocol::grammar::function::LambdaFunction);
-                // The class's type parameters are in scope in its defaults, as in pass 3 for its qualified
-                // properties (class/property/defaultValue_typeParameter).
-                let defaultResult = $defaultLambda->compileLambda(^$annotCtx(ownerTypeParams = $owner.typeParameters->cast(@TypeParameter)), [], [], []);
+                // The class's type and multiplicity parameters are in scope in its defaults, as in pass 3 for its
+                // qualified properties (class/property/defaultValue_typeParameter, defaultValue_multiplicityParameter).
+                let defaultResult = $defaultLambda->compileLambda(^$annotCtx(ownerTypeParams = $owner.typeParameters->cast(@TypeParameter), ownerMulParams = $owner.multiplicityParameters->cast(@platform::pure::metamodel::multiplicity::MultiplicityParameter)), [], [], []);
+                // What it refers to is in the reverse index ('cast(@pack::Box<V|m>)': pass 3 records the
+                // functions it calls, never the types it names), and nothing else of the lambda context is kept.
+                let withReferences = ^$annotCtx(referencedBy = $defaultResult.context->toOne().referencedBy);
                 if($defaultResult.values->isEmpty(),
-                    | $builtProp,
-                    | ^$builtProp(defaultValue = $defaultResult.values->at(0)->cast(@AtomicValue).value->toOne()->cast(@LambdaFunction<Any>))
+                    | pair($builtProp, $withReferences),
+                    | pair(^$builtProp(defaultValue = $defaultResult.values->at(0)->cast(@AtomicValue).value->toOne()->cast(@LambdaFunction<Any>)), $withReferences)
                 );
           );
           ^CompilerResult<Property<Nil, Any|*>>(
-              value = $finalProp,
-              context = $annotCtx
+              value = $defaultCompiled.first,
+              context = $defaultCompiled.second
           );
     );
 }

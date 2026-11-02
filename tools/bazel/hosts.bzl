@@ -207,7 +207,8 @@ HOSTS = {
                 # Interpreted: its PDB goldens take over 15 minutes (Bazel's large timeout) on a CI runner.
                 "timeout": "eternal",
                 "tags": ["manual", "bootstrap"],
-                "runs": lambda owner, test: owner in ["core", "compiler"],
+                # And the legacy layer, which just runs on the bootstrap (extensions::legacy::test-all).
+                "runs": lambda owner, test: owner in ["core", "compiler", "legacy", "legacy_loader"],
             },
             # The compiler corpus on compiler-pure as the compiler written in Pure, run by the bootstrap, compiles it.
             "selfhost": {
@@ -292,6 +293,14 @@ PENDING = {
     ("javascript", "cli", "relation", "pct"): "the relation natives have no JavaScript coder yet (spec Section 6: relation on Java and JavaScript), so the PCT tests that call them are not translated: 'no translated function for ...::size::testSimpleSize_Function_1__Boolean_1_'",
     ("javascript", "translated", "relation", "pct"): "the relation natives have no JavaScript coder yet (spec Section 6: relation on Java and JavaScript), so the PCT tests that call them are not translated: 'no translated function for ...::size::testSimpleSize_Function_1__Boolean_1_'",
     ("javascript", "cli", "translation-shared", "unit"): "7 of 41 canonicalisation tests fail on the JavaScript platform: 'no translated function for <native>' (as on the Java platform)",
+    # The legacy layer, run on the bootstrap only before Bazel (just: extensions::legacy::test-all).
+    ("truffle", "jit", "legacy", "unit"): "3 of 35 bridge tests fail on Truffle: 'type parameter T could not be resolved at runtime' (natives::testEnumValuesOfAView), and a dynamic new from a view returns no value (testDynamicNewFromAViewOf*)",
+    ("truffle", "native", "legacy", "unit"): "3 of 35 bridge tests fail on Truffle: 'type parameter T could not be resolved at runtime' (natives::testEnumValuesOfAView), and a dynamic new from a view returns no value (testDynamicNewFromAViewOf*)",
+    ("truffle", "jit", "legacy_loader", "loader"): "29 of 57 loader tests fail on Truffle: 'String cannot be cast to Any' (and Integer, Boolean) in meta::pure::bridge::loader::rewrite (code/rewrite.pure)",
+    ("truffle", "native", "legacy_loader", "loader"): "29 of 57 loader tests fail on Truffle: 'String cannot be cast to Any' (and Integer, Boolean) in meta::pure::bridge::loader::rewrite (code/rewrite.pure)",
+    ("java", "platform", "legacy", "unit"): "27 of 35 bridge tests fail on the Java platform: 'ClassImpl cannot be cast to Class', 'Cannot call PureLambdaValue.execute(FunctionDefinition)'",
+    ("javascript", "cli", "legacy", "unit"): "0 of 35 bridge tests run on the JavaScript platform: 'no translated function for meta::pure::bridge::tests::...' (the layer, package meta, is not translated)",
+    ("javascript", "cli", "legacy_loader", "loader"): "0 of 57 loader tests run on the JavaScript platform: 'no translated function for meta::pure::bridge::loader::tests::...' (package meta is not translated)",
     ("java", "platform", "javascript", "unit"): "127 of 133 JavaScript language tests fail on the Java platform: the Java translator leaves the quotes of a string literal unescaped (serialization::callSiteMarker_Node_1__String_1_: ';' expected)",
 }
 

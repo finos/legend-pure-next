@@ -292,7 +292,7 @@ function platform::pure::compiler::runCompilePass1(e:platform::pure::protocol::g
             let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().value);
             let className = if($packagePath == '', | $c.name, | $packagePath + '::' + $c.name);
             let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
-            let typeParams = $c.typeParameters->map(tp | buildTypeParameter($tp.name, false));
+            let typeParams = $c.typeParameters->map(tp | buildTypeParameter($tp.name, $tp.contravariant));
             let mulParams = $c.multiplicityParameters->map(mp | buildUserDefinedMultiplicityParameter($mp.name)->cast(@MultiplicityParameter));
             // Pass-1 class skeleton built with a {@link ClassPointer} self-ref
             // for {@code classifierGenericType.typeArguments[0].type} — avoids

@@ -17,6 +17,7 @@
 load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_run_binary")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@npm//platforms/javascript:esbuild/package_json.bzl", esbuild = "bin")
 load("//tools/bazel:hosts.bzl", "host_specs")
@@ -337,4 +338,12 @@ copy_to_directory(
     ],
     root_paths = [],
     tags = ["job:translations"],
+)
+
+# The browser IDE, served locally (just: javascript::serve): bazel run //platforms/javascript:serve [-- <port>].
+sh_binary(
+    name = "serve",
+    srcs = ["serve.sh"],
+    args = ["$(rootpath :ide_site)"],
+    data = [":ide_site"],
 )

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Copy a field-ID registry the schema generation wrote over the tracked one: the only writes of sources the Bazel
-# build makes, and only when asked (bazel run //:update_fbs_ids, //:update_island_fbs_ids).
+# build makes, and only when asked (bazel run //:update_fbs_ids__<registry>).
 #
 #   update-fbs-ids.sh <generated> <tracked, relative to the repository root>
 

@@ -172,6 +172,14 @@ pure_suites.module(
     manifest = "//pure/extensions/pure/relation:module.json",
     report_dir = "spec/relation",
 )
+pure_suites.module(
+    manifest = "//pure/extensions/legacy:module.json",
+    report_dir = "spec/legacy",
+)
+pure_suites.module(
+    manifest = "//pure/extensions/legacy/loader:module.json",
+    report_dir = "spec/legacy",
+)
 use_repo(pure_suites, "pure_suites")
 
 # Node, as CI installs it (build.yml NODE_VERSION: 22), and the JavaScript platform packages, from its pnpm lock.

@@ -1,0 +1,63 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+import pack::*;
+
+Class pack::Box<V|m>
+{
+  name: String[1];
+}
+
+Class pack::Wrapper<V|m>
+{
+  next: Any[0..1];
+  name: String[1] = $this.next->cast(@Box<V|m>).name->toOne();
+}
+
+###CompiledGraph
+class pack::Box extends Any  ~Class<pack::Box<V~pack::Box|m~pack::Box>>  @17:1-20:1
+  property name :@String@[1]  ~Property<pack::Box<V~pack::Box|m~pack::Box>, @String@|1>
+
+class pack::Wrapper extends Any  ~Class<pack::Wrapper<V~pack::Wrapper|m~pack::Wrapper>>  @22:1-26:1
+  property next :@Any@[0..1]  ~Property<pack::Wrapper<V~pack::Wrapper|m~pack::Wrapper>, @Any@|0..1>
+  property name :@String@[1]  ~Property<pack::Wrapper<V~pack::Wrapper|m~pack::Wrapper>, @String@|1>
+    defaultValue Lambda(this:pack::Wrapper<V~pack::Wrapper|m~pack::Wrapper>[1])  ~#LambdaFunction<#{pack::Wrapper<V~pack::Wrapper|m~pack::Wrapper>[1]->#String##[1]#}#>#
+      ArrowInvocation toOne_T_MANY__T_1_ :#String##[1]#  ~@ArrowInvocation@  @25:53-25:61
+        typeParam T -> #String#
+        FunctionInvocation map_T_$0_1$__Function_1__V_$0_1$_ :#String##[0..1]#  ~@FunctionInvocation@  @25:48-25:52
+          typeParam T -> #pack::Box<V~pack::Wrapper>#
+          typeParam V -> #String#
+          ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#pack::Box<V~pack::Wrapper>##[0..1]#  ~@ArrowInvocation@  @25:31-25:47
+            typeParam T -> #pack::Box<V~pack::Wrapper>#
+            mulParam m -> #[0..1]#
+            DotApplication pack::Wrapper.next :#Any##[0..1]#  ~@DotApplication@  @25:26-25:30
+              Variable this :#pack::Wrapper<V~pack::Wrapper|m~pack::Wrapper>##[1]#  ~@VariableExpression@  @25:21-25:25
+            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<pack::Box<V~pack::Wrapper|m~pack::Wrapper>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<pack::Box<V~pack::Wrapper|m~pack::Wrapper>|?>  @25:38-25:46
+          Lambda(v_automap:#pack::Box<V~pack::Wrapper|m~pack::Wrapper>#[1]) :#LambdaFunction<#{#pack::Box<V~pack::Wrapper|m~pack::Wrapper>#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
+            DotApplication pack::Box.name :#String##[1]#  ~@DotApplication@  @25:48-25:52
+              Variable v_automap :#pack::Box<V~pack::Wrapper|m~pack::Wrapper>##[1]#  ~@VariableExpression@
+
+###ReverseIndex
+pack::Box:
+  pack::Wrapper.name
+pack::Box.name:
+  pack::Wrapper.name
+pack::Wrapper.next:
+  pack::Wrapper.name
+platform::pure::functions::collection::map_T_$0_1$__Function_1__V_$0_1$_:
+  pack::Wrapper.name
+platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+  pack::Wrapper.name
+platform::pure::functions::lang::toOne_T_MANY__T_1_:
+  pack::Wrapper.name

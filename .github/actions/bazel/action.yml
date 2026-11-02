@@ -12,14 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The setup of a Bazel job: Node (the report tools), and the Bazel caches of the job it needs, restored. The job
-# saves its own with actions/cache/save, when a job downstream needs them.
+# The setup of a Bazel job: Node (the report tools), and the two Bazel caches, restored.
+# - The repository cache (the downloads: GraalVM, the JDK, Node, the Maven jars, the npm packages) is one cache for
+#   every job and run, keyed on what pins the downloads; the bootstrap job saves it when the key is new.
+# - The disk cache (the action outputs) of the job this one needs: the job saves its own with actions/cache/save, when
+#   a job downstream needs it, and all-green deletes the run's once the run passes (each is about a gigabyte, against
+#   the repository's 10 GB of caches).
 name: Bazel job
-description: Restore the Bazel disk and repository caches, and set up Node and the ci configuration.
+description: Restore the Bazel repository and disk caches, and set up Node and the ci configuration.
 inputs:
   restore-from:
-    description: The job whose caches to restore (this run first, then the latest of any run).
+    description: The job whose disk cache to restore (this run first, then the latest of main, then of any run).
     required: true
+outputs:
+  repository-cache-key:
+    description: The key of the repository cache.
+    value: ${{ steps.repository.outputs.key }}
+  repository-cache-hit:
+    description: Whether the repository cache of that key was restored ('true'), so not to be saved again.
+    value: ${{ steps.restore-repository.outputs.cache-hit }}
 runs:
   using: composite
   steps:
@@ -28,17 +39,29 @@ runs:
       with:
         node-version: '22'
 
-    - name: Restore the Bazel caches
+    - name: Name the repository cache
+      id: repository
+      shell: bash
+      run: echo "key=bazel-repo-${{ runner.os }}-${{ hashFiles('.bazelversion', 'MODULE.bazel', 'MODULE.bazel.lock', 'maven_install.json', 'tools/bazel/*.bzl', 'platforms/javascript/pnpm-lock.yaml') }}" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the Bazel repository cache
+      id: restore-repository
       uses: actions/cache/restore@v4
       with:
-        path: |
-          ~/.cache/bazel-disk
-          ~/.cache/bazel-repo
-        key: bazel-${{ runner.os }}-${{ github.run_id }}-${{ inputs.restore-from }}
+        path: ~/.cache/bazel-repo
+        key: ${{ steps.repository.outputs.key }}
         restore-keys: |
-          bazel-${{ runner.os }}-${{ github.run_id }}-
-          bazel-${{ runner.os }}-main-
-          bazel-${{ runner.os }}-
+          bazel-repo-${{ runner.os }}-
+
+    - name: Restore the Bazel disk cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/.cache/bazel-disk
+        key: bazel-disk-${{ runner.os }}-${{ github.run_id }}-${{ inputs.restore-from }}
+        restore-keys: |
+          bazel-disk-${{ runner.os }}-${{ github.run_id }}-
+          bazel-disk-${{ runner.os }}-main-
+          bazel-disk-${{ runner.os }}-
 
     - name: Use the ci configuration
       shell: bash

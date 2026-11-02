@@ -101,7 +101,7 @@ jvm_heap               := "2g"
 header := "h(){ s=\"[java::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
 substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
 
-default: spike
+default: test-all
 
 # The awk splitters below write one file per `//// FILE <path>` marker. Each closes the previous
 # file first: an unclosed file stays open, and macOS caps a process at 256 open files by default
@@ -751,21 +751,3 @@ gallery PACKAGE="platform::pure::functions" OUT=(java_root / "build" / "java-pla
         --function "platform::extensions::language::java::translation::gallery::renderGallery_String_1__String_1_" \
         --args "{{PACKAGE}}" > {{OUT}}
     @echo "  wrote {{OUT}} ($(wc -c < {{OUT}} | tr -d ' ') bytes)"
-
-# Read a Class element out of a PDB with the translated reader.
-spike PDB=(shared / "core.pdb") ELEMENT="platform::pure::metamodel::type::Class": compile
-    @{{header}} 'spike'
-    @{{substep}} 'java: read {{ELEMENT}}'
-    java -cp {{classes}} org.finos.legend.pure.platform.java.compiler.module.pdbModule.PdbSpike "{{PDB}}" {{repo_root}}/shared/specification/m3.fbs "{{ELEMENT}}"
-
-# Navigate the Pure metamodel from PDBs through the generated typed interfaces.
-metamodel-spike ELEMENT="platform::pure::metamodel::type::Class": compile
-    @{{header}} 'metamodel-spike'
-    @{{substep}} 'java: navigate {{ELEMENT}} (core.pdb + compiler.pdb)'
-    java -cp {{classes}} org.finos.legend.pure.platform.java.compiler.module.pdbModule.MetamodelSpike {{repo_root}}/shared/specification/m3.fbs "{{ELEMENT}}" {{shared}}/core.pdb {{shared}}/compiler.pdb
-
-# One object model: instances built at run time next to PDB-read ones.
-model-spike: compile
-    @{{header}} 'model-spike'
-    @{{substep}} 'java: build a Class in memory, copy a PDB element'
-    java -cp {{classes}} org.finos.legend.pure.platform.java.compiler.module.pdbModule.ModelSpike {{repo_root}}/shared/specification/m3.fbs {{shared}}/core.pdb

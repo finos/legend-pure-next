@@ -164,7 +164,7 @@ genrule(
 )
 
 # The test island values: their FlatBuffer fragment, and the registry of its field IDs it was generated with (the
-# tracked registry is an input: //tools/bazel:island_fbs_ids_up_to_date checks it is current).
+# tracked registry is an input: //tools/bazel:fbs_ids_up_to_date__island checks it is current).
 genrule(
     name = "island_fbs",
     srcs = _PASS1_INPUTS + ["compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt"],

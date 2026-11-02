@@ -60,7 +60,8 @@ function platform::pure::functions::printer::compiled::printCompiledTypeAndMulPa
 {
     if ($typeParams->isEmpty() && $mulParams->isEmpty(),
         | '',
-        | let t = $typeParams->map(tp | $tp.name)->joinStrings(',');
+        | // A contravariant one as it is declared, '-U'.
+          let t = $typeParams->map(tp | if ($tp.contravariant == true, | '-', | '') + $tp.name)->joinStrings(',');
           let m = $mulParams->map(mp | $mp.name)->joinStrings(',');
           let sep = if ($mulParams->isEmpty(), | '', | '|');
           '<' + $t + $sep + $m + '>';

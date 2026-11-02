@@ -34,7 +34,8 @@ def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources =
       resources: test resources, on the classpath.
       jvm_flags: flags of the test JVM.
       plugins: annotation processors of the test sources.
-      visibility: the visibility of '<name>_lib'.
+      visibility: the visibility of '<name>_lib' and '<name>_runner' (a command that runs some of the tests, as
+        //tools/bazel:update_pdb_goldens__compiler).
       **kwargs: passed to the java_test (tags, size, timeout, shard_count, env).
     """
     java_library(
@@ -58,6 +59,7 @@ def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources =
         testonly = True,
         jvm_flags = jvm_flags,
         main_class = "org.junit.platform.console.ConsoleLauncher",
+        visibility = visibility,
         runtime_deps = [
             ":%s_lib" % name,
             "@maven//:org_junit_platform_junit_platform_console_standalone",

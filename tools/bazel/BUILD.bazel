@@ -19,34 +19,34 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 # Build helpers (junit5.bzl, srcjar.bzl), flatc, and the field-ID registry check.
 
 # Each tracked field-ID registry: a test that it holds every ID its schema generation assigned, and the command that
-# writes them back. {name: (tracked, generated)}.
+# writes them back: fbs_ids_up_to_date__<registry> and update_fbs_ids__<registry>. {registry: (tracked, generated)}.
 _FBS_ID_REGISTRIES = {
-    "fbs_ids": (
+    "m3": (
         "//pure/specification:m3-fbs-field-ids.txt",
         "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:m3-fbs-field-ids.txt",
     ),
-    "diagram_fbs_ids": (
+    "diagram": (
         "//pure/extensions/diagram:diagram-fbs-field-ids.txt",
         "//pure/extensions/diagram:generated/diagram-fbs-field-ids.txt",
     ),
-    "island_fbs_ids": (
+    "island": (
         "//pure/specification:compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt",
         "//pure/specification:compiler/generated/islandTest-fbs-field-ids.txt",
     ),
-    "tds_fbs_ids": (
+    "tds": (
         "//pure/extensions/pure/tds:tds-fbs-field-ids.txt",
         "//pure/extensions/pure/tds:generated/tds-fbs-field-ids.txt",
     ),
 }
 
 [sh_test(
-    name = name + "_up_to_date",
+    name = "fbs_ids_up_to_date__" + name,
     tags = ["job:bootstrap"],
     srcs = ["fbs-ids-up-to-date.sh"],
     args = [
         "$(rootpath %s)" % tracked,
         "$(rootpath %s)" % generated,
-        "bazel run //:update_" + name,
+        "bazel run //:update_fbs_ids__" + name,
     ],
     data = [
         tracked,
@@ -55,7 +55,7 @@ _FBS_ID_REGISTRIES = {
 ) for name, (tracked, generated) in _FBS_ID_REGISTRIES.items()]
 
 [sh_binary(
-    name = "update_" + name,
+    name = "update_fbs_ids__" + name,
     srcs = ["update-fbs-ids.sh"],
     args = [
         "$(rootpath %s)" % generated,
@@ -64,6 +64,85 @@ _FBS_ID_REGISTRIES = {
     data = [generated],
     visibility = ["//:__pkg__"],
 ) for name, (tracked, generated) in _FBS_ID_REGISTRIES.items()]
+
+_BOOTSTRAP_COMPILER = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler"
+
+_TRUFFLE_CLI = "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle"
+
+# What Truffle loads to run Pure, as its suites do (hosts.bzl: prelude).
+_TRUFFLE_PRELUDE = [
+    _BOOTSTRAP_COMPILER + ":core.pdb",
+    "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
+    _BOOTSTRAP_COMPILER + ":core-tests.pdb",
+    "//pure/specification:compiler.pdb",
+    "//pure/specification:compiler-tests.pdb",
+]
+
+# The PDB goldens the Pure writer writes, written back to the source tree: update_pdb_goldens__<owner>.
+# {owner: (CLI, PDBs, golden function, fixtures, subdirectory, goldens)}.
+_PDB_GOLDENS = {
+    # The test island values (just: bootstrap::regen-island-goldens), on the bootstrap.
+    "island": (
+        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap",
+        [
+            _BOOTSTRAP_COMPILER + ":core.pdb",
+            _BOOTSTRAP_COMPILER + ":core-tests.pdb",
+            "//pure/specification:compiler.pdb",
+            "//pure/specification:compiler-tests.pdb",
+        ],
+        "platform::pure::compiler::test::pdb::goldenHexOf_String_1__String_1__String_1_",
+        "pure/specification/compiler/tests",
+        "valueSpecification/island",
+        "pure/specification/compiler/tests-pdb-serialization",
+    ),
+    "diagram": (
+        _TRUFFLE_CLI,
+        _TRUFFLE_PRELUDE + ["//pure/extensions/diagram:build/diagram.pdb", "//pure/extensions/diagram:build/diagram-tests.pdb"],
+        "platform::extensions::pure::diagram::tests::goldenHexOf_String_1__String_1__String_1_",
+        "pure/extensions/diagram/tests/compiler",
+        ".",
+        "pure/extensions/diagram/tests/compiler-pdb-serialization",
+    ),
+    "tds": (
+        _TRUFFLE_CLI,
+        _TRUFFLE_PRELUDE + ["//pure/extensions/pure/tds:build/tds.pdb", "//pure/extensions/pure/tds:build/tds-tests.pdb"],
+        "platform::extensions::pure::tds::tests::goldenHexOf_String_1__String_1__String_1_",
+        "pure/extensions/pure/tds/tests/compiler",
+        ".",
+        "pure/extensions/pure/tds/tests/compiler-pdb-serialization",
+    ),
+}
+
+[sh_binary(
+    name = "update_pdb_goldens__" + owner,
+    srcs = ["update-pdb-goldens.sh"],
+    args = [
+        "$(rootpath %s)" % cli,
+        function,
+        fixtures,
+        subdirectory,
+        goldens,
+    ] + [a for pdb in pdbs for a in ["--pdb", "$(rootpath %s)" % pdb]],
+    data = [cli] + pdbs,
+    visibility = ["//:__pkg__"],
+) for owner, (cli, pdbs, function, fixtures, subdirectory, goldens) in _PDB_GOLDENS.items()]
+
+# The compiler PDB goldens, from the Java writer of the bootstrap (PdbGoldenGeneratorTest; Maven: -Dpdb.goldens.dir).
+sh_binary(
+    name = "update_pdb_goldens__compiler",
+    testonly = True,
+    srcs = ["update-pdb-goldens-junit.sh"],
+    args = [
+        "$(rootpath %s:tests_runner)" % _BOOTSTRAP_COMPILER,
+        "org.finos.legend.pure.m3.specification.PdbGoldenGeneratorTest",
+        "pure/specification/compiler/tests-pdb-serialization",
+    ],
+    data = [
+        _BOOTSTRAP_COMPILER + ":tests_runner",
+        "//pure/specification:all",
+    ],
+    visibility = ["//:__pkg__"],
+)
 
 # flatc for the machine a build runs on.
 alias(

@@ -14,15 +14,27 @@
 
 # The repository root: repository-wide commands.
 
-# Write the field-ID registries a model change needs back to the source tree (tools/bazel: update_*).
+# Write the field-ID registries a model change needs back to the source tree (tools/bazel: update_fbs_ids__*).
 [alias(
-    name = "update_" + name,
-    actual = "//tools/bazel:update_" + name,
-) for name in [
-    "diagram_fbs_ids",
-    "fbs_ids",
-    "island_fbs_ids",
-    "tds_fbs_ids",
+    name = "update_fbs_ids__" + registry,
+    actual = "//tools/bazel:update_fbs_ids__" + registry,
+) for registry in [
+    "diagram",
+    "island",
+    "m3",
+    "tds",
+]]
+
+# Write the PDB goldens back to the source tree (tools/bazel: update_pdb_goldens__*).
+[alias(
+    name = "update_pdb_goldens__" + owner,
+    actual = "//tools/bazel:update_pdb_goldens__" + owner,
+    testonly = owner == "compiler",
+) for owner in [
+    "compiler",
+    "diagram",
+    "island",
+    "tds",
 ]]
 
 # The PDBs and schemas the Java tests and the suites find in a 'shared' directory, as just stages them in
