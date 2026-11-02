@@ -190,6 +190,40 @@ public final class PureValues
     }
 
     /**
+     * `a + b`, `a - b`, `a * b` on two values typed Number, by what they hold: two Integers give an Integer, a Decimal
+     * makes it a Decimal, anything else a Float, as on every host. Java has no operator for two Numbers; the
+     * translator calls these only then (primitiveInfix), concrete operands keeping their own operator.
+     */
+    public static Number plus(Number a, Number b)
+    {
+        return arithmetic(a, b, (x, y) -> x + y, (x, y) -> x + y, BigDecimal::add);
+    }
+
+    public static Number minus(Number a, Number b)
+    {
+        return arithmetic(a, b, (x, y) -> x - y, (x, y) -> x - y, BigDecimal::subtract);
+    }
+
+    public static Number times(Number a, Number b)
+    {
+        return arithmetic(a, b, (x, y) -> x * y, (x, y) -> x * y, BigDecimal::multiply);
+    }
+
+    private static Number arithmetic(Number a, Number b, java.util.function.LongBinaryOperator integer,
+                                     java.util.function.DoubleBinaryOperator floating, java.util.function.BinaryOperator<BigDecimal> decimal)
+    {
+        if (a instanceof Long x && b instanceof Long y)
+        {
+            return integer.applyAsLong(x, y);
+        }
+        if (a instanceof BigDecimal || b instanceof BigDecimal)
+        {
+            return decimal.apply(new BigDecimal(a.toString()), new BigDecimal(b.toString()));
+        }
+        return floating.applyAsDouble(a.doubleValue(), b.doubleValue());
+    }
+
+    /**
      * Java has no unary minus for Number: {@code -n} where n is a function parameter typed Number (Pure's minus
      * accepts any). Each kind keeps its own, so negating an Integer is an Integer.
      */

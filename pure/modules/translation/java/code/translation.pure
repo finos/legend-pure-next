@@ -518,7 +518,13 @@ function <<access.private>> platform::extensions::language::java::translation::p
    // are typed by its signature): compare or compute on their values.
    let compares  = ($resultTypeOpt->isNotEmpty() && $resultTypeOpt->toOne() == Boolean)
                    || ($left.type == javaNumber() && $right.type == javaNumber());
-   $factory->eval($leftCast->numericOperand($compares), $rightCast->numericOperand($compares));
+   // Arithmetic on two Numbers computes on what they hold (PureValues): two Integers give an Integer, where
+   // doubleValue() would give a Float. Operands of a concrete type keep Java's own operator.
+   let numbers   = $left.type == javaNumber() && $right.type == javaNumber()
+                   && ['plus', 'minus', 'times']->contains($fe.functionName->toOne());
+   if ($numbers,
+      | $conv->runtimeCall('PureValues', $fe.functionName->toOne(), [$left, $right], javaNumber()),
+      | $factory->eval($leftCast->numericOperand($compares), $rightCast->numericOperand($compares)));
 }
 
 // An Object-typed operand fitted to the operation: by the expression's own Pure
