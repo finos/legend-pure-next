@@ -1,0 +1,49 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:52:33.151Z",
+ "source": "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler/target/surefire-reports/TEST-org.finos.legend.pure.m3.TestPureModel.xml",
+ "cases": [
+  {
+   "id": "compilationErrorForUnknownType",
+   "status": "passed"
+  },
+  {
+   "id": "compileEnumerationAndResolve",
+   "status": "passed"
+  },
+  {
+   "id": "emptyModelCompilesSuccessfully",
+   "status": "passed"
+  },
+  {
+   "id": "compileClassAndResolveFromModule",
+   "status": "passed"
+  },
+  {
+   "id": "moduleCannotSeeElementsFromNonDependency",
+   "status": "passed"
+  },
+  {
+   "id": "compileAgainstPdbModule",
+   "status": "passed"
+  },
+  {
+   "id": "moduleCanAccessItsOwnElements",
+   "status": "passed"
+  },
+  {
+   "id": "packagePatternValidation",
+   "status": "passed"
+  },
+  {
+   "id": "modulesCompiledInDependencyOrder",
+   "status": "passed"
+  },
+  {
+   "id": "bootstrapTypesVisibleThroughDependency",
+   "status": "passed"
+  }
+ ]
+}

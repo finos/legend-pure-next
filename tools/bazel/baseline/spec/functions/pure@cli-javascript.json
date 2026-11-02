@@ -1,0 +1,254 @@
+{
+ "cases": [
+  {
+   "id": "platform::pure::functions::collection::tests::map::testMapWithPropertyAsVariable__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::collection::tests::map::testMapWithFunctionAsVariable__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::collection::tests::map::testMapWithDynamicFunctionFromZeroOneToZeroOne__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::collection::tests::map::testAutoMapWithZeroOnePropertyInEvaluate__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::collection::tests::removeAll::testRemoveAllOptimizedClassKey__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::collection::tests::filter::testFilterUsingVarForFunction__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementToPath::testElementToPath__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementToPath::testTopLevelElementToPath__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementToPath::testRootElementToPath__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementToPath::testPackageablesToPath__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementToPath::testEnumerationToPath__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementToPath::testEphemeralPackageableElements__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementToPath::testCompilerPointerElementToPath__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementPath::testTopLevelElementPath__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementPath::testRootElementPath__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementPath::testElementPath__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::elementPath::testEphemeralPackageableElement__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::meta::tests::packageTree::testATestIsReachableFromItsRoot__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::lang::tests::evaluate::copy::testFunctionDefinitionCopy__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::lang::tests::evaluate::copy::testFunctionDefinitionWithInstanceCopy__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testClosedVariablePropagatedThroughMap__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testClosedVariablePropagatedThroughFilter__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testMultipleClosedVariables__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testClosedVariableInNestedLambda__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testClosedVariableInFold__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testClosedVariableThroughUserDefinedFunction__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testFoldAccumulatorVisibleInMatchLambda__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testClosedVariableNotShadowedByIntermediateScope__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testLetInsideIfBranch__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testNestedLetInFold__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::openVariables::testLetUsedAcrossNestedBlocks__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::metaEnum::testEnumName__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::metaEnum::testEnumValueNames__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::metaEnum::testEnumValueStereotypes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::metaEnum::testEnumValueTaggedValues__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::cgtCollision::testCGTPointsToUserPackage__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::cgtCollision::testCGTPointsToUserClass__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::cgtCollision::testInstanceOfDiscriminatesUserVsPlatform__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::cgtCollision::testMatchDispatchOnUserType__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::pointerAccess::testUnresolvedClassPointerNameAccessCrashes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::pointerAccess::testUnresolvedPrimitiveTypePointerNameAccessCrashes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::pointerAccess::testUnresolvedPointerPathAccessIsSafe__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::tests::dispatch::testPolymorphicQualifiedPropertyDispatch__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::asserts::tests::stackTrace::testFullPureStackTrace__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testIterateExpressionSequence__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testBuildCollectionFromExpressions__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testCollectionValuesAreUnwrapped__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testFoldPlusEqualsWithValueSpecifications__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testAccessValuesViaHolder__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testHolderValuesNotEmpty__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testFoldCollectionThenStoreInHolder__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testConcatenateFromHolder__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testMetaAtomicValueIsNavigable__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testCollectionStoredInPropertyIsMultipleValues__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testFoldPlusEqualsPreservesAllElements__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testExpressionSequenceCastToValueSpecification__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testExpressionSequenceCastToAtomicValue__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testExpressionSequenceGenericType__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testExpressionSequenceMatch__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testCollectionInSingleValuedProperty__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::valueSpecificationManipulation::testCollectionPlainCopy__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::printer::protocol::tests::testGrammarCorpusCoverage__Boolean_1_",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "testFunctions"
+}

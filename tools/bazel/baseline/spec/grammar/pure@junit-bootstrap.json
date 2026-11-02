@@ -1,0 +1,297 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:52:50.382Z",
+ "source": "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation/target/surefire-reports/TEST-org.finos.legend.pure.next.parser.mappings.PureParserMatchesJavaParserTest.xml",
+ "cases": [
+  {
+   "id": "association/all",
+   "status": "passed"
+  },
+  {
+   "id": "association/profile",
+   "status": "passed"
+  },
+  {
+   "id": "association/properties/aggregationKind",
+   "status": "passed"
+  },
+  {
+   "id": "association/properties/defaultValues",
+   "status": "passed"
+  },
+  {
+   "id": "association/properties/profile",
+   "status": "passed"
+  },
+  {
+   "id": "association/properties/qualifiedProperties",
+   "status": "passed"
+  },
+  {
+   "id": "association/properties/space",
+   "status": "passed"
+  },
+  {
+   "id": "class/all",
+   "status": "passed"
+  },
+  {
+   "id": "class/constraints",
+   "status": "passed"
+  },
+  {
+   "id": "class/inheritance",
+   "status": "passed"
+  },
+  {
+   "id": "class/light",
+   "status": "passed"
+  },
+  {
+   "id": "class/lightProperty",
+   "status": "passed"
+  },
+  {
+   "id": "class/profile",
+   "status": "passed"
+  },
+  {
+   "id": "class/properties/aggregationKind",
+   "status": "passed"
+  },
+  {
+   "id": "class/properties/defaultValues",
+   "status": "passed"
+  },
+  {
+   "id": "class/properties/profile",
+   "status": "passed"
+  },
+  {
+   "id": "class/properties/qualifiedProperties",
+   "status": "passed"
+  },
+  {
+   "id": "class/properties/space",
+   "status": "passed"
+  },
+  {
+   "id": "class/typeAndMulParam",
+   "status": "passed"
+  },
+  {
+   "id": "class/typeVariables",
+   "status": "passed"
+  },
+  {
+   "id": "enumeration/profile",
+   "status": "passed"
+  },
+  {
+   "id": "enumeration/simple",
+   "status": "passed"
+  },
+  {
+   "id": "function/definition/concrete",
+   "status": "passed"
+  },
+  {
+   "id": "function/definition/constraint",
+   "status": "passed"
+  },
+  {
+   "id": "function/definition/native",
+   "status": "passed"
+  },
+  {
+   "id": "function/definition/typeAndMulParam",
+   "status": "passed"
+  },
+  {
+   "id": "function/definition/undefinedMultiplicityArgument",
+   "status": "passed"
+  },
+  {
+   "id": "function/functionType",
+   "status": "passed"
+  },
+  {
+   "id": "function/lambda/default",
+   "status": "passed"
+  },
+  {
+   "id": "primitive/binary",
+   "status": "passed"
+  },
+  {
+   "id": "primitive/profile",
+   "status": "passed"
+  },
+  {
+   "id": "primitive/simple",
+   "status": "passed"
+  },
+  {
+   "id": "primitive/typeVariable",
+   "status": "passed"
+  },
+  {
+   "id": "profile",
+   "status": "passed"
+  },
+  {
+   "id": "relation/inference",
+   "status": "passed"
+  },
+  {
+   "id": "relation/simple",
+   "status": "passed"
+  },
+  {
+   "id": "relation/space",
+   "status": "passed"
+  },
+  {
+   "id": "relation/wildcardAndQuotedColumns",
+   "status": "passed"
+  },
+  {
+   "id": "section",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/all",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/cast",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/collection",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/copy",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/copy_append",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/copy_expression",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/dsl",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/dslMultiline",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/enumeration",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionApplication/arrow",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionApplication/dot",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionApplication/precedence",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionApplication/simple",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/lambda/arrowReceiver",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/lambda/let",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/lambda/multiStatement",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/let",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/new/function",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/new/parentReference",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/new/simple",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/primitives/allPrimitives",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/primitives/blockCommentCharsInString",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/primitives/hashSectionInString",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/primitives/stringEscapes",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/primitives/tripeString/iIndented",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/primitives/tripeString/indentedTab",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/primitives/tripeString/simple",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/primitives/tripeString/withDocComment",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/range",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/range_expression",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/relation",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/relation/quotedColSpec",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/relation/quotedProperty",
+   "status": "passed"
+  }
+ ]
+}

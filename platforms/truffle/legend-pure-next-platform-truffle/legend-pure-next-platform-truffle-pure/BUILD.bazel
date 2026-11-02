@@ -155,7 +155,7 @@ _TRUFFLE_TEST_JVM_FLAGS = [
 
 junit5_test(
     name = "tests",
-    tags = ["job:truffle-self-host"],
+    tags = ["job:truffle"],
     srcs = glob(["src/test/java/**/*.java"]),
     data = [
         "//:shared",

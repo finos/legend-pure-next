@@ -1,0 +1,29 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T22:00:59.715Z",
+ "source": "platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-pure/target/surefire-reports/TEST-org.finos.legend.pure.platform.java.grammar.LanguageSchemaTest.xml",
+ "cases": [
+  {
+   "id": "m3IsNoLongerAHardWiredResource",
+   "status": "passed"
+  },
+  {
+   "id": "thePureManifestCarriesM3sSchema",
+   "status": "passed"
+  },
+  {
+   "id": "extensionsFollowTheAlwaysActiveLanguages",
+   "status": "passed"
+  },
+  {
+   "id": "noAlwaysActiveSchemaIsAnError",
+   "status": "passed"
+  },
+  {
+   "id": "anExplicitSchemaReplacesTheAlwaysActiveLanguages(Path)",
+   "status": "passed"
+  }
+ ]
+}

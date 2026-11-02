@@ -1,0 +1,18 @@
+{
+ "cases": [
+  {
+   "id": "platform::pure::functions::relation::tests::columnRead::testAColumnReadIsItsReceiversColumn_Function_1__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::relation::tests::size::testSimpleSize_Function_1__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::functions::relation::tests::size::testSimpleSize_MultipleExpressions_Function_1__Boolean_1_",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "pct"
+}

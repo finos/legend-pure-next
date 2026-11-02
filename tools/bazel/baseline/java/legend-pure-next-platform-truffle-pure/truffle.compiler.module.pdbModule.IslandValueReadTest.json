@@ -1,0 +1,13 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:53:36.388Z",
+ "source": "platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure/target/surefire-reports/TEST-org.finos.legend.pure.truffle.compiler.module.pdbModule.IslandValueReadTest.xml",
+ "cases": [
+  {
+   "id": "anIslandValueReadsBackAsAnInstanceOfItsClass",
+   "status": "passed"
+  }
+ ]
+}

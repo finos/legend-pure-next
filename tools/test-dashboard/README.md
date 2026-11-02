@@ -66,7 +66,7 @@ run a specification corpus into specification runs:
 | JUnit class | Specification run |
 |---|---|
 | `PureToJsonRoundtripTest` | `spec/grammar/java` |
-| `PureParserMatchesJavaParserTest` (its `grammar:` cases) | `spec/grammar/pure@cli-bootstrap` |
+| `PureParserMatchesJavaParserTest` (its `grammar:` cases) | `spec/grammar/pure@junit-bootstrap` |
 | `CompilerCompiledGraphTest` + `CompilerErrorTest` | `spec/compiler/java` |
 | `CompilerCompiledGraphPdbRoundTripTest` | `spec/pdb/java` |
 

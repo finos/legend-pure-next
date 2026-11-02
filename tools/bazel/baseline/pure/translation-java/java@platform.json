@@ -1,0 +1,66 @@
+{
+ "cases": [
+  {
+   "id": "platform::extensions::language::java::translation::tests::testRunAddViaTranslation__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::testRunSubViaTranslation__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::testRunMulViaTranslation__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::testRunDivViaTranslation__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::testRunNegViaTranslation__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::testTranslateAdd__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::testTranslateSub__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::testTranslateMul__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::testTranslateDiv__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::testTranslateNeg__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::testTheCodersAreTheNativesOfTheLoadedModules__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::pct::testSimplePlus__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::pct::testComplexPlus__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::pct::testNegativePlus__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::translation::tests::pct::testPlusMany__Boolean_1_",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "testFunctions"
+}

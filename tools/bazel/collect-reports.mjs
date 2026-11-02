@@ -42,9 +42,23 @@ export function reportPath(path) {
 
 const attr = (text, name) => (text.match(new RegExp(`\\b${name}="([^"]*)"`)) ?? [])[1];
 
+const escapeAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+/** A case named as surefire names it (usePhrasedTestCaseMethodName, bootstrap/legend-pure-next-bootstrap/pom.xml), from the
+ * display name the launcher records in its output: the method alone when the display name is the method's own
+ * ('name' for 'name()', 'name(Path)' as it is), else the method signature, a space and the display name (the corpus
+ * path of a corpus test: 'testCompiledGraph(String, String) association/profile/profile'). */
+function phrased(testcase) {
+    const display = (testcase.match(/^display-name: (.*)$/m) ?? [])[1]?.trim();
+    if (display === undefined) return testcase;
+    const signature = (attr(testcase, "name") ?? "").replace(/\[\d+\]$/, "");
+    const name = display === signature ? signature.replace(/\(\)$/, "") : `${signature} ${display}`;
+    return testcase.replace(/(<testcase\b[^>]*?\bname=")[^"]*(")/, (_, a, b) => a + escapeAttr(name) + b);
+}
+
 /** A launcher report (one <testsuite> of every class) as surefire writes it: {file name: XML}, one per class. */
 export function splitJUnit(xml) {
-    const cases = [...xml.matchAll(/<testcase\b[^>]*?(?:\/>|>[\s\S]*?<\/testcase>)/g)].map((m) => m[0]);
+    const cases = [...xml.matchAll(/<testcase\b[^>]*?(?:\/>|>[\s\S]*?<\/testcase>)/g)].map((m) => phrased(m[0]));
     const byClass = cases.reduce((acc, c) => {
         const cls = attr(c, "classname") ?? "unknown";
         return { ...acc, [cls]: [...(acc[cls] ?? []), c] };

@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "suite": "source-store",
+ "cases": [
+  {
+   "id": "round-trips a workspace",
+   "status": "passed"
+  },
+  {
+   "id": "nothing stored yields nothing, not an empty workspace",
+   "status": "passed"
+  },
+  {
+   "id": "survives storage that throws on every access",
+   "status": "passed"
+  },
+  {
+   "id": "survives storage being absent altogether",
+   "status": "passed"
+  },
+  {
+   "id": "ignores a corrupt blob rather than throwing",
+   "status": "passed"
+  },
+  {
+   "id": "ignores a blob from another version instead of guessing at it",
+   "status": "passed"
+  },
+  {
+   "id": "drops entries that are not name-to-text",
+   "status": "passed"
+  },
+  {
+   "id": "falls back to a real file when the active one is gone",
+   "status": "passed"
+  },
+  {
+   "id": "keeps an empty file, and can make it active",
+   "status": "passed"
+  },
+  {
+   "id": "clearing means the next load starts fresh",
+   "status": "passed"
+  },
+  {
+   "id": "gives a name the .pure extension and strips separators",
+   "status": "passed"
+  },
+  {
+   "id": "rejects a name with nothing usable in it",
+   "status": "passed"
+  },
+  {
+   "id": "makes a name unique rather than overwriting a file",
+   "status": "passed"
+  },
+  {
+   "id": "collapses a burst into one call",
+   "status": "passed"
+  },
+  {
+   "id": "flush runs the pending call immediately",
+   "status": "passed"
+  }
+ ]
+}

@@ -1,0 +1,42 @@
+{
+ "cases": [
+  {
+   "id": "tds/inferredColumns",
+   "status": "passed"
+  },
+  {
+   "id": "tds/typedHeader",
+   "status": "passed"
+  },
+  {
+   "id": "tds/enumeration",
+   "status": "passed"
+  },
+  {
+   "id": "tds/manyMultiplicity",
+   "status": "passed"
+  },
+  {
+   "id": "tds/mixedInference",
+   "status": "passed"
+  },
+  {
+   "id": "tds/quotedNamesAndCells",
+   "status": "passed"
+  },
+  {
+   "id": "tds/primitiveExtension",
+   "status": "passed"
+  },
+  {
+   "id": "tds/variant",
+   "status": "passed"
+  },
+  {
+   "id": "tds/quotedValues",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "compiledPrinter"
+}

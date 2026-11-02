@@ -1,0 +1,13 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:52:45.149Z",
+ "source": "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-runtime/target/surefire-reports/TEST-org.finos.legend.pure.runtime.TestPureRuntime.xml",
+ "cases": [
+  {
+   "id": "modifyCodeInModulesCompileAndExecute",
+   "status": "passed"
+  }
+ ]
+}

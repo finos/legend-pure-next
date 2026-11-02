@@ -62,3 +62,37 @@ test("no test logs (no test ran) is nothing to collect", () => {
     const repo = mkdtempSync(join(tmpdir(), "repo-"));
     assert.deepEqual(collectReports(join(repo, "no-testlogs"), repo), { reports: 0, classes: 0 });
 });
+
+test("a generated case is named by its method and display name, as surefire names it (usePhrasedTestCaseMethodName)", () => {
+    const files = splitJUnit(`<testsuite name="JUnit Jupiter" tests="1">
+<testcase name="testCompiledGraph(String, String)[18]" classname="org.x.CTest" time="0.05">
+<system-out><![CDATA[
+unique-id: [engine:junit-jupiter]/[class:org.x.CTest]/[test-template:testCompiledGraph(java.lang.String, java.lang.String)]/[test-template-invocation:#18]
+display-name: class/property/defaultValue
+]]></system-out>
+</testcase>
+</testsuite>`);
+    assert.match(files["TEST-org.x.CTest.xml"], /<testcase name="testCompiledGraph\(String, String\) class\/property\/defaultValue" classname="org.x.CTest"/);
+});
+
+test("a case whose display name is its method is named by the method alone, as surefire names it", () => {
+    const files = splitJUnit(`<testsuite name="JUnit Jupiter" tests="1">
+<testcase name="emptyModelCompiles()" classname="org.x.DTest" time="0.05">
+<system-out><![CDATA[
+display-name: emptyModelCompiles()
+]]></system-out>
+</testcase>
+</testsuite>`);
+    assert.match(files["TEST-org.x.DTest.xml"], /<testcase name="emptyModelCompiles" classname="org.x.DTest"/);
+});
+
+test("a method with parameters keeps them, as surefire names it", () => {
+    const files = splitJUnit(`<testsuite name="JUnit Jupiter" tests="1">
+<testcase name="writes(Path)" classname="org.x.ETest" time="0.05">
+<system-out><![CDATA[
+display-name: writes(Path)
+]]></system-out>
+</testcase>
+</testsuite>`);
+    assert.match(files["TEST-org.x.ETest.xml"], /<testcase name="writes\(Path\)" classname="org.x.ETest"/);
+});

@@ -1,0 +1,30 @@
+{
+ "cases": [
+  {
+   "id": "platform::extensions::language::javascript::translation::tests::runTinyLambdaViaTranslator__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::translation::tests::debugFilterInstanceRoundTripFields__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::translation::tests::testTheCodersAreTheNativesOfTheLoadedModules__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::translation::tests::pct::testSimplePlus__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::translation::tests::pct::testFilterInstance__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::translation::tests::pct::testMetaProperties__Boolean_1_",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "testFunctions"
+}

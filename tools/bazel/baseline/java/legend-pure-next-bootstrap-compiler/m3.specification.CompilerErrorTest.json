@@ -1,0 +1,465 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:52:41.931Z",
+ "source": "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler/target/surefire-reports/TEST-org.finos.legend.pure.m3.specification.CompilerErrorTest.xml",
+ "cases": [
+  {
+   "id": "association/profile/profile_E_unknownProfile",
+   "status": "passed"
+  },
+  {
+   "id": "association/profile/profile_E_unknownStereotype",
+   "status": "passed"
+  },
+  {
+   "id": "association/profile/profile_E_unknownTag",
+   "status": "passed"
+  },
+  {
+   "id": "association/property/simple_E_ambiguousType",
+   "status": "passed"
+  },
+  {
+   "id": "association/property/simple_E_multipleUnknownTypes",
+   "status": "passed"
+  },
+  {
+   "id": "association/property/simple_E_unknownTypeInProperty",
+   "status": "passed"
+  },
+  {
+   "id": "association/property/typeArguments_E_Unknown",
+   "status": "passed"
+  },
+  {
+   "id": "class/constraints/simple_E_UnkownProperty",
+   "status": "passed"
+  },
+  {
+   "id": "class/inheritance/simple_E_multipleUnknownTypes",
+   "status": "passed"
+  },
+  {
+   "id": "class/inheritance/simple_E_unknownTypeInGeneralization",
+   "status": "passed"
+  },
+  {
+   "id": "class/inheritance/typeArguments_E_Unknown",
+   "status": "passed"
+  },
+  {
+   "id": "class/profile/profile_E_unknownProfile",
+   "status": "passed"
+  },
+  {
+   "id": "class/profile/profile_E_unknownStereotype",
+   "status": "passed"
+  },
+  {
+   "id": "class/profile/profile_E_unknownTag",
+   "status": "passed"
+  },
+  {
+   "id": "class/property/defaultValue_E_WrongType",
+   "status": "passed"
+  },
+  {
+   "id": "class/property/defaultValue_E_wrongMultiplicity",
+   "status": "passed"
+  },
+  {
+   "id": "class/property/profile_E_unknownProfile",
+   "status": "passed"
+  },
+  {
+   "id": "class/property/profile_E_unknownStereotype",
+   "status": "passed"
+  },
+  {
+   "id": "class/property/profile_E_unknownTag",
+   "status": "passed"
+  },
+  {
+   "id": "class/property/property_E_overrideAnyProperty",
+   "status": "passed"
+  },
+  {
+   "id": "class/property/property_E_overrideVarianceMismatch",
+   "status": "passed"
+  },
+  {
+   "id": "class/property/simple_E_multipleUnknownTypes",
+   "status": "passed"
+  },
+  {
+   "id": "class/property/simple_E_unknownTypeInProperty",
+   "status": "passed"
+  },
+  {
+   "id": "class/property/typeArguments_E_Unknown",
+   "status": "passed"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty_E_ambiguousDifferentParamTypes",
+   "status": "passed"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty_E_ambiguousSameParamsNonCovariant",
+   "status": "passed"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty_E_overrideReturnMultiplicityMismatch",
+   "status": "passed"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty_E_overrideReturnTypeMismatch",
+   "status": "passed"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty_E_returnMultiplicityMismatch",
+   "status": "passed"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty_E_returnTypeMismatch",
+   "status": "passed"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty_E_unknownParameterType",
+   "status": "passed"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty_E_unknownReturnType",
+   "status": "passed"
+  },
+  {
+   "id": "enumeration/profile/profile_E_unknownProfile",
+   "status": "passed"
+  },
+  {
+   "id": "enumeration/profile/profile_E_unknownStereotype",
+   "status": "passed"
+  },
+  {
+   "id": "enumeration/profile/profile_E_unknownTag",
+   "status": "passed"
+  },
+  {
+   "id": "enumeration/simple_E_duplicateValue",
+   "status": "passed"
+  },
+  {
+   "id": "function/lambda/lambda_E_NoInference",
+   "status": "passed"
+  },
+  {
+   "id": "function/lambda/lambda_E_VarConflicts",
+   "status": "passed"
+  },
+  {
+   "id": "function/lambda/lambda_E_dupParamName",
+   "status": "passed"
+  },
+  {
+   "id": "function/native/simple_E_dupParamName",
+   "status": "passed"
+  },
+  {
+   "id": "function/native/simple_E_unknownParameterType",
+   "status": "passed"
+  },
+  {
+   "id": "function/native/simple_E_unknownReturnType",
+   "status": "passed"
+  },
+  {
+   "id": "function/native/simple_E_unknownTypeParam",
+   "status": "passed"
+  },
+  {
+   "id": "function/userDefined/constraints/constraints_E_unknownVariable",
+   "status": "passed"
+  },
+  {
+   "id": "function/userDefined/constraints/constraints_E_wrongReturnType",
+   "status": "passed"
+  },
+  {
+   "id": "function/userDefined/profile/profile_E_unknownProfile",
+   "status": "passed"
+  },
+  {
+   "id": "function/userDefined/profile/profile_E_unknownStereotype",
+   "status": "passed"
+  },
+  {
+   "id": "function/userDefined/profile/profile_E_unknownTag",
+   "status": "passed"
+  },
+  {
+   "id": "function/userDefined/simple_E_dupParamName",
+   "status": "passed"
+  },
+  {
+   "id": "function/userDefined/simple_E_unknownVariable",
+   "status": "passed"
+  },
+  {
+   "id": "leanReferencesTest_E_nonTestReferencesTestElement",
+   "status": "passed"
+  },
+  {
+   "id": "multiPassErrorManagement",
+   "status": "passed"
+  },
+  {
+   "id": "primitive/constraints/constraints_E_wrongVariable",
+   "status": "passed"
+  },
+  {
+   "id": "primitive/profile/profile_E_unknownProfile",
+   "status": "passed"
+  },
+  {
+   "id": "primitive/profile/profile_E_unknownStereotype",
+   "status": "passed"
+  },
+  {
+   "id": "primitive/profile/profile_E_unknownTag",
+   "status": "passed"
+  },
+  {
+   "id": "primitive/simple_E_wrongSuperType",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/atomicValue/element/graphElement_E_wrongElements",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/2colFunc_E_NoInference",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/colFunc_E_NoInference",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/enumeraiton_E_unknownValue",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/property_E_unknownProperty",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/property_E_unknownPropertyOnAnyInLambda",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/property_E_wrongType",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/classTypeParam_E_wrongType",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/foldSubtypeInit_E_varianceMismatch",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/if_E_multipleMatch",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/if_E_notFound",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/if_E_wrongMul",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/if_E_wrongOperation",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters_E_noMatch",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/lambdaReturnfunctionTypeInference_E_error",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/lambdaWithParamTypeAndMul_E_wrongVarType",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/lambda_E_errorInBody",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/multiplicity_E_paramValueTooBig",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/pushDownMultiplicity_E_errorInBody",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/pushDown_E_errorInBody",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/distinct_E_columnIsNotSubset",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/extend_E_unknownColumn",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/type_E_paramValueWrongType",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_ambiguousFunction",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_packageVisibility",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_unknownFunction",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_wrongParameterCount",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/firstPass/noArguments_E_ambiguous",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/multiplicity/multiplicity_E_wrongParameterMultiplicity",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/type/type_e_wrongParameterType",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_E_unknownProperty",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongType",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_parentReference_E_outOfBounds",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_parentReference_E_unknownProperty",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/let/let_E_conflict",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/let/let_E_duplicateVariable",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/let/let_E_duplicateVariableNoShadow",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_E_abstractClassInstantiation",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_E_missingProperties",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyExactMultiplicity",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyNonStandardMultiplicity",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongMultiplicity",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongType",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongType_VS",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_circular",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_midChainTilde",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_outOfBounds",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_unknownProperty",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/genericTypeAndMultiplicityHolder/relation/simpleColumn_E_unknownType",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/genericTypeAndMultiplicityHolder/relation/simpleColumn_E_wrongMultiplicity",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/genericTypeAndMultiplicityHolder/relation/simpleColumn_E_wrongType",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/island/island_E_ambiguous",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/island/island_E_errorInside",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/island/island_E_unclaimed",
+   "status": "passed"
+  },
+  {
+   "id": "valueSpecification/island/ref_E_unknown",
+   "status": "passed"
+  }
+ ]
+}

@@ -204,6 +204,8 @@ HOSTS = {
                 "report": "pure@cli-bootstrap",
                 "command": ["execute"],
                 "prelude": ["core", "core-tests", "compiler"],
+                # Interpreted: its PDB goldens take over 15 minutes (Bazel's large timeout) on a CI runner.
+                "timeout": "eternal",
                 "tags": ["manual", "bootstrap"],
                 "runs": lambda owner, test: owner in ["core", "compiler"],
             },
@@ -301,7 +303,7 @@ def _runs_javascript_free(owner):
 # The CI job of a suite (.github/workflows/build.yml: 'job:<job>' or 'job:<job>/<matrix entry>'), as the jobs ran
 # them before Bazel. A manual suite has none: tools/bazel/check-job-coverage.sh checks every other test has one.
 _TRUFFLE_JOBS = {
-    "compiler/compiler": "truffle-self-host",
+    "compiler/compiler": "truffle",
     "compiler/printer-compiled": "printer-compiled",
     "compiler/pdb": "pdb-golden",
     "core/printer-protocol": "printer-protocol",
@@ -314,9 +316,12 @@ _TRUFFLE_JOBS = {
 def job_of(host, variant, owner, suite):
     """The CI job that runs a suite of 'owner' on a variant of 'host'."""
     if host == "truffle" and variant == "native":
-        return "truffle-native-self-host/specifications"
+        return "truffle-native/specifications"
     if host == "truffle":
         return _TRUFFLE_JOBS.get("%s/%s" % (owner, suite), "truffle-specifications")
+    # The module suites on the Java platform compile and run Java as they go: minutes each, on a runner of their own.
+    if host == "java" and owner in ["java", "java-translation", "javascript", "translation-shared"]:
+        return "translations/java-modules"
     return "translations/" + host
 
 def _suite_test(host_name, host, variant_name, variant, owner, test):
@@ -352,6 +357,7 @@ def _suite_test(host_name, host, variant_name, variant, owner, test):
         data = [tool, "//:shared", _M3_FBS] + pdbs + owner_fbs + manifest["data"] + variant.get("data", []),
         env = env,
         size = "large",
+        timeout = variant.get("timeout"),
         tags = ["host:" + host_name] + variant.get("tags", []) + (["pending"] if reason else []) +
                ([] if "manual" in variant.get("tags", []) else ["job:" + job_of(host_name, variant_name, owner, test["suite"])]),
     )

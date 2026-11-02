@@ -1,0 +1,713 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:52:40.186Z",
+ "source": "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler/target/surefire-reports/TEST-org.finos.legend.pure.m3.specification.PdbGoldenGeneratorTest.xml",
+ "cases": [
+  {
+   "id": "association/profile/profile",
+   "status": "skipped"
+  },
+  {
+   "id": "association/property/aggregationKind",
+   "status": "skipped"
+  },
+  {
+   "id": "association/property/inheritedAssociationProperty",
+   "status": "skipped"
+  },
+  {
+   "id": "association/property/inheritedAssociationPropertyDeep",
+   "status": "skipped"
+  },
+  {
+   "id": "association/property/profile",
+   "status": "skipped"
+  },
+  {
+   "id": "association/property/simple",
+   "status": "skipped"
+  },
+  {
+   "id": "association/property/typeArguments",
+   "status": "skipped"
+  },
+  {
+   "id": "association/qualifiedProperty/qualifiedProperty",
+   "status": "skipped"
+  },
+  {
+   "id": "class/constraints/advanced",
+   "status": "skipped"
+  },
+  {
+   "id": "class/constraints/constraintReferencingLaterFunction",
+   "status": "skipped"
+  },
+  {
+   "id": "class/constraints/simple",
+   "status": "skipped"
+  },
+  {
+   "id": "class/constraints/typeParameterCast",
+   "status": "skipped"
+  },
+  {
+   "id": "class/inheritance/simple",
+   "status": "skipped"
+  },
+  {
+   "id": "class/inheritance/typeArguments",
+   "status": "skipped"
+  },
+  {
+   "id": "class/profile/profile",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/aggregationKind",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/aggregationKind_noRoundtrip",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/defaultValue",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/defaultValue_optional",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/defaultValue_subtype",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/defaultValue_typeParameter",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/profile",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/property_override",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/relationProperty",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/sameShortNameInUnimportedPackage",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/simple",
+   "status": "skipped"
+  },
+  {
+   "id": "class/property/typeArguments",
+   "status": "skipped"
+  },
+  {
+   "id": "class/qualifiedProperty/profile",
+   "status": "skipped"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty",
+   "status": "skipped"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty_overrideCovariantReturn",
+   "status": "skipped"
+  },
+  {
+   "id": "class/qualifiedProperty/qualifiedProperty_typeParameterCast",
+   "status": "skipped"
+  },
+  {
+   "id": "class/typeAndMulParam/typeAndMulParam",
+   "status": "skipped"
+  },
+  {
+   "id": "class/typeVariables/typeVariables",
+   "status": "skipped"
+  },
+  {
+   "id": "enumeration/profile/profile",
+   "status": "skipped"
+  },
+  {
+   "id": "enumeration/simple",
+   "status": "skipped"
+  },
+  {
+   "id": "function/lambda/canonicalAnchor",
+   "status": "skipped"
+  },
+  {
+   "id": "function/lambda/openVariables",
+   "status": "skipped"
+  },
+  {
+   "id": "function/lambda/openVariables_foldMatch",
+   "status": "skipped"
+  },
+  {
+   "id": "function/native/simple",
+   "status": "skipped"
+  },
+  {
+   "id": "function/userDefined/classAsParamAndReturn",
+   "status": "skipped"
+  },
+  {
+   "id": "function/userDefined/constraints/constraints",
+   "status": "skipped"
+  },
+  {
+   "id": "function/userDefined/profile/profile",
+   "status": "skipped"
+  },
+  {
+   "id": "function/userDefined/simple",
+   "status": "skipped"
+  },
+  {
+   "id": "function/userDefined/typeParameterCast",
+   "status": "skipped"
+  },
+  {
+   "id": "primitive/constraints/constraints",
+   "status": "skipped"
+  },
+  {
+   "id": "primitive/profile/profile",
+   "status": "skipped"
+  },
+  {
+   "id": "primitive/simple",
+   "status": "skipped"
+  },
+  {
+   "id": "primitive/typeVariables/typeVariable",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/element/classWithTypeParameter",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/element/classWithTypeParameterThroughLambdaCall",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/element/graphElement",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/element/packageRoot",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/element/packageSimple",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/element/packageableMultiplicity",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/primitive/binary",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/primitive/boolean",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/primitive/date_noRoundtrip",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/primitive/decimal",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/primitive/float",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/primitive/integer",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/primitive/shadowedByOwnClass",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/primitive/string",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/2aggColSpec",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/2aggColSpecArray",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/2colFunc",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/2colFuncArray",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/aggColSpec",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/aggColSpecArray",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/colFunc",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/colFuncAnyMatch",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/colFuncArray",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/simpleColArrayWithType",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/simpleColArrayWithTypeAndMul",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/simpleColWithType",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/atomicValue/relation/simpleColWithTypeAndMul_noRoundtrip",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/collection/collection",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/collection/collectionLambda",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/arithmeticPrecedence",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/automap",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/automapAfterEval",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/automapInheritedQualifiedProperty",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/automapPropertyChained",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/automapWithSourceResolvedTransitively",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/chainedAutomap",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/enumeration",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/enumeration_valueNamedAsAnEnumProperty",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/inheritedQualifiedProperty",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/inheritedQualifiedPropertyDeep",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/inheritedQualifiedPropertyNoArgs",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/inheritedQualifiedPropertyWithThisAccess",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/metaclassProperties",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/property",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/propertyGenericTypeBinding",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/propertyGenericTypeChained",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/propertyGenericTypeMulParam",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/propertyGenericTypeMultiParam",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/propertyGenericTypeViaFunctionCall",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/propertyInheritance",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/propertyOnOneToMany",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/qualifiedProperty",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/qualifiedPropertyLambdaArgument",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/qualifiedPropertyOverrideCovariant",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/dot/qualifiedPropertyOverrideCovariantReturnUsed",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/anyAsFunctionType",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/cast",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/classTypeParam",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/fold",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/foldEmptyStart",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/foldWidenMul",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/functionReferenceAsAddressableFunction",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/if",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/ifMul",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/inferImportsLikeChain",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/lambda",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/lambdaReturnfunctionTypeInference",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/lambdaWithParamTypeAndMul",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/mapWithPropertyAsVariable",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/multipass",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/multipassMultiplicity",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/multiplicity",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/multiplicityParameter_givenTwiceToAnOverload",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/nestedTypeArgumentBinding",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/pushDown",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/pushDownComplex",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/pushDownDeep",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/pushDownMultiplicity",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/distinct",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/dot_escapedColumnName",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/eval_colSpecSubset",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/extend",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/extend_overWindowAggregate",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/extend_overloadedWindow",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/groupBy",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/groupBy_callerNamesCollide",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/groupBy_reduceOverAGenericClass",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/project",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/rename",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/select",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/select_escapedColumnName",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/relation/sort_colSpecArgument",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/tiebreakMultiplicityParameter",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/tiebreakTypeParameter",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/tiebreakTypeParameterInheritance",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/type",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/typeParamNameCollision",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/typeParamResolvedTransitively",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/typeParamResolvedTransitively_callerNamesCollide",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/generics/withPackage",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/multiplicity/multiplicity",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/multiplicity/overload_multiplicityParameter",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/type/overload",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/type/overload_sameSimpleName_noRoundtrip",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/type/overload_sameSimpleName_sameReturn_noRoundtrip",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/type/type",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/simple/type/type_subtypeArgument",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_expression_oneToOne",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_expression_zeroMany",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_expression_zeroToOne",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_parentReference",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_parentReference_selfMap",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/copy/copy_pointerStereotype",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/let/let",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_parentReference",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_tildeInLambda",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_pointerStereotype",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_subtypePropertyValue",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/functionExpression/functionApplication/special/new/new_subtypePropertyValueInheritance",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/genericTypeAndMultiplicityHolder/primitive/withTypeValue",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/genericTypeAndMultiplicityHolder/relation/simpleColumn",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/genericTypeAndMultiplicityHolder/relation/typeHolderCollection",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/genericTypeAndMultiplicityHolder/typeAndMulParam",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/genericTypeAndMultiplicityHolder/undefined/undefinedGenericType",
+   "status": "skipped"
+  },
+  {
+   "id": "valueSpecification/genericTypeAndMultiplicityHolder/undefined/undefinedMul",
+   "status": "skipped"
+  }
+ ]
+}

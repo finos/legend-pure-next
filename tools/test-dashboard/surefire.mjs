@@ -33,8 +33,9 @@ const SKIP_DIRS = new Set([".git", "node_modules", "src", "generated"]);
 // Pure runners report, so these runs line up with the others in the specification matrix.
 const SPEC_RUNS = [
   { spec: "grammar", run: "java", classes: ["org.finos.legend.pure.next.parser.PureToJsonRoundtripTest"] },
-  // The Pure grammar parser, run on bootstrap, checked against the Java parser; its grammar-corpus cases are "grammar:<fixture>".
-  { spec: "grammar", run: "pure@cli-bootstrap", classes: ["org.finos.legend.pure.next.parser.mappings.PureParserMatchesJavaParserTest"], idPrefix: "grammar:" },
+  // The Pure grammar parser, run on bootstrap through JUnit, checked against the Java parser; its grammar-corpus cases are
+  // "grammar:<fixture>". "junit", as the PCT run through JUnit below: pure@cli-bootstrap is the bootstrap CLI's own run.
+  { spec: "grammar", run: "pure@junit-bootstrap", classes: ["org.finos.legend.pure.next.parser.mappings.PureParserMatchesJavaParserTest"], idPrefix: "grammar:" },
   { spec: "compiler", run: "java", classes: ["org.finos.legend.pure.m3.specification.CompilerCompiledGraphTest", "org.finos.legend.pure.m3.specification.CompilerErrorTest"] },
   { spec: "pdb", run: "java", classes: ["org.finos.legend.pure.m3.specification.CompilerCompiledGraphPdbRoundTripTest"] },
   // The PCT corpus as the MAVEN BUILD runs it: in-process, through JUnit, rather than through the

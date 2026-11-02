@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:53:35.430Z",
+ "source": "platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure/target/surefire-reports/TEST-org.finos.legend.pure.truffle.runtime.PureRuntimeLanguageNativesTest.xml",
+ "cases": [
+  {
+   "id": "everyNativeTheLoadedModulesDeclareIsImplemented",
+   "status": "passed"
+  },
+  {
+   "id": "anEntryForAFunctionWrittenInPureFailsTheBuild",
+   "status": "passed"
+  },
+  {
+   "id": "nativesThatDoNotMatchTheModuleFailTheBuild",
+   "status": "passed"
+  },
+  {
+   "id": "theNativesOfALanguageWhoseModuleIsNotLoadedAreInstalledUnchecked",
+   "status": "passed"
+  }
+ ]
+}

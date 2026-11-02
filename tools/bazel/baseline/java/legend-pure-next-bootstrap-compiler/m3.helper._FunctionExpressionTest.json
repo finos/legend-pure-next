@@ -1,0 +1,21 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:52:42.097Z",
+ "source": "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler/target/surefire-reports/TEST-org.finos.legend.pure.m3.helper._FunctionExpressionTest.xml",
+ "cases": [
+  {
+   "id": "testPopulateWithOwnership",
+   "status": "passed"
+  },
+  {
+   "id": "testPopulateAndExtract",
+   "status": "passed"
+  },
+  {
+   "id": "testExtractResolvedParametersBinding_empty",
+   "status": "passed"
+  }
+ ]
+}

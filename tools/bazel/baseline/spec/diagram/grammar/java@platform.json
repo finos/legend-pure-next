@@ -1,0 +1,30 @@
+{
+ "cases": [
+  {
+   "id": "defaults",
+   "status": "passed"
+  },
+  {
+   "id": "noDimension",
+   "status": "passed"
+  },
+  {
+   "id": "points",
+   "status": "passed"
+  },
+  {
+   "id": "qualifiedNames",
+   "status": "passed"
+  },
+  {
+   "id": "shape",
+   "status": "passed"
+  },
+  {
+   "id": "typeViewValues",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "grammar"
+}

@@ -17,18 +17,20 @@
 #
 #   guard
 #   └── bootstrap                       the bootstrap, its PDBs, the field-ID registry checks
-#       ├── bootstrap-self-host         the bootstrap tests, specification suites and self-host (tagged manual)
+#       ├── bootstrap-self-host         the bootstrap tests, specification suites and self-host (tagged manual):
+#       │                               [pdb-golden | compiler | printer-compiled | self-host | rest], interpreted
 #       ├── printer-compiled            compiler-pure printed back, on Truffle
 #       ├── pdb-golden                  compiler-pure PDB goldens, on Truffle
 #       ├── printer-protocol            the protocol printer corpus, on Truffle
-#       ├── truffle-native-self-host    the native image: [specifications | self-host (every self-host check)]
-#       └── truffle-self-host           Truffle: its JUnit tests, the compiler corpus, the usage example
+#       ├── truffle-native              the native image: [specifications | self-host (every self-host check)]
+#       └── truffle                     Truffle: its build, JUnit tests, the compiler corpus, the usage example
 #           ├── truffle-specifications  every other suite on Truffle
 #           └── translation-deps        the module suites on Truffle: [language-java | language-javascript | translation-shared]
-#               └── translations        the Java and JavaScript hosts, the Truffle translator: [java | javascript | truffle]
+#               └── translations        the Java and JavaScript hosts, the Truffle translator:
+#                                       [java | javascript | truffle | java-modules (the module suites on Java)]
 #   publish-gallery → all-green
 #
-# Jobs hand their work on through the Bazel disk cache (.bazelrc config ci): bootstrap and truffle-self-host save
+# Jobs hand their work on through the Bazel disk cache (.bazelrc config ci): bootstrap and truffle save
 # theirs, the jobs that need them restore it, and main saves the one every run starts from. The manual tiers (tags
 # bootstrap, selfhost) are not in //..., so not in a local `bazel test //...`, but CI runs them on every run, in
 # parallel. The test dashboard reads each job's reports as before (tools/bazel/collect-reports.mjs).
@@ -158,9 +160,24 @@ jobs:
           key: bazel-${{ runner.os }}-${{ github.run_id }}-bootstrap
 
   bootstrap-self-host:
-    name: "Bootstrap tier (its tests, specification suites and self-host)"
+    name: "Bootstrap tier (${{ matrix.part }})"
     needs: bootstrap
     runs-on: ubuntu-24.04
+    # Its suites are interpreted: the heaviest each on a runner of its own, the rest together.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: pdb-golden
+            query: //bootstrap:compiler_pdb_cli
+          - part: compiler
+            query: //bootstrap:compiler_compiler_cli
+          - part: printer-compiled
+            query: //bootstrap:compiler_printer-compiled_cli
+          - part: self-host
+            query: //bootstrap:compiler_compiler_selfhost + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests
+          - part: rest
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap:compiler_pdb_cli - //bootstrap:compiler_compiler_cli - //bootstrap:compiler_printer-compiled_cli - //bootstrap:compiler_compiler_selfhost - (//pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests)
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -171,7 +188,7 @@ jobs:
           restore-from: bootstrap
 
       - name: Test
-        run: bazel test $(bazel query --noshow_progress 'attr(tags, "\bbootstrap\b", //...)')
+        run: bazel test $(bazel query --noshow_progress '${{ matrix.query }}')
 
       - name: Collect dashboard reports
         if: always()
@@ -184,7 +201,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: dashboard-reports-bootstrap-self-host
+          name: dashboard-reports-bootstrap-self-host-${{ matrix.part }}
           path: test-results/
           if-no-files-found: ignore
 
@@ -281,7 +298,7 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
 
-  truffle-self-host:
+  truffle:
     name: Truffle (build + JUnit + compiler corpus)
     needs: bootstrap
     runs-on: ubuntu-24.04
@@ -298,7 +315,7 @@ jobs:
         run: bazel build //platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle
 
       - name: Test
-        run: bazel test --build_tests_only --test_tag_filters=job:truffle-self-host //...
+        run: bazel test --build_tests_only --test_tag_filters=job:truffle //...
 
       # The cache the next run on any branch starts from.
       - name: Save the Bazel caches for later runs
@@ -321,7 +338,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: dashboard-reports-truffle-self-host
+          name: dashboard-reports-truffle
           path: test-results/
           if-no-files-found: ignore
 
@@ -332,9 +349,9 @@ jobs:
           path: |
             ~/.cache/bazel-disk
             ~/.cache/bazel-repo
-          key: bazel-${{ runner.os }}-${{ github.run_id }}-truffle-self-host
+          key: bazel-${{ runner.os }}-${{ github.run_id }}-truffle
 
-  truffle-native-self-host:
+  truffle-native:
     name: Truffle native image (${{ matrix.suite }})
     needs: bootstrap
     runs-on: ubuntu-24.04
@@ -343,11 +360,11 @@ jobs:
       matrix:
         include:
           - suite: specifications
-            command: bazel test --build_tests_only --test_tag_filters=job:truffle-native-self-host/specifications //...
+            command: bazel test --build_tests_only --test_tag_filters=job:truffle-native/specifications //...
           # Every self-host check (Truffle JIT, native image, bootstrap): tagged manual, so not in //..., but run here
           # on every run, in parallel with the other jobs.
           - suite: self-host
-            command: bazel test $(bazel query --noshow_progress 'attr(tags, "\bselfhost\b", //...)')
+            command: bazel test $(bazel query --noshow_progress 'attr(tags, "[\[ ]selfhost[,\]]", //...)')
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -377,7 +394,7 @@ jobs:
 
   truffle-specifications:
     name: Truffle specifications
-    needs: truffle-self-host
+    needs: truffle
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
@@ -386,7 +403,7 @@ jobs:
       - name: Set up Bazel
         uses: ./.github/actions/bazel
         with:
-          restore-from: truffle-self-host
+          restore-from: truffle
 
       - name: Test
         run: bazel test --build_tests_only --test_tag_filters=job:truffle-specifications //...
@@ -408,7 +425,7 @@ jobs:
 
   translation-deps:
     name: Module suites on Truffle (${{ matrix.target }})
-    needs: truffle-self-host
+    needs: truffle
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -424,7 +441,7 @@ jobs:
       - name: Set up Bazel
         uses: ./.github/actions/bazel
         with:
-          restore-from: truffle-self-host
+          restore-from: truffle
 
       - name: Test
         run: bazel test --build_tests_only --test_tag_filters=job:translation-deps/${{ matrix.target }} //...
@@ -461,6 +478,8 @@ jobs:
           - target: truffle
             gallery: //platforms/truffle:gallery
             gallery_file: truffle-translation-gallery.html
+          # The module suites on the Java platform, which compile and run Java as they go.
+          - target: java-modules
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -468,12 +487,13 @@ jobs:
       - name: Set up Bazel
         uses: ./.github/actions/bazel
         with:
-          restore-from: truffle-self-host
+          restore-from: truffle
 
       - name: Test
         run: bazel test --build_tests_only --test_tag_filters=job:translations/${{ matrix.target }} //...
 
       - name: Build the gallery
+        if: matrix.gallery
         run: |
           set -euo pipefail
           bazel build ${{ matrix.gallery }}
@@ -481,6 +501,7 @@ jobs:
           cp "$(bazel info bazel-bin)/platforms/${{ matrix.target }}/${{ matrix.gallery_file }}" gallery/
 
       - name: Upload the gallery
+        if: matrix.gallery
         uses: actions/upload-artifact@v7
         with:
           name: gallery-${{ matrix.target }}
@@ -525,8 +546,8 @@ jobs:
       - printer-compiled
       - pdb-golden
       - printer-protocol
-      - truffle-self-host
-      - truffle-native-self-host
+      - truffle
+      - truffle-native
       - truffle-specifications
       - translation-deps
       - translations
@@ -668,8 +689,8 @@ jobs:
       - printer-compiled
       - pdb-golden
       - printer-protocol
-      - truffle-self-host
-      - truffle-native-self-host
+      - truffle
+      - truffle-native
       - truffle-specifications
       - translation-deps
       - translations

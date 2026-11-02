@@ -44,7 +44,7 @@ java_binary(
 # working cannot go unnoticed.
 sh_test(
     name = "usage-example_runs",
-    tags = ["job:truffle-self-host"],
+    tags = ["job:truffle"],
     srcs = ["//tools/bazel:runs.sh"],
     args = ["$(rootpath :usage-example)"],
     data = [":usage-example"],
