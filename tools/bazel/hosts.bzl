@@ -285,13 +285,9 @@ HOSTS = {
 # Known gaps (Section 2.5): {(host, variant, owner, suite): reason}. Each runs, and its test passes while the suite
 # fails; it fails once the suite passes, asking for its entry to be removed, so the list only shrinks.
 PENDING = {
-    ("bootstrap", "cli", "compiler", "compiler-unit"): "3 of 17 fail on the bootstrap, whose Java compiler cannot build the island values of the test package: 'DotApplication cannot be cast to FunctionInvocation' (testAnIslandValue*); just does not run this suite on the bootstrap",
     ("java", "platform", "relation", "pct"): "the relation natives have no Java coder yet (spec Section 6: relation on Java and JavaScript): 'No coder for Pure function: size'",
-    ("java", "platform", "java", "unit"): "3 of 92 Java language tests fail on the Java platform: 'IfImpl cannot be cast to class java.util.List' (serialization::tests::classToStringWith*Imports)",
-    ("java", "platform", "translation-shared", "unit"): "7 of 41 canonicalisation tests fail on the Java platform: 'Cannot translate <native>: NativeFunctionImpl cannot be cast'",
     ("javascript", "cli", "relation", "pct"): "the relation natives have no JavaScript coder yet (spec Section 6: relation on Java and JavaScript), so the PCT tests that call them are not translated: 'no translated function for ...::size::testSimpleSize_Function_1__Boolean_1_'",
     ("javascript", "translated", "relation", "pct"): "the relation natives have no JavaScript coder yet (spec Section 6: relation on Java and JavaScript), so the PCT tests that call them are not translated: 'no translated function for ...::size::testSimpleSize_Function_1__Boolean_1_'",
-    ("javascript", "cli", "translation-shared", "unit"): "7 of 41 canonicalisation tests fail on the JavaScript platform: 'no translated function for <native>' (as on the Java platform)",
     # The legacy layer, run on the bootstrap only before Bazel (just: extensions::legacy::test-all).
     ("truffle", "jit", "legacy", "unit"): "3 of 35 bridge tests fail on Truffle: 'type parameter T could not be resolved at runtime' (natives::testEnumValuesOfAView), and a dynamic new from a view returns no value (testDynamicNewFromAViewOf*)",
     ("truffle", "native", "legacy", "unit"): "3 of 35 bridge tests fail on Truffle: 'type parameter T could not be resolved at runtime' (natives::testEnumValuesOfAView), and a dynamic new from a view returns no value (testDynamicNewFromAViewOf*)",
@@ -370,13 +366,26 @@ def _suite_test(host_name, host, variant_name, variant, owner, test):
     )
 
 def host_specs(host):
-    """One test per suite of every owner, on each variant of 'host' that runs it: '<owner>_<suite>_<variant>'."""
+    """One test per suite of every owner, on each variant of 'host' that runs it: '<owner>_<suite>_<variant>'; and,
+    for an owner that declares no suite, '<owner>_none_<variant>' on the default variant, whose report has no case:
+    the dashboard shows the module, 0/0, rather than nothing."""
     description = HOSTS[host]
     [_suite_test(host, description, variant_name, variant, owner, test)
      for owner in sorted(MODULES.keys())
      for test in MODULES[owner]["tests"]
      for variant_name, variant in description["variants"].items()
      if variant["runs"](owner, test)]
+    default = description["default"]
+    variant = description["variants"][default]
+    [sh_test(
+        name = "%s_none_%s" % (owner, default),
+        srcs = ["//tools/bazel:empty-report.sh"],
+        # Where the module's unit suite would report (the dashboard reads modules there).
+        args = ["%s/unit/%s.json" % (MODULES[owner]["reportDir"], variant["report"])],
+        tags = ["host:" + host] + variant.get("tags", []) +
+               ([] if "manual" in variant.get("tags", []) else ["job:" + job_of(host, default, owner, "unit")]),
+    ) for owner in sorted(MODULES.keys())
+      if not MODULES[owner]["tests"] and variant["runs"](owner, {"suite": "unit", "runner": "tests", "target": ""})]
 
 def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compiler"):
     """Host checks: each golden of 'owner' read back by the host decoder, which must find in it the element its
@@ -397,10 +406,12 @@ def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compile
     [sh_test(
         name = "%s_read_back_%s" % (owner, fixture.replace("/", "_")),
         srcs = ["//tools/bazel:run-suite.sh"],
-        args = ["%s/read-back/%s.json" % (manifest["reportDir"], fixture.replace("/", "_")), "$(rootpath %s)" % description["tool"]] + command +
+        # Every read-back of the host shares one report, a case per fixture (run-suite.sh: PURE_CASE).
+        args = ["%s/read-back/%s.json" % (manifest["reportDir"], variant["report"]), "$(rootpath %s)" % description["tool"]] + command +
                [a for pdb in pdbs for a in ["--pdb", "$(rootpath %s)" % pdb]] +
                ["--pdb", "%s/%s-pdb-serialization/%s.pdb" % (manifest["dir"], fixture_dir, fixture),
                 "--function", function, "--args", "%s/%s/%s.pure" % (manifest["dir"], fixture_dir, fixture), element],
         data = [description["tool"], "//:shared"] + pdbs + manifest["data"] + variant.get("data", []),
+        env = {"PURE_CASE": fixture},
         tags = ["host:" + host, "job:" + job_of(host, description["default"], owner, "read-back")],
     ) for fixture, element in fixtures.items()]

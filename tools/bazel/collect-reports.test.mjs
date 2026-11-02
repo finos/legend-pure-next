@@ -55,12 +55,12 @@ test("collectReports copies the Pure reports and splits the JUnit ones below eac
     const result = collectReports(logs, repo);
     assert.equal(readFileSync(join(repo, "test-results/spec/pct/pure@cli-truffle.json"), "utf8"), "{}");
     assert.ok(existsSync(join(repo, "bootstrap/m/target/surefire-reports/TEST-org.x.ATest.xml")));
-    assert.deepEqual(result, { reports: 1, classes: 2 });
+    assert.deepEqual(result, { reports: 1, classes: 2, checks: 0 });
 });
 
 test("no test logs (no test ran) is nothing to collect", () => {
     const repo = mkdtempSync(join(tmpdir(), "repo-"));
-    assert.deepEqual(collectReports(join(repo, "no-testlogs"), repo), { reports: 0, classes: 0 });
+    assert.deepEqual(collectReports(join(repo, "no-testlogs"), repo), { reports: 0, classes: 0, checks: 0 });
 });
 
 test("a generated case is named by its method and display name, as surefire names it (usePhrasedTestCaseMethodName)", () => {
@@ -95,4 +95,68 @@ display-name: writes(Path)
 </testcase>
 </testsuite>`);
     assert.match(files["TEST-org.x.ETest.xml"], /<testcase name="writes\(Path\)" classname="org.x.ETest"/);
+});
+
+const testXml = (label, failures, seconds) => `<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="${label}" tests="1" failures="${failures}" errors="0">
+    <testcase name="${label}" classname="" status="run" duration="${seconds}" time="${seconds}"></testcase>
+  </testsuite>
+</testsuites>`;
+
+test("a test that ran without a report of its own is a check: one case, passed or failed as Bazel recorded it", () => {
+    const logs = mkdtempSync(join(tmpdir(), "testlogs-"));
+    const repo = mkdtempSync(join(tmpdir(), "repo-"));
+    write(logs, "tools/bazel/ids_up_to_date/test.xml", testXml("tools/bazel/ids_up_to_date", 0, 2));
+    write(logs, "pure/x/pdbs_match/test.xml", testXml("pure/x/pdbs_match", 1, 1));
+    write(logs, "pure/x/pdbs_match/test.log", "exec ${PAGER:-/usr/bin/less} \"$0\" || exit 1\nExecuting tests from //pure/x:pdbs_match\n----\nPDB deep diff\n  property diffs : 3\n");
+    const result = collectReports(logs, repo);
+    const passed = JSON.parse(readFileSync(join(repo, "test-results/checks/tools/bazel/ids_up_to_date.json"), "utf8"));
+    assert.deepEqual(passed.cases, [{ id: "//tools/bazel:ids_up_to_date", status: "passed", durationMs: 2000 }]);
+    const failed = JSON.parse(readFileSync(join(repo, "test-results/checks/pure/x/pdbs_match.json"), "utf8"));
+    assert.equal(failed.cases[0].status, "failed");
+    assert.match(failed.cases[0].error.message, /property diffs : 3/);
+    assert.doesNotMatch(failed.cases[0].error.message, /PAGER|Executing tests/);
+    assert.equal(result.checks, 2);
+});
+
+test("the reports several tests write at one path are one report, with all their cases", () => {
+    const logs = mkdtempSync(join(tmpdir(), "testlogs-"));
+    const repo = mkdtempSync(join(tmpdir(), "repo-"));
+    const report = (id) => JSON.stringify({ schema: 1, producer: "bazel", suite: "read-back", durationMs: 5, recordedAt: "2026-11-02T00:00:00Z", source: "s", cases: [{ id, status: "passed", durationMs: 5 }] });
+    write(logs, "platforms/truffle/a_read_back_x/test.outputs/spec/a/read-back/pure@cli-truffle.json", report("x"));
+    write(logs, "platforms/truffle/a_read_back_y/test.outputs/spec/a/read-back/pure@cli-truffle.json", report("y"));
+    collectReports(logs, repo);
+    const merged = JSON.parse(readFileSync(join(repo, "test-results/spec/a/read-back/pure@cli-truffle.json"), "utf8"));
+    assert.deepEqual(merged.cases.map((c) => c.id).sort(), ["x", "y"]);
+    assert.equal(merged.durationMs, 10);
+});
+
+test("given the live test targets, the logs of any other (a test since removed) are left out", () => {
+    const logs = mkdtempSync(join(tmpdir(), "testlogs-"));
+    const repo = mkdtempSync(join(tmpdir(), "repo-"));
+    write(logs, "platforms/truffle/core_pct_jit/test.outputs/spec/pct/pure@cli-truffle.json", "{\"cases\":[]}");
+    write(logs, "platforms/truffle/gone_unit_jit/test.outputs/pure/gone/unit/pure@cli-truffle.json", "{\"cases\":[]}");
+    write(logs, "tools/bazel/gone_check/test.xml", testXml("tools/bazel/gone_check", 0, 1));
+    const result = collectReports(logs, repo, new Set(["//platforms/truffle:core_pct_jit"]));
+    assert.ok(existsSync(join(repo, "test-results/spec/pct/pure@cli-truffle.json")));
+    assert.ok(!existsSync(join(repo, "test-results/pure/gone")));
+    assert.ok(!existsSync(join(repo, "test-results/checks")));
+    assert.deepEqual(result, { reports: 1, classes: 0, checks: 0 });
+});
+
+test("a collection replaces the previous one: a report it no longer finds is removed, other files are kept", () => {
+    const repo = mkdtempSync(join(tmpdir(), "repo-"));
+    const first = mkdtempSync(join(tmpdir(), "testlogs-"));
+    write(first, "platforms/truffle/a_unit_jit/test.outputs/pure/a/unit/pure@cli-truffle.json", "{\"cases\":[]}");
+    write(first, "tools/bazel/check/test.xml", testXml("tools/bazel/check", 0, 1));
+    collectReports(first, repo);
+    write(repo, "test-results/history.json", "[]");
+    const second = mkdtempSync(join(tmpdir(), "testlogs-"));
+    write(second, "platforms/truffle/b_unit_jit/test.outputs/pure/b/unit/pure@cli-truffle.json", "{\"cases\":[]}");
+    collectReports(second, repo);
+    assert.ok(!existsSync(join(repo, "test-results/pure/a/pure@cli-truffle.json")));
+    assert.ok(!existsSync(join(repo, "test-results/checks/tools/bazel/check.json")));
+    assert.ok(existsSync(join(repo, "test-results/pure/b/pure@cli-truffle.json")));
+    assert.ok(existsSync(join(repo, "test-results/history.json")));
 });

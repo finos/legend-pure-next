@@ -164,6 +164,7 @@ java_binary(
 
 exports_files(
     [
+        "empty-report.sh",
         "pdb-diff.sh",
         "run-suite.sh",
         "runs.sh",

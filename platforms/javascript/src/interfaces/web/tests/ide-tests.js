@@ -129,6 +129,9 @@ async function launchChrome(url) {
         "--no-sandbox",                 // CI containers run as root; harmless locally
         "--disable-dev-shm-usage",      // small /dev/shm in containers crashes the renderer
         "--no-first-run", "--no-default-browser-check",
+        // A fresh profile asks the macOS keychain for its storage key, and a keychain that cannot answer shows a
+        // dialog Chrome waits on, the page never loading; Linux asks its secret store the same way. Neither is used.
+        "--use-mock-keychain", "--password-store=basic",
         "--remote-debugging-port=0",    // the port is read back, so parallel runs cannot collide
         `--user-data-dir=${profile}`,
         url,
@@ -239,10 +242,16 @@ check("the IDE loads and reaches Ready", async () => {
     chrome = await launchChrome(url);
     page = await attach(chrome.port, PAGE);
     // The page reports its own readiness; it downloads 13.6 MB of archives to get there.
+    let last = "";
     const status = await until(async () => {
-        const text = await page.evaluate("document.getElementById('status')?.textContent ?? ''");
-        return text.trim() === "Ready." ? text.trim() : undefined;
-    }, "the IDE to report Ready.", LOAD_MS);
+        last = (await page.evaluate("document.getElementById('status')?.textContent ?? ''")).trim();
+        return last === "Ready." ? last : undefined;
+    }, "the IDE to report Ready.", LOAD_MS).catch((e) => {
+        // What the page got to, and why: its status, what it logged, what was not served.
+        throw new Error(`${e.message}\n  its status: '${last}'`
+            + (page.pageErrors.length ? `\n  the page logged errors:\n    ${page.pageErrors.join("\n    ")}` : "")
+            + (server.misses.length ? `\n  unserved requests: ${server.misses.join(", ")}` : ""));
+    });
     assert.equal(status, "Ready.");
     assert.deepEqual(page.pageErrors, [],
         `the page logged errors while loading:\n  ${page.pageErrors.join("\n  ")}`

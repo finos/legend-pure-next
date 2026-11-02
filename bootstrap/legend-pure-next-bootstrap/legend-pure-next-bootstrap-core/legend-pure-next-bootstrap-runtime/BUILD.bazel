@@ -17,9 +17,27 @@
 load("@rules_java//java:defs.bzl", "java_library")
 load("//tools/bazel:junit5.bzl", "junit5_test")
 
+# The language manifests compileSource compiles with (PureCompilation.LANGUAGES), on the class path at languages/,
+# as Truffle stages them.
+genrule(
+    name = "language_resources",
+    srcs = [
+        "//pure/specification:language_pure.json",
+        "//pure/specification:language_test.json",
+    ],
+    outs = [
+        "languages/language_pure.json",
+        "languages/language_test.json",
+    ],
+    cmd = "cp $(execpath //pure/specification:language_pure.json) $(RULEDIR)/languages/language_pure.json; " +
+          "cp $(execpath //pure/specification:language_test.json) $(RULEDIR)/languages/language_test.json",
+)
+
 java_library(
     name = "runtime",
     srcs = glob(["src/main/java/**/*.java"]),
+    resource_strip_prefix = package_name(),
+    resources = [":language_resources"],
     visibility = ["//visibility:public"],
     exports = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-execution:execution"],
     deps = [

@@ -25,6 +25,12 @@
     "tds",
 ]]
 
+# The test dashboard of the last test run, in test-results/dashboard.html: bazel test //... && bazel run //:dashboard.
+alias(
+    name = "dashboard",
+    actual = "//tools/test-dashboard:dashboard",
+)
+
 # Write the PDB goldens back to the source tree (tools/bazel: update_pdb_goldens__*).
 [alias(
     name = "update_pdb_goldens__" + owner,

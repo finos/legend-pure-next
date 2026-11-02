@@ -418,7 +418,8 @@ function groupFailures() {
   return [...out.values()].sort((a, b) => b.tests.length - a.tests.length);
 }
 
-const KINDS = [["spec", "Specifications"], ["pure", "Pure code"], ["java", "Java tests"], ["javascript", "JavaScript tests"]];
+// "checks": the tests with no case of their own (a PDB comparison, a registry check), one case each (tools/bazel/collect-reports.mjs).
+const KINDS = [["spec", "Specifications"], ["pure", "Pure code"], ["java", "Java tests"], ["javascript", "JavaScript tests"], ["checks", "Checks"]];
 for (const k of new Set(ALL.map(r => r.kind))) if (!KINDS.some(([known]) => known === k)) KINDS.push([k, k]);
 
 function header() {
@@ -569,7 +570,11 @@ const MODULES = [
   ["translation-shared", "Translation shared module", "<<test.Test>> suite"],
   ["translation-java", "Java translation module", "translator <<test.Test>> suite"],
   ["translation-java-functions", "Java translation extension", "runtime functions, extension loaded"],
-  ["translation-javascript", "JavaScript translation module", "translator <<test.Test>> suite"]
+  ["translation-javascript", "JavaScript translation module", "translator <<test.Test>> suite"],
+  // Modules that declare no suite: 0/0 on each host (tools/bazel/hosts.bzl host_specs), shown rather than missing.
+  ["protocol", "Protocol module", "no suite"],
+  ["analysis-diagram", "Diagram analysis module", "no suite"],
+  ["translation-truffle", "Truffle translation module", "no suite"]
 ];
 for (const r of ALL) if (r.kind === "pure" && ![...PURE_CODE, ...MODULES].some(([g]) => g === r.group)) PURE_CODE.push([r.group, r.group, ""]);
 // Pure code runs on the plain Pure hosts and through the Java translation; the other columns are specification variants

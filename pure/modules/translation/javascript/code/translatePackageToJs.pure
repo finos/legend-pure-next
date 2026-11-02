@@ -171,6 +171,7 @@ function platform::extensions::language::javascript::translation::pdb::isTransla
 ): Boolean[1]
 {
    $e->instanceOf(platform::pure::metamodel::function::UserDefinedFunction)
+      || $e->instanceOf(platform::pure::metamodel::function::NativeFunction)
       || $e->instanceOf(platform::pure::metamodel::type::Class)
       || $e->instanceOf(platform::pure::metamodel::type::Enumeration);
 }
@@ -184,6 +185,8 @@ function platform::extensions::language::javascript::translation::pdb::translate
    if ($e->instanceOf(platform::pure::metamodel::function::UserDefinedFunction),
       | let udf = $e->cast(@platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>);
         $udf->translateUdfElement();,
+   |if ($e->instanceOf(platform::pure::metamodel::function::NativeFunction),
+      | $e->cast(@platform::pure::metamodel::function::NativeFunction<platform::pure::metamodel::type::Any>)->translateNativeElement();,
    |if ($e->instanceOf(platform::pure::metamodel::type::Enumeration),
       | let en = $e->cast(@platform::pure::metamodel::type::Enumeration<platform::pure::metamodel::type::Any>);
         $en->translateEnumeration();,
@@ -191,7 +194,7 @@ function platform::extensions::language::javascript::translation::pdb::translate
       | let cls = $e->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>);
         $cls->translateClass();,
       | ''
-   )));
+   ))));
 }
 
 // Pure Classes have no runtime representation in the emitted JavaScript —
@@ -257,6 +260,48 @@ function platform::extensions::language::javascript::translation::pdb::translate
    if ($attempt.failure->isNotEmpty(),
       | '// translation failed for ' + $path + ': ' + $attempt.failure->toOne().message,
       | '// ' + $path + '\n' + $attempt.value);
+}
+
+// A native as a function of its own, named as a UDF is (jsUdfName): its parameters, and the native's coder for a
+// call passing them on. Its call sites never need it (the coder is inlined there); it is what a native held as a
+// VALUE runs as (`evaluate($native, ...)`), which resolves a function by that name. A native this platform has no
+// coder for is not emitted.
+function platform::extensions::language::javascript::translation::pdb::translateNativeElement(
+   native: platform::pure::metamodel::function::NativeFunction<platform::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let conv = defaultConvention();
+   if ($native->coderFor($conv)->isEmpty(),
+      | '',
+      | let path = $native->elementToPath();
+        let attempt = tryEval(| $native->renderNativeTs($conv));
+        if ($attempt.failure->isNotEmpty(),
+           | '// translation failed for ' + $path + ': ' + $attempt.failure->toOne().message,
+           | '// ' + $path + '\n' + $attempt.value););
+}
+
+function platform::extensions::language::javascript::translation::pdb::renderNativeTs(
+   native: platform::pure::metamodel::function::NativeFunction<platform::pure::metamodel::type::Any>[1],
+   conv: Convention[1]
+): String[1]
+{
+   let call = ^platform::pure::metamodel::valuespecification::FunctionInvocation(
+      functionName     = $native.functionName->toOne('translateNativeElement: native missing functionName'),
+      parametersValues = $native.parameters,
+      func             = $native,
+      multiplicity     = $native.returnMultiplicity,
+      genericType      = $native.returnGenericType
+   );
+   let pkg = $native.package->map(p | $p->elementToPath())->filter(s | $s != '')->joinStrings('');
+   let fn = ^FunctionDeclaration(
+      name              = jsUdfName($native),
+      modifiers         = [ModifierFlag.Export],
+      parameters        = $native.parameters->map(p | jsParam(safeJsName($p.name))),
+      body              = [$call]->buildJsFunctionBody($conv->withTypeVarWitness($native.parameters)),
+      sourceInformation = $native.sourceInformation,
+      pureName          = if ($pkg == '', | $native.functionName->toOne(), | $pkg + '::' + $native.functionName->toOne())
+   );
+   jsSourceFile('translated.js', [$fn])->serialize();
 }
 
 function platform::extensions::language::javascript::translation::pdb::renderUdfTs(

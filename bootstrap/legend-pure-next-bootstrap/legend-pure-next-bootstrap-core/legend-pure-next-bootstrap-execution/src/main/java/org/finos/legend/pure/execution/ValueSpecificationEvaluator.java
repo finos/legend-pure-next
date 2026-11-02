@@ -641,13 +641,32 @@ public class ValueSpecificationEvaluator
 
     private List<ValueSpecification> evaluateArgs(FunctionExpression fe)
     {
-        MutableList<ValueSpecification> paramSpecs = fe._parametersValues();
+        // Read as Object: an argument can be an island value (see evaluateNode).
+        List<?> paramSpecs = fe._parametersValues();
         List<ValueSpecification> args = new ArrayList<>(paramSpecs.size());
-        for (ValueSpecification param : paramSpecs)
+        for (Object param : paramSpecs)
         {
-            args.add(evaluate(param));
+            args.add(evaluateNode(param));
         }
         return args;
+    }
+
+    /**
+     * An element of an expression list, read as an Object: a value specification, or an instance of a class
+     * defined in Pure that extends ValueSpecification (an island value, which a language extension compiles to its
+     * own class). Here that is a DynamicInstance, which the generated Java ValueSpecification cannot type, so a
+     * typed read of the list would fail on it; it evaluates to the instance itself, as evaluate's default case.
+     */
+    private ValueSpecification evaluateNode(Object node)
+    {
+        if (node instanceof DynamicInstance instance)
+        {
+            return _E_ValueSpecification.wrap(instance,
+                    instance.get("genericType") instanceof GenericType genericType ? genericType : null,
+                    instance.get("multiplicity") instanceof platform.pure.metamodel.multiplicity.Multiplicity multiplicity ? multiplicity : null,
+                    this.natives.resolver());
+        }
+        return evaluate((ValueSpecification) node);
     }
 
     /**
@@ -712,8 +731,8 @@ public class ValueSpecificationEvaluator
             throw new RuntimeException("Property access '" + propertyName + "' has no target object");
         }
 
-        // Evaluate the target object (first parameter)
-        ValueSpecification targetVs = evaluate(paramSpecs.get(0));
+        // Evaluate the target object (first parameter), read as Object: it can be an island value (evaluateNode).
+        ValueSpecification targetVs = evaluateNode(((List<?>) paramSpecs).get(0));
 
         return accessProperty(targetVs, propertyName, fe._genericType(), fe._multiplicity(), isEnumValueProperty(prop));
     }
@@ -1111,9 +1130,10 @@ public class ValueSpecificationEvaluator
         ValueSpecification result = null;
         try
         {
-            for (ValueSpecification expr : fd._expressionSequence())
+            // Read as Object: an expression of the body can be an island value (evaluateNode).
+            for (Object expr : (List<?>) fd._expressionSequence())
             {
-                result = evaluate(expr);
+                result = evaluateNode(expr);
             }
         }
         finally

@@ -15,8 +15,12 @@
 
 package org.finos.legend.pure.runtime.compilation;
 
+import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.list.ImmutableList;
+import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Maps;
 import org.eclipse.collections.api.map.MutableMap;
+import org.finos.legend.pure.execution.JsonValue;
 import org.finos.legend.pure.m3.module.ElementStatistics;
 import org.finos.legend.pure.m3.module.CompilationStatistics;
 import org.finos.legend.pure.m3.module.sourceModule.PureContent;
@@ -52,6 +56,10 @@ public final class PureCompilation implements Compilation
     private static final String PARSE_FN = "platform::pure::functions::meta::parse_String_1__String_1__PureFile_1_";
     private static final String PARSE_DIRS_FN = "platform::pure::compiler::parseDirs_String_MANY__PureFile_MANY_";
     private static final String COMPILE_FN = "platform::pure::compiler::compile_PureFile_MANY__CompilationResult_1_";
+    private static final String COMPILE_WITH_EXTENSIONS_FN = "platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
+    // The languages of the runtime, as Truffle stages them (its language_resources): their manifests, on the class
+    // path. A language whose compiler extension is not loaded (its module is not) contributes nothing.
+    private static final ImmutableList<String> LANGUAGES = Lists.immutable.of("languages/language_pure.json", "languages/language_test.json");
 
     private final MetadataAccess registry;
     private final FunctionExecutor executor;
@@ -94,7 +102,49 @@ public final class PureCompilation implements Compilation
     @Override
     public CompilationResult compileParsed(List<?> pureFiles)
     {
-        Object result = this.executor.execute(compilerFunction(COMPILE_FN), pureFiles);
+        return compilationResult(this.executor.execute(compilerFunction(COMPILE_FN), pureFiles));
+    }
+
+    /** The compile with the languages' compiler extensions, silent (no progress bar inside a program). */
+    @Override
+    public CompilationResult compileParsedWithLanguages(List<?> pureFiles)
+    {
+        return compilationResult(this.executor.execute(compilerFunction(COMPILE_WITH_EXTENSIONS_FN), pureFiles, compilerExtensions(), true));
+    }
+
+    /** The compiler extensions of the languages: each one's `pure.compilerExtension` function, called. */
+    private MutableList<Object> compilerExtensions()
+    {
+        return LANGUAGES.toList()
+                .collect(PureCompilation::compilerExtensionPath)
+                .select(java.util.Objects::nonNull)
+                .collect(this.registry::getElement)
+                .select(java.util.Objects::nonNull)
+                .flatCollect(function -> Lists.mutable.withAll(asList(this.executor.execute((FunctionWithParameters) function))));
+    }
+
+    /** The `pure.compilerExtension` of a language manifest on the class path, or null. */
+    private static String compilerExtensionPath(String resource)
+    {
+        try (java.io.InputStream in = PureCompilation.class.getClassLoader().getResourceAsStream(resource))
+        {
+            if (in == null)
+            {
+                throw new IllegalStateException("no language manifest on the class path at '" + resource + "'");
+            }
+            JsonValue manifest = JsonValue.parse(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            JsonValue pure = manifest instanceof JsonValue.JsonObject object ? object.fields().get("pure") : null;
+            JsonValue extension = pure instanceof JsonValue.JsonObject object ? object.fields().get("compilerExtension") : null;
+            return extension instanceof JsonValue.JsonString string ? string.value() : null;
+        }
+        catch (java.io.IOException e)
+        {
+            throw new IllegalStateException("cannot read the language manifest '" + resource + "'", e);
+        }
+    }
+
+    private CompilationResult compilationResult(Object result)
+    {
         if (!(result instanceof DynamicInstance compilationResult))
         {
             throw new RuntimeException("compile did not return a CompilationResult (got "

@@ -663,7 +663,7 @@ function platform::extensions::language::javascript::translation::derefFuncToUdf
 // which is globally unique. Derived from the resolved element, so the
 // definition and every call site agree; hand-written callers (antlr-entry.js)
 // reference the same full name.
-function platform::extensions::language::javascript::translation::jsUdfName(udf: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]): String[1]
+function platform::extensions::language::javascript::translation::jsUdfName(udf: platform::pure::metamodel::function::PackageableFunction<platform::pure::metamodel::type::Any>[1]): String[1]
 {
    safeJsName($udf->elementToPath()->split('::')->joinStrings('$'));
 }

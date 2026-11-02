@@ -103,3 +103,9 @@ function <<PCT.test>> platform::pure::functions::collection::tests::fold::testFo
     assertEquals('Roe', $person.lastName);
     assertEquals(['Doe', 'Branche'], $person.otherNames);
 }
+// The fold of many whose function gives ONE value each step (a [*] accumulator, a [1] result): the next step reads
+// it back as many, as j_if folds its else branches (pure/modules/language/java factories_code.pure).
+function <<PCT.test>> platform::pure::functions::collection::tests::fold::testFoldOfManyReturningOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(4, $f->eval(|[1, 2, 3]->fold({x:Integer[1], y:Integer[*] | $x + $y->size()}, [])->toOne()));
+}

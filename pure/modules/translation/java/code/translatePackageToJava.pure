@@ -140,7 +140,12 @@ function <<test.TestDependency>> platform::extensions::language::java::translati
 // (a PCT test, which lives in a `tests` package the platform doesn't prebuild).
 function <<test.TestDependency>> platform::extensions::language::java::translation::translateFunctionProgram(functionPath: String[1]): String[1]
 {
-   $functionPath->pathToElement()->cast(@UserDefinedFunction<Any>)->translateFunctionValueProgram();
+   let function = $functionPath->pathToElement();
+   if ($function->instanceOf(platform::pure::metamodel::function::NativeFunction),
+      | let base = defaultConventions(platform::extensions::language::java::translation::platform::platformRoot());
+        ^$base(metadataElements = true)->platform::extensions::language::java::translation::nativeFileOrStub($function->cast(@platform::pure::metamodel::function::NativeFunction<Any>))
+           ->platform::extensions::language::java::serialization::withoutMarkers();,
+      | $function->cast(@UserDefinedFunction<Any>)->translateFunctionValueProgram());
 }
 
 // The same, for a function the metadata does NOT hold: one just built by
@@ -216,6 +221,21 @@ function <<test.TestDependency>> platform::extensions::language::java::translati
    let source    = if ($attempt.failure->isEmpty(),
                       | $attempt.value->toOne(),
                       | $className->untranslatedStub($udf.parameters->size(), $udf->elementToPath() + ': ' + $attempt.failure->toOne().message));
+   '//// FILE ' + $className->replace('.', '/') + '.java\n' + $source;
+}
+
+// The `//// FILE` block of a native's class (translateNative), or of its stub when it has no coder or its coder does
+// not translate a call that only passes the native's parameters on. Built on demand (translateFunctionProgram), never
+// with the platform: a coder writes Java for the types of a call site, and from a native's own generic signature
+// some do not compile (ceiling(Number), reverse(T[m]), copy), which would fail the platform build for a native
+// nothing calls as a value.
+function <<test.TestDependency>> platform::extensions::language::java::translation::nativeFileOrStub(conv: Conventions[1], native: platform::pure::metamodel::function::NativeFunction<Any>[1]): String[1]
+{
+   let className = $conv->udfClassName($native);
+   let attempt   = tryEval(| $conv->translateNative($native)->platform::extensions::language::java::serialization::classToStringWithPositions());
+   let source    = if ($attempt.failure->isEmpty(),
+                      | $attempt.value->toOne(),
+                      | $className->untranslatedStub($native.parameters->size(), $native->elementToPath() + ': ' + $attempt.failure->toOne().message));
    '//// FILE ' + $className->replace('.', '/') + '.java\n' + $source;
 }
 

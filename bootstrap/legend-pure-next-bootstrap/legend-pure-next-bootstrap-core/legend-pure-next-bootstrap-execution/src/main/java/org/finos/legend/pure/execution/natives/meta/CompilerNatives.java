@@ -121,7 +121,8 @@ public class CompilerNatives implements NativesExtension
             DynamicInstance out = new DynamicInstance("platform::pure::functions::meta::CompileSourceResult");
             try
             {
-                CompilationResult result = this.compilation.get().compileParsed(List.of(file));
+                // With the runtime's languages, as on every host: a source holding a section or an island compiles.
+                CompilationResult result = this.compilation.get().compileParsedWithLanguages(List.of(file));
                 boolean failed = !result.errors().isEmpty();
                 out.put("elements", failed ? new ArrayList<>() : new ArrayList<Object>(result.elements()));
                 out.put("errors", new ArrayList<Object>(result.errors().stream().map(CompilationError::message).toList()));
@@ -256,6 +257,20 @@ public class CompilerNatives implements NativesExtension
         if (value instanceof platform.pure.metamodel.pointer.TempCompilerPointer p)
         {
             String path = p._path();
+            String member = memberName(p);
+            if (member != null)
+            {
+                // A member of an owner (a property, a stereotype, an enum value): `path` is the owner, the pointer
+                // resolves to the member of that name, as Truffle's PointerGraphImmutableResolver does.
+                Object inGraphOwner = byPath.get(path);
+                Object owner = inGraphOwner != null ? deepCopyAndRewritePointers(inGraphOwner, byPath, resolver, copies) : resolver.getElement(path);
+                Object resolved = owner == null ? null : member(owner, p, member);
+                if (resolved == null)
+                {
+                    throw new RuntimeException("resolveAndReturnGraph: cannot resolve the pointer to '" + member + "' of '" + path + "'");
+                }
+                return resolved;
+            }
             // An element of the graph resolves to its RESOLVED copy — the one returned — so the result
             // is self-consistent (a property's owner is the returned class); copied on first reach, the
             // copies table closing any cycle back to it. Anything else resolves to the live element.
@@ -303,6 +318,17 @@ public class CompilerNatives implements NativesExtension
         if (cached != null)
         {
             return cached;
+        }
+        if (value instanceof DynamicInstance instance)
+        {
+            // An instance of a class defined in Pure (an island value, say): its slots can hold elements and
+            // pointers as a generated class does, so they are rewritten on a copy the same way.
+            DynamicInstance copy = new DynamicInstance(instance.getClassPath());
+            copy.setClassifierGenericType(instance.getClassifierGenericType());
+            copies.put(value, copy);
+            org.eclipse.collections.impl.factory.Maps.adapt(instance.getValues())
+                    .forEachKeyValue((name, slot) -> copy.put(name, deepCopyAndRewritePointers(slot, byPath, resolver, copies)));
+            return copy;
         }
         // Resolver-indexed dep element that is NOT being (re)compiled: return
         // it AS-IS. These are the live canonical instances (Integer, Any, …)
@@ -364,6 +390,83 @@ public class CompilerNatives implements NativesExtension
             }
             throw new RuntimeException("resolveAndReturnGraph: deep-copy + rewrite failed on "
                     + value.getClass().getName() + chain, ex);
+        }
+    }
+
+    /** The member an owner-and-member pointer names (`element`), or null for a pointer to an element itself. */
+    private static String memberName(platform.pure.metamodel.pointer.TempCompilerPointer pointer)
+    {
+        try
+        {
+            Object element = pointer.getClass().getMethod("_element").invoke(pointer);
+            return element instanceof String name && !name.isEmpty() ? name : null;
+        }
+        catch (NoSuchMethodException e)
+        {
+            return null;
+        }
+        catch (ReflectiveOperationException e)
+        {
+            throw new RuntimeException("resolveAndReturnGraph: cannot read the member of " + pointer.getClass().getName(), e);
+        }
+    }
+
+    /** The member `name` of `owner`: the slots and the key Truffle reads for each kind of pointer. */
+    private static Object member(Object owner, platform.pure.metamodel.pointer.TempCompilerPointer pointer, String name)
+    {
+        if (pointer instanceof platform.pure.metamodel.pointer.PropertyPointer)
+        {
+            Object property = memberOf(owner, "properties", "name", name);
+            return property != null ? property : memberOf(owner, "propertiesFromAssociations", "name", name);
+        }
+        if (pointer instanceof platform.pure.metamodel.pointer.QualifiedPropertyPointer)
+        {
+            return memberOf(owner, "qualifiedProperties", "name", name);
+        }
+        if (pointer instanceof platform.pure.metamodel.pointer.StereotypePointer)
+        {
+            return memberOf(owner, "p_stereotypes", "value", name);
+        }
+        if (pointer instanceof platform.pure.metamodel.pointer.TagPointer)
+        {
+            return memberOf(owner, "p_tags", "value", name);
+        }
+        if (pointer instanceof platform.pure.metamodel.pointer.EnumPointer)
+        {
+            return memberOf(owner, "values", "name", name);
+        }
+        return owner;
+    }
+
+    /** The value of `owner`'s slot `slot` whose `key` is `name`, or null. */
+    private static Object memberOf(Object owner, String slot, String key, String name)
+    {
+        try
+        {
+            Object members = owner.getClass().getMethod("_" + slot).invoke(owner);
+            if (!(members instanceof java.util.Collection<?> collection))
+            {
+                return null;
+            }
+            return org.eclipse.collections.impl.factory.Lists.adapt(new ArrayList<Object>(collection)).detect(candidate ->
+            {
+                try
+                {
+                    return name.equals(candidate.getClass().getMethod("_" + key).invoke(candidate));
+                }
+                catch (ReflectiveOperationException e)
+                {
+                    return false;
+                }
+            });
+        }
+        catch (NoSuchMethodException e)
+        {
+            return null;
+        }
+        catch (ReflectiveOperationException e)
+        {
+            throw new RuntimeException("resolveAndReturnGraph: cannot read '" + slot + "' of " + owner.getClass().getName(), e);
         }
     }
 
