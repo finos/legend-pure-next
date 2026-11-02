@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 ###Pure
-function test::island::echo(): Any[*]
+function <<test.TestDependency>> island::echo(): Any[*]
 {
   #ECHO{hello}#;
   let greeting = #ECHO{hi there}#;
@@ -21,7 +21,8 @@ function test::island::echo(): Any[*]
 }
 
 ###CompiledGraph
-function test::island::echo__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+function island::echo__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  <<platform::pure::profiles::test.TestDependency>>
   EchoLiteral  'hello' :platform::pure::compiler::test::islands::metamodel::EchoLiteral[1]  ~platform::pure::compiler::test::islands::metamodel::EchoLiteral  @17:3-17:15
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#platform::pure::compiler::test::islands::metamodel::EchoLiteral##[1]#  ~@FunctionInvocation@  @18:3-18:33
     typeParam T -> platform::pure::compiler::test::islands::metamodel::EchoLiteral
@@ -35,8 +36,12 @@ function test::island::echo__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@
 
 ###ReverseIndex
 platform::pure::compiler::test::islands::metamodel::EchoLiteral:
-  test::island::echo__Any_MANY_
+  island::echo__Any_MANY_
 platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
-  test::island::echo__Any_MANY_
+  island::echo__Any_MANY_
 platform::pure::functions::lang::toOne_T_MANY__T_1_:
-  test::island::echo__Any_MANY_
+  island::echo__Any_MANY_
+platform::pure::profiles::test:
+  island::echo__Any_MANY_
+platform::pure::profiles::test.TestDependency:
+  island::echo__Any_MANY_

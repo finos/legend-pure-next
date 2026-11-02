@@ -59,3 +59,57 @@ function <<test.Test>> platform::pure::compiler::pdb::writer::tests::islands::te
    let text = platform::pure::compiler::pdb::generator::emitWriteElementBlob(platform::pure::compiler::pdb::writer::tests::islands::target());
    assert($text->contains('writes no element'), | $text);
 }
+
+// A writer generated from a test metamodel is test itself, as the classes it writes say.
+Class <<test.TestDependency>> platform::pure::compiler::pdb::writer::tests::classified::test::Ember extends platform::pure::metamodel::valuespecification::ValueSpecification
+{
+   label : String[1];
+}
+
+Class <<test.TestDependency>> platform::pure::compiler::pdb::writer::tests::classified::mixed::Ash extends platform::pure::metamodel::valuespecification::ValueSpecification
+{
+   label : String[1];
+}
+
+Class platform::pure::compiler::pdb::writer::tests::classified::mixed::Soot extends platform::pure::metamodel::valuespecification::ValueSpecification
+{
+   label : String[1];
+}
+
+function <<test.TestDependency>> platform::pure::compiler::pdb::writer::tests::classified::target(package:String[1], tables:String[*]):platform::pure::compiler::pdb::generator::WriterTarget[1]
+{
+   ^platform::pure::compiler::pdb::generator::WriterTarget(
+      packages  = 'platform::pure::compiler::pdb::writer::tests::classified::' + $package,
+      ns        = 'x::gen',
+      schema    = platform::pure::compiler::pdb::schema::parseFbs($tables->map(t | 'table ' + $t + ' {\n    label: string (id: 0);\n}')->joinStrings('\n')),
+      ownTables = $tables,
+      ownUnions = [],
+      m3        = false);
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::writer::tests::classified::testAWriterOfATestMetamodelIsTest():Boolean[1]
+{
+   let target = platform::pure::compiler::pdb::writer::tests::classified::target('test', 'EmberDef');
+   assert(platform::pure::compiler::pdb::generator::writerIsTest($target));
+   let classified = ^$target(test = true);
+   let text = platform::pure::compiler::pdb::generator::emitValueBlobs($classified)
+      + platform::pure::compiler::pdb::generator::emitWriteElementBlob($classified)
+      + platform::pure::compiler::pdb::generator::emitSerialization($classified);
+   assert($text->contains('function <<test.TestDependency>> platform::pure::compiler::pdb::writer::tests::classified::test::Ember_pdbValueBlob('), | $text);
+   assert($text->contains('function <<test.TestDependency>> x::gen::writeElementBlob('), | $text);
+   assert($text->contains('function <<test.TestDependency>> x::gen::serialization('), | $text);
+   assert(!$text->contains('\nfunction x::gen'), | $text);
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::writer::tests::classified::testAWriterOfOtherClassesIsNot():Boolean[1]
+{
+   let target = platform::pure::compiler::pdb::writer::tests::islands::target();
+   assert(!platform::pure::compiler::pdb::generator::writerIsTest($target));
+   assert(!platform::pure::compiler::pdb::generator::emitSerialization($target)->contains('test.TestDependency'));
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::writer::tests::classified::testAMixedMetamodelFails():Boolean[1]
+{
+   assertError(| platform::pure::compiler::pdb::generator::writerIsTest(platform::pure::compiler::pdb::writer::tests::classified::target('mixed', ['AshDef', 'SootDef'])),
+               'PDB writer: x::gen mixes test and non-test classes: Ash are test');
+}

@@ -160,9 +160,9 @@ jobs:
           - part: printer-compiled
             query: //bootstrap:compiler_printer-compiled_cli
           - part: self-host
-            query: //bootstrap:compiler_compiler_selfhost + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests
+            query: //bootstrap:compiler_compiler_selfhost + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests + //pure/specification:pdb_writer_bootstrap_via_pure_matches_bootstrap + //pure/specification:island_writer_bootstrap_via_pure_matches_bootstrap
           - part: rest
-            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap:compiler_pdb_cli - //bootstrap:compiler_compiler_cli - //bootstrap:compiler_printer-compiled_cli - //bootstrap:compiler_compiler_selfhost - (//pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests)
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap:compiler_pdb_cli - //bootstrap:compiler_compiler_cli - //bootstrap:compiler_printer-compiled_cli - //bootstrap:compiler_compiler_selfhost - (//pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests + //pure/specification:pdb_writer_bootstrap_via_pure_matches_bootstrap + //pure/specification:island_writer_bootstrap_via_pure_matches_bootstrap)
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6

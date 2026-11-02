@@ -13,7 +13,8 @@
   "pdbs": [
     "shared/core.pdb",
     "shared/parser-mappings.pdb",
-    "shared/compiler.pdb"
+    "shared/compiler.pdb",
+    "shared/pdb_writer.pdb"
   ],
   "fbs": "shared/specification/m3.fbs"
 }

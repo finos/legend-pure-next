@@ -314,6 +314,7 @@ check("registerExtension pairs an extension with its module, and validate() enfo
     const paired = new ModuleRegistry().useLanguages(WITH_DIAGRAM);
     paired.register(PdbModule.open(join(SHARED, "core.pdb")));
     paired.register(PdbModule.open(join(SHARED, "compiler.pdb")));
+    paired.register(PdbModule.open(join(SHARED, "pdb_writer.pdb")));
     paired.registerExtension(diagram, PdbModule.open(join(REPO, diagram.pdbs.find((p) => p.endsWith(`/${diagram.module}.pdb`)))));
     paired.validate().validate();
     assert.equal(paired.extensions.length, 1);
@@ -516,7 +517,7 @@ const ISLAND_GOLDEN = join(REPO, "pure/specification/compiler/tests-pdb-serializ
 check("an island value reads back as an object of its own class", () => {
     host.register(PdbModule.open(ISLAND_GOLDEN));
     try {
-        const value = asArray(host.getElement("test::island::ref__Any_MANY_").expressionSequence)[0];
+        const value = asArray(host.getElement("island::ref__Any_MANY_").expressionSequence)[0];
         assert.equal(one(one(value.target).name), "Person", "the RefLiteral points at the class m::Person");
     } finally {
         host.unregister("test");
@@ -527,7 +528,7 @@ check("an island value fails loudly without the language that declares it", () =
     const registry = new ModuleRegistry().useLanguages([languageNamed("Pure").descriptor]);
     registry.register(PdbModule.open(join(SHARED, "core.pdb")));
     registry.register(PdbModule.open(ISLAND_GOLDEN));
-    assert.throws(() => metadataHost(registry).metadataRead("test::island::ref__Any_MANY_", "expressionSequence"), /no schema for RefLiteralDef/);
+    assert.throws(() => metadataHost(registry).metadataRead("island::ref__Any_MANY_", "expressionSequence"), /no schema for RefLiteralDef/);
 });
 
 // The Pure language's own island extensions live one level down (pure/extensions/pure/<name>), and are

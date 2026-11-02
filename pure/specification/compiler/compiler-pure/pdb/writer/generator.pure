@@ -113,6 +113,7 @@ Class platform::pure::compiler::pdb::generator::WriterTarget
    ownTables : String[*];
    ownUnions : String[*];
    m3        : Boolean[1];
+   test      : Boolean[1] = false;
 }
 
 function platform::pure::compiler::pdb::generator::m3Ns():String[1]
@@ -131,6 +132,24 @@ function platform::pure::compiler::pdb::generator::m3Target(schema:FbsSchema[1])
 function platform::pure::compiler::pdb::generator::nsFor(target:WriterTarget[1], name:String[1]):String[1]
 {
    if($target.ownTables->contains($name) || $target.ownUnions->contains($name), | $target.ns, | m3Ns());
+}
+
+// A writer generated from a test metamodel is test itself: what the classes are decides, so the two cannot disagree.
+// The functions of a target serve all its classes together, hence no mix.
+function platform::pure::compiler::pdb::generator::writerIsTest(target:WriterTarget[1]):Boolean[1]
+{
+   let classes = writerClasses($target);
+   let tests   = $classes->filter(c | hasClassStereotype($c, 'TestDependency'));
+   if($tests->isEmpty(),
+      | false,
+      | if($tests->size() == $classes->size(),
+           | true,
+           | fail('PDB writer: ' + $target.ns + ' mixes test and non-test classes: ' + $tests->map(c | $c.name->toOne())->joinStrings(', ') + ' are test'); false;));
+}
+
+function platform::pure::compiler::pdb::generator::functionKeyword(target:WriterTarget[1]):String[1]
+{
+   if($target.test, | 'function <<test.TestDependency>> ', | 'function ');
 }
 
 // The classes the writer emits writeX for: mirror of the reference generator's
@@ -467,14 +486,14 @@ function platform::pure::compiler::pdb::generator::emitClass(target:WriterTarget
    let storedLets = $defaulted->map(p | '   let stored_' + $p.name->toOne() + ' = platform::pure::compiler::pdb::writerHelper::stored($obj, \'' + $p.owner->toOne()->cast(@PackageableElement)->elementToPath() + '\', \'' + $p.name->toOne() + '\')->cast(@' + $p.genericType->toOne()->rawType()->toOne()->cast(@PackageableElement)->elementToPath() + ');\n')->joinStrings('');
    let body = $storedLets + $defaulted->fold({p, code | ['->', ',', ')', ' ', ';']->fold({x, c | $c->replace('$obj.' + $p.name->toOne() + $x, '$stored_' + $p.name->toOne() + $x)}, $code)}, $reads);
 
-   'function ' + $target.ns + '::write' + $clsName + '(b:platform::pure::compiler::pdb::fbb::Builder[1], obj:' + $objType + '[1], stack:Any[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]\n' +
+   functionKeyword($target) + $target.ns + '::write' + $clsName + '(b:platform::pure::compiler::pdb::fbb::Builder[1], obj:' + $objType + '[1], stack:Any[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]\n' +
    '{\n' +
    '   if(platform::pure::compiler::pdb::writerHelper::onStack($stack, $obj),\n' +
    '      | platform::pure::compiler::pdb::writerHelper::encodeAncestorRef($b, platform::pure::compiler::pdb::writerHelper::ancestorDepth($stack, $obj)),\n' +
    '      | ' + $target.ns + '::write' + $clsName + '_body($b, $obj, $stack->concatenate($obj)));\n' +
    '}\n' +
    '\n' +
-   'function ' + $target.ns + '::write' + $clsName + '_body(b:platform::pure::compiler::pdb::fbb::Builder[1], obj:' + $objType + '[1], stack:Any[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]\n' +
+   functionKeyword($target) + $target.ns + '::write' + $clsName + '_body(b:platform::pure::compiler::pdb::fbb::Builder[1], obj:' + $objType + '[1], stack:Any[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]\n' +
    '{\n' + $body + '}\n';
 }
 
@@ -504,7 +523,7 @@ function platform::pure::compiler::pdb::generator::emitElementTypeName(target:Wr
    let arms = elementClasses($target)->map(c |
       '      v' + $c.name->toOne() + ' : ' + $c->elementToPath() + typeArgsSuffix($c)
          + '[1] | \'' + $c.name->toOne() + '\',\n');
-   'function ' + $target.ns + '::elementTypeName(e:Any[1]):String[0..1]\n'
+   functionKeyword($target) + $target.ns + '::elementTypeName(e:Any[1]):String[0..1]\n'
       + '{\n   $e->match([\n'
       + $arms->joinStrings('')
       + '      x : Any[1] | []\n   ]);\n}\n';
@@ -517,7 +536,7 @@ function platform::pure::compiler::pdb::generator::emitWriteElementBlob(target:W
       '      v' + $c.name->toOne() + ' : ' + $c->elementToPath() + typeArgsSuffix($c)
          + '[1] | ' + $target.ns + '::write' + $c.name->toOne()
          + '(' + $fbb + '::newBuilder(), $v' + $c.name->toOne() + ', []),\n');
-   'function ' + $target.ns + '::writeElementBlob(e:Any[1]):Binary[1]\n'
+   functionKeyword($target) + $target.ns + '::writeElementBlob(e:Any[1]):Binary[1]\n'
       + if($arms->isEmpty(),
            // An extension of values only (a language of islands): no element of it reaches the archive writer.
            | '{\n   fail(\'' + $target.ns + ': this extension writes no element\');\n   []->cast(@Binary)->toOne();\n}\n',
@@ -560,14 +579,14 @@ function platform::pure::compiler::pdb::generator::emitUnion(target:WriterTarget
       | 'platform::pure::compiler::pdb::writerHelper::failUnion($b, \'' + $u.name + '\')');
    let inner = 'if([\n       ' + $arms->joinStrings(',\n       ') + '],\n      | ' + $fallback + ')';
 
-   'function ' + $target.ns + '::writeUnion_' + $u.name + '(b:platform::pure::compiler::pdb::fbb::Builder[1], v:Any[0..1], stack:Any[*]):platform::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
+   functionKeyword($target) + $target.ns + '::writeUnion_' + $u.name + '(b:platform::pure::compiler::pdb::fbb::Builder[1], v:Any[0..1], stack:Any[*]):platform::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
    '{\n' +
    '   if($v->isEmpty(),\n' +
    '      | ^platform::pure::compiler::pdb::writerHelper::UnionRes(builder = $b, offset = 0, typeByte = 0),\n' +
    '      | ' + $target.ns + '::writeUnionValue_' + $u.name + '($b, $v->toOne(), $stack));\n' +
    '}\n' +
    '\n' +
-   'function ' + $target.ns + '::writeUnionValue_' + $u.name + '(b:platform::pure::compiler::pdb::fbb::Builder[1], vv:Any[1], stack:Any[*]):platform::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
+   functionKeyword($target) + $target.ns + '::writeUnionValue_' + $u.name + '(b:platform::pure::compiler::pdb::fbb::Builder[1], vv:Any[1], stack:Any[*]):platform::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
    '{\n   ' + $inner + ';\n}\n';
 }
 
@@ -638,7 +657,7 @@ function platform::pure::compiler::pdb::generator::emitValueBlobs(target:WriterT
    let fbb = 'platform::pure::compiler::pdb::fbb';
    writerClasses($target)
       ->filter(c | allSuperClasses($c)->map(x | $x->elementToPath())->contains('platform::pure::metamodel::valuespecification::ValueSpecification'))
-      ->map(c | 'function ' + $c.package->toOne()->elementToPath() + '::' + $c.name->toOne() + '_pdbValueBlob(v:Any[1]):Binary[1]\n'
+      ->map(c | functionKeyword($target) + $c.package->toOne()->elementToPath() + '::' + $c.name->toOne() + '_pdbValueBlob(v:Any[1]):Binary[1]\n'
                   + '{\n   let r = ' + $target.ns + '::write' + $c.name->toOne() + '(' + $fbb + '::newBuilder(), $v->cast(@' + $c->elementToPath() + typeArgsSuffix($c) + '), []);\n'
                   + '   $r.builder->' + $fbb + '::finish($r.offset)->' + $fbb + '::result();\n}\n')
       ->joinStrings('\n');
@@ -661,7 +680,7 @@ function platform::pure::compiler::pdb::generator::emitAll(target:WriterTarget[1
 // The generated function an extension's `CompilerExtension.pdb` points at.
 function platform::pure::compiler::pdb::generator::emitSerialization(target:WriterTarget[1]):String[1]
 {
-   'function ' + $target.ns + '::serialization():platform::pure::compiler::extension::PdbSerialization[1]\n'
+   functionKeyword($target) + $target.ns + '::serialization():platform::pure::compiler::extension::PdbSerialization[1]\n'
       + '{\n'
       + '   ^platform::pure::compiler::extension::PdbSerialization(\n'
       + '      elementTypeName  = e: Any[1] | ' + $target.ns + '::elementTypeName($e),\n'
@@ -675,9 +694,10 @@ function platform::pure::compiler::pdb::generator::generateExtensionWriter(m3Fbs
 {
    let fragText = platform::pure::functions::io::readFile($fragmentPath);
    let fragment = parseFbs($fragText);
-   let target   = ^WriterTarget(packages = $packagesCsv->split(','), ns = $ns,
+   let parsed   = ^WriterTarget(packages = $packagesCsv->split(','), ns = $ns,
                                 schema = parseFbs(platform::pure::functions::io::readFile($m3FbsPath) + '\n' + $fragText),
                                 ownTables = $fragment.tables.name, ownUnions = $fragment.unions.name, m3 = false);
+   let target   = ^$parsed(test = writerIsTest($parsed));
    '// AUTO-GENERATED by platform::pure::compiler::pdb::generator from ' + $packagesCsv + '\n'
       + '// and its fbs fragment (pdb/fbsgen) - DO NOT EDIT. Regenerated by the extension build.\n\n'
       + emitAll($target) + '\n' + emitSerialization($target);

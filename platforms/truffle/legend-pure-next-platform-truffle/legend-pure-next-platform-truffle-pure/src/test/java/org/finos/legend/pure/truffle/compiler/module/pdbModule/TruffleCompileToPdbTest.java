@@ -95,15 +95,22 @@ public class TruffleCompileToPdbTest
         // compiler-tests.pdb: the specification's island handlers (islandTestExtension) every runner compiles with.
         PdbModule compilerTestsLoader = new PdbModule(buildDir.resolve("compiler-tests.pdb"));
         PdbModule parserMappingsLoader = new PdbModule(buildDir.resolve("parser-mappings.pdb"));
+        // What is generated from those two: the m3 writer and the writer of the test island values.
+        PdbModule pdbWriterLoader = new PdbModule(buildDir.resolve("pdb_writer.pdb"));
+        PdbModule islandWriterLoader = new PdbModule(buildDir.resolve("island_writer-with-tests.pdb"));
         ModuleRegistry registry = new ModuleRegistry();
         registry.register(coreLoader);
         registry.register(compilerLoader);
+        registry.register(pdbWriterLoader);
         registry.register(compilerTestsLoader);
+        registry.register(islandWriterLoader);
         registry.register(parserMappingsLoader);
         resolver = registry;
         coreLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
+        pdbWriterLoader.setResolver(resolver);
         compilerTestsLoader.setResolver(resolver);
+        islandWriterLoader.setResolver(resolver);
         parserMappingsLoader.setResolver(resolver);
 
         // Section parsers (CompiledGraph / CompilerStats / TestFile /

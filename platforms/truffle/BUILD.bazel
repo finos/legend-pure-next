@@ -62,6 +62,7 @@ _GALLERY_PDBS = [
     "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
     _CORE + ":core-tests.pdb",
     "//pure/specification:compiler.pdb",
+    "//pure/specification:pdb_writer.pdb",
     "//pure/modules/translation/shared:build/translation-shared.pdb",
     "//pure/modules/translation/truffle:build/truffle-translation-gallery.pdb",
     "//pure/modules/translation/truffle:build/truffle-translation-gallery-tests.pdb",

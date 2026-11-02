@@ -93,6 +93,9 @@ class TrufflePurePCTAndFuncFromPDBTest
         coreTestsLoader = new PdbModule(coreTestsPdb);
         compilerLoader = new PdbModule(compilerPdb);
         compilerTestsLoader = new PdbModule(compilerTestsPdb);
+        // What is generated from those two: the m3 writer and the writer of the test island values.
+        PdbModule pdbWriterLoader = new PdbModule(sharedDir.resolve("pdb_writer.pdb"));
+        PdbModule islandWriterLoader = new PdbModule(sharedDir.resolve("island_writer-with-tests.pdb"));
         // parser-mappings.pdb is required for the `parse` Pure native to resolve
         // `platform::pure::parser::mappings::interpreter::parseDocument` — TrufflePureParser
         // dispatches every section through the Pure-side registry, no host fallback.
@@ -107,20 +110,24 @@ class TrufflePurePCTAndFuncFromPDBTest
 
         // Module registry replaces the previous anonymous-class composite resolver.
         // Registration order is dependency-first: core, parser-mappings, core-tests,
-        // compiler, compiler-tests (each tests pdb depends on its lean pair).
+        // compiler, its writer, compiler-tests and its island writer (each tests pdb depends on its lean pair).
         resolver = new ModuleRegistry();
         resolver.register(coreLoader);
         resolver.register(parserMappingsLoader);
         resolver.register(coreTestsLoader);
         resolver.register(compilerLoader);
+        resolver.register(pdbWriterLoader);
         resolver.register(compilerTestsLoader);
+        resolver.register(islandWriterLoader);
 
         // Wire composite resolver into each loader for cross-module FBW resolution
         coreLoader.setResolver(resolver);
         parserMappingsLoader.setResolver(resolver);
         coreTestsLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
+        pdbWriterLoader.setResolver(resolver);
         compilerTestsLoader.setResolver(resolver);
+        islandWriterLoader.setResolver(resolver);
 
         PureLanguage.configure(resolver, NativeRegistry.createDefault(),
                 java.util.Map.of(

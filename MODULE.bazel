@@ -140,6 +140,12 @@ pure_suites.module(
     report_dir = "spec",
 )
 pure_suites.module(
+    manifest = "//pure/specification:compiler/compiler-pure-pdb-writer/module.json",
+)
+pure_suites.module(
+    manifest = "//pure/specification:compiler/compiler-island-pdb-writer/module.json",
+)
+pure_suites.module(
     manifest = "//pure/modules/protocol:module.json",
     report_dir = "pure/protocol",
 )

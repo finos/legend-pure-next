@@ -17,7 +17,7 @@ Class m::Person
    name: String[1];
 }
 
-function test::island::ref(): Any[*]
+function <<test.TestDependency>> island::ref(): Any[*]
 {
   #REF{m::Person}#;
 }
@@ -26,11 +26,16 @@ function test::island::ref(): Any[*]
 class m::Person extends Any  ~Class<m::Person>  @15:1-18:1
   property name :@String@[1]  ~Property<m::Person, @String@|1>
 
-function test::island::ref__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+function island::ref__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  <<platform::pure::profiles::test.TestDependency>>
   RefLiteral  m::Person :platform::pure::compiler::test::islands::metamodel::RefLiteral[1]  ~platform::pure::compiler::test::islands::metamodel::RefLiteral  @22:3-22:18
 
 ###ReverseIndex
 m::Person:
-  test::island::ref__Any_MANY_
+  island::ref__Any_MANY_
 platform::pure::compiler::test::islands::metamodel::RefLiteral:
-  test::island::ref__Any_MANY_
+  island::ref__Any_MANY_
+platform::pure::profiles::test:
+  island::ref__Any_MANY_
+platform::pure::profiles::test.TestDependency:
+  island::ref__Any_MANY_

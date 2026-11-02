@@ -36,7 +36,16 @@ _PDBS = {
     "core-tests": _CORE + ":core-tests.pdb",
     "compiler": "//pure/specification:compiler.pdb",
     "compiler-tests": "//pure/specification:compiler-tests.pdb",
+    "pdb_writer": "//pure/specification:pdb_writer.pdb",
+    "island_writer": "//pure/specification:island_writer-with-tests.pdb",
     "parser-mappings": _PARSER_MAPPINGS,
+}
+
+# What is generated from a PDB, compiled after it, so no manifest of the compiler can name it: what loads the first
+# loads the second right after. {module: what is generated from it}.
+_GENERATED_FROM = {
+    "compiler": "pdb_writer",
+    "compiler-tests": "island_writer",
 }
 
 def _pdb(module, overrides = {}):
@@ -72,7 +81,12 @@ def _loads(owner, prelude, overrides = {}):
     mains = _closure(prelude + [owner] + [d for d in test_deps if not d.endswith("-tests")])
     wanted = [owner + "-tests"] + [d for d in test_deps if d.endswith("-tests")]
     tests = [m + "-tests" for m in mains if m + "-tests" in wanted and m + "-tests" not in mains]
-    return [_pdb(m, overrides) for m in mains + tests]
+    loaded = []
+    for module in mains + tests:
+        for m in [module, _GENERATED_FROM.get(module)]:
+            if m and m not in loaded:
+                loaded.append(m)
+    return [_pdb(m, overrides) for m in loaded]
 
 def _variant_loads(owner, variant):
     """The PDBs a variant gives a suite of 'owner': all it loads, but those the host loads itself; then what the
@@ -164,6 +178,8 @@ HOSTS = {
                 "pdbs": {
                     "compiler": "//pure/specification:selfhost/compiler.pdb",
                     "compiler-tests": "//pure/specification:selfhost/compiler-tests.pdb",
+                    "pdb_writer": "//pure/specification:selfhost/pdb_writer.pdb",
+                    "island_writer": "//pure/specification:selfhost/island_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
@@ -177,6 +193,8 @@ HOSTS = {
                 "pdbs": {
                     "compiler": "//pure/specification:selfhost-native/compiler.pdb",
                     "compiler-tests": "//pure/specification:selfhost-native/compiler-tests.pdb",
+                    "pdb_writer": "//pure/specification:selfhost-native/pdb_writer.pdb",
+                    "island_writer": "//pure/specification:selfhost-native/island_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
@@ -218,6 +236,8 @@ HOSTS = {
                 "pdbs": {
                     "compiler": "//pure/specification:selfhost-bootstrap/compiler.pdb",
                     "compiler-tests": "//pure/specification:selfhost-bootstrap/compiler-tests.pdb",
+                    "pdb_writer": "//pure/specification:selfhost-bootstrap/pdb_writer.pdb",
+                    "island_writer": "//pure/specification:selfhost-bootstrap/island_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost", "bootstrap"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
@@ -272,7 +292,7 @@ HOSTS = {
                 "command": ["--root", "."],
                 "prelude": ["core-tests"],
                 # The PDBs it loads itself: the languages (language_*.json) and its own modules.
-                "supplies": ["core", "parser-mappings", "compiler", "diagram", "tds", "java", "translation-shared", "java-translation"],
+                "supplies": ["core", "parser-mappings", "compiler", "pdb_writer", "diagram", "tds", "java", "translation-shared", "java-translation"],
                 # The test companion of the translator the platform runs.
                 "extra_pdbs": ["//pure/modules/translation/java:build/java-translation-tests.pdb"],
                 "data": ["//platforms/java:runtime_data"],

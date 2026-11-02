@@ -1,7 +1,7 @@
 {
   "name": "tds",
   "packagePattern": "(platform::extensions::pure::tds)(::.*)?",
-  "dependencies": ["core", "compiler"],
+  "dependencies": ["core", "compiler", "pdb_writer"],
   "testDependencies": ["core-tests", "compiler-tests"],
   "tests": [
     {"suite": "compiler", "runner": "compiler", "target": "tests/compiler"},

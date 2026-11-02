@@ -12,16 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 ###Pure
-function test::island::inLambda(): Any[*]
+function <<test.TestDependency>> island::inLambda(): Any[*]
 {
   |#ECHO{x}#;
 }
 
 ###CompiledGraph
-function test::island::inLambda__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+function island::inLambda__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  <<platform::pure::profiles::test.TestDependency>>
   Lambda :#LambdaFunction<#{->platform::pure::compiler::test::islands::metamodel::EchoLiteral[1]}#>#[1]  ~@AtomicValue@  @17:3-17:13
     EchoLiteral  'x' :platform::pure::compiler::test::islands::metamodel::EchoLiteral[1]  ~platform::pure::compiler::test::islands::metamodel::EchoLiteral  @17:4-17:12
 
 ###ReverseIndex
 platform::pure::compiler::test::islands::metamodel::EchoLiteral:
-  test::island::inLambda__Any_MANY_
+  island::inLambda__Any_MANY_
+platform::pure::profiles::test:
+  island::inLambda__Any_MANY_
+platform::pure::profiles::test.TestDependency:
+  island::inLambda__Any_MANY_

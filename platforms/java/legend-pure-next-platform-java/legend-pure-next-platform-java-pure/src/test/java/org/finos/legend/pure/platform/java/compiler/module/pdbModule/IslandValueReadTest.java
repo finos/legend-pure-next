@@ -43,7 +43,7 @@ public class IslandValueReadTest
                 .collect(Language::types)
                 .injectInto(PdbTypes::create, (java.util.function.Function<String, LazyObject> chain, java.util.function.Function<String, LazyObject> next) -> t -> chain.apply(t) != null ? chain.apply(t) : next.apply(t)),
                 repoRoot().resolve(REF));
-        LazyObject function = (LazyObject) runtime.element("test::island::ref__Any_MANY_");
+        LazyObject function = (LazyObject) runtime.element("island::ref__Any_MANY_");
         LazyObject value = (LazyObject) function.__values("expressionSequence").get(0);
         Assertions.assertEquals("platform::pure::compiler::test::islands::metamodel::RefLiteral", value._purePath());
         LazyObject target = (LazyObject) value.__values("target").get(0);
@@ -58,7 +58,7 @@ public class IslandValueReadTest
     {
         PdbRuntime runtime = PdbRuntime.open(Language.schemaText(PureLanguage.all().select(l -> "Pure".equals(l.name())), null),
                 PdbTypes::create, repoRoot().resolve(REF));
-        LazyObject function = (LazyObject) runtime.element("test::island::ref__Any_MANY_");
+        LazyObject function = (LazyObject) runtime.element("island::ref__Any_MANY_");
         IllegalStateException e = Assertions.assertThrows(IllegalStateException.class,
                 () -> ((LazyObject) function.__values("expressionSequence").get(0)).__values("target"));
         Assertions.assertTrue(e.getMessage().contains("no schema for RefLiteralDef"), e.getMessage());

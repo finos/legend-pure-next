@@ -132,7 +132,7 @@ public final class PureRuntimeCompilerBinaryBuilder
         // strategy and runs through the interpreted execution; the language extensions parse
         // the `###CompiledGraph`, `###CompilerStats`, … sections of the canonical compiler-pure sources.
         PureRuntime runtime = PureRuntime.builder()
-                .withRegistry(resolver)
+                .withRegistry(registry)
                 .withLanguageExtensions(List.of(
                         new org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension(),
                         new org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension(),
@@ -233,7 +233,7 @@ public final class PureRuntimeCompilerBinaryBuilder
         switch (mode)
         {
             case WITH ->
-                    writePdb("full", elements, extensions, lastModule, manifest,
+                    writePdb("full", elements, extensions, lastModule, manifest.withAllDependencies(),
                             pureLangExt.archiveSections(functionEntries),
                             TestElementFilter.withTestsPath(outputFile), referencedBy);
             case NONE ->

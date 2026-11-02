@@ -26,6 +26,8 @@ exports_files(
         "m3_protocol_addition.ttl",
         "module.json",
         "compiler/compiler-pure/module.json",
+        "compiler/compiler-pure-pdb-writer/module.json",
+        "compiler/compiler-island-pdb-writer/module.json",
         "compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt",
         "language_pure.json",
         "language_test.json",
@@ -73,11 +75,13 @@ filegroup(
 )
 
 # ---------------------------------------------------------------------------------------------------------------------
-# compiler.pdb and compiler-tests.pdb.
+# compiler.pdb and compiler-tests.pdb, compiled once, and what is generated from them.
 #
-# compiler-pure needs its generated writer (pdb/writer/generated/generatedWriter.pure), which a compiled compiler-pure
-# generates: pass 1 compiles it without the generated sources, runs the generators, and pass 2 compiles it with them.
-# The generated sources are outputs here, never written to the source tree (where they are gitignored).
+# compiler-pure reaches its generated writer by name at run time (writerHelper::genFn), so it compiles without it. The
+# generators then run on the compiled PDBs, and what they generate is compiled on top: pdb_writer.pdb, the writer of
+# m3, and island_writer-with-tests.pdb, the writer of the test island values, test as they are. Everything that writes a PDB
+# through the compiler written in Pure loads pdb_writer.pdb with compiler.pdb. The generated sources are outputs here,
+# never written to the source tree.
 
 _CLI = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap"
 
@@ -104,9 +108,9 @@ _LICENSE_HEADER = " ".join(["printf '%s\\n'"] + ["'%s'" % line for line in [
     "// limitations under the License.",
 ]])
 
-# Runs 'pure-bootstrap execute' over core and pass 1, from a directory holding shared/specification/m3.fbs: the
+# Runs 'pure-bootstrap execute' over core and the compiler, from a directory holding shared/specification/m3.fbs: the
 # generator reads it there, relative to its working directory. Its standard output goes to $$OUT.
-_EXECUTE_ON_PASS1 = """
+_EXECUTE_ON_COMPILER = """
     set -e
     R=$$PWD
     W=$$(mktemp -d)
@@ -117,17 +121,17 @@ _EXECUTE_ON_PASS1 = """
     run() {{
         (cd $$W && $$R/$(execpath {cli}) execute \\
             --pdb $$R/$(execpath {core}) --pdb $$R/$(execpath {core_tests}) \\
-            --pdb $$R/$(execpath :pass1/compiler.pdb) --pdb $$R/$(execpath :pass1/compiler-tests.pdb) "$$@") > $$OUT 2> $$W/stderr \\
+            --pdb $$R/$(execpath :compiler.pdb) --pdb $$R/$(execpath :compiler-tests.pdb) "$$@") > $$OUT 2> $$W/stderr \\
             || {{ cat $$W/stderr >&2; exit 1; }}
     }}
 """.format(m3_fbs = _M3_FBS, cli = _CLI, core = _CORE_PDB, core_tests = _CORE_TESTS_PDB)
 
-_PASS1_INPUTS = [
+_COMPILER_INPUTS = [
     _CORE_PDB,
     _CORE_TESTS_PDB,
     _M3_FBS,
-    ":pass1/compiler.pdb",
-    ":pass1/compiler-tests.pdb",
+    ":compiler.pdb",
+    ":compiler-tests.pdb",
 ]
 
 filegroup(
@@ -135,26 +139,29 @@ filegroup(
     srcs = glob([
         "compiler/compiler-pure/**/*.pure",
         "compiler/compiler-pure/module.json",
+        "compiler/compiler-pure-pdb-writer/module.json",
+        "compiler/compiler-island-pdb-writer/module.json",
     ]),
 )
 
 pure_bootstrap_compile(
-    name = "compiler_pass1",
+    name = "compiler_pdbs",
     srcs = [":compiler_sources"],
     base_pdbs = [_CORE_PDB],
     outs = [
-        "pass1/compiler.pdb",
-        "pass1/compiler-tests.pdb",
+        "compiler.pdb",
+        "compiler-tests.pdb",
     ],
     source_dir = "pure/specification/compiler/compiler-pure",
     split_tests = True,
+    visibility = ["//visibility:public"],
 )
 
 genrule(
     name = "generated_writer",
-    srcs = _PASS1_INPUTS,
+    srcs = _COMPILER_INPUTS,
     outs = ["compiler/generated/generatedWriter.pure"],
-    cmd = _EXECUTE_ON_PASS1 + """
+    cmd = _EXECUTE_ON_COMPILER + """
         run --function "platform::pure::compiler::pdb::generator::printGeneratedWriter__Boolean_1_"
         awk '/===GENWRITER-BEGIN===/{f=1;next} /===GENWRITER-END===/{f=0} f' $$OUT > $$W/body
         test -s $$W/body || { echo "printGeneratedWriter produced no output between its markers" >&2; exit 1; }
@@ -166,13 +173,13 @@ genrule(
 # The test island values: their FlatBuffer fragment, and the registry of its field IDs it was generated with (the
 # tracked registry is an input: //tools/bazel:fbs_ids_up_to_date__island checks it is current).
 genrule(
-    name = "island_fbs",
-    srcs = _PASS1_INPUTS + ["compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt"],
+    name = "test_island_fbs",
+    srcs = _COMPILER_INPUTS + ["compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt"],
     outs = [
         "compiler/generated/islandTest.fbs",
         "compiler/generated/islandTest-fbs-field-ids.txt",
     ],
-    cmd = _EXECUTE_ON_PASS1 + """
+    cmd = _EXECUTE_ON_COMPILER + """
         run --function "platform::pure::compiler::pdb::fbsgen::printFbs_String_1__String_1__String_1__Boolean_1_" \\
             --args "platform::pure::compiler::test::islands::metamodel" $$M3_FBS \\
             $$R/$(execpath compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt)
@@ -185,10 +192,10 @@ genrule(
 )
 
 genrule(
-    name = "island_writer",
-    srcs = _PASS1_INPUTS + ["compiler/generated/islandTest.fbs"],
+    name = "test_island_writer",
+    srcs = _COMPILER_INPUTS + ["compiler/generated/islandTest.fbs"],
     outs = ["compiler/generated/islandWriter.pure"],
-    cmd = _EXECUTE_ON_PASS1 + """
+    cmd = _EXECUTE_ON_COMPILER + """
         run --function "platform::pure::compiler::pdb::generator::printExtensionWriter_String_1__String_1__String_1__String_1__Boolean_1_" \\
             --args $$M3_FBS $$R/$(execpath compiler/generated/islandTest.fbs) \\
             "platform::pure::compiler::test::islands::metamodel" "platform::pure::compiler::test::islands::pdb::gen"
@@ -199,20 +206,38 @@ genrule(
 )
 
 pure_bootstrap_compile(
-    name = "compiler_pdbs",
-    srcs = [":compiler_sources"],
-    base_pdbs = [_CORE_PDB],
-    generated = {
-        ":compiler/generated/generatedWriter.pure": "pdb/writer/generated/generatedWriter.pure",
-        ":compiler/generated/islandWriter.pure": "test/islands/generated/writer.pure",
-    },
-    outs = [
-        "compiler.pdb",
-        "compiler-tests.pdb",
-    ],
-    source_dir = "pure/specification/compiler/compiler-pure",
-    split_tests = True,
+    name = "pdb_writer_pdbs",
+    srcs = ["compiler/compiler-pure-pdb-writer/module.json"],
+    base_pdbs = [_CORE_PDB, ":compiler.pdb"],
+    generated = {":compiler/generated/generatedWriter.pure": "generated/writer.pure"},
+    outs = ["pdb_writer.pdb"],
+    source_dir = "pure/specification/compiler/compiler-pure-pdb-writer",
     visibility = ["//visibility:public"],
+)
+
+pure_bootstrap_compile(
+    name = "island_writer_pdbs",
+    srcs = ["compiler/compiler-island-pdb-writer/module.json"],
+    base_pdbs = [_CORE_PDB, _CORE_TESTS_PDB, ":compiler.pdb", ":compiler-tests.pdb", ":pdb_writer.pdb"],
+    generated = {":compiler/generated/islandWriter.pure": "generated/writer.pure"},
+    outs = ["island_writer-with-tests.pdb"],
+    source_dir = "pure/specification/compiler/compiler-island-pdb-writer",
+    with_tests = True,
+    visibility = ["//visibility:public"],
+)
+
+# compiler.pdb holds neither the writers nor the test island values.
+sh_test(
+    name = "compiler_pdb_is_only_the_compiler",
+    srcs = ["//tools/bazel:pdb-lacks.sh"],
+    args = [
+        "$(rootpath :compiler.pdb)",
+        "elements/platform/pure/compiler/pdb/gen/write",
+        "elements/platform/pure/compiler/test/islands/metamodel/",
+        "elements/platform/pure/compiler/test/islands/pdb/",
+    ],
+    data = [":compiler.pdb"],
+    tags = ["job:bootstrap"],
 )
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -228,11 +253,8 @@ pure_compile(
         "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
         _CORE_TESTS_PDB,
         ":compiler.pdb",
+        ":pdb_writer.pdb",
     ],
-    generated = {
-        ":compiler/generated/generatedWriter.pure": "pdb/writer/generated/generatedWriter.pure",
-        ":compiler/generated/islandWriter.pure": "test/islands/generated/writer.pure",
-    },
     outs = [
         "selfhost/compiler.pdb",
         "selfhost/compiler-tests.pdb",
@@ -277,11 +299,8 @@ pure_compile(
         "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
         _CORE_TESTS_PDB,
         ":compiler.pdb",
+        ":pdb_writer.pdb",
     ],
-    generated = {
-        ":compiler/generated/generatedWriter.pure": "pdb/writer/generated/generatedWriter.pure",
-        ":compiler/generated/islandWriter.pure": "test/islands/generated/writer.pure",
-    },
     outs = [
         "selfhost-native/compiler.pdb",
         "selfhost-native/compiler-tests.pdb",
@@ -317,6 +336,60 @@ pure_compile(
     ("_tests", "compiler-tests.pdb"),
 ]]
 
+# What is generated from the compiler, compiled by each self-host chain and compared with what the bootstrap compiles.
+_PARSER_MAPPINGS_PDB = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb"
+
+[pure_compile(
+    name = "%s_%s" % (module, chain),
+    srcs = ["compiler/compiler-%s/module.json" % source],
+    base_pdbs = [_CORE_PDB] + ([_PARSER_MAPPINGS_PDB] if parser else []) + [
+        _CORE_TESTS_PDB,
+        ":compiler.pdb",
+        ":compiler-tests.pdb",
+        ":pdb_writer.pdb",
+    ],
+    command = command,
+    generated = {generated: "generated/writer.pure"},
+    outs = ["%s/%s" % (directory, out)],
+    source_dir = "pure/specification/compiler/compiler-%s" % source,
+    with_tests = with_tests,
+    tags = ["manual"] + extra_tags,
+    tool = tool,
+    visibility = ["//visibility:public"],
+) for module, source, generated, out, with_tests in [
+    ("pdb_writer", "pure-pdb-writer", ":compiler/generated/generatedWriter.pure", "pdb_writer.pdb", False),
+    ("island_writer", "island-pdb-writer", ":compiler/generated/islandWriter.pure", "island_writer-with-tests.pdb", True),
+] for chain, directory, tool, command, parser, extra_tags in [
+    ("truffle", "selfhost", "truffle", "compile", True, []),
+    ("truffle_native", "selfhost-native", "truffle-native", "compile", True, []),
+    ("bootstrap_via_pure", "selfhost-bootstrap", "bootstrap", "compile-via-pure", False, ["bootstrap"]),
+]]
+
+[sh_test(
+    name = "%s_%s_matches_bootstrap" % (module, chain),
+    srcs = ["//tools/bazel:pdb-diff.sh"],
+    args = [
+        "$(rootpath %s)" % _CLI,
+        "$(rootpath %s)" % _CORE_PDB,
+        "$(rootpath :%s)" % out,
+        "$(rootpath :%s/%s)" % (directory, out),
+    ],
+    data = [
+        _CLI,
+        _CORE_PDB,
+        ":" + out,
+        ":%s/%s" % (directory, out),
+    ],
+    tags = ["manual", "selfhost"] + extra_tags,
+) for module, out in [
+    ("pdb_writer", "pdb_writer.pdb"),
+    ("island_writer", "island_writer-with-tests.pdb"),
+] for chain, directory, extra_tags in [
+    ("truffle", "selfhost", []),
+    ("truffle_native", "selfhost-native", []),
+    ("bootstrap_via_pure", "selfhost-bootstrap", ["bootstrap"]),
+]]
+
 # The specification in the output tree, where the JavaScript platform tests read it, by its path relative to their own.
 copy_to_bin(
     name = "all_in_bin",
@@ -333,12 +406,9 @@ pure_compile(
         _CORE_PDB,
         _CORE_TESTS_PDB,
         ":compiler.pdb",
+        ":pdb_writer.pdb",
     ],
     command = "compile-via-pure",
-    generated = {
-        ":compiler/generated/generatedWriter.pure": "pdb/writer/generated/generatedWriter.pure",
-        ":compiler/generated/islandWriter.pure": "test/islands/generated/writer.pure",
-    },
     outs = [
         "selfhost-bootstrap/compiler.pdb",
         "selfhost-bootstrap/compiler-tests.pdb",

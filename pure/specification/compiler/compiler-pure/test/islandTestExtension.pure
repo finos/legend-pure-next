@@ -148,7 +148,7 @@ function <<test.Test>> platform::pure::compiler::test::testAnIslandIsOfferedToEv
 {
    // The handler sits on a second extension: islands are not owned by the first one passed.
    let file = platform::pure::functions::meta::parse('islandTest',
-      '###Pure\nfunction a::f(): Any[1]\n{\n  #ECHO{hi}#\n}\n');
+      '###Pure\nfunction <<test.TestDependency>> a::f(): Any[1]\n{\n  #ECHO{hi}#\n}\n');
    let errors = platform::pure::compiler::compile($file,
       [platform::pure::compiler::test::extensionTestExtension(), platform::pure::compiler::test::islandTestExtension()], true).errors;
    assertEmpty($errors);
@@ -169,18 +169,18 @@ function <<test.TestDependency>> platform::pure::compiler::test::evaluateIslandF
 
 function <<test.Test>> platform::pure::compiler::test::testAnIslandValueEvaluatesToAnInstanceOfItsClass():Boolean[1]
 {
-   assertEquals('hi', platform::pure::compiler::test::evaluateIslandFunction('function cs::isl::echo():Any[1] { #ECHO{hi}#.text }'));
+   assertEquals('hi', platform::pure::compiler::test::evaluateIslandFunction('function <<test.TestDependency>> cs::isl::echo():Any[1] { #ECHO{hi}#.text }'));
 }
 
 function <<test.Test>> platform::pure::compiler::test::testAnIslandValueInALambdaEvaluates():Boolean[1]
 {
-   assertEquals('x', platform::pure::compiler::test::evaluateIslandFunction('function cs::isl::lambda():Any[1] { {| #ECHO{x}#}->eval().text }'));
+   assertEquals('x', platform::pure::compiler::test::evaluateIslandFunction('function <<test.TestDependency>> cs::isl::lambda():Any[1] { {| #ECHO{x}#}->eval().text }'));
 }
 
 function <<test.Test>> platform::pure::compiler::test::testAnIslandValuePointsIntoTheGraph():Boolean[1]
 {
    // A loaded element: an element compileSource compiles is handed back as a value, never added to the
    // graph a translated program resolves paths in (JavaScript), so pointing at one would test that instead.
-   let target = platform::pure::compiler::test::evaluateIslandFunction('function cs::isl::ref():Any[1] { #REF{platform::pure::functions::collection::Pair}#.target }');
+   let target = platform::pure::compiler::test::evaluateIslandFunction('function <<test.TestDependency>> cs::isl::ref():Any[1] { #REF{platform::pure::functions::collection::Pair}#.target }');
    assertEquals('Pair', $target->toOne()->cast(@platform::pure::metamodel::PackageableElement).name);
 }

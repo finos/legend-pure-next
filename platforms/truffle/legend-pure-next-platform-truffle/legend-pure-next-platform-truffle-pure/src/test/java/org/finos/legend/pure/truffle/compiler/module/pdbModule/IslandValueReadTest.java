@@ -66,7 +66,7 @@ public class IslandValueReadTest
     @Test
     public void anIslandValueReadsBackAsAnInstanceOfItsClass()
     {
-        Object function = registry.getElement("test::island::ref__Any_MANY_");
+        Object function = registry.getElement("island::ref__Any_MANY_");
         Object body = _Any.read(function, "expressionSequence");
         Object first = body instanceof org.finos.legend.pure.truffle.execution.types.PureSequence ? ((org.finos.legend.pure.truffle.execution.types.PureSequence) body).getBoxed(0) : body;
         Assertions.assertTrue(_Any.isType(first, "platform::pure::compiler::test::islands::metamodel::RefLiteral", registry),

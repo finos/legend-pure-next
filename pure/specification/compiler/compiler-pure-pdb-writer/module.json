@@ -1,0 +1,5 @@
+{
+  "name": "pdb_writer",
+  "packagePattern": "(platform::pure::compiler::pdb::gen)(::.*)?",
+  "dependencies": ["core", "compiler"]
+}

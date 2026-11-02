@@ -25,7 +25,7 @@ _TOOLS = {
     "truffle-native": "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle-native",
 }
 
-def pure_compile(name, srcs, source_dir, outs, base_pdbs = [], sources = ["."], split_tests = False, generated = {}, tool = "truffle", command = "compile", **kwargs):
+def pure_compile(name, srcs, source_dir, outs, base_pdbs = [], sources = ["."], split_tests = False, with_tests = False, generated = {}, tool = "truffle", command = "compile", **kwargs):
     """'<tool> compile' over a staged copy of 'source_dir': its declared files, and generated ones.
 
     A CLI compiles every .pure file below each --source, each named by its path relative to that source, and finds
@@ -38,10 +38,11 @@ def pure_compile(name, srcs, source_dir, outs, base_pdbs = [], sources = ["."], 
       srcs: the source files, all below 'source_dir' (its .pure files and module.json).
       source_dir: the directory of the module, relative to the repository root.
       outs: the PDBs the compile writes, by file name (the module name of module.json, '-tests' for the tests),
-        in a directory of the package when two compiles of one package write the same names ('pass1/compiler.pdb').
+        in a directory of the package when two compiles of one package write the same names ('selfhost/compiler.pdb').
       base_pdbs: the PDBs compiled against, in order (--base-pdb).
       sources: the --source directories, relative to 'source_dir'.
       split_tests: true for '--tests split': the <<test.*>> elements in their own PDB.
+      with_tests: true for '--tests with': one PDB holding them all, '<module>-with-tests.pdb'.
       generated: generated sources: {label: path below source_dir}.
       tool: 'truffle' (the Truffle CLI, which builds every module), 'bootstrap' (only what Truffle is built from), or
         'truffle-native' (the native image, for its self-host check).
@@ -74,7 +75,7 @@ def pure_compile(name, srcs, source_dir, outs, base_pdbs = [], sources = ["."], 
             command = command,
             bases = " ".join(["--base-pdb $(execpath %s)" % pdb for pdb in base_pdbs]),
             sources = " ".join(["--source $$T/pkg/%s" % source for source in sources]),
-            split = "--tests split" if split_tests else "",
+            split = "--tests split" if split_tests else "--tests with" if with_tests else "",
             collect = " ".join(["cp $$T/out/%s $(RULEDIR)/%s;" % (out.split("/")[-1], out) for out in outs]),
         ),
         tools = [cli],
@@ -151,12 +152,12 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
     pure_compile(
         name = name + "_metamodel",
         srcs = ["module.json", metamodel],
-        base_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", _CORE + ":core-tests.pdb", "//pure/specification:compiler-tests.pdb"],
+        base_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:pdb_writer.pdb", _CORE + ":core-tests.pdb", "//pure/specification:compiler-tests.pdb"],
         outs = ["metamodel/%s.pdb" % name],
         source_dir = native.package_name(),
         tool = "bootstrap",
     )
-    metamodel_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", ":metamodel/%s.pdb" % name]
+    metamodel_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:pdb_writer.pdb", ":metamodel/%s.pdb" % name]
     native.genrule(
         name = name + "_fbs",
         srcs = metamodel_pdbs + [ids, _M3_FBS],
@@ -194,7 +195,7 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
         pure_generate(
             name = name + "_protocol",
             out = "generated/protocol.pure",
-            pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/modules/protocol:build/protocol.pdb", ":metamodel/%s.pdb" % name],
+            pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:pdb_writer.pdb", "//pure/modules/protocol:build/protocol.pdb", ":metamodel/%s.pdb" % name],
             function = "platform::pure::protocol::generation::generateProtocol_String_1__String_1__String_1_",
             args = [metamodel_package, protocol_package],
         )
@@ -223,7 +224,7 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None, b
     pure_compile(
         name = "pdbs",
         srcs = srcs,
-        base_pdbs = [_CORE + ":core.pdb", _PARSER_MAPPINGS, "//pure/specification:compiler.pdb"] + base_pdbs,
+        base_pdbs = [_CORE + ":core.pdb", _PARSER_MAPPINGS, "//pure/specification:compiler.pdb", "//pure/specification:pdb_writer.pdb"] + base_pdbs,
         outs = outs,
         source_dir = native.package_name(),
         sources = sources,
