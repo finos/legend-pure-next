@@ -22,7 +22,7 @@
 #       ├── printer-compiled            compiler-pure printed back, on Truffle
 #       ├── pdb-golden                  compiler-pure PDB goldens, on Truffle
 #       ├── printer-protocol            the protocol printer corpus, on Truffle
-#       ├── truffle-native              the native image: [specifications | self-host (every self-host check)]
+#       ├── truffle-native              the native image: [specifications | self-host (Truffle JIT and native image)]
 #       └── truffle                     Truffle: its build, JUnit tests, the compiler corpus, the usage example
 #           ├── truffle-specifications  every other suite on Truffle
 #           └── translation-deps        the module suites on Truffle: [language-java | language-javascript | translation-shared]
@@ -361,10 +361,10 @@ jobs:
         include:
           - suite: specifications
             command: bazel test --build_tests_only --test_tag_filters=job:truffle-native/specifications //...
-          # Every self-host check (Truffle JIT, native image, bootstrap): tagged manual, so not in //..., but run here
-          # on every run, in parallel with the other jobs.
+          # The self-host checks of Truffle (JIT and native image): tagged manual, so not in //..., but run here on
+          # every run, in parallel with the other jobs. The bootstrap's runs in bootstrap-self-host.
           - suite: self-host
-            command: bazel test $(bazel query --noshow_progress 'attr(tags, "[\[ ]selfhost[,\]]", //...)')
+            command: bazel test $(bazel query --noshow_progress 'attr(tags, "[\[ ]selfhost[,\]]", //...) - attr(tags, "[\[ ]bootstrap[,\]]", //...)')
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
