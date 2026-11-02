@@ -12,24 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pure/extensions/pure/Justfile — the Pure language's own extensions (expression islands: `#TDS{…}#`).
+# The IntelliJ Bazel plugin's project view (it reads this file before its own .bazelbsp/.bazelproject).
+derive_targets_from_directories: true
+directories: .
 
-set quiet := true
-set shell := ["bash", "-c"]
-
-mod tds "tds/Justfile"
-mod relation "relation/Justfile"
-
-default: build
-
-# relation is not here: it compiles on Truffle (its tests are written on `#TDS…#` literals), so it builds
-# after Truffle does — see the root Justfile.
-build: tds::build
-
-build-tests: tds::build-tests
-
-build-all: build
-
-test-all: tds::test-all relation::test-all
-
-clean: tds::clean relation::clean
+# The bootstrap and self-host tiers are tagged manual (out of //...): sync them too, so they show and run from the IDE.
+allow_manual_targets_sync: true

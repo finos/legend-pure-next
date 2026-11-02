@@ -1179,6 +1179,10 @@ function platform::extensions::language::java::factory::addDependencyVisitedFunc
 
 
 
+// A Java string literal. The '@' of a '/*@' in it is written '\u0040', which javac reads back as '@': the printed
+// source then never holds a position marker's opening (serialization: markerOpen) inside a literal, so stripping
+// the markers (withoutMarkers) leaves every literal whole. Built by concatenation, as markerOpen is: this function
+// is translated to Java by the translator that serializes it.
 function platform::extensions::language::java::factory::escapedString(in: String[1]):String[1]
 {
    '"' +
@@ -1188,7 +1192,8 @@ function platform::extensions::language::java::factory::escapedString(in: String
          ->replace('\f','\\f')
          ->replace('\n','\\n')
          ->replace('\r','\\r')
-         ->replace('\t','\\t') +
+         ->replace('\t','\\t')
+         ->replace('/*' + '@', '/*\\u0040') +
    '"';
 }
 

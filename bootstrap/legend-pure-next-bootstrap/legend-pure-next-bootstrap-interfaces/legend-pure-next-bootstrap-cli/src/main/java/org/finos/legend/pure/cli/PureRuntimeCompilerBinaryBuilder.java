@@ -60,7 +60,7 @@ import java.util.stream.Stream;
  *       suite. Doesn't exercise compiler-pure at all.</li>
  *   <li>{@code TruffleCompilerBinaryBuilder} — Pure compiler running on the
  *       Truffle interpreter. Tested by the Truffle test suite + the
- *       {@code test-self-host-truffle} Justfile recipe.</li>
+ *       Truffle self-host checks ({@code //platforms/truffle:compiler_compiler_selfhost}).</li>
  *   <li><strong>this class</strong> — Pure compiler running on the Java
  *       runtime. Verifies that the bootstrap-Java executor can run
  *       compiler-pure end-to-end, producing a usable PDB.</li>

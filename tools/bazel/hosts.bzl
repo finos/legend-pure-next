@@ -285,8 +285,7 @@ HOSTS = {
 # Known gaps (Section 2.5): {(host, variant, owner, suite): reason}. Each runs, and its test passes while the suite
 # fails; it fails once the suite passes, asking for its entry to be removed, so the list only shrinks.
 PENDING = {
-    ("bootstrap", "cli", "compiler", "compiler-unit"): "2 of 17 fail on the bootstrap, whose Java compiler cannot build the island values of the test package: 'DotApplication cannot be cast to FunctionInvocation' (testAnIslandValue*); just does not run this suite on the bootstrap",
-    ("bootstrap", "cli", "core", "grammar"): "0 of 72 grammar corpus files match their protocol.json on the bootstrap; just does not run this suite on the bootstrap",
+    ("bootstrap", "cli", "compiler", "compiler-unit"): "3 of 17 fail on the bootstrap, whose Java compiler cannot build the island values of the test package: 'DotApplication cannot be cast to FunctionInvocation' (testAnIslandValue*); just does not run this suite on the bootstrap",
     ("java", "platform", "relation", "pct"): "the relation natives have no Java coder yet (spec Section 6: relation on Java and JavaScript): 'No coder for Pure function: size'",
     ("java", "platform", "java", "unit"): "3 of 92 Java language tests fail on the Java platform: 'IfImpl cannot be cast to class java.util.List' (serialization::tests::classToStringWith*Imports)",
     ("java", "platform", "translation-shared", "unit"): "7 of 41 canonicalisation tests fail on the Java platform: 'Cannot translate <native>: NativeFunctionImpl cannot be cast'",
@@ -301,7 +300,6 @@ PENDING = {
     ("java", "platform", "legacy", "unit"): "27 of 35 bridge tests fail on the Java platform: 'ClassImpl cannot be cast to Class', 'Cannot call PureLambdaValue.execute(FunctionDefinition)'",
     ("javascript", "cli", "legacy", "unit"): "0 of 35 bridge tests run on the JavaScript platform: 'no translated function for meta::pure::bridge::tests::...' (the layer, package meta, is not translated)",
     ("javascript", "cli", "legacy_loader", "loader"): "0 of 57 loader tests run on the JavaScript platform: 'no translated function for meta::pure::bridge::loader::tests::...' (package meta is not translated)",
-    ("java", "platform", "javascript", "unit"): "127 of 133 JavaScript language tests fail on the Java platform: the Java translator leaves the quotes of a string literal unescaped (serialization::callSiteMarker_Node_1__String_1_: ';' expected)",
 }
 
 def _runs_javascript_free(owner):

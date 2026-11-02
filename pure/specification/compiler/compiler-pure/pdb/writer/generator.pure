@@ -670,7 +670,7 @@ function platform::pure::compiler::pdb::generator::emitSerialization(target:Writ
 }
 
 // A language extension's writer: its metamodel package, the fbs fragment pdb/fbsgen generated for
-// it, emitted into `ns`. Run from the extension's build (see pure/extensions/diagram/Justfile).
+// it, emitted into `ns`. Run from the extension's build (pure_extension_generated, tools/bazel/pure.bzl).
 function platform::pure::compiler::pdb::generator::generateExtensionWriter(m3FbsPath:String[1], fragmentPath:String[1], packagesCsv:String[1], ns:String[1]):String[1]
 {
    let fragText = platform::pure::functions::io::readFile($fragmentPath);

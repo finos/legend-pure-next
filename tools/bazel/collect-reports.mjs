@@ -44,7 +44,7 @@ const attr = (text, name) => (text.match(new RegExp(`\\b${name}="([^"]*)"`)) ?? 
 
 const escapeAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
-/** A case named as surefire names it (usePhrasedTestCaseMethodName, bootstrap/legend-pure-next-bootstrap/pom.xml), from the
+/** A case named as surefire names it (usePhrasedTestCaseMethodName, as the Maven build configured it), from the
  * display name the launcher records in its output: the method alone when the display name is the method's own
  * ('name' for 'name()', 'name(Path)' as it is), else the method signature, a space and the display name (the corpus
  * path of a corpus test: 'testCompiledGraph(String, String) association/profile/profile'). */

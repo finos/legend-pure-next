@@ -45,8 +45,8 @@ import platform::extensions::pure::translation::gallery::*;
 // `platform::extensions::pure::translation::gallery` module; this file only emits
 // per-test cards with the data attributes the chrome consumes.
 //
-// Entry point: `renderGallery(rootPackagePath)`. The `gallery` Justfile
-// recipe pipes stdout to `pure/modules/translation/javascript/build/javascript-translation-gallery.html`.
+// Entry point: `renderGallery(rootPackagePath)`. The gallery build (a genrule of its platform's
+// BUILD.bazel) captures stdout as the gallery page.
 // ============================================================================
 
 function <<test.TestDependency>> platform::extensions::language::javascript::translation::gallery::renderGallery(rootPackagePath: String[1]): String[1]
@@ -55,8 +55,8 @@ function <<test.TestDependency>> platform::extensions::language::javascript::tra
     let tests = platform::pure::test::collectPCTTests($root);
     let ctx   = buildPrintContext($tests->cast(@platform::pure::metamodel::PackageableElement), PrintMode.ManageImports);
     let total = $tests->size();
-    // No progress reporting: stdout is captured to the gallery file by the
-    // calling Justfile, so println would corrupt the HTML output.
+    // No progress reporting: stdout is captured as the gallery page by the
+    // build, so println would corrupt the HTML output.
     let sections = $tests->map(t | $t->renderTestCard($ctx));
     renderGalleryShell(
         'Pure &rarr; JavaScript translation gallery',

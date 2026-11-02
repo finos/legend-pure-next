@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// tools/test-dashboard/merge-builds.mjs - merges build step records (builds.json files written by build-step.mjs)
+// tools/test-dashboard/merge-builds.mjs - merges build step records (builds.json files, as just recorded them before Bazel)
 // into one file, as the CI publish job does with the published history and each job's steps:
 //
 //   merge-builds.mjs <out> <input>...
 //
 // Missing or unreadable inputs are skipped. A step recorded twice (same step, start and invocation, as when a
-// job is re-run) is kept once. The result is ordered by start time and keeps the latest 2000 steps, like build-step.mjs.
+// job is re-run) is kept once. The result is ordered by start time and keeps the latest 2000 steps.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";

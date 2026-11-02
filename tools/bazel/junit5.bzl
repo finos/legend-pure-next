@@ -18,8 +18,9 @@ load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources = [], jvm_flags = [], plugins = [], visibility = None, **kwargs):
-    """The test classes of a module: every class named like surefire includes them (**/*Test*.java), run with the
-    JUnit console launcher, from a jar of their own.
+    """The test classes of a module: every class of its test jar that holds tests, whatever its name (surefire ran
+    only those named like **/*Test*.java, and SurefireDiscoveryTest guarded the rest), run with the JUnit console
+    launcher, from a jar of their own.
 
     Two targets: '<name>_lib', the compiled test classes (the test jar Maven publishes, for a module whose tests
     other modules reuse), and '<name>', the test, which scans that jar only, so the tests of a test jar on the
@@ -73,7 +74,7 @@ def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources =
             "$(rootpath :%s_runner)" % name,
             "execute",
             "--scan-classpath=$(rootpath :%s_lib)" % name,
-            "--include-classname=.*Test.*",
+            "--include-classname=.*",
             "--fail-if-no-tests",
             "--disable-banner",
             "--reports-dir={report}",

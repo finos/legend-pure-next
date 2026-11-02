@@ -54,17 +54,17 @@ const historyFile = join(resultsDir, "history.json");
 //
 // A gallery belongs to the PLATFORM RUN of whichever host renders it, so all
 // three hang off their backend's own platform column rather than off a variant
-// beside it. Each is rendered by that platform's runtime: `just java::gallery`
-// by the Java platform, the javascript translation module's `gallery` by
-// `pure-js`, the truffle one by `pure-truffle` — the recipe's Justfile says
-// which module owns it, not which host runs it.
+// beside it. Each is rendered by that platform's runtime: the Java gallery by
+// the Java platform, the javascript translation module's by `pure-js`, the
+// truffle one by `pure-truffle` — the gallery's package says which module
+// owns it, not which host runs it.
 const GALLERIES = [
   // Each gallery is rendered by, and lands in, the platform whose host supplies its pass/fail column.
   ["java@platform", "platforms/java/build/java-platform-gallery.html", "java.html"],
   ["pure@cli-javascript", "platforms/javascript/build/javascript-translation-gallery.html", "javascript.html"],
   ["pure@cli-truffle", "platforms/truffle/build/truffle-translation-gallery.html", "truffle.html"]
 ];
-// Heavy build steps recorded by build-step.mjs.
+// Heavy build steps, as just recorded them before Bazel (builds.json, kept as published).
 const buildsFile = join(resultsDir, "builds.json");
 
 function walk(dir) {

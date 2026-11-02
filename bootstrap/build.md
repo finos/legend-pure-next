@@ -1,127 +1,39 @@
-# Bootstrap build pipeline
+# Bootstrap build
 
-This is a map of the recipes in [`bootstrap/Justfile`](Justfile) and how they
-chain together. All recipes are addressable as `just bootstrap::<recipe>` from
-the repo root, or as `just <recipe>` from `bootstrap/`.
+The bootstrap is built and tested by Bazel. It builds Truffle, and only what Truffle needs to be built
+(the migration design, `docs/superpowers/specs/2026-11-01-bazel-migration-design.md`, Section 1). Every
+package below is relative to `bootstrap/legend-pure-next-bootstrap/`.
 
-## Pieces
+## What it builds
 
-A single parameterized private recipe `_mvn mode` invokes Maven; `mode` is
-either `"skip-tests"` or `"with-tests"`. Two public recipes use it:
+| Target | What it is |
+|---|---|
+| `…-core/legend-pure-next-bootstrap-generators:generated_specification` | `m3.pure`, `m3.fbs` and the protocol model (`m3_protocol.pure`), generated from `pure/specification/m3.ttl` |
+| `…-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-parser:grammar-parser` | the ANTLR parser (`//tools/bazel:antlr`) and the protocol model |
+| `…-core/legend-pure-next-bootstrap-compiler:compiler` | the Java compiler, and `core.pdb` / `core-tests.pdb` (`core_pdbs`) |
+| `…-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser_mappings_pdb` | `parser-mappings.pdb`, the grammar mappings the Pure parser runs |
+| `…-core/legend-pure-next-bootstrap-execution:execution`, `…-runtime:runtime` | the tree-walking interpreter and its natives |
+| `…-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap` | the CLI: `compile`, `compile-via-pure`, `execute` |
+| `…-interfaces/legend-pure-next-bootstrap-ide:pure-ide` | the IDE server |
 
-- `build` calls `(_mvn "skip-tests")` — `mvn clean install -DskipTests`. Used as a fast build for downstream consumers.
-- `test-java` calls `(_mvn "with-tests")` — `mvn clean install`, surefire runs all unit tests during the install lifecycle. The Pure `runTests` and `runPCTTests` suites are wrapped as Java tests, so they execute here too.
+compiler-pure is compiled from these in `//pure/specification` (`compiler_pass1`, the generated writer, then
+`compiler_pdbs`: `compiler.pdb` and `compiler-tests.pdb`). `//:shared` gathers the PDBs and schemas into the
+`shared/` layout the tests and the language manifests name.
 
-`_mvn` always wipes `bootstrap/build/` first, then `cd legend-pure-next-bootstrap && mvn clean install [...]`.
+## Its tests
 
-`stage` and `build-compiler-pdb` are public, zero-Maven-dep recipes. The
-entry-point recipe (`build` / `test`) lists Maven + `stage` + `build-compiler-pdb`
-explicitly so the chain works on a fresh tree.
+| Tests | Tier |
+|---|---|
+| the JUnit tests of each module (`…:tests`) | required (`bazel test //...`), CI job `bootstrap` |
+| the field-ID registry checks (`//tools/bazel:fbs_ids_up_to_date__*`) | required, CI job `bootstrap` |
+| the specification suites on the interpreter (`//bootstrap:*_cli`: `core` and `compiler` suites, the legacy layer) | `bootstrap` (manual; CI job `bootstrap-self-host`) |
+| compiler-pure compiled by the compiler written in Pure (`compile-via-pure`), against the Java compile | `selfhost` (manual; CI job `bootstrap-self-host`) |
 
-- `stage` — copies into staging dirs:
-  - `bootstrap/build/pure-bootstrap.jar` ← `legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli/target/pure-bootstrap-*-fat.jar`
-  - `<repo>/shared/core.pdb` ← `legend-pure-next-bootstrap-compiler/target/classes/core.pdb`
-  - `<repo>/shared/specification/` ← `legend-pure-next-bootstrap-generators/target/generated-specification/`
-- `build-compiler-pdb` — runs `pure-bootstrap compile` over `pure/specification/compiler/compiler-pure/`, producing `<repo>/shared/compiler.pdb`. Truffle codegen reads this.
+The manual tiers run with
+`bazel test $(bazel query 'attr(tags, "[\[ ]bootstrap[,\]]", //...)')` (or `selfhost`).
 
-The `spec-functions`, `spec-pct`, and `spec-compiler` recipes are zero-dep
-"expert mode" entry points — they assume `just build` (or `just test`) has
-already produced the artifacts. Use them standalone for tight Pure-side
-iteration without re-invoking Maven.
+## Writing back to the source tree
 
-## Public recipes — fully expanded
-
-Each tree below shows every step that runs, end to end, when the recipe at
-the root is invoked. Steps repeated across recipes are inlined so each tree
-stands alone.
-
-```
-build
-├── (_mvn "skip-tests")    rm -rf bootstrap/build && mvn clean install -DskipTests
-├── stage                  cp pure-bootstrap.jar + core.pdb + specs/
-└── build-compiler-pdb     pure-bootstrap compile compiler-pure → shared/compiler.pdb
-```
-
-```
-test
-├── test-java
-│   └── (_mvn "with-tests")  rm -rf bootstrap/build && mvn clean install
-│                             (Java unit tests + Pure runTests/PCT via surefire)
-├── stage                    cp pure-bootstrap.jar + core.pdb + specs/
-├── build-compiler-pdb       pure-bootstrap compile compiler-pure → shared/compiler.pdb
-└── spec-compiler
-    └── body: pure-bootstrap execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
-```
-
-```
-test-java
-└── (_mvn "with-tests")    rm -rf bootstrap/build && mvn clean install (surefire runs all Java tests)
-```
-
-```
-spec-functions
-└── body: pure-bootstrap execute platform::pure::test::runTests              platform::pure::functions
-                                 (assumes `just build` was run — no Maven, no stage)
-```
-
-```
-spec-pct
-└── body: pure-bootstrap execute platform::pure::test::runPCTTests           platform::pure::functions
-                                 (assumes `just build` was run — no Maven, no stage)
-```
-
-```
-spec-compiler
-└── body: pure-bootstrap execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
-                                 (assumes `just build` was run — no Maven, no stage)
-```
-
-```
-spec-compiler-selfhost
-└── build-compiler-pdb     pure-bootstrap compile (assumes core.pdb staged)
-    └── body
-        ├── pure-bootstrap compile-via-pure compiler-pure → bootstrap/build/compiler_bootstrap.pdb
-        └── pure-bootstrap execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
-                                    (using compiler_bootstrap.pdb instead of compiler.pdb)
-```
-
-```
-ide
-└── build-compiler-pdb
-    └── body: pure-bootstrap execute platform::pure::ide::start
-```
-
-```
-clean
-└── body
-    ├── rm -rf bootstrap/build
-    └── cd legend-pure-next-bootstrap && mvn clean
-```
-
-## Why one Maven launch for `test`
-
-Maven runs ~5–10 s of JVM + reactor startup per invocation, even when sources
-are unchanged. The previous setup had `build-mvn` (`mvn install -DskipTests`)
-followed by `test-java` doing a separate `mvn test`, paying that cost twice.
-Routing `test` through `test-java` (which uses `(_mvn "with-tests")`)
-collapses both into a single launch — surefire runs as part of the install
-lifecycle. `spec-functions`, `spec-pct`, and `spec-compiler` standalone skip
-Maven entirely (assume staged), giving a tight inner-loop for Pure-side
-iteration.
-
-## Test runners return their own summary
-
-`runTests`, `runPCTTests`, and `runCompiledGraphTests` all return `String[1]`
-— the `OK: N / N tests passed in M ms` summary. The Pure CLI prints the
-return value, so each suite produces exactly one line of summary output (no
-inner `println` + redundant `true` from a trailing `Boolean[1]` return).
-
-## Outputs
-
-| Path | Produced by | Consumed by |
-|---|---|---|
-| `bootstrap/build/pure-bootstrap.jar` | `stage` | `pure-bootstrap` wrapper, all Pure CLI invocations |
-| `<repo>/shared/core.pdb` | `stage` | `build-compiler-pdb`, truffle codegen, all Pure CLI invocations |
-| `<repo>/shared/compiler.pdb` | `build-compiler-pdb` | truffle codegen, all Pure CLI invocations |
-| `<repo>/shared/specification/` | `stage` | reference data for tests |
-| `bootstrap/build/compiler_bootstrap.pdb` | `spec-compiler-selfhost` | `spec-compiler-selfhost`'s own `execute` step |
+A build never writes a source file. When a model change adds a field, `bazel run //:update_fbs_ids__m3`
+writes the field IDs it was given back to `pure/specification/m3-fbs-field-ids.txt`;
+`bazel run //:update_pdb_goldens__compiler` (and `__island`) rewrites the PDB goldens.

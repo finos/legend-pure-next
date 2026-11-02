@@ -445,7 +445,7 @@ const TECHS = [
   { id: "bootstrap", label: "Bootstrap", note: "Java & Java Interpreter", columns: [
     ["java", "Bootstrap", ["grammar", "compiler", "pdb"], "the Java reference implements the parser, compiler and PDB writer; Pure tests and printers are Pure code"],
     ["pure@cli-bootstrap", "Bootstrap"],
-    ["pure@junit-bootstrap", "Junit", ["pct"], "the same interpreter, running the PCT corpus in-process inside the Maven build rather than through the CLI — the view that gates `mvn test`"],
+    ["pure@junit-bootstrap", "Junit", ["pct"], "the same interpreter, running the PCT corpus in-process inside the bootstrap JUnit tests rather than through the CLI — the view the required tier runs"],
     ["pure@cli-bootstrap+selfhost", "self-compiled compiler", ...SELF_HOST]
   ] },
   { id: "java", label: "Java", note: "AOT", columns: [
@@ -732,7 +732,7 @@ function change(now, prev, first = "first build") {
   return h("span", { class: cls ? `delta ${cls}` : "delta", title: `previous: ${fmtMs(prev)}` }, text);
 }
 
-// Heavy build steps, recorded by build-step.mjs from the Justfiles (see README.md), in platform order.
+// Heavy build steps, as just recorded them before Bazel (builds.json, kept as published), in platform order.
 const STEPS = [
   ["bootstrap/maven-skip-tests", "Bootstrap Maven"],
   ["bootstrap/maven-with-tests", "Bootstrap Maven + unit tests"],

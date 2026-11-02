@@ -37,34 +37,7 @@
 # parallel. The test dashboard reads each job's reports as before (tools/bazel/collect-reports.mjs).
 name: Build CI
 
-env:
-  CI_DEPLOY_USERNAME: ${{ secrets.CI_DEPLOY_USERNAME }}
-  CI_DEPLOY_PASSWORD: ${{ secrets.CI_DEPLOY_PASSWORD }}
-  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
-
-  # Tool versions — pinned for reproducibility. Bump as a deliberate change,
-  # not a side effect of an upstream release. Local equivalents:
-  #   JDK_VERSION       ↔ Temurin 25 patch the team builds on (mvn `java-version`)
-  #   GRAALVM_VERSION   ↔ latest graalvm-ce-builds tag for JDK 25
-  #                       (`gh release list --repo graalvm/graalvm-ce-builds`).
-  #                       NB: GraalVM Community lags Oracle GraalVM by one
-  #                       patch; local devs on Oracle GraalVM 25.0.3 won't
-  #                       match exactly, that's expected.
-  #   MAVEN_VERSION     ↔ system mvn locally; we install our own here so the
-  #                       runner image's preinstalled mvn can't drift the build
-  #   JUST_VERSION      ↔ `just --version` locally
-  JDK_VERSION: '25.0.1'
-  GRAALVM_VERSION: '25.0.2'
-  MAVEN_VERSION: '3.9.11'
-  JUST_VERSION: '1.58.0'
-  FLATC_VERSION: '25.2.10'
-  #   NODE_VERSION      ↔ node on PATH locally; the JS translation runtime needs
-  #                       node + pnpm to esbuild-bundle the antlr natives
-  #   PNPM_VERSION      ↔ `pnpm --version` locally; major must match
-  #                       platforms/javascript/pnpm-lock.yaml's lockfileVersion
-  NODE_VERSION: '22'
-  PNPM_VERSION: '9'
+# Every tool version is pinned in the Bazel workspace (MODULE.bazel, tools/bazel/graalvm.bzl, .bazelversion).
 
 on:
   push:
@@ -152,7 +125,7 @@ jobs:
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
           node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
 
@@ -205,7 +178,7 @@ jobs:
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
           node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
 
@@ -236,7 +209,7 @@ jobs:
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
           node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
 
@@ -267,7 +240,7 @@ jobs:
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
           node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
 
@@ -298,7 +271,7 @@ jobs:
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
           node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
 
@@ -340,7 +313,7 @@ jobs:
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
           node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
 
@@ -388,7 +361,7 @@ jobs:
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
           node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
 
@@ -419,7 +392,7 @@ jobs:
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
           node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
 
@@ -457,7 +430,7 @@ jobs:
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
           node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
 
@@ -534,7 +507,7 @@ jobs:
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
           node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
 
@@ -610,14 +583,6 @@ jobs:
           path: test-results
           merge-multiple: true
 
-      - name: Download build steps
-        continue-on-error: true
-        uses: actions/download-artifact@v8
-        with:
-          pattern: dashboard-builds-*
-          path: build-steps
-          merge-multiple: true
-
       # The published site's address, where the previous history.json and builds.json live.
       - name: Configure Pages
         id: pages
@@ -631,11 +596,11 @@ jobs:
           shopt -s nullglob
           mkdir -p _site test-results
           # History carries over from the published site: build.mjs appends this run's snapshot to
-          # history.json, and each job's build steps are merged into builds.json. A 404 (first deploy)
-          # starts them fresh.
+          # history.json, and builds.json (the build step times just recorded, before Bazel) is kept as
+          # published. A 404 (first deploy) starts them fresh.
           curl -fsSL "$PAGES_BASE_URL/history.json" -o test-results/history.json || rm -f test-results/history.json
           curl -fsSL "$PAGES_BASE_URL/builds.json" -o "$RUNNER_TEMP/published-builds.json" || rm -f "$RUNNER_TEMP/published-builds.json"
-          node tools/test-dashboard/merge-builds.mjs test-results/builds.json "$RUNNER_TEMP/published-builds.json" build-steps/*.json
+          node tools/test-dashboard/merge-builds.mjs test-results/builds.json "$RUNNER_TEMP/published-builds.json"
           links='    <li><a href="dashboard.html">Pure conformance dashboard</a></li>'
           publish() {
             if [[ -f "$1" ]]; then

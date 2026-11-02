@@ -41,8 +41,8 @@ import java.util.List;
  * ({@code pure/specification/compiler/tests-pdb-serialization}) — they are reference
  * artifacts that validate every port, not a JS-platform fixture.
  *
- * <p>Regenerate: {@code mvn -pl ...bootstrap-compiler test -Dtest=PdbGoldenGeneratorTest
- * -Dpdb.goldens.dir=$PWD/pure/specification/compiler/tests-pdb-serialization}</p>
+ * <p>Regenerate: {@code bazel run //:update_pdb_goldens__compiler}, which runs this class with
+ * {@code -Dpdb.goldens.dir} set to {@code pure/specification/compiler/tests-pdb-serialization}.</p>
  */
 public class PdbGoldenGeneratorTest
 {

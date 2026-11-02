@@ -25,8 +25,8 @@ bazel_dep(name = "rules_nodejs", version = "6.7.7")
 bazel_dep(name = "aspect_rules_js", version = "3.5.2")
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 
-# Versions as the Maven build pins them (bootstrap/legend-pure-next-bootstrap/pom.xml). Maven enforces dependency
-# convergence; "pinned" keeps these versions over any a transitive dependency asks for.
+# Versions as the Maven build pinned them, before Bazel (it enforced dependency convergence); "pinned" keeps these
+# versions over any a transitive dependency asks for. A bump is a deliberate change: maven_install.json follows.
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
     artifacts = [
@@ -48,7 +48,7 @@ maven.install(
         "org.eclipse.collections:eclipse-collections:13.0.0",
         "org.eclipse.collections:eclipse-collections-api:13.0.0",
         "org.eclipse.lsp4j:org.eclipse.lsp4j:0.24.0",
-        # Truffle (platforms/truffle/legend-pure-next-platform-truffle/pom.xml truffle.version).
+        # Truffle, as the native image's GraalVM (tools/bazel/graalvm.bzl) runs it.
         "org.graalvm.polyglot:polyglot:25.0.3",
         "org.graalvm.sdk:nativeimage:25.0.3",
         "org.graalvm.tools:profiler-tool:25.0.3",

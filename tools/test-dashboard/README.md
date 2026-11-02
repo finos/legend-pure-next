@@ -1,12 +1,12 @@
 # Test dashboard
 
-One page over every test result in the repository. `just dashboard` renders each report under
+One page over every test result in the repository. `build.mjs` renders each report under
 `test-results/` into `test-results/dashboard.html`, a self-contained file you can open from disk.
 
 ```bash
-just dashboard                                   # from the repository root
-just test / just test-all                        # run the suites, then render the dashboard (even when a suite fails)
-tools/test-dashboard/build.mjs                   # the same, from anywhere
+bazel test //...                                 # run the suites (each writes its report among its test outputs)
+node tools/bazel/collect-reports.mjs             # gather them under test-results/ (and the JUnit XML, below)
+node tools/test-dashboard/build.mjs              # render the dashboard
 tools/test-dashboard/build.mjs --results <dir> --out <file>
 ```
 
@@ -16,8 +16,8 @@ dashboard and publishes it to GitHub Pages as `dashboard.html`, next to the tran
 (on push to main only, and also when a suite failed).
 
 History carries over between deploys through the site itself: `publish-gallery` downloads the published
-`history.json` and `builds.json`, merges every job's build steps into the latter (`merge-builds.mjs`: duplicates
-dropped, latest 2000 kept), renders the dashboard (which appends this run's snapshot to `history.json`, latest 60
+`history.json` and `builds.json` (the build step times just recorded before Bazel, kept as published through
+`merge-builds.mjs`), renders the dashboard (which appends this run's snapshot to `history.json`, latest 60
 kept) and publishes both files next to `dashboard.html`. A first deploy, or a reset site, starts them fresh.
 
 The PCT runs that have a translation gallery link to it under their board cell: the Java and JavaScript
@@ -27,10 +27,10 @@ built under `pure/modules/translation/*/build/` (when they exist); `--published`
 
 - `index.html` is the page: styles, markup and the script that draws the views.
 - `build.mjs` collects the reports, inlines them into the page and keeps `test-results/history.json`.
-- `build-step.mjs` records how long heavy build steps take, into `test-results/builds.json` (see Build time below);
-  `merge-builds.mjs` merges several such files, as CI does.
-- `surefire.mjs`, called by `build.mjs`, imports the JUnit results Maven leaves in
-  `<module>/target/surefire-reports/TEST-*.xml` (skip it with `--no-surefire`).
+- `merge-builds.mjs` merges `builds.json` files (see Build time below).
+- `surefire.mjs`, called by `build.mjs`, imports JUnit results from `<module>/target/surefire-reports/TEST-*.xml`,
+  where `tools/bazel/collect-reports.mjs` writes those of the Bazel JUnit tests, as surefire did (skip it with
+  `--no-surefire`).
 
 ## Reports
 
@@ -70,14 +70,13 @@ run a specification corpus into specification runs:
 | `CompilerCompiledGraphTest` + `CompilerErrorTest` | `spec/compiler/java` |
 | `CompilerCompiledGraphPdbRoundTripTest` | `spec/pdb/java` |
 
-Both parent poms (`bootstrap/legend-pure-next-bootstrap/pom.xml`, `platforms/truffle/legend-pure-next-platform-truffle/pom.xml`)
-turn on surefire's `usePhrasedTestCaseMethodName`, so a parameterized or dynamic test is recorded under its
-display name: the corpus path or Pure element path, the same id the Pure runners report. Only those generated
+`collect-reports.mjs` names each case as surefire's `usePhrasedTestCaseMethodName` did, so a parameterized or
+dynamic test is recorded under its display name: the corpus path or Pure element path, the same id the Pure
+runners report. Only those generated
 tests go into a specification run; plain `@Test` methods stay in the class report.
 
 Its reports carry `"producer": "surefire"`. Each import deletes the previous import's reports first and
-never overwrites a report another producer wrote. Surefire keeps a module's XML until the module is
-cleaned, so a module that wasn't rebuilt shows as an older run on the page.
+never overwrites a report another producer wrote.
 
 ## What the page does with them
 
@@ -91,32 +90,14 @@ cleaned, so a module that wasn't rebuilt shows as an older run on the page.
   Each cell shows the result, passed over run, and how long the run took.
 - **Failures** are grouped by cause: the first line of the error message with element paths,
   resource locations, quoted values and numbers blanked out.
-- **Trends** start with **Build time**: one stacked bar per `just` command that ran heavy build steps, then a table giving each step
+- **Trends** start with **Build time** (the steps just recorded, before Bazel): one stacked bar per `just` command that ran heavy build steps, then a table giving each step
   a sparkline, its latest and median duration, and the latest against the median of earlier runs (coloured beyond 10% and 200 ms).
   Below, the kind cards and **Test execution time** chart `history.json`, one snapshot per build whose results differ from the last.
   Each snapshot keeps per-kind totals and every report's duration, test and failure counts.
 
 ## Build time
 
-Heavy recipes record their duration with `build-step.mjs`. The recipe's first dependency stamps the start and its last line
-appends the step to `test-results/builds.json` (the last 2000 steps):
-
-```just
-_mvn mode: (_step-start "bootstrap/maven-" + mode)
-    cd {{boot}} && mvn clean install ...
-    {{build_step}} end "bootstrap/maven-{{mode}}"
-```
-
-A step that fails stops the recipe before its last line, so only completed steps are recorded. Each step keeps the
-`just` command that ran it (the outermost `just` process), which is how the chart stacks one command's steps.
-
-| Step | Recipe |
-|---|---|
-| `bootstrap/maven-skip-tests`, `bootstrap/maven-with-tests` | `bootstrap::_mvn` (Java + core.pdb, with or without unit tests) |
-| `bootstrap/compiler-pdb` | `bootstrap::build-compiler-pdb` |
-| `truffle/maven-skip-tests`, `truffle/maven-with-tests` | `truffle::_mvn` |
-| `truffle/native-image` | `truffle::native::build` |
-| `modules/pdbs` | `modules::build` |
-| `javascript/generate` | `javascript::generate-all` (usually quick when its emission stamps are current) |
-
-To time another step, add `_step-start` and the `end` line to its recipe and give it a label in `STEPS` in `index.html`.
+Before Bazel, the heavy `just` recipes recorded their duration into `builds.json` (`bootstrap/maven-*`,
+`bootstrap/compiler-pdb`, `truffle/maven-*`, `truffle/native-image`, `modules/pdbs`, `javascript/generate`). The
+published history is kept and still charted (`STEPS` in `index.html`); nothing records new steps. Bazel reports its
+own timings (`bazel test` prints each test's, and `--profile` writes the build's).

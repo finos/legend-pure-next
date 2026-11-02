@@ -121,18 +121,9 @@ public class ProtocolToDynamicInstance
                         {
                             instance.put(propName, convertedVal);
                         }
-                        // Protocol properties use a "p_" prefix to avoid collision
-                        // with inherited m3 properties. Copy into the unprefixed
-                        // m3 name so both accessors work.
-                        if (propName.startsWith("p_"))
-                        {
-                            String m3Name = propName.substring(2);
-                            if (instance.get(m3Name) == null)
-                            {
-                                instance.put(m3Name, convertedVal instanceof List<?> listVal2
-                                        ? org.eclipse.collections.api.factory.Lists.mutable.withAll(listVal2) : convertedVal);
-                            }
-                        }
+                        // A "p_" property (p_sourceInformation) keeps its prefix only: it is
+                        // what keeps the protocol clear of the inherited m3 property of the
+                        // same name (Any.sourceInformation), which the Pure parser never sets.
                     }
                 }
                 catch (Exception e)

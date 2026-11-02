@@ -30,7 +30,12 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
-const specFile = path.resolve(root, '../../../shared/specification/protocol/m3_protocol.pure');
+// The protocol model the bootstrap generators write (Bazel: generated-specification/protocol/m3_protocol.pure).
+if (process.argv.length !== 3) {
+    console.error('usage: generate-protocol-rewrite.mjs <m3_protocol.pure>');
+    process.exit(2);
+}
+const specFile = path.resolve(process.argv[2]);
 const outFile = path.join(root, 'loader/code/rewrite.pure');
 
 const PROTOCOL = 'platform::pure::protocol::';

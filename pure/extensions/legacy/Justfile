@@ -17,8 +17,10 @@
 #
 # Direct invocation: just <recipe>     (from pure/extensions/legacy/)
 #
-# Inputs:  shared/core.pdb, shared/core-tests.pdb (produced by `bootstrap::build`).
-# Output:  build/legacy.pdb (+ build/legacy-tests.pdb from `build-tests`)
+# What needs the pinned legend-pure and legend-engine sources: fetch them, generate from them, load them through
+# the bridge, and run what was loaded and the use cases. The layer itself (legacy.pdb, the loader) is built and tested
+# by Bazel (//pure/extensions/legacy/..., suites unit and loader); these recipes build what they use with Bazel
+# (`_bazel`) and read it from its output tree.
 #
 # code/m3/m3.pure is GENERATED (`generate`) from legend-pure's m3.pure (fetched from the pinned
 # legend-pure-m3-core jar), next's shared/specification/m3.pure and tools/m3-mapping.json. It is
@@ -30,12 +32,17 @@ set shell := ["bash", "-c"]
 
 legacy_root    := source_directory()
 repo_root      := legacy_root / ".." / ".." / ".."
-shared_out     := repo_root / "shared"
 test_results   := repo_root / "test-results"
 legacy_out     := legacy_root / "build"
-pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
-pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
-tds_pdb        := repo_root / "pure" / "extensions" / "pure" / "tds" / "build" / "tds.pdb"
+# Bazel's output tree, and what these recipes use from it (built by `_bazel`).
+bazel_bin      := `bazel info bazel-bin 2>/dev/null`
+shared_out     := bazel_bin / "shared"
+pure_bootstrap := bazel_bin / "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli/pure-bootstrap"
+pure_truffle   := bazel_bin / "platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli/pure-truffle"
+tds_pdb        := bazel_bin / "pure/extensions/pure/tds/build/tds.pdb"
+legacy_pdb     := bazel_bin / "pure/extensions/legacy/build/legacy.pdb"
+loader_pdb     := bazel_bin / "pure/extensions/legacy/loader/build/legacy_loader.pdb"
+m3_protocol    := bazel_bin / "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators/generated-specification/protocol/m3_protocol.pure"
 err_filter     := "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)"
 # The legend-engine release whose Pure the bridge compiles (its function modules, then its core), and the
 # legend-pure release it builds on: legend.pure.version in that release's pom.xml, which `_check-versions`
@@ -50,14 +57,21 @@ legend_engine_modules := "legend-engine-pure-functions-json-pure legend-engine-p
 
 header := "h(){ s=\"[extensions-legacy::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
 
-default: build
+default: load
+
+# What these recipes run and load, built by Bazel.
+_bazel:
+    cd {{repo_root}} && bazel build //:shared //pure/extensions/legacy:pdbs //pure/extensions/legacy/loader:pdbs //pure/extensions/pure/tds:pdbs \
+        //bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap \
+        //platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle \
+        //bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:m3_protocol_pure
 
 # Regenerate code/m3/m3.pure (the legacy metamodel as wrappers over next's), from the m3.pure of the
 # pinned legend-pure-m3-core jar, and by the loader natives/legacy_platform.pure (legend-pure's natives next
 # lacks, as functions failing when called), natives/legacy_platform.adapters.pure (its functions taking
 # legacy functions, overloaded for next's) and natives/legacy_platform.nextAdapters.pure (next's functions
 # taking metamodel objects, overloaded for legacy's), all compiled with the loaded legacy_platform.
-generate: _check-versions _fetch-legend-pure _fetch-legend-engine build-loader
+generate: _check-versions _fetch-legend-pure _fetch-legend-engine _bazel
     #!/usr/bin/env bash
     set -euo pipefail
     {{header}} 'generate'
@@ -65,7 +79,7 @@ generate: _check-versions _fetch-legend-pure _fetch-legend-engine build-loader
     node {{legacy_root}}/tools/load.mjs {{legend_pure_dir}}/platform/pure {{legend_engine_dir}} {{loaded_out}} legacy_platform
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
-        --pdb {{loader_out}}/legacy_loader.pdb \
+        --pdb {{loader_pdb}} \
         --function "meta::pure::bridge::loader::generateStubs_String_1__String_1__String_1__String_1__String_1__String_1__String_1_" \
         --args "{{loaded_out}}/plan.txt" legacy_platform "{{legacy_root}}/natives/legacy_platform.pure" "{{legacy_root}}/natives/legacy_platform.adapters.pure" "{{legacy_root}}/natives/legacy_platform.nextAdapters.pure" "legend-pure {{legend_pure_version}} platform" {{err_filter}}
 
@@ -142,55 +156,30 @@ _fetch-legend-pure:
 # files give them (with what they depend on).
 load_modules := "legacy_platform core_functions_unclassified core_functions_variant core_functions_relation core_functions_standard platform_dsl_store platform_dsl_mapping platform_dsl_path platform_dsl_graph platform_dsl_diagram platform_store_relational"
 loaded_out   := legacy_out / "loaded"
-loader_out   := legacy_out / "loader"
 
 # Regenerate loader/code/rewrite.pure (the copy of a parsed source with its references rewritten), from
 # next's protocol model.
-generate-loader:
+generate-loader: _bazel
     @{{header}} 'generate-loader'
-    node {{legacy_root}}/tools/generate-protocol-rewrite.mjs
-
-# Compile the loader (loader/) with its tests -> build/loader/legacy_loader.pdb (+ -tests.pdb).
-build-loader: _depCheck_base-pdbs
-    @{{header}} 'build-loader'
-    mkdir -p {{loader_out}}
-    {{pure_bootstrap}} compile \
-        --base-pdb {{shared_out}}/core.pdb \
-        --base-pdb {{shared_out}}/core-tests.pdb \
-        --source {{legacy_root}}/loader \
-        --output-dir {{loader_out}} \
-        --tests split {{err_filter}}
-
-# Run the loader's <<test.Test>> functions (meta::pure::bridge::loader::tests).
-test-loader: build-loader
-    @{{header}} 'test-loader'
-    mkdir -p {{test_results}}/spec/legacy/loader
-    {{pure_bootstrap}} execute \
-        --pdb {{shared_out}}/core.pdb \
-        --pdb {{shared_out}}/core-tests.pdb \
-        --pdb {{loader_out}}/legacy_loader.pdb \
-        --pdb {{loader_out}}/legacy_loader-tests.pdb \
-        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::bridge::loader::tests" "{{test_results}}/spec/legacy/loader/pure@cli-bootstrap.json" {{err_filter}}
+    node {{legacy_root}}/tools/generate-protocol-rewrite.mjs {{m3_protocol}}
 
 # Load legacy sources into build/loaded/<module>/: staged (tools/load.mjs), then parsed by next's parser and
 # placed on top of the bridge (the loader). Each is then compiled in order, on top of core.pdb, legacy.pdb
 # and the modules before it -> build/loaded/<module>.pdb.
-load: fetch build-tests build-loader
+load: fetch _bazel
     #!/usr/bin/env bash
     set -euo pipefail
     {{header}} 'load'
     node {{legacy_root}}/tools/load.mjs {{legend_pure_dir}}/platform/pure {{legend_engine_dir}} {{loaded_out}} {{load_modules}}
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
-        --pdb {{loader_out}}/legacy_loader.pdb \
+        --pdb {{loader_pdb}} \
         --function "meta::pure::bridge::loader::load_String_1__String_1_" \
         --args "{{loaded_out}}/plan.txt" {{err_filter}}
     # A module with islands (#TDS … #) is compiled by compiler-pure on Truffle: they need next's TDS extension,
     # whose handler is Pure (tds.pdb, on compiler.pdb). The others by the bootstrap compiler, much faster.
-    test -f "{{tds_pdb}}" || (echo "ERROR: missing {{tds_pdb}} (run \`just extensions::pure::tds::build-tests\` first)" && exit 1)
     # Each with its tests split out (<module>-tests.pdb), on next's and its dependencies' tests: test-loaded runs them.
-    bases=(--base-pdb "{{shared_out}}/core.pdb" --base-pdb "{{shared_out}}/core-tests.pdb" --base-pdb "{{shared_out}}/parser-mappings.pdb" --base-pdb "{{shared_out}}/compiler.pdb" --base-pdb "{{tds_pdb}}" --base-pdb "{{legacy_out}}/legacy.pdb")
+    bases=(--base-pdb "{{shared_out}}/core.pdb" --base-pdb "{{shared_out}}/core-tests.pdb" --base-pdb "{{shared_out}}/parser-mappings.pdb" --base-pdb "{{shared_out}}/compiler.pdb" --base-pdb "{{tds_pdb}}" --base-pdb "{{legacy_pdb}}")
     while read -r module _; do
         if grep -rqE '#TDS' "{{loaded_out}}/$module/code"; then compiler="{{pure_truffle}}"; else compiler="{{pure_bootstrap}}"; fi
         echo "  compiling $module ($(basename "$compiler"))"
@@ -207,13 +196,13 @@ usecase_modules  := "legacy_usecases_reflection legacy_usecases_functionValues"
 usecases_out     := legacy_out / "usecases"
 usecases_expected := legacy_root / "tests" / "usecases" / "expected"
 
-_load-usecases: fetch build-tests build-loader
+_load-usecases: fetch _bazel
     #!/usr/bin/env bash
     set -euo pipefail
     node {{legacy_root}}/tools/load.mjs {{legend_pure_dir}}/platform/pure {{legacy_root}}/tests {{usecases_out}} legacy_platform {{usecase_modules}}
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
-        --pdb {{loader_out}}/legacy_loader.pdb \
+        --pdb {{loader_pdb}} \
         --function "meta::pure::bridge::loader::load_String_1__String_1_" \
         --args "{{usecases_out}}/plan.txt" > "{{usecases_out}}/loader.log" {{err_filter}}
 
@@ -241,8 +230,8 @@ test-usecases: _load-usecases
         fi
     done
     mkdir -p {{test_results}}/spec/legacy/usecases
-    bases=(--base-pdb "{{shared_out}}/core.pdb" --base-pdb "{{shared_out}}/parser-mappings.pdb" --base-pdb "{{shared_out}}/compiler.pdb" --base-pdb "{{tds_pdb}}" --base-pdb "{{legacy_out}}/legacy.pdb")
-    pdbs=(--pdb "{{shared_out}}/core.pdb" --pdb "{{shared_out}}/core-tests.pdb" --pdb "{{shared_out}}/parser-mappings.pdb" --pdb "{{shared_out}}/compiler.pdb" --pdb "{{tds_pdb}}" --pdb "{{legacy_out}}/legacy.pdb")
+    bases=(--base-pdb "{{shared_out}}/core.pdb" --base-pdb "{{shared_out}}/parser-mappings.pdb" --base-pdb "{{shared_out}}/compiler.pdb" --base-pdb "{{tds_pdb}}" --base-pdb "{{legacy_pdb}}")
+    pdbs=(--pdb "{{shared_out}}/core.pdb" --pdb "{{shared_out}}/core-tests.pdb" --pdb "{{shared_out}}/parser-mappings.pdb" --pdb "{{shared_out}}/compiler.pdb" --pdb "{{tds_pdb}}" --pdb "{{legacy_pdb}}")
     while read -r module _; do
         echo "  compiling $module"
         if [[ " {{usecase_modules}} " == *" $module "* ]]; then
@@ -285,12 +274,12 @@ test-usecases-on-legacy: _check-versions
 
 # Run the loaded modules' own tests (load first): their <<test.Test>> and <<PCT.test>> functions, on Truffle (whose
 # runtime evaluates #TDS islands, as the TDS extension's tests do) -> test-results/spec/legacy/loaded/{tests,pct}.json.
-test-loaded:
+test-loaded: _bazel
     #!/usr/bin/env bash
     set -uo pipefail
     {{header}} 'test-loaded'
     mkdir -p {{test_results}}/spec/legacy/loaded
-    pdbs=(--pdb "{{shared_out}}/core.pdb" --pdb "{{shared_out}}/core-tests.pdb" --pdb "{{shared_out}}/parser-mappings.pdb" --pdb "{{shared_out}}/compiler.pdb" --pdb "{{tds_pdb}}" --pdb "{{legacy_out}}/legacy.pdb")
+    pdbs=(--pdb "{{shared_out}}/core.pdb" --pdb "{{shared_out}}/core-tests.pdb" --pdb "{{shared_out}}/parser-mappings.pdb" --pdb "{{shared_out}}/compiler.pdb" --pdb "{{tds_pdb}}" --pdb "{{legacy_pdb}}")
     while read -r module _; do
         pdbs+=(--pdb "{{loaded_out}}/$module.pdb" --pdb "{{loaded_out}}/$module-tests.pdb")
     done < "{{loaded_out}}/modules.txt"
@@ -303,49 +292,5 @@ test-loaded:
         --args "meta" "{{test_results}}/spec/legacy/loaded/pct.json" {{err_filter}} || failed=1
     exit $failed
 
-# Compile the layer -> build/legacy.pdb.
-build: _depCheck_base-pdbs
-    @{{header}} 'build'
-    mkdir -p {{legacy_out}}
-    {{pure_bootstrap}} compile \
-        --base-pdb {{shared_out}}/core.pdb \
-        --source {{legacy_root}}/code \
-        --output-dir {{legacy_out}} {{err_filter}}
-
-build-all: build
-
-# Compile with tests -> build/legacy.pdb + build/legacy-tests.pdb.
-build-tests: _depCheck_base-pdbs
-    @{{header}} 'build-tests'
-    mkdir -p {{legacy_out}}
-    {{pure_bootstrap}} compile \
-        --base-pdb {{shared_out}}/core.pdb \
-        --base-pdb {{shared_out}}/core-tests.pdb \
-        --source {{legacy_root}}/code \
-        --output-dir {{legacy_out}} \
-        --tests split {{err_filter}}
-
-# The tools' own tests (the grammar preprocessor).
-test-tools:
-    @{{header}} 'test-tools'
-    node --test {{legacy_root}}/tools/*.test.mjs
-
-# Run the tools' tests, then the layer's <<test.Test>> functions (meta::pure::bridge::tests) on the
-# bootstrap runtime.
-test-all: test-tools test-loader build-tests
-    @{{header}} 'test-all'
-    mkdir -p {{test_results}}/spec/legacy/unit
-    {{pure_bootstrap}} execute \
-        --pdb {{shared_out}}/core.pdb \
-        --pdb {{shared_out}}/core-tests.pdb \
-        --pdb {{legacy_out}}/legacy.pdb \
-        --pdb {{legacy_out}}/legacy-tests.pdb \
-        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::bridge::tests" "{{test_results}}/spec/legacy/unit/pure@cli-bootstrap.json" {{err_filter}}
-
 clean:
     rm -rf {{legacy_out}}
-
-_depCheck_base-pdbs:
-    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
-    test -f {{shared_out}}/core-tests.pdb || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)

@@ -38,9 +38,9 @@ const SPEC_RUNS = [
   { spec: "grammar", run: "pure@junit-bootstrap", classes: ["org.finos.legend.pure.next.parser.mappings.PureParserMatchesJavaParserTest"], idPrefix: "grammar:" },
   { spec: "compiler", run: "java", classes: ["org.finos.legend.pure.m3.specification.CompilerCompiledGraphTest", "org.finos.legend.pure.m3.specification.CompilerErrorTest"] },
   { spec: "pdb", run: "java", classes: ["org.finos.legend.pure.m3.specification.CompilerCompiledGraphPdbRoundTripTest"] },
-  // The PCT corpus as the MAVEN BUILD runs it: in-process, through JUnit, rather than through the
+  // The PCT corpus as the bootstrap JUnit tests run it: in-process, rather than through the
   // bootstrap CLI. 831 of its 833 ids are the `pure@cli-bootstrap` set, so the column is mostly a
-  // second view of that host — but it is the view that gates `mvn test`, and it carries two rawType
+  // second view of that host — but it is the view the required tier runs, and it carries two rawType
   // tests the corpus the other columns share does not. Its skipped ids arrive as
   // "<path> [skipped: <reason>]" and are normalised in caseOf, so rows line up with every other run.
   { spec: "pct", run: "pure@junit-bootstrap", classes: ["org.finos.legend.pure.runtime.TestPCT"] },

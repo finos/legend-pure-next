@@ -33,6 +33,4 @@ Consumers:
 
 Regenerate (after any deliberate wire-contract change in the reference):
 
-    cd bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler
-    mvn -o test -Dtest=PdbGoldenGeneratorTest \
-        -Dpdb.goldens.dir=<repo>/pure/specification/compiler/tests-pdb-serialization
+    bazel run //:update_pdb_goldens__compiler

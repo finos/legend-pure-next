@@ -51,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code <<PCT.test>>} function becomes an individual dynamic test
  * with independent pass/fail — no fail-fast.
  *
- * <p>Run with: {@code mvn test -Dtest=TrufflePureTestRunner}</p>
+ * <p>Run with: {@code bazel test //platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure:tests}</p>
  */
 class TrufflePurePCTAndFuncFromPDBTest
 {

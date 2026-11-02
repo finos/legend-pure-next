@@ -31,7 +31,7 @@ import platform::pure::ui::progress::*;
 // that the printer didn't regress.
 //
 // Mirrors the compiled-side `runCompiledPrinterCorpus` so both printers have
-// the same harness shape and the same Justfile recipe pattern.
+// the same harness shape and the same suite runner (printerProtocol, tools/bazel/hosts.bzl).
 
 function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus(testDir: String[1]): String[1]
 {

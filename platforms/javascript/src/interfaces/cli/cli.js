@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command-line entry for the execution host (bin/pure-js) — the Node
+// Command-line entry for the execution host (pure-js (//platforms/javascript:pure-js)) — the Node
 // counterpart of `pure-truffle execute` (platforms/truffle PureCompileMain), so
 // module recipes invoke both hosts with the same arguments:
 //
