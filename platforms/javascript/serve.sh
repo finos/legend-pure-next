@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Serve the browser IDE as publish-gallery deploys it (:ide_site), on a port (default 8000; just: javascript::serve):
+# Serve the browser IDE as publish-gallery deploys it (:ide_site), on a port (default 8000):
 # bazel run //platforms/javascript:serve [-- <port>].
 #
 #   serve.sh <site> [<port>]

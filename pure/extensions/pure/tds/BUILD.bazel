@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The TDS extension: its FlatBuffer fragment (just: tds::generate), which the Truffle extension packages.
+# The TDS extension: its FlatBuffer fragment, which the Truffle extension packages.
 
 load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("//tools/bazel:pure.bzl", "pure_extension_generated", "pure_module")

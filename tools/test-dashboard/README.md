@@ -21,7 +21,7 @@ dashboard and publishes it to GitHub Pages as `dashboard.html`, next to the tran
 (on push to main only, and also when a suite failed).
 
 History carries over between deploys through the site itself: `publish-gallery` downloads the published
-`history.json` and `builds.json` (the build step times just recorded before Bazel, kept as published through
+`history.json` and `builds.json` (the build step times recorded before Bazel, kept as published through
 `merge-builds.mjs`), renders the dashboard (which appends this run's snapshot to `history.json`, latest 60
 kept) and publishes both files next to `dashboard.html`. A first deploy, or a reset site, starts them fresh.
 
@@ -34,7 +34,7 @@ built under `pure/modules/translation/*/build/` (when they exist); `--published`
 - `build.mjs` collects the reports, inlines them into the page and keeps `test-results/history.json`.
 - `merge-builds.mjs` merges `builds.json` files (see Build time below).
 - `surefire.mjs`, called by `build.mjs`, imports JUnit results from `<module>/target/surefire-reports/TEST-*.xml`,
-  where `tools/bazel/collect-reports.mjs` writes those of the Bazel JUnit tests, as surefire did (skip it with
+  where `tools/bazel/collect-reports.mjs` writes those of the Bazel JUnit tests (skip it with
   `--no-surefire`).
 
 ## Reports
@@ -53,7 +53,7 @@ A test run writes one JSON file at `test-results/<kind>/<group>/<run>.json`:
 |---|---|---|---|
 | `spec` | the specification: `grammar`, `compiler`, `functions`, `pct`, `pdb` (archives against the Java goldens), `pdb-format` (the PDB format's `<<test.Test>>` suite) | `<implementation>@<host>[+<source>]`, e.g. `pure@cli-truffle+inMemory`; the host names the CLI that runs it (`cli-bootstrap`, `cli-truffle`, `cli-truffle-native`, `cli-javascript`), and the Java reference is plain `java` | the Pure runners, through `writeSuiteReport` in `pure/specification/runtime/test/testReport.pure` |
 | `pure` | Pure code checked on each host: a library (`printer-compiled`, `printer-protocol`) or a module's `<<test.Test>>` suite (`language-java`, `language-javascript`, `translation-shared`, `translation-java`, `translation-java-functions` for the runtime functions with the Java extension loaded, `translation-javascript`) | `pure@<host>` | the printer corpus runners; each module's `runTests` with a report path |
-| `java` | the Maven module | the test class | JUnit |
+| `java` | the module | the test class | JUnit |
 | `javascript` | the source area | the script | Node test scripts |
 
 Test ids are element paths for Pure tests and corpus-relative paths for fixtures, so the same test
@@ -65,7 +65,7 @@ file).
 
 ## JUnit results
 
-`surefire.mjs` writes one `java/<maven-module>/<class>.json` per test class, and turns the classes that
+`surefire.mjs` writes one `java/<module>/<class>.json` per test class, and turns the classes that
 run a specification corpus into specification runs:
 
 | JUnit class | Specification run |
@@ -75,7 +75,7 @@ run a specification corpus into specification runs:
 | `CompilerCompiledGraphTest` + `CompilerErrorTest` | `spec/compiler/java` |
 | `CompilerCompiledGraphPdbRoundTripTest` | `spec/pdb/java` |
 
-`collect-reports.mjs` names each case as surefire's `usePhrasedTestCaseMethodName` did, so a parameterized or
+`collect-reports.mjs` names each case in the style of `usePhrasedTestCaseMethodName`, so a parameterized or
 dynamic test is recorded under its display name: the corpus path or Pure element path, the same id the Pure
 runners report. Only those generated
 tests go into a specification run; plain `@Test` methods stay in the class report.
@@ -95,14 +95,14 @@ never overwrites a report another producer wrote.
   Each cell shows the result, passed over run, and how long the run took.
 - **Failures** are grouped by cause: the first line of the error message with element paths,
   resource locations, quoted values and numbers blanked out.
-- **Trends** start with **Build time** (the steps just recorded, before Bazel): one stacked bar per `just` command that ran heavy build steps, then a table giving each step
+- **Trends** start with **Build time** (the steps recorded before Bazel): one stacked bar per command that ran heavy build steps, then a table giving each step
   a sparkline, its latest and median duration, and the latest against the median of earlier runs (coloured beyond 10% and 200 ms).
   Below, the kind cards and **Test execution time** chart `history.json`, one snapshot per build whose results differ from the last.
   Each snapshot keeps per-kind totals and every report's duration, test and failure counts.
 
 ## Build time
 
-Before Bazel, the heavy `just` recipes recorded their duration into `builds.json` (`bootstrap/maven-*`,
+Before Bazel, the heavy build steps recorded their duration into `builds.json` (`bootstrap/maven-*`,
 `bootstrap/compiler-pdb`, `truffle/maven-*`, `truffle/native-image`, `modules/pdbs`, `javascript/generate`). The
 published history is kept and still charted (`STEPS` in `index.html`); nothing records new steps. Bazel reports its
 own timings (`bazel test` prints each test's, and `--profile` writes the build's).

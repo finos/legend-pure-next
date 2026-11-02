@@ -60,7 +60,7 @@ import java.util.TreeMap;
  *
  * <h2>Concurrency</h2>
  * <p>Single-threaded. The schema generator runs synchronously in the
- * {@code generate-m3-fbs} maven execution, so no synchronisation is
+ * {@code m3.fbs} generation, so no synchronisation is
  * needed.</p>
  */
 public final class FbsFieldIdRegistry

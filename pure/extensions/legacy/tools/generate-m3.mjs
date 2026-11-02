@@ -15,7 +15,7 @@
 
 // Generates code/m3/m3.pure: legend-pure's m3 metamodel as wrappers over next's.
 //
-//   node tools/generate-m3.mjs <legend-pure version> <its m3.pure>      (`just generate` fetches it)
+//   node tools/generate-m3.mjs <legend-pure version> <its m3.pure>      (`bazel run //pure/extensions/legacy:generate` fetches it)
 //
 // Inputs:
 //   m3.pure of legend-pure-m3-core <version>   the legacy metamodel (M4 syntax)

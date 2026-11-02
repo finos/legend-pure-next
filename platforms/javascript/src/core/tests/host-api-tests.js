@@ -437,7 +437,7 @@ check("a ###Diagram section compiles to a Diagram element with its types resolve
 });
 
 // A golden beside the diagram's compiler fixtures (pure/extensions/diagram/tests/compiler-pdb-serialization,
-// regenerated with `just extensions::diagram::regen-pdb-goldens`): every view kind, with an association-
+// regenerated with `bazel run //:update_pdb_goldens__diagram`): every view kind, with an association-
 // owned property pointer, read back with THIS host's decoder.
 const DIAGRAM_GOLDEN = join(REPO, "pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/propertyAndAssociation.pdb");
 
@@ -541,7 +541,7 @@ check("the TDS extension is found under pure/extensions/pure", () => {
 });
 
 // A TDS golden (pure/extensions/pure/tds/tests/compiler-pdb-serialization, regenerated with
-// `just extensions::pure::tds::regen-pdb-goldens`): the `#TDS{…}#` in its fixture's function, decoded by THIS
+// `bazel run //:update_pdb_goldens__tds`): the `#TDS{…}#` in its fixture's function, decoded by THIS
 // host with the schema fragment the tds language declares.
 const TDS_GOLDEN = join(REPO, "pure/extensions/pure/tds/tests/compiler-pdb-serialization/tds/typedHeader.pdb");
 

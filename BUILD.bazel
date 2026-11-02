@@ -43,8 +43,7 @@ alias(
     "tds",
 ]]
 
-# The PDBs and schemas the Java tests and the suites find in a 'shared' directory, as just stages them in
-# <repo>/shared: a test runs from the root of its runfiles, where these land. The source directory 'shared' is never
+# The PDBs and schemas the Java tests and the suites find in a 'shared' directory: a test runs from the root of its runfiles, where these land. The source directory 'shared' is never
 # read (REPO.bazel).
 _SHARED = {
     "core.pdb": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb",

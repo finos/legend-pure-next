@@ -22,7 +22,7 @@ import org.finos.legend.pure.truffle.grammar.Language;
  * The {@code ###Diagram} language, for a composition root to install.
  *
  * <p>Two facts, and both are this module's rather than the language's: WHERE its manifest was staged, and
- * WHERE this module's pom generates its parser. Everything else — the grammar's name and entry rule, the
+ * WHERE this module's BUILD.bazel generates its parser. Everything else — the grammar's name and entry rule, the
  * module carrying its Pure code, the elements that parse a diagram section and supply its compiler passes
  * — is read from {@code language_diagram.json}, which belongs to the extension and is shared with every
  * other platform.</p>
@@ -31,7 +31,7 @@ public final class DiagramLanguage
 {
     private static final String MANIFEST = "languages/language_diagram.json";
 
-    /** The package this module's pom generates {@code DiagramLexer} and {@code DiagramParser} into. */
+    /** The package this module's BUILD.bazel generates {@code DiagramLexer} and {@code DiagramParser} into. */
     private static final String GRAMMAR_PACKAGE = "org.finos.legend.pure.truffle.extensions.diagram";
 
     private DiagramLanguage()

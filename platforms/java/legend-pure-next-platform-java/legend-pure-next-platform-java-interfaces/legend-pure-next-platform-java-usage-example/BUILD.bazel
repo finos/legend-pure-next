@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Embedding the Java platform (just: java::usage-example).
+# Embedding the Java platform.
 
 load("@rules_java//java:defs.bzl", "java_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")

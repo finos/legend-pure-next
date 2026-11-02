@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""The Java platform runtime: Pure translated to Java by the Java translator, run on the Truffle CLI (just:
-java::generate-*)."""
+"""The Java platform runtime: Pure translated to Java by the Java translator, run on the Truffle CLI."""
 
 _TRUFFLE_CLI = "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle"
 
@@ -25,7 +24,7 @@ def java_translation_srcjar(name, steps):
     """'<name>.srcjar', the Java the steps print, and '<name>-positions.jar', the source position tables (.pos) the
     translator writes beside it, which the runtime reads from the class path.
 
-    The steps run in order into one directory, as the just recipes run them: a later step may write a file an
+    The steps run in order into one directory: a later step may write a file an
     earlier one wrote.
 
     Args:

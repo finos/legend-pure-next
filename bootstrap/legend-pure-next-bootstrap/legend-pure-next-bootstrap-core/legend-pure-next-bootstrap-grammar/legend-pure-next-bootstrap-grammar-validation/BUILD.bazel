@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # The Pure parser checked against the Java one: parser-mappings.pdb, compiled by the bootstrap CLI from the grammar
-# mappings (Maven: build-parser-mappings-pdb), and the tests that read it from the classpath.
+# mappings, and the tests that read it from the classpath.
 
 load("@rules_java//java:defs.bzl", "java_library")
 load("//tools/bazel:junit5.bzl", "junit5_test")

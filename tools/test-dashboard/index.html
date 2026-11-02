@@ -370,7 +370,7 @@ function toRun(report) {
   return { kind: parts[0], group: parts.slice(1, -1).join("/") || run, run, suite: report.suite, file: `${report.path}.json`, cases, passed, failed, skipped: cases.length - passed - failed, durationMs: report.durationMs, recordedAt: report.recordedAt };
 }
 const ALL = DATA.reports.map(toRun);
-// A run recorded well before the newest report (say, a Maven module that wasn't rebuilt) is flagged as older.
+// A run recorded well before the newest report (say, a module that wasn't rebuilt) is flagged as older.
 const NEWEST = Math.max(0, ...ALL.map(r => Date.parse(r.recordedAt) || 0));
 const isOlder = r => NEWEST - (Date.parse(r.recordedAt) || NEWEST) > 12 * 3600 * 1000;
 const fmtAt = at => at ? `${at.slice(0, 16).replace("T", " ")} UTC` : "";
@@ -432,7 +432,7 @@ function header() {
   if (meta.generatedAt) $("#generated").append("Built ", h("b", { class: "num" }, `${meta.generatedAt.slice(0, 16).replace("T", " ")} UTC`));
   else $("#generated").hidden = true;
   $("#runcount").append(h("b", { class: "num" }, fmtN(ALL.length)), ` ${ALL.length === 1 ? "report" : "reports"} ${DOT} `, h("b", { class: "num" }, fmtN(total)), " tests");
-  const empty = meta.unbuilt ? "This is the template: run just dashboard and open test-results/dashboard.html" : "Run a test recipe such as just bootstrap::spec, then just dashboard";
+  const empty = meta.unbuilt ? "This is the template: run bazel run //:dashboard and open test-results/dashboard.html" : "Run bazel test //... then bazel run //:dashboard";
   $("#verdict").append(
     h("div", { class: "big " + (failed ? "bad" : ALL.length ? "good" : "") }, failed ? `${fmtN(failed)} failing` : ALL.length ? "All green" : "No reports"),
     h("div", { class: "label" }, failed ? `in ${failingRuns} of ${ALL.length} runs ${DOT} ${groupFailures().length} distinct causes` : ALL.length ? `all ${ALL.length} runs pass` : empty));
@@ -488,7 +488,7 @@ const PLATFORM_RUNS = new Set([
 ]);
 const techOf = run => TECHS.find(t => t.columns.some(c => c[0] === run));
 // The technology that runs the code. A translation run is named after the CLI that drives it
-// (javascript-translation@cli-javascript) but belongs to its target language; JUnit classes go by Maven module.
+// (javascript-translation@cli-javascript) but belongs to its target language; JUnit classes go by module.
 function techOfRun(r) {
   const listed = techOf(r.run);
   if (listed) return listed;
@@ -737,7 +737,7 @@ function change(now, prev, first = "first build") {
   return h("span", { class: cls ? `delta ${cls}` : "delta", title: `previous: ${fmtMs(prev)}` }, text);
 }
 
-// Heavy build steps, as just recorded them before Bazel (builds.json, kept as published), in platform order.
+// Heavy build steps, as recorded before Bazel (builds.json, kept as published), in platform order.
 const STEPS = [
   ["bootstrap/maven-skip-tests", "Bootstrap Maven"],
   ["bootstrap/maven-with-tests", "Bootstrap Maven + unit tests"],
@@ -760,7 +760,7 @@ const isStage = step => step.startsWith("test-all/");
 function buildTime(records = []) {
   const head = h("h3", { class: "section" }, "Build time");
   if (!records.length) return h("section", { class: "builds" }, head,
-    h("div", { class: "caption" }, "No build steps recorded yet. They appear after the next command that runs Maven, native-image, the module PDBs or JavaScript generation."));
+    h("div", { class: "caption" }, "No build steps recorded: only the history published before Bazel holds them."));
   const byCommand = new Map();
   for (const r of records.filter(r => !isStage(r.step))) {
     const id = r.invocation?.id ?? r.at;

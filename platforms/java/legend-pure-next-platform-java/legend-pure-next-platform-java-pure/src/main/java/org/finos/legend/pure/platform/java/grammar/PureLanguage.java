@@ -34,7 +34,7 @@ public final class PureLanguage
             Lists.immutable.of("languages/language_pure.json", "languages/language_test.json");
 
     /**
-     * Where ANTLR puts the parser the manifest names. The pom stages the shared grammars keeping their
+     * Where ANTLR puts the parser the manifest names. The build stages the shared grammars keeping their
      * {@code m3/} sub-directory, so {@code M3Lexer} and {@code M3Parser} land one package below this one.
      */
     private static final String GRAMMAR_PACKAGE = "org.finos.legend.pure.platform.java.grammar.m3";

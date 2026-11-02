@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""ANTLR grammars compiled to Java, as the antlr4 Maven plugin compiles them."""
+"""ANTLR grammars compiled to Java."""
 
 def antlr_srcjar(name, srcs, grammar_dir, package, grammars, **kwargs):
     """'<name>.srcjar': the visitors and parsers of 'grammars', in 'package' and the packages below it.
 
-    The grammars are staged by package, as the Maven plugin stages them, so each generated file names the same
+    The grammars are staged by package, so each generated file names the same
     grammar path ('// Generated from org/…/M3Parser.g4'). Each lexer is compiled before its parser, which reads the
     tokens file it writes (tokenVocab) through -lib.
 

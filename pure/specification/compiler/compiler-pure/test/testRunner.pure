@@ -117,7 +117,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::runCompiledGrap
     );
     // Throw on any failure so the CLI's exit code reflects test status —
     // returning the summary string lets the bootstrap CLI swallow failures
-    // (it just prints the result), so callers like `just self-host-java`
+    // (it just prints the result), so callers like the self-host checks
     // never see a non-zero exit.
     $reportPath->map(path | platform::pure::test::report::writeSuiteReport($path, 'compiledGraph', $elapsedMs,
         $results->map(r | ^platform::pure::test::report::TestCaseReport(id = $r.name, durationMs = $r.durationMs, error = $r.error))));

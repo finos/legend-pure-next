@@ -137,7 +137,7 @@ function platform::extensions::language::java::translation::platform::platformRo
    'org.finos.legend.pure.m3'
 }
 
-// True for the types the platform prebuilds (`just java::generate-types`): the
+// True for the types the platform prebuilds (//platforms/java:engine_generated): the
 // metamodel's and the core library's, test models excepted.
 function platform::extensions::language::java::translation::platform::isPrebuiltType(path: String[1]): Boolean[1]
 {

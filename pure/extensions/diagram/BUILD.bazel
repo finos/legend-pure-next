@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The diagram extension: its FlatBuffer fragment (just: diagram::generate) and grammar, which the Truffle extension
+# The diagram extension: its FlatBuffer fragment and grammar, which the Truffle extension
 # packages, and the compiler PDB goldens the bootstrap compiler tests read.
 
 load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")

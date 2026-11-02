@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Write the PDB golden of each compiler fixture that compiles (not '*_E_*') back to the source tree, from the Pure
-# writer (just: <owner>::regen-pdb-goldens): bazel run //:update_pdb_goldens__<owner>. Read the diff, and run the
+# writer: bazel run //:update_pdb_goldens__<owner>. Read the diff, and run the
 # owner's pdb suite, before keeping them.
 #
 #   update-pdb-goldens.sh <CLI> <golden function> <fixtures> <subdirectory> <goldens> <CLI option>...

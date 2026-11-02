@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # The M3 and top-level parsers: ANTLR over pure/specification/grammar/antlr, and the protocol classes generated from
-# m3_protocol.ttl (Maven: the antlr4 and generate-protocol-classes executions of this pom).
+# m3_protocol.ttl.
 
 load("@rules_java//java:defs.bzl", "java_library")
 load("//tools/bazel:antlr.bzl", "antlr_srcjar")

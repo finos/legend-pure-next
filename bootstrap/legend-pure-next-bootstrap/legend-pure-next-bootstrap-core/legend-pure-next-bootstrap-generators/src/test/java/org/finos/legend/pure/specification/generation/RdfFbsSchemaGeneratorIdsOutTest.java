@@ -26,8 +26,8 @@ import java.util.List;
 
 /**
  * {@code --ids-out}: the registry a generation updates is written to an output, and the tracked registry is left as it
- * was — what a build tool that never writes its sources needs. Without it the tracked registry is updated in place, as
- * the Maven build expects.
+ * was — what a build tool that never writes its sources needs. Without it the tracked registry is updated
+ * in place.
  */
 public class RdfFbsSchemaGeneratorIdsOutTest
 {

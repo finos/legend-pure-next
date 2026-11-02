@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The Bazel build, beside Maven and just until every suite matches (docs/superpowers/specs/2026-11-01-bazel-migration-design.md).
+# The Bazel build (docs/superpowers/specs/2026-11-01-bazel-migration-design.md).
 
 module(name = "legend_pure_next")
 
@@ -25,17 +25,17 @@ bazel_dep(name = "rules_nodejs", version = "6.7.7")
 bazel_dep(name = "aspect_rules_js", version = "3.5.2")
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 
-# Versions as the Maven build pinned them, before Bazel (it enforced dependency convergence); "pinned" keeps these
-# versions over any a transitive dependency asks for. A bump is a deliberate change: maven_install.json follows.
+# Dependencies converge on one version each: "pinned" keeps these versions over any a transitive dependency asks for.
+# A bump is a deliberate change: maven_install.json follows.
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
     artifacts = [
         "org.antlr:antlr4:4.13.2",
         "org.antlr:antlr4-runtime:4.13.2",
         "com.google.flatbuffers:flatbuffers-java:25.2.10",
-        # Managed in the bootstrap pom, to converge Jena and its other users on one version.
+        # To converge Jena and its other users on one version.
         "com.google.code.gson:gson:2.14.0",
-        # As Maven resolves them, nearest first: Gson brings the annotations, Jena the commons-logging bridge.
+        # Gson brings the annotations, Jena the commons-logging bridge.
         "com.google.errorprone:error_prone_annotations:2.48.0",
         "org.slf4j:jcl-over-slf4j:2.0.17",
         "commons-codec:commons-codec:1.20.0",
@@ -70,7 +70,20 @@ maven.install(
     repositories = ["https://repo1.maven.org/maven2"],
     version_conflict_policy = "pinned",
 )
-use_repo(maven, "maven")
+
+# legend-pure itself, to run legacy Pure (pure/extensions/legacy/tools/legacy-pure-runner), apart from the versions
+# above: it is fetched only when that runner is built. The version is legend_pure_version in tools/legacy.sh there.
+maven.install(
+    name = "legend_pure_runner",
+    artifacts = [
+        "org.finos.legend.pure:legend-pure-m3-core:5.110.0",
+        "org.finos.legend.pure:legend-pure-runtime-java-engine-interpreted:5.110.0",
+    ],
+    fail_if_repin_required = True,
+    lock_file = "//:legend_pure_runner_install.json",
+    repositories = ["https://repo1.maven.org/maven2"],
+)
+use_repo(maven, "legend_pure_runner", "maven")
 
 # flatc, the release binaries at the version the FlatBuffers Java runtime is pinned to, as CI installs it. The
 # registry module builds it from source but brings gRPC with it, which does not load on Bazel 9.

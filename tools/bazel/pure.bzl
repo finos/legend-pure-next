@@ -129,7 +129,7 @@ def pure_generate(name, out, pdbs, function, args = [], srcs = [], markers = Non
     )
 
 def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_package, protocol_package = None):
-    """The generated sources of a language extension, as its Justfile 'generate' recipe writes them to generated/:
+    """The generated sources of a language extension, under generated/:
 
     - 'generated/<name>.fbs' and 'generated/<name>-fbs-field-ids.txt', its FlatBuffer fragment and the field-ID
       registry it was generated with (the tracked 'ids' is an input, never written);
@@ -207,7 +207,7 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None, b
 
     The Truffle CLI parses with the compiler written in Pure, so core, parser-mappings and the compiler come first
     in its base PDBs, before 'base_pdbs'. With 'bootstrap_base_pdbs', the module is also compiled by the bootstrap
-    ('pdbs_bootstrap', as just builds it today) and 'pdbs_match_bootstrap' checks the two are the same element for
+    ('pdbs_bootstrap') and 'pdbs_match_bootstrap' checks the two are the same element for
     element: a self-host check, run on demand (tags 'manual', 'selfhost').
 
     Args:
@@ -216,7 +216,7 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None, b
       sources: the --source directories, relative to the package.
       generated: generated sources: {label: path below the package}.
       srcs: the source files; every .pure file and the module.json of the package by default.
-      bootstrap_base_pdbs: the base PDBs of the bootstrap compile, as the module Justfile gives them.
+      bootstrap_base_pdbs: the base PDBs of the bootstrap compile.
     """
     srcs = srcs if srcs != None else native.glob(["**/*.pure", "module.json"])
     outs = ["build/%s.pdb" % name, "build/%s-tests.pdb" % name]

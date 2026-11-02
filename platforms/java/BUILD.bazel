@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The Java platform runtime, translated from Pure on the Truffle CLI (just: java::generate-*): the engine (types, the
+# The Java platform runtime, translated from Pure on the Truffle CLI: the engine (types, the
 # PDB reader, the translator, the functions, the tests), and the diagram and TDS extensions.
 
 load("//tools/bazel:hosts.bzl", "host_specs", "pdb_read_backs")
@@ -106,7 +106,7 @@ filegroup(
 # Every suite of every owner on the Java platform (tools/bazel/hosts.bzl): '<owner>_<suite>_platform'.
 host_specs(host = "java")
 
-# The extension goldens read back by the Java platform decoder (just: java::spec-diagram-pdb, ::spec-tds-pdb).
+# The extension goldens read back by the Java platform decoder.
 
 pdb_read_backs(
     fixtures = {
@@ -141,7 +141,7 @@ pdb_read_backs(
     owner = "tds",
 )
 
-# The Java platform gallery (just: java::gallery), which publish-gallery deploys. The platform reads its PDBs below
+# The Java platform gallery, which publish-gallery deploys. The platform reads its PDBs below
 # --root at their repository paths: the action stages them so, in a root of its own.
 _JAVA_CLI = "//platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-interfaces/legend-pure-next-platform-java-cli:pure-java"
 

@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// tools/test-dashboard/surefire.mjs - turns the JUnit results Maven's surefire plugin leaves in
+// tools/test-dashboard/surefire.mjs - turns the JUnit results collect-reports.mjs leaves in
 // <module>/target/surefire-reports/TEST-*.xml into dashboard reports (see README.md):
-//   test-results/java/<maven-module>/<class>.json   one per test class
+//   test-results/java/<module>/<class>.json   one per test class
 //   test-results/spec/<spec>/<run>.json             for the classes that run a specification corpus
 //
 // Every report written here carries "producer": "surefire". Each import first deletes the previous
-// import's reports, so a module Maven cleaned leaves nothing stale, and never overwrites a report
+// import's reports, so a module cleaned leaves nothing stale, and never overwrites a report
 // another producer (a Pure runner) wrote.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -87,7 +87,7 @@ function textOf(s = "") {
 }
 
 // Surefire names a parameterized or dynamic test "<method>(<parameter types>) <display name>" when
-// usePhrasedTestCaseMethodName is on (both parent poms), "<method>(<parameter types>)[<n>]" otherwise; a plain
+// usePhrasedTestCaseMethodName is on, "<method>(<parameter types>)[<n>]" otherwise; a plain
 // @Test method is just "<method>". Only generated tests are corpus tests.
 const PHRASED = /^[\w$]+\([^)]*\) (?=\S)/;
 const isGenerated = name => PHRASED.test(name) || /^[\w$]+\([^)]*\)\[\d+\]$/.test(name);

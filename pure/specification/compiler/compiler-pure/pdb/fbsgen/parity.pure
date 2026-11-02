@@ -106,7 +106,7 @@ function platform::pure::compiler::pdb::fbsgen::fbsParity(m3FbsPath:String[1], i
       ->joinStrings('\n');
 }
 
-// Entry point for `just bootstrap::check-fbs-parity`.
+// Entry point for //pure/specification:check_fbs_parity.
 function platform::pure::compiler::pdb::fbsgen::printFbsParity(m3FbsPath:String[1], idsPath:String[1]):Boolean[1]
 {
    let diffs = platform::pure::compiler::pdb::fbsgen::fbsParity($m3FbsPath, $idsPath);

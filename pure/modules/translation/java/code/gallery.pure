@@ -159,7 +159,7 @@ function platform::extensions::language::java::translation::gallery::translateOn
 }
 
 // The Java a card shows is the Java THIS PLATFORM generates and runs: the same
-// conventions `just java::compile` uses. Without `metadataElements` every
+// conventions //platforms/java:engine_generated uses. Without `metadataElements` every
 // metadata-backed native (genericType, parse, compileSource, the ANTLR ones)
 // reports "No coder", so a passing test would show a failed translation.
 // Canonicalization plays no part here either — the lambda is what runs.

@@ -89,7 +89,7 @@ function loadMonaco() {
     return new Promise((resolve, reject) => {
         const req = globalThis.require;
         if (typeof req !== "function") {
-            reject(new Error("Monaco was not vendored — run `just javascript::web-deps`"));
+            reject(new Error("Monaco was not vendored — run `bazel run //platforms/javascript:serve`"));
             return;
         }
         // The worker is started from a blob so the AMD build needs no separate entry file;

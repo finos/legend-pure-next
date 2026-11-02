@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The bootstrap CLI, pure-bootstrap. 'pure-bootstrap_deploy.jar' is the fat jar Maven shades
-# (pure-bootstrap-<version>-fat.jar).
+# The bootstrap CLI, pure-bootstrap. 'pure-bootstrap_deploy.jar' is the fat jar.
 
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 
@@ -36,7 +35,7 @@ java_binary(
     visibility = ["//visibility:public"],
     runtime_deps = [
         ":cli",
-        # The no-op SLF4J binding: Jena logs through SLF4J, and the CLI stays quiet (the bootstrap pom).
+        # The no-op SLF4J binding: Jena logs through SLF4J, and the CLI stays quiet.
         "@maven//:org_slf4j_slf4j_nop",
     ],
 )

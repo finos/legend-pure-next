@@ -31,9 +31,8 @@ exports_files([
 ])
 
 # ---------------------------------------------------------------------------------------------------------------------
-# The runtime translated from Pure to JavaScript (just: javascript::generate, generate-core, generate-pdb-reader,
-# generate-translator, generate-extensions-code, parser-mappings-bundle), each package with every PDB the platform
-# translates against (just: emit_pdbs). The extensions: their LANGUAGES[].translate, from their language manifests.
+# The runtime translated from Pure to JavaScript each package with every PDB the platform
+# translates against (_EMIT_PDBS). The extensions: their LANGUAGES[].translate, from their language manifests.
 
 _CORE = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler"
 
@@ -97,7 +96,7 @@ _TRANSLATED = {
     "extensions/pure/tds/tests.js": ("platform::extensions::pure::tds::tests", _ALL),
 }
 
-# The relation extension is translated from its own PDBs, which just: emit_pdbs leaves out (its translation was
+# The relation extension is translated from its own PDBs, which _EMIT_PDBS leaves out (its translation was
 # then empty: 'no translated function' for every relation test).
 _RELATION_PDBS = [
     "//pure/extensions/pure/relation:build/relation.pdb",
@@ -112,7 +111,7 @@ _RELATION_PDBS = [
     pdbs = _EMIT_PDBS + (_RELATION_PDBS if out.startswith("extensions/pure/relation/") else []),
 ) for out, (package, function) in _TRANSLATED.items()]
 
-# The languages the platform knows, from the specification and extension manifests (just: generate-extensions):
+# The languages the platform knows, from the specification and extension manifests:
 # bin/generate-languages.mjs over a tree holding only what it reads, the manifests and the schemas they name.
 _LANGUAGE_INPUTS = {
     "pure/specification/language_pure.json": "//pure/specification:language_pure.json",
@@ -154,8 +153,8 @@ genrule(
     tools = ["@nodejs_toolchains//:resolved_toolchain"],
 )
 
-# The JavaScript parsers (just: antlr-generate-parsers), with the ANTLR the antlr4ng-cli package bundles, as just
-# runs it: from each grammar directory, so each parser names its grammar by file name.
+# The JavaScript parsers, with the ANTLR the antlr4ng-cli package bundles, run
+# from each grammar directory, so each parser names its grammar by file name.
 _PARSERS = {
     "pure/specification/grammar/antlr": ("generated/pure/grammar/antlr", ["TopLexer", "TopParser"]),
     "pure/specification/grammar/antlr/m3": ("generated/pure/grammar/antlr", ["M3Lexer", "M3Parser"]),
@@ -200,7 +199,7 @@ _RUNTIME_SOURCES = glob(["src/**"]) + [
     "//pure/modules/translation/javascript/js:runtime_lib",
 ]
 
-# The parser bundles (just: antlr-bundle, parser-mappings-bundle), which load-parser.js loads.
+# The parser bundles, which load-parser.js loads.
 [esbuild.esbuild(
     name = name,
     srcs = _RUNTIME_SOURCES,
@@ -218,7 +217,7 @@ _RUNTIME_SOURCES = glob(["src/**"]) + [
     ("parser_mappings_bundle", "parser-mappings-entry.js", "parser-mappings-bundle.js", []),
 ]]
 
-# The JavaScript CLI, pure-js (just: bin/pure-js), run from the output tree with everything the runtime loads.
+# The JavaScript CLI, pure-js, run from the output tree with everything the runtime loads.
 js_binary(
     name = "pure-js",
     data = _RUNTIME_SOURCES + [
@@ -233,9 +232,8 @@ js_binary(
 # Every suite of every owner on the JavaScript platform (tools/bazel/hosts.bzl): '<owner>_<suite>_cli'.
 host_specs(host = "javascript")
 
-# The platform's own tests (just: javascript::test, test-compiler, test-execution, test-host-api, usage-example,
-# test-diagram, test-section-hint, test-source-store, test-ide), each a script run from the output tree, with its
-# report among the test outputs at javascript/<area>/<name>.json, as just writes it in test-results/.
+# The platform's own tests, each a script run from the output tree, with its
+# report among the test outputs at javascript/<area>/<name>.json.
 _TEST_DATA = _RUNTIME_SOURCES + [
     ":antlr_bundle",
     ":parser_mappings_bundle",
@@ -275,7 +273,7 @@ _NODE_TESTS = {
     tags = tags + ["job:translations/javascript"],
 ) for name, (_, report, tags) in _NODE_TESTS.items()]
 
-# The Monaco editor the web IDE loads from build/vs (just: web-deps): the min/vs directory of its package.
+# The Monaco editor the web IDE loads from build/vs: the min/vs directory of its package.
 copy_to_directory(
     name = "monaco",
     srcs = [":node_modules/monaco-editor/dir"],
@@ -284,7 +282,7 @@ copy_to_directory(
     replace_prefixes = {"**/min/vs/": ""},
 )
 
-# The JavaScript translation gallery (just: javascript::gallery), which publish-gallery deploys.
+# The JavaScript translation gallery, which publish-gallery deploys.
 _GALLERY_PDBS = [
     _CORE + ":core.pdb",
     _CORE + ":core-tests.pdb",
@@ -340,7 +338,7 @@ copy_to_directory(
     tags = ["job:translations"],
 )
 
-# The browser IDE, served locally (just: javascript::serve): bazel run //platforms/javascript:serve [-- <port>].
+# The browser IDE, served locally: bazel run //platforms/javascript:serve [-- <port>].
 sh_binary(
     name = "serve",
     srcs = ["serve.sh"],

@@ -80,7 +80,7 @@ public final class ModuleRegistry implements MetadataAccess
     // associations (e.g. test-only LA_* associations in core-tests.pdb) become
     // visible the moment their module is registered. Previously cached as a
     // static volatile on {@code NewWithKeysNode} which assumed one resolver per
-    // JVM — broke when a surefire JVM ran tests with different module sets.
+    // JVM — broke when a test JVM ran tests with different module sets.
     private Map<String, List<String[]>> reverseAssocIndex;
 
     /**

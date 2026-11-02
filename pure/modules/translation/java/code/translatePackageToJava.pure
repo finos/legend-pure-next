@@ -252,8 +252,8 @@ function <<test.TestDependency>> platform::extensions::language::java::translati
 //
 // ONE TABLE PER JAVA FILE, `Foo.java` -> `Foo.java.pos`, each row
 // `<javaLine>\t<sourceId>:<line>:<column>\t<lambdaDepth>`. Not one shared table: a shared file
-// is written by every recipe that emits classes, so the last one to run
-// truncates the others' rows. Per file, a table is written by whichever recipe
+// is written by every step that emits classes, so the last one to run
+// truncates the others' rows. Per file, a table is written by whichever step
 // writes its class, with the same overwrite semantics as the class itself, so
 // the two can never disagree — and the runtime reads one small resource for a
 // frame instead of parsing every class's rows to use one.

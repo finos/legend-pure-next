@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The Truffle CLI, pure-truffle, with every extension. 'pure-truffle_deploy.jar' is the fat jar Maven shades
-# (pure-truffle-<version>-fat.jar).
+# The Truffle CLI, pure-truffle, with every extension. 'pure-truffle_deploy.jar' is the fat jar.
 
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("//tools/bazel:classpath.bzl", "runtime_jars")
@@ -57,8 +56,8 @@ runtime_jars(
     ],
 )
 
-# The native image, pure-truffle-native (just: truffle::native::build; Maven: the native profile of this pom), built
-# by the native-image of the GraalVM runtime from the runtime jars, with the profile's arguments.
+# The native image, pure-truffle-native, built
+# by the native-image of the GraalVM runtime from the runtime jars.
 genrule(
     name = "pure-truffle-native",
     srcs = [":native_classpath"],

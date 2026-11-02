@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Embedding Truffle: name the language, compile a source held in a string, call a function it defines
-# (just: truffle::usage-example).
+# Embedding Truffle: name the language, compile a source held in a string, call a function it defines.
 
 load("@rules_java//java:defs.bzl", "java_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
@@ -40,7 +39,7 @@ java_binary(
     ],
 )
 
-# The example runs (just: truffle::usage-example in test-all): it asserts nothing, but an example that stopped
+# The example runs: it asserts nothing, but an example that stopped
 # working cannot go unnoticed.
 sh_test(
     name = "usage-example_runs",

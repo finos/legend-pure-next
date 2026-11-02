@@ -354,7 +354,7 @@ public class CompilerCompiledGraphTest
         if (moduleRoot == null)
         {
             System.err.println("WARNING: Cannot locate legend-pure-next root from: " + cwd);
-            // Fallback: try pom.xml detection from parent chain
+            // No root, so no source to compare with
             return;
         }
 

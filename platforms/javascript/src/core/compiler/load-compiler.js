@@ -19,7 +19,7 @@
 // compiler PDBs) so the translated runtime's execution-time reflection
 // (`__metadataRead`, `__metadataSubtypeOf`, …) is answered from the committed
 // .pdb graph. It then imports the generated core + compiler JS
-// (platforms/javascript/generated, produced by `just generate-all`) and exposes
+// (platforms/javascript/generated, produced by `bazel build //platforms/javascript:generated`) and exposes
 // `{ parse, compile, printGraph }`.
 //
 // Same shape as grammar/load-parser.js's loadParser — one idempotent loader, no JVM;

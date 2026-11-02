@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The M3 generators: m3.ttl to m3.pure, m3.fbs and the protocol model (Maven: the generate-* executions of this pom).
+# The M3 generators: m3.ttl to m3.pure, m3.fbs and the protocol model.
 
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("//tools/bazel:junit5.bzl", "junit5_test")
 
-# The jar carries the generated specification and m3.ttl under generated-specification/, as Maven packages it
-# (package-generated-spec): the compiler reads m3.ttl from the classpath. The generators read none of it, so building
+# The jar carries the generated specification and m3.ttl under generated-specification/:
+# the compiler reads m3.ttl from the classpath. The generators read none of it, so building
 # them never waits on their own output.
 java_library(
     name = "generators_classes",
@@ -87,7 +87,7 @@ junit5_test(
     ],
 )
 
-# The generated specification, laid out as Maven lays out target/generated-specification.
+# The generated specification, laid out under generated-specification.
 
 genrule(
     name = "m3_pure",

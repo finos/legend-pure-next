@@ -39,7 +39,7 @@ const FNS = {
 function fn(name) {
     const f = globalThis[FNS[name]];
     if (typeof f !== "function") {
-        throw new Error(`translated Pure pdb reader not loaded (missing ${FNS[name]}; run \`just javascript::generate-all\` and load the generated compiler first)`);
+        throw new Error(`translated Pure pdb reader not loaded (missing ${FNS[name]}; run \`bazel build //platforms/javascript:generated\` and load the generated compiler first)`);
     }
     return f;
 }

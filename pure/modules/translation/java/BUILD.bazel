@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The Java translator (just: translation::java::build-tests).
+# The Java translator.
 
 load("//tools/bazel:pure.bzl", "pure_bootstrap_compile")
 

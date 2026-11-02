@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The Truffle interpreter: its PDB reader, translated from Pure (just: truffle::generate-pdb-reader), the ANTLR
-# parsers, and the interpreter itself (Maven: this pom).
+# The Truffle interpreter: its PDB reader, translated from Pure, the ANTLR
+# parsers, and the interpreter itself.
 
 load("@rules_java//java:defs.bzl", "java_library", "java_plugin")
 load("//tools/bazel:antlr.bzl", "antlr_srcjar")
@@ -99,8 +99,7 @@ java_plugin(
     deps = ["@maven//:org_openjdk_jmh_jmh_generator_annprocess"],
 )
 
-# The schemas and language manifests the runtime loads from the classpath, under languages/ (Maven: the
-# copy-fbs-schema and copy-language-manifests executions).
+# The schemas and language manifests the runtime loads from the classpath, under languages/.
 _LANGUAGE_RESOURCES = {
     "m3.fbs": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:generated-specification/m3.fbs",
     "islandTest.fbs": "//pure/specification:compiler/generated/islandTest.fbs",
@@ -143,7 +142,7 @@ java_library(
     ],
 )
 
-# The surefire flags: the Graal JIT (the tests fail on a compilation that bails out), and immediate compilation.
+# The test JVM flags: the Graal JIT (the tests fail on a compilation that bails out), and immediate compilation.
 _TRUFFLE_TEST_JVM_FLAGS = [
     "--add-opens=java.base/sun.misc=ALL-UNNAMED",
     "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",

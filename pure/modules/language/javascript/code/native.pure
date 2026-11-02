@@ -95,5 +95,5 @@ native function platform::extensions::language::javascript::execute(
 // the PCT adapter (testAdapterForTranslatedJavaScript) drives compileModule +
 // execute once per PCT test, and the translation gallery does the same per card
 // — 804 of each, covering Integer/Float/String/Boolean returns, lambdas, PDOs
-// and collection lifting. Run them with `just javascript::test-execution`.
+// and collection lifting. Run them with `bazel test //platforms/javascript:execution_tests`.
 // ----------------------------------------------------------------------------

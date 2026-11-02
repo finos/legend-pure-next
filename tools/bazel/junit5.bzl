@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""JUnit 5 tests, run as surefire runs them in the Maven build."""
+"""JUnit 5 tests, run with the JUnit console launcher."""
 
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources = [], jvm_flags = [], plugins = [], visibility = None, **kwargs):
-    """The test classes of a module: every class of its test jar that holds tests, whatever its name (surefire ran
-    only those named like **/*Test*.java, and SurefireDiscoveryTest guarded the rest), run with the JUnit console
+    """The test classes of a module: every class of its test jar that holds tests, whatever its name, run with the JUnit console
     launcher, from a jar of their own.
 
-    Two targets: '<name>_lib', the compiled test classes (the test jar Maven publishes, for a module whose tests
+    Two targets: '<name>_lib', the compiled test classes (the test jar, for a module whose tests
     other modules reuse), and '<name>', the test, which scans that jar only, so the tests of a test jar on the
     classpath are never run twice.
 
@@ -53,7 +52,7 @@ def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources =
         ],
         runtime_deps = runtime_deps,
     )
-    # The launcher, run by run-suite.sh so that its JUnit XML (what surefire writes for Maven, and the test
+    # The launcher, run by run-suite.sh so that its JUnit XML (what the test
     # dashboard imports) goes among the test outputs, at junit/<package>/<name>.
     java_binary(
         name = name + "_runner",

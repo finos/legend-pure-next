@@ -399,7 +399,7 @@ public class RdfFbsSchemaGenerator
         if (registry == null)
         {
             // No registry — fall back to declaration order. This mode exists
-            // only for the back-compat overload; the maven pipeline always
+            // only for the back-compat overload; the build always
             // passes a registry path.
             currentFields.forEach((field, type) ->
                     sb.append("    ").append(field).append(": ").append(type).append(";\n"));

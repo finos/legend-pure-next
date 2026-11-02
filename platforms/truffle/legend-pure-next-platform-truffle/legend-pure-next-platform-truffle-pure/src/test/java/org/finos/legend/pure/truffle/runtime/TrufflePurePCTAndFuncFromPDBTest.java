@@ -138,7 +138,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         // reaches — without it, Truffle's threshold (~10 invocations)
         // means single-call test paths never JIT and any recursive-inlining
         // bailout in those paths slips by silently. Trades a slower
-        // surefire run for full coverage of the Pure stdlib's compile
+        // test run for full coverage of the Pure stdlib's compile
         // surface.
         engine = org.graalvm.polyglot.Engine.newBuilder()
                 .allowExperimentalOptions(true)
@@ -323,7 +323,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         return DynamicTest.dynamicTest(path, () ->
         {
             // Suppress the stdout side effect of `print`/`println` for the
-            // test body so individual tests don't pollute Surefire's event
+            // test body so individual tests don't pollute the test runner's event
             // channel. The returned string is unaffected, so assertions
             // still work. The flag is restored in finally to keep
             // surrounding setup/teardown output visible.

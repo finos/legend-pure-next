@@ -52,7 +52,7 @@ function pureWriteArchive(elements, referencedBy) {
     const name = referencedBy != null ? WRITE_WITH_REFERENCES : WRITE;
     if (typeof globalThis[name] !== "function" || typeof globalThis[PURE_EXTENSION] !== "function") {
         throw new Error(`translated Pure pdb writer not loaded: ${name} and ${PURE_EXTENSION} `
-                      + "(run `just javascript::generate-all` and loadCompiler() first)");
+                      + "(run `bazel build //platforms/javascript:generated` and loadCompiler() first)");
     }
     // m3's elements are written by ###Pure's own extension, named like any other.
     const extensions = [globalThis[PURE_EXTENSION]()];

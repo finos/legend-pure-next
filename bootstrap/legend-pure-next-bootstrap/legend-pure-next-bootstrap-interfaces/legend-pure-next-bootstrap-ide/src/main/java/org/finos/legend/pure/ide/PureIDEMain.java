@@ -229,7 +229,7 @@ public class PureIDEMain
             {
                 throw new IllegalStateException("Cannot resolve module dependency '" + depName
                         + "': not in " + pdbDir + " or any pure/modules/*/*/build/. Build it first"
-                        + " (e.g. `just bootstrap::build` or `just modules::build`).");
+                        + " (e.g. `bazel build //:shared //pure/modules/...`).");
             }
             // Peek at the dep's own manifest to recurse — load and discard.
             // The actual PDB load happens later in dep order.

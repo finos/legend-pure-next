@@ -122,7 +122,7 @@ public class TruffleCompileToPdbTest
         parserMappingsLoader.preloadAll();
 
         // Silent variant — tests pull errors/stats structurally off the result; the live progress bar +
-        // stats summary would flood surefire output. With the specification's island handlers, as every
+        // stats summary would flood the test output. With the specification's island handlers, as every
         // runner of pure/specification/compiler/tests compiles (valueSpecification/island needs them).
         compileFn = resolver.getElement("platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__Boolean_1__CompilationResult_1_");
         if (compileFn == null

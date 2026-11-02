@@ -30,7 +30,7 @@
 //      each test gets the translated in-memory adapter and passes or throws.
 //
 // Run: node --stack-size=4000 src/core/execution/tests/pct-tests.js [--report <path>]
-// (needs generated/ JS: `just javascript::generate-all`)
+// (needs generated/ JS: `bazel build //platforms/javascript:generated`)
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

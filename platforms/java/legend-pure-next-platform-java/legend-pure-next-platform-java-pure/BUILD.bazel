@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # The Java platform engine: the handwritten host and the translated runtime (//platforms/java:engine_generated),
-# compiled as one unit, with the Pure grammar and the schemas and language manifests it loads (Maven: this pom).
+# compiled as one unit, with the Pure grammar and the schemas and language manifests it loads.
 
 load("@rules_java//java:defs.bzl", "java_import", "java_library")
 load("//tools/bazel:antlr.bzl", "antlr_srcjar")
@@ -68,7 +68,7 @@ java_library(
     ],
 )
 
-# The tests run from the repository root, as surefire runs them: the root of their runfiles.
+# The tests run from the repository root: the root of their runfiles.
 junit5_test(
     name = "tests",
     tags = ["job:translations/java"],

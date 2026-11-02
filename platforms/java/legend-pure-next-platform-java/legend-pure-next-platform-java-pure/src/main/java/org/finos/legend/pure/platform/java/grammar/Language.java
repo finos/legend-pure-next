@@ -108,7 +108,7 @@ public record Language(
             if (in == null)
             {
                 throw new IllegalStateException("no language manifest on the class path at '" + resource
-                        + "' — the module that owns it did not stage it (see its pom)");
+                        + "' — the module that owns it did not stage it (see its BUILD.bazel)");
             }
             text = new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
@@ -161,7 +161,7 @@ public record Language(
             if (in == null)
             {
                 throw new IllegalStateException("language " + name + " declares fbs " + fbs + " but " + resource
-                        + " is not on the class path — the module that owns it did not stage it (see its pom)");
+                        + " is not on the class path — the module that owns it did not stage it (see its BUILD.bazel)");
             }
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }

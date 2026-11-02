@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # The M3 compiler: the metamodel classes and FlatBuffer accessors generated from m3.ttl and m3.fbs, and core.pdb /
-# core-tests.pdb, built by the compiler from pure/specification/runtime (Maven: the executions of this pom).
+# core-tests.pdb, built by the compiler from pure/specification/runtime.
 
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("//tools/bazel:junit5.bzl", "junit5_test")
@@ -70,7 +70,7 @@ java_library(
         "@maven//:org_eclipse_collections_eclipse_collections_api",
         "@maven//:org_jspecify_jspecify",
     ],
-    # Jena logs through commons-logging, bridged to SLF4J: a dependency of jena-arq under Maven, an edge the
+    # Jena logs through commons-logging, bridged to SLF4J: a dependency of jena-arq, an edge the
     # resolver of rules_jvm_external does not keep.
     runtime_deps = ["@maven//:org_slf4j_jcl_over_slf4j"],
 )
@@ -110,7 +110,7 @@ genrule(
     visibility = ["//visibility:public"],
 )
 
-# The compiler jar: its classes, with core.pdb and core-tests.pdb at its root, as Maven packages them.
+# The compiler jar: its classes, with core.pdb and core-tests.pdb at its root.
 java_library(
     name = "compiler",
     resource_strip_prefix = package_name(),

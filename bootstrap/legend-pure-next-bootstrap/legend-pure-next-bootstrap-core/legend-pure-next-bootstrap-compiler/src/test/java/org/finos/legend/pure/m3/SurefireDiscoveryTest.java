@@ -34,13 +34,13 @@ import static org.junit.jupiter.api.Assertions.fail;
  * <p>Why this exists: surefire's defaults ({@code Test*}, {@code *Test},
  * {@code *Tests}, {@code *TestCase}) drop classes named e.g.
  * {@code FooTestRunner} or {@code FooSuite}. We had a 674-test class hidden
- * for months because of this. The Maven build widened the include pattern to
- * {@code **}<!---->{@code /*Test*.java}, and the Bazel one keeps it
+ * for months because of this. The include pattern was widened to
+ * {@code **}<!---->{@code /*Test*.java}, and the launcher keeps it
  * ({@code --include-classname=.*Test.*}); this test enforces that any future
  * test class also matches that pattern.</p>
  *
- * <p>Lives in the bootstrap reactor but walks the entire repo, so a misnamed
- * test in the truffle reactor still fails this build (assuming you run
+ * <p>Lives in the bootstrap but walks the entire repo, so a misnamed
+ * test in Truffle still fails this build (assuming you run
  * bootstrap before truffle, which the dependency order requires anyway).</p>
  */
 class SurefireDiscoveryTest

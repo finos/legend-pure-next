@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The Java language model (just: language::java::build-tests).
+# The Java language model.
 
 load("//tools/bazel:pure.bzl", "pure_bootstrap_compile")
 

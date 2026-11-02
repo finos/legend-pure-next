@@ -173,7 +173,7 @@ function <<test.TestDependency>> platform::pure::functions::printer::protocol::t
 }
 
 // Best-effort locate of the grammar tests root for the discoverable test.
-// Runtime CWD varies (repo root, bootstrap/, surefire tmpdirs); walk a few
+// Runtime CWD varies (repo root, bootstrap/, test tmpdirs); walk a few
 // common ancestors and pick the first one whose directoryTree succeeds.
 // `runProtocolPrinterCorpus(testDir)` takes the dir as a parameter so the
 // CLI invocation can pass an absolute path without going through this probe.

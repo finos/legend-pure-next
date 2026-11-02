@@ -237,8 +237,8 @@ function platform::pure::compiler::pdb::generator::unionByteFor(members:String[*
 // testReadArchiveRoundTrip and testArchiveEntriesVsJavaPdb (which diffs entries
 // against the Java-written PDB) pin that the two agree.
 //
-// The writer is still regenerated on every build (`just bootstrap::generate-writer`,
-// a prerequisite of build-compiler-pdb) rather than committed: which properties a
+// The writer is still regenerated on every build (//pure/specification:generated_writer,
+// a prerequisite of compiler_pdbs) rather than committed: which properties a
 // class has, and how each is written, still come from the metamodel.
 //
 // Emits platform::pure::compiler::pdb::gen::* — one writeX/writeX_body per Def-table

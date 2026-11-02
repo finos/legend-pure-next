@@ -18,14 +18,14 @@ common --enable_bzlmod
 # second Git root in it. Outputs are at `bazel info bazel-bin` / `bazel info bazel-testlogs`.
 common --experimental_convenience_symlinks=ignore
 
-# JDK 25, as the Maven build compiles and runs with, on GraalVM, as Maven runs with a GraalVM JAVA_HOME: Truffle
+# JDK 25, on GraalVM: Truffle
 # needs its JIT, in tests and as the tool that compiles the modules (tools/bazel/graalvm.bzl).
 common --java_language_version=25
 common --java_runtime_version=graalvm_25
 common --tool_java_language_version=25
 common --tool_java_runtime_version=graalvm_25
 
-# The checks javac runs are the Maven build ones: no Error Prone, which Bazel runs by default.
+# The checks javac runs: no Error Prone, which Bazel runs by default.
 build --javacopt=-XepDisableAllChecks
 build --host_javacopt=-XepDisableAllChecks
 

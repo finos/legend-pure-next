@@ -30,10 +30,10 @@
   console (bottom), which carries the program's print output live plus the result, the
   compiled graph and the generated JavaScript.
 
-  Monaco is vendored into build/vs by `just javascript::web-deps` rather than loaded from a
+  Monaco is vendored into build/vs by //platforms/javascript:monaco rather than loaded from a
   CDN, so the page keeps working with no network — the same reason the parser bundle and
-  the .pdb files are local. Open via a static server from the repo root (`just
-  javascript::serve`, which runs web-deps first) so the relative paths resolve.
+  the .pdb files are local. Open via a static server
+  (`bazel run //platforms/javascript:serve`) so the relative paths resolve.
 -->
 <html lang="en">
 <head>
@@ -435,7 +435,7 @@
   <!-- Mappings half: the translated parser-mappings. Must come after runtime-lib.js;
        the PureRuntime main.js builds drives both bundles. -->
   <script src="../../../build/parser-mappings-bundle.js"></script>
-  <!-- Monaco's AMD loader, vendored (just javascript::web-deps). main.js waits for it. -->
+  <!-- Monaco's AMD loader, vendored (//platforms/javascript:monaco). main.js waits for it. -->
   <script src="../../../build/vs/loader.js"></script>
   <script type="module" src="./main.js"></script>
 </body>

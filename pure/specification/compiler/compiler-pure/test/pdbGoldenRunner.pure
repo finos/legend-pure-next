@@ -99,7 +99,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::pdb::assertMatc
 
 // The archive a fixture compiles to, as hex, with the specification's island handlers — how the island
 // goldens (valueSpecification/island) are written: by the Pure writer, as the diagram's are, since the
-// Java compiler cannot build the test package's island values (`just bootstrap::regen-island-goldens`).
+// Java compiler cannot build the test package's island values (`bazel run //:update_pdb_goldens__island`).
 function <<test.TestDependency>> platform::pure::compiler::test::pdb::goldenHexOf(testDir:String[1], name:String[1]):String[1]
 {
     platform::pure::compiler::test::pdb::writeFixture(readFile($testDir + '/' + $name + '.pure'), $name, platform::pure::compiler::test::islandTestExtension())

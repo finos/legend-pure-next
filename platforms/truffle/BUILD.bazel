@@ -18,7 +18,7 @@ load("//tools/bazel:hosts.bzl", "host_specs", "pdb_read_backs")
 
 host_specs(host = "truffle")
 
-# The extension goldens read back by Truffle's own decoder (just: truffle::spec-diagram-pdb, ::spec-tds-pdb).
+# The extension goldens read back by Truffle's own decoder.
 
 pdb_read_backs(
     fixtures = {
@@ -53,7 +53,7 @@ pdb_read_backs(
     owner = "tds",
 )
 
-# The Truffle translation gallery (just: truffle::gallery), which publish-gallery deploys: the HTML that
+# The Truffle translation gallery, which publish-gallery deploys: the HTML that
 # renderGallery prints, from its doctype on.
 _CORE = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler"
 

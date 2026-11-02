@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The legacy grammar preprocessor: legacy-only syntax rewritten into next's (just extensions::legacy::test-tools).
+// The legacy grammar preprocessor: legacy-only syntax rewritten into next's.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';

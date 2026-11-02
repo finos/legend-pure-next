@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The loader of legacy sources (just: extensions::legacy::build-loader): legacy_loader.pdb and its tests.
+# The loader of legacy sources: legacy_loader.pdb and its tests.
 
 load("//tools/bazel:pure.bzl", "pure_module")
 

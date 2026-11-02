@@ -146,7 +146,7 @@ HOSTS = {
                 "prelude": ["core", "parser-mappings", "core-tests", "compiler"],
                 "runs": lambda owner, test: _runs_javascript_free(owner),
             },
-            # The native image (just: truffle::native): no JIT, so no strict JIT check.
+            # The native image: no JIT, so no strict JIT check.
             "native": {
                 "tool": "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle-native",
                 "report": "pure@cli-truffle-native",
@@ -192,7 +192,7 @@ HOSTS = {
         },
         "default": "jit",
         # Suites whose Graal compilations may bail out on a graph just over the size limit (the strict JIT check
-        # fails on them): the compiler corpus and its unit tests, as just runs them.
+        # fails on them): the compiler corpus and its unit tests.
         "lenient_jit": ["compiler/compiler", "compiler/compiler-unit"],
     },
     # The bootstrap: a host for the specification only (Section 1), and on demand (Section 3).
@@ -207,7 +207,7 @@ HOSTS = {
                 # Interpreted: its PDB goldens take over 15 minutes (Bazel's large timeout) on a CI runner.
                 "timeout": "eternal",
                 "tags": ["manual", "bootstrap"],
-                # And the legacy layer, which just runs on the bootstrap (extensions::legacy::test-all).
+                # And the legacy layer, which passes only on the bootstrap.
                 "runs": lambda owner, test: owner in ["core", "compiler", "legacy", "legacy_loader"],
             },
             # The compiler corpus on compiler-pure as the compiler written in Pure, run by the bootstrap, compiles it.
@@ -288,7 +288,7 @@ PENDING = {
     ("java", "platform", "relation", "pct"): "the relation natives have no Java coder yet (spec Section 6: relation on Java and JavaScript): 'No coder for Pure function: size'",
     ("javascript", "cli", "relation", "pct"): "the relation natives have no JavaScript coder yet (spec Section 6: relation on Java and JavaScript), so the PCT tests that call them are not translated: 'no translated function for ...::size::testSimpleSize_Function_1__Boolean_1_'",
     ("javascript", "translated", "relation", "pct"): "the relation natives have no JavaScript coder yet (spec Section 6: relation on Java and JavaScript), so the PCT tests that call them are not translated: 'no translated function for ...::size::testSimpleSize_Function_1__Boolean_1_'",
-    # The legacy layer, run on the bootstrap only before Bazel (just: extensions::legacy::test-all).
+    # The legacy layer, which passes only on the bootstrap.
     ("truffle", "jit", "legacy", "unit"): "3 of 35 bridge tests fail on Truffle: 'type parameter T could not be resolved at runtime' (natives::testEnumValuesOfAView), and a dynamic new from a view returns no value (testDynamicNewFromAViewOf*)",
     ("truffle", "native", "legacy", "unit"): "3 of 35 bridge tests fail on Truffle: 'type parameter T could not be resolved at runtime' (natives::testEnumValuesOfAView), and a dynamic new from a view returns no value (testDynamicNewFromAViewOf*)",
     ("truffle", "jit", "legacy_loader", "loader"): "29 of 57 loader tests fail on Truffle: 'String cannot be cast to Any' (and Integer, Boolean) in meta::pure::bridge::loader::rewrite (code/rewrite.pure)",

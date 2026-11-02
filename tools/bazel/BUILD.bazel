@@ -81,7 +81,7 @@ _TRUFFLE_PRELUDE = [
 # The PDB goldens the Pure writer writes, written back to the source tree: update_pdb_goldens__<owner>.
 # {owner: (CLI, PDBs, golden function, fixtures, subdirectory, goldens)}.
 _PDB_GOLDENS = {
-    # The test island values (just: bootstrap::regen-island-goldens), on the bootstrap.
+    # The test island values, on the bootstrap.
     "island": (
         "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap",
         [
@@ -127,7 +127,7 @@ _PDB_GOLDENS = {
     visibility = ["//:__pkg__"],
 ) for owner, (cli, pdbs, function, fixtures, subdirectory, goldens) in _PDB_GOLDENS.items()]
 
-# The compiler PDB goldens, from the Java writer of the bootstrap (PdbGoldenGeneratorTest; Maven: -Dpdb.goldens.dir).
+# The compiler PDB goldens, from the Java writer of the bootstrap (PdbGoldenGeneratorTest).
 sh_binary(
     name = "update_pdb_goldens__compiler",
     testonly = True,

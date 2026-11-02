@@ -26,9 +26,9 @@
 // Each build also appends a summary snapshot to test-results/history.json when the results
 // changed since the previous one; the Trends view charts those snapshots.
 //
-// JUnit results are imported first, from the XML Maven's surefire plugin writes (surefire.mjs).
+// JUnit results are imported first, from the XML collect-reports.mjs writes in the surefire layout (surefire.mjs).
 //
-// Usage: tools/test-dashboard/build.mjs [--results <dir>] [--out <file>] [--no-surefire] [--published]   (or: just dashboard)
+// Usage: tools/test-dashboard/build.mjs [--results <dir>] [--out <file>] [--no-surefire] [--published]   (or: bazel run //:dashboard)
 //   --published: the page sits next to the galleries on the published site (java.html, javascript.html, truffle.html).
 
 import { createHash } from "node:crypto";
@@ -64,7 +64,7 @@ const GALLERIES = [
   ["pure@cli-javascript", "platforms/javascript/build/javascript-translation-gallery.html", "javascript.html"],
   ["pure@cli-truffle", "platforms/truffle/build/truffle-translation-gallery.html", "truffle.html"]
 ];
-// Heavy build steps, as just recorded them before Bazel (builds.json, kept as published).
+// Heavy build steps, as recorded before Bazel (builds.json, kept as published).
 const buildsFile = join(resultsDir, "builds.json");
 
 function walk(dir) {

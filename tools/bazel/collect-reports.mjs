@@ -13,11 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The reports of a Bazel test run, where the test dashboard (tools/test-dashboard) reads them, as just and Maven
-// leave them:
+// The reports of a Bazel test run, where the test dashboard (tools/test-dashboard) reads them:
 //   - every Pure report a test wrote among its outputs, at test-results/<its path>: the reports several tests write
 //     at one path (each host's PDB read-backs, one test per fixture) are one report, with all their cases;
-//   - every JUnit report, which the console launcher writes one per engine, split into surefire's one per class
+//   - every JUnit report, which the console launcher writes one per engine, split into one per class, in the surefire layout
 //     (<module>/target/surefire-reports/TEST-<class>.xml), the module being the package of the test;
 //   - for a test that ran without a report of its own (a PDB comparison, a registry check, a usage example), a
 //     check: test-results/checks/<package>/<name>.json, one case passed or failed as Bazel recorded it.
@@ -35,7 +34,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// TRANSITIONAL: where just writes the reports whose Bazel path differs, until the dashboard reads the spec layout
+// TRANSITIONAL: where the dashboard finds the reports whose Bazel path differs, until it reads the spec layout
 // (test-results/<owner>/<suite>/<host>.json, docs/superpowers/specs/2026-11-01-bazel-migration-design.md 2.6).
 const RENAMES = [
     [/^spec\/(printer-compiled|printer-protocol)\//, "pure/$1/"],
@@ -51,7 +50,7 @@ const attr = (text, name) => (text.match(new RegExp(`\\b${name}="([^"]*)"`)) ?? 
 
 const escapeAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
-/** A case named as surefire names it (usePhrasedTestCaseMethodName, as the Maven build configured it), from the
+/** A case named as surefire names it (usePhrasedTestCaseMethodName), from the
  * display name the launcher records in its output: the method alone when the display name is the method's own
  * ('name' for 'name()', 'name(Path)' as it is), else the method signature, a space and the display name (the corpus
  * path of a corpus test: 'testCompiledGraph(String, String) association/profile/profile'). */

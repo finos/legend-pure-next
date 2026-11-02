@@ -45,7 +45,7 @@ import java.nio.file.Path;
  * is for modules of the CALLER's own (test content, an extension's module), and {@code --root} is only
  * what the manifests' repo-relative paths resolve against — the working directory by default.</p>
  *
- * <p>Those five modules used to be spelled out by every caller: twenty lines across the Justfile naming
+ * <p>Those five modules used to be spelled out by every caller: twenty lines of build scripts naming
  * core.pdb, compiler.pdb and the three the platform brings, each needing to be kept in step with
  * PlatformModules by hand.</p>
  *

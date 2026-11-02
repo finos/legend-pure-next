@@ -30,7 +30,7 @@ import java.util.List;
  * EMBEDDING THE TRUFFLE PLATFORM, end to end: name the language, put Pure source held in a string into a
  * module of your own, compile it, and call what it defines.
  *
- * <p>Run it: {@code just truffle::usage-example}.
+ * <p>Run it: {@code bazel run //platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-usage-example:usage-example}.
  *
  * <p>THE LANGUAGE IS NAMED HERE because an embedder is the only thing that knows which it wants. WHAT IT
  * NEEDS IS NOT: {@code language_pure.json} declares core.pdb, parser-mappings.pdb and compiler.pdb — the

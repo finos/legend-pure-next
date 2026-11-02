@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tools/test-dashboard/merge-builds.mjs - merges build step records (builds.json files, as just recorded them before Bazel)
+// tools/test-dashboard/merge-builds.mjs - merges build step records (builds.json files, as recorded before Bazel)
 // into one file, as the CI publish job does with the published history and each job's steps:
 //
 //   merge-builds.mjs <out> <input>...

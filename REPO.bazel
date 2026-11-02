@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Output the just and Maven builds leave in the source tree is never read by a Bazel build: a glob() over a module
+# Output left in the source tree is never read by a Bazel build: a glob() over a module
 # would otherwise pick up stale generated sources or PDBs.
 ignore_directories([
     "**/target",

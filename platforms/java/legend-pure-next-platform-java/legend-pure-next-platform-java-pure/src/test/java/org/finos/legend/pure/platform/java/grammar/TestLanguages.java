@@ -129,6 +129,6 @@ class TestLanguages
         IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> Language.fromResources(Lists.immutable.of("languages/language_nope.json"), GRAMMAR_PACKAGE));
         assertTrue(e.getMessage().contains("languages/language_nope.json"), e.getMessage());
-        assertTrue(e.getMessage().contains("stage"), "it points at the pom: " + e.getMessage());
+        assertTrue(e.getMessage().contains("stage"), "it points at the build: " + e.getMessage());
     }
 }

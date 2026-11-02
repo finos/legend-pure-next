@@ -30,7 +30,7 @@ import java.util.List;
  * EMBEDDING THE JAVA PLATFORM, end to end: name the languages, put Pure source held in a string into a
  * module of your own, compile it, and call what it defines.
  *
- * <p>Run it: {@code just java::usage-example}.
+ * <p>Run it: {@code bazel run //platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-interfaces/legend-pure-next-platform-java-usage-example:usage-example}.
  *
  * <p>ONE FILE, TWO LANGUAGES. {@code ###Pure} is the language itself; {@code ###Diagram} comes from a
  * language extension (pure/extensions/diagram) and compiles to an element in the graph beside the

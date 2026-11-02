@@ -32,7 +32,7 @@ java_library(
 
 java_binary(
     name = "pure-java",
-    # As just runs it (jvm_heap): the PDB golden corpus passes in 512m.
+    # The PDB golden corpus passes in 512m.
     jvm_flags = [
         "-Xmx2g",
         "-Xss64m",

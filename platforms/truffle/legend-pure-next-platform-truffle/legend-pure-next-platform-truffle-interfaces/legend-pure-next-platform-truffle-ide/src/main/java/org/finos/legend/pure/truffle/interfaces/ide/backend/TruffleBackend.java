@@ -109,12 +109,12 @@ public final class TruffleBackend implements PureBackend
         if (!java.nio.file.Files.isRegularFile(corePdb))
         {
             throw new IOException("Truffle backend requires " + corePdb
-                    + ". Run `just bootstrap::build` first.");
+                    + ". Run `bazel build //:shared` first.");
         }
         if (!java.nio.file.Files.isRegularFile(compilerPdb))
         {
             throw new IOException("Truffle backend requires " + compilerPdb
-                    + ". Run `just bootstrap::build-compiler-pdb` first.");
+                    + ". Run `bazel build //:shared` first.");
         }
         this.executor = Executors.newSingleThreadExecutor(r ->
         {

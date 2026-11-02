@@ -198,8 +198,10 @@ among its test outputs; `bazel run //:dashboard` gathers the last run's under `t
 one self-contained page you can open from disk, `test-results/dashboard.html` (a test with no case of its own, such
 as a PDB comparison, is a check of one case; a module with no suite is 0/0). CI publishes the same page for `main`: [Test dashboard ↗](https://finos.github.io/legend-pure-next/dashboard.html), alongside the [translation galleries](https://finos.github.io/legend-pure-next/).
 
-The legacy layer's recipes that need the upstream legend-pure and legend-engine sources (fetch, load, generate)
-are in [its Justfile](pure/extensions/legacy/Justfile): `cd pure/extensions/legacy && just --list`.
+What the legacy layer needs the upstream legend-pure and legend-engine sources for is not part of `//...`: run
+`bazel run //pure/extensions/legacy:<command>`, the commands being `fetch`, `generate`, `generate_loader`, `load`,
+`test_loaded`, `test_usecases`, `update_usecases` and `test_usecases_on_legacy`
+([tools/legacy.sh](pure/extensions/legacy/tools/legacy.sh)).
 
 ## Usage example
 

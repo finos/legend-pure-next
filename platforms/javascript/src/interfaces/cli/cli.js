@@ -14,7 +14,7 @@
 
 // Command-line entry for the execution host (pure-js (//platforms/javascript:pure-js)) — the Node
 // counterpart of `pure-truffle execute` (platforms/truffle PureCompileMain), so
-// module recipes invoke both hosts with the same arguments:
+// module suites invoke both hosts with the same arguments:
 //
 //   pure-js execute [--pdb <file>...] --function <path> [--args <arg>...]
 //

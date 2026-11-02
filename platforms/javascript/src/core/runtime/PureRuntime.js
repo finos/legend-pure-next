@@ -130,7 +130,7 @@ export class PureRuntime {
             const compile = globalThis[COMPILE];
             if (typeof compile !== "function") {
                 throw new Error("PureRuntime.compile: compiler-pure is not loaded, or predates the language-extension "
-                                + "overload of compile (run `just javascript::generate`)");
+                                + "overload of compile (run `bazel build //platforms/javascript:generated`)");
             }
             if (typeof this.#evalJs !== "function") throw new Error("PureRuntime.compile: withEvalJs(evalJs) is required to run compiled code");
             let result;

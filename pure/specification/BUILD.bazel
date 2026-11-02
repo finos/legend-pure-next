@@ -73,7 +73,7 @@ filegroup(
 )
 
 # ---------------------------------------------------------------------------------------------------------------------
-# compiler.pdb and compiler-tests.pdb (bootstrap/Justfile: generate-writer, build-compiler-pdb).
+# compiler.pdb and compiler-tests.pdb.
 #
 # compiler-pure needs its generated writer (pdb/writer/generated/generatedWriter.pure), which a compiled compiler-pure
 # generates: pass 1 compiles it without the generated sources, runs the generators, and pass 2 compiles it with them.
@@ -216,7 +216,7 @@ pure_bootstrap_compile(
 )
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Self-host (just: truffle::spec-compiler-selfhost): compiler-pure compiled by the Truffle CLI, the compiler written in
+# Self-host: compiler-pure compiled by the Truffle CLI, the compiler written in
 # Pure, which must be the compiler the bootstrap compiles, element for element. Run on demand (tags 'manual',
 # 'selfhost'); the Truffle host runs the compiler corpus on it (//platforms/truffle:compiler_compiler_selfhost).
 
@@ -267,7 +267,7 @@ pure_compile(
     ("_tests", "compiler-tests.pdb"),
 ]]
 
-# The same self-host check for the native image (just: truffle::native::spec-compiler-selfhost).
+# The same self-host check for the native image.
 
 pure_compile(
     name = "compiler_pdbs_truffle_native",
@@ -324,7 +324,7 @@ copy_to_bin(
     visibility = ["//visibility:public"],
 )
 
-# The bootstrap self-host check (just: bootstrap::spec-compiler-selfhost): compiler-pure compiled by the compiler
+# The bootstrap self-host check: compiler-pure compiled by the compiler
 # written in Pure, run on the bootstrap (compile-via-pure), against the one the bootstrap compiles in Java.
 pure_compile(
     name = "compiler_pdbs_bootstrap_via_pure",
@@ -376,7 +376,7 @@ pure_compile(
 ]]
 
 # The bootstrap host checks (Section 2.2), on demand: the M3 schema the compiler written in Pure generates against the
-# one the bootstrap generates (just: check-fbs-parity), and the metamodel validation (just: check-metamodel).
+# one the bootstrap generates, and the metamodel validation.
 [sh_test(
     name = name,
     srcs = ["//tools/bazel:runs.sh"],
