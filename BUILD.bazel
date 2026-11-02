@@ -50,8 +50,8 @@ _SHARED = {
     "core-tests.pdb": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb",
     "compiler.pdb": "//pure/specification:compiler.pdb",
     "compiler-tests.pdb": "//pure/specification:compiler-tests.pdb",
-    "pdb_writer.pdb": "//pure/specification:pdb_writer.pdb",
-    "island_writer-with-tests.pdb": "//pure/specification:island_writer-with-tests.pdb",
+    "pure_pdb_writer.pdb": "//pure/specification:pure_pdb_writer.pdb",
+    "island_pdb_writer-with-tests.pdb": "//pure/specification:island_pdb_writer-with-tests.pdb",
     "parser-mappings.pdb": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
     # The schemas, side by side: a reader given m3.fbs finds the test island fragment beside it.
     "specification/m3.fbs": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:generated-specification/m3.fbs",

@@ -117,7 +117,7 @@ jobs:
 
       # What every later job builds on: the bootstrap, its PDBs, and the PDBs Truffle is built from.
       - name: Build the bootstrap outputs
-        run: bazel build //bootstrap/... //pure/specification:compiler_pdbs //:shared //platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure:pdb_reader
+        run: bazel build //bootstrap/... //pure/specification:compiler_compile //:shared //platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure:pdb_reader
 
       - name: Test
         run: bazel test --build_tests_only --test_tag_filters=job:bootstrap //...
@@ -160,9 +160,9 @@ jobs:
           - part: printer-compiled
             query: //bootstrap:compiler_printer-compiled_cli
           - part: self-host
-            query: //bootstrap:compiler_compiler_selfhost + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests + //pure/specification:pdb_writer_bootstrap_via_pure_matches_bootstrap + //pure/specification:island_writer_bootstrap_via_pure_matches_bootstrap
+            query: //bootstrap:compiler_compiler_selfhost + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests + //pure/specification:pure_pdb_writer_bootstrap_via_pure_matches_bootstrap + //pure/specification:island_pdb_writer_bootstrap_via_pure_matches_bootstrap
           - part: rest
-            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap:compiler_pdb_cli - //bootstrap:compiler_compiler_cli - //bootstrap:compiler_printer-compiled_cli - //bootstrap:compiler_compiler_selfhost - (//pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests + //pure/specification:pdb_writer_bootstrap_via_pure_matches_bootstrap + //pure/specification:island_writer_bootstrap_via_pure_matches_bootstrap)
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap:compiler_pdb_cli - //bootstrap:compiler_compiler_cli - //bootstrap:compiler_printer-compiled_cli - //bootstrap:compiler_compiler_selfhost - (//pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests + //pure/specification:pure_pdb_writer_bootstrap_via_pure_matches_bootstrap + //pure/specification:island_pdb_writer_bootstrap_via_pure_matches_bootstrap)
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6

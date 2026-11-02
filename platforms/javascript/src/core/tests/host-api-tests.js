@@ -314,7 +314,7 @@ check("registerExtension pairs an extension with its module, and validate() enfo
     const paired = new ModuleRegistry().useLanguages(WITH_DIAGRAM);
     paired.register(PdbModule.open(join(SHARED, "core.pdb")));
     paired.register(PdbModule.open(join(SHARED, "compiler.pdb")));
-    paired.register(PdbModule.open(join(SHARED, "pdb_writer.pdb")));
+    paired.register(PdbModule.open(join(SHARED, "pure_pdb_writer.pdb")));
     paired.registerExtension(diagram, PdbModule.open(join(REPO, diagram.pdbs.find((p) => p.endsWith(`/${diagram.module}.pdb`)))));
     paired.validate().validate();
     assert.equal(paired.extensions.length, 1);

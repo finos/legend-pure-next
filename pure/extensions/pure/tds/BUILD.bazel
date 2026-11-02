@@ -37,7 +37,7 @@ pure_module(
     name = "tds",
     srcs = glob(["code/**/*.pure", "module.json"]),
     base_pdbs = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb", "//pure/specification:compiler-tests.pdb"],
-    bootstrap_base_pdbs = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb", "//pure/specification:compiler.pdb", "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb", "//pure/specification:compiler-tests.pdb", "//pure/specification:pdb_writer.pdb"],
+    bootstrap_base_pdbs = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb", "//pure/specification:compiler.pdb", "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb", "//pure/specification:compiler-tests.pdb", "//pure/specification:pure_pdb_writer.pdb"],
     generated = {":generated/writer.pure": "generated/writer.pure"},
     sources = ["code", "generated"],
 )

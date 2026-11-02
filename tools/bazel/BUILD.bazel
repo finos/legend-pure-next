@@ -75,9 +75,9 @@ _TRUFFLE_PRELUDE = [
     "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
     _BOOTSTRAP_COMPILER + ":core-tests.pdb",
     "//pure/specification:compiler.pdb",
-    "//pure/specification:pdb_writer.pdb",
+    "//pure/specification:pure_pdb_writer.pdb",
     "//pure/specification:compiler-tests.pdb",
-    "//pure/specification:island_writer-with-tests.pdb",
+    "//pure/specification:island_pdb_writer-with-tests.pdb",
 ]
 
 # The PDB goldens the Pure writer writes, written back to the source tree: update_pdb_goldens__<owner>.
@@ -90,9 +90,9 @@ _PDB_GOLDENS = {
             _BOOTSTRAP_COMPILER + ":core.pdb",
             _BOOTSTRAP_COMPILER + ":core-tests.pdb",
             "//pure/specification:compiler.pdb",
-            "//pure/specification:pdb_writer.pdb",
+            "//pure/specification:pure_pdb_writer.pdb",
             "//pure/specification:compiler-tests.pdb",
-            "//pure/specification:island_writer-with-tests.pdb",
+            "//pure/specification:island_pdb_writer-with-tests.pdb",
         ],
         "platform::pure::compiler::test::pdb::goldenHexOf_String_1__String_1__String_1_",
         "pure/specification/compiler/tests",

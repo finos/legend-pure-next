@@ -96,8 +96,8 @@ public class TruffleCompileToPdbTest
         PdbModule compilerTestsLoader = new PdbModule(buildDir.resolve("compiler-tests.pdb"));
         PdbModule parserMappingsLoader = new PdbModule(buildDir.resolve("parser-mappings.pdb"));
         // What is generated from those two: the m3 writer and the writer of the test island values.
-        PdbModule pdbWriterLoader = new PdbModule(buildDir.resolve("pdb_writer.pdb"));
-        PdbModule islandWriterLoader = new PdbModule(buildDir.resolve("island_writer-with-tests.pdb"));
+        PdbModule pdbWriterLoader = new PdbModule(buildDir.resolve("pure_pdb_writer.pdb"));
+        PdbModule islandWriterLoader = new PdbModule(buildDir.resolve("island_pdb_writer-with-tests.pdb"));
         ModuleRegistry registry = new ModuleRegistry();
         registry.register(coreLoader);
         registry.register(compilerLoader);

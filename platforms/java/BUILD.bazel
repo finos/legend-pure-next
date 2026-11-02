@@ -26,7 +26,7 @@ _COMPILER = "//pure/specification:compiler.pdb"
 
 _COMPILER_TESTS = "//pure/specification:compiler-tests.pdb"
 
-_PDB_WRITER = "//pure/specification:pdb_writer.pdb"
+_PDB_WRITER = "//pure/specification:pure_pdb_writer.pdb"
 
 _PARSER_MAPPINGS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb"
 

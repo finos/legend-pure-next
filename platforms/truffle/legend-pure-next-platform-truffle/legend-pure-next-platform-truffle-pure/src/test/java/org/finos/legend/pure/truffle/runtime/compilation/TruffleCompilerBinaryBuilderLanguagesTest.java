@@ -42,7 +42,7 @@ public class TruffleCompilerBinaryBuilderLanguagesTest
 
         Path shared = sharedDir();
         TruffleCompilerBinaryBuilder.compile(
-                List.of(shared.resolve("core.pdb"), shared.resolve("parser-mappings.pdb"), shared.resolve("compiler.pdb"), shared.resolve("pdb_writer.pdb")),
+                List.of(shared.resolve("core.pdb"), shared.resolve("parser-mappings.pdb"), shared.resolve("compiler.pdb"), shared.resolve("pure_pdb_writer.pdb")),
                 List.of(source), out, TestElementFilter.Mode.NONE, PureLanguage.all(), b -> { });
 
         Assertions.assertTrue(Files.exists(out.resolve("tiny.pdb")), "tiny.pdb written");
@@ -63,7 +63,7 @@ public class TruffleCompilerBinaryBuilderLanguagesTest
 
         Path shared = sharedDir();
         TruffleCompilerBinaryBuilder.compile(
-                List.of(shared.resolve("core.pdb"), shared.resolve("parser-mappings.pdb"), shared.resolve("compiler.pdb"), shared.resolve("pdb_writer.pdb")),
+                List.of(shared.resolve("core.pdb"), shared.resolve("parser-mappings.pdb"), shared.resolve("compiler.pdb"), shared.resolve("pure_pdb_writer.pdb")),
                 List.of(code, generated), out, TestElementFilter.Mode.NONE, PureLanguage.all(), b -> { });
 
         Assertions.assertTrue(Files.exists(out.resolve("two.pdb")), "two.pdb written from code/ + generated/, tests/ ignored");

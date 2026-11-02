@@ -17,7 +17,7 @@ package below is relative to `bootstrap/legend-pure-next-bootstrap/`.
 | `…-interfaces/legend-pure-next-bootstrap-ide:pure-ide` | the IDE server |
 
 compiler-pure is compiled from these in `//pure/specification` (`compiler_pass1`, the generated writer, then
-`compiler_pdbs`: `compiler.pdb` and `compiler-tests.pdb`). `//:shared` gathers the PDBs and schemas into the
+`compiler_compile`: `compiler.pdb` and `compiler-tests.pdb`). `//:shared` gathers the PDBs and schemas into the
 `shared/` layout the tests and the language manifests name.
 
 ## Its tests
