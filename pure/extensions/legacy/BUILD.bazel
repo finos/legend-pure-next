@@ -23,17 +23,17 @@ load("//tools/bazel:pure.bzl", "pure_module")
 pure_module(
     name = "legacy",
     srcs = glob(["code/**/*.pure", "module.json"]),
-    base_pdbs = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb"],
+    base_pdbs = ["//pure/specification:core-tests.pdb"],
     bootstrap_base_pdbs = [
-        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb",
-        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb",
+        "//pure/specification:core.pdb",
+        "//pure/specification:core-tests.pdb",
     ],
     sources = ["code"],
 )
 
 # The tests of its tools: the grammar preprocessor.
 js_test(
-    name = "tools_tests",
+    name = "test_tools",
     data = ["tools/preprocess.mjs"],
     entry_point = "tools/preprocess.test.mjs",
     tags = ["job:bootstrap"],
@@ -48,7 +48,7 @@ _LOADER_PDB = "//pure/extensions/legacy/loader:build/legacy_loader.pdb"
 _RUNNER = "//pure/extensions/legacy/tools/legacy-pure-runner"
 
 # What the commands of tools/legacy.sh read, as tool names: the PDBs of 'shared', which they find beside core.pdb.
-_SHARED_PDBS = ["//:shared/%s.pdb" % name for name in ["core", "core-tests", "parser-mappings", "compiler", "pure_pdb_writer"]]
+_SHARED_PDBS = ["//:shared/%s.pdb" % name for name in ["core", "core-tests", "parser-mappings", "compiler", "core_metamodel_pdb_writer"]]
 _TOOLS = {
     "bootstrap": _CLI_BOOTSTRAP,
     "truffle": _CLI_TRUFFLE,

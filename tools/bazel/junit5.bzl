@@ -22,7 +22,7 @@ def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources =
     launcher, from a jar of their own.
 
     Two targets: '<name>_lib', the compiled test classes (the test jar, for a module whose tests
-    other modules reuse), and '<name>', the test, which scans that jar only, so the tests of a test jar on the
+    other modules reuse), and 'test_<name>', the test, which scans that jar only, so the tests of a test jar on the
     classpath are never run twice.
 
     Args:
@@ -66,7 +66,7 @@ def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources =
         ],
     )
     sh_test(
-        name = name,
+        name = "test_" + name,
         srcs = ["//tools/bazel:run-suite.sh"],
         args = [
             "junit/%s/%s" % (native.package_name(), name),

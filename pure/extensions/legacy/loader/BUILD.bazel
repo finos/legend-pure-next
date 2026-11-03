@@ -18,9 +18,9 @@ load("//tools/bazel:pure.bzl", "pure_module")
 
 pure_module(
     name = "legacy_loader",
-    base_pdbs = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb"],
+    base_pdbs = ["//pure/specification:core-tests.pdb"],
     bootstrap_base_pdbs = [
-        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb",
-        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb",
+        "//pure/specification:core.pdb",
+        "//pure/specification:core-tests.pdb",
     ],
 )

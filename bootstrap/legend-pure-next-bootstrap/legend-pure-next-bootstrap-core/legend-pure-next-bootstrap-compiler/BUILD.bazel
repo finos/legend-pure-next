@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The M3 compiler: the metamodel classes and FlatBuffer accessors generated from m3.ttl and m3.fbs, and core.pdb /
-# core-tests.pdb, built by the compiler from pure/specification/runtime.
+# The M3 compiler: the metamodel classes and FlatBuffer accessors generated from m3.ttl and m3.fbs, and the tool that
+# builds core.pdb and core-tests.pdb (//pure/specification:core_compile).
 
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("//tools/bazel:junit5.bzl", "junit5_test")
@@ -79,59 +79,31 @@ java_binary(
     name = "SpecificationBinaryBuilder",
     main_class = "org.finos.legend.pure.m3.SpecificationBinaryBuilder",
     runtime_deps = [":compiler_classes"],
-)
-
-# core.pdb and core-tests.pdb (build-core-pdb): the runtime sources and the generated protocol model, split by
-# <<test.*>> stereotypes.
-genrule(
-    name = "core_pdbs",
-    srcs = [
-        "//pure/specification:m3.ttl",
-        # Found by walking up from the first source directory.
-        "//pure/specification:module.json",
-        "//pure/specification:runtime_sources",
-        _GENERATORS + ":generated-specification/protocol/m3_protocol.pure",
-    ],
-    outs = [
-        "core.pdb",
-        "core-tests.pdb",
-    ],
-    cmd = """
-        set -e
-        T=$$(mktemp -d)
-        PROTOCOL=$$(dirname $(execpath %s:generated-specification/protocol/m3_protocol.pure))
-        $(execpath :SpecificationBinaryBuilder) --m3-ttl $(execpath //pure/specification:m3.ttl) --output-dir $$T --tests split \
-            pure/specification/runtime/functions pure/specification/runtime/featureTests pure/specification/runtime/ui \
-            pure/specification/runtime/test pure/specification/runtime/printer $$PROTOCOL > /dev/null
-        cp $$T/core.pdb $(RULEDIR)/core.pdb
-        cp $$T/core-tests.pdb $(RULEDIR)/core-tests.pdb
-    """ % _GENERATORS,
-    tools = [":SpecificationBinaryBuilder"],
     visibility = ["//visibility:public"],
 )
 
 # The compiler jar: its classes, with core.pdb and core-tests.pdb at its root.
 java_library(
     name = "compiler",
-    resource_strip_prefix = package_name(),
+    resource_strip_prefix = "pure/specification",
     resources = [
-        ":core.pdb",
-        ":core-tests.pdb",
+        "//pure/specification:core.pdb",
+        "//pure/specification:core-tests.pdb",
     ],
     visibility = ["//visibility:public"],
     exports = [":compiler_classes"],
     runtime_deps = [":compiler_classes"],
 )
 
-# The test classes are the compiler test jar later modules reuse ('tests_lib').
+# The test classes are the compiler test jar later modules reuse ('junit_lib').
 junit5_test(
-    name = "tests",
+    name = "junit",
     # On every pull request, in the bootstrap job: the bootstrap builds every PDB the hosts load.
     tags = ["bootstrap", "job:bootstrap"],
     srcs = glob(["src/test/java/**/*.java"]),
     data = [
         "//pure/extensions/diagram:compiler_pdb_goldens",
-        "//pure/specification:all",
+        "//pure/specification:specification_files",
     ],
     visibility = ["//visibility:public"],
     deps = [

@@ -50,7 +50,7 @@ java_library(
 )
 
 junit5_test(
-    name = "tests",
+    name = "junit",
     tags = ["job:translations/java"],
     srcs = glob(["src/test/java/**/*.java"]),
     data = [

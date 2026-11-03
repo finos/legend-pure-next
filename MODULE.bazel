@@ -123,7 +123,7 @@ register_toolchains(
 # The modules whose owners declare suites in module.json, and the modules those suites load (tools/bazel/suites.bzl).
 pure_suites = use_extension("//tools/bazel:suites.bzl", "pure_suites")
 pure_suites.module(
-    data = ["//pure/specification:all"],
+    data = ["//pure/specification:specification_files"],
     manifest = "//pure/specification:module.json",
     report_dir = "spec",
     sources = [
@@ -135,12 +135,12 @@ pure_suites.module(
     ],
 )
 pure_suites.module(
-    data = ["//pure/specification:all"],
+    data = ["//pure/specification:specification_files"],
     manifest = "//pure/specification:compiler/compiler-pure/module.json",
     report_dir = "spec",
 )
 pure_suites.module(
-    manifest = "//pure/specification:compiler/compiler-pure-pdb-writer/module.json",
+    manifest = "//pure/specification:compiler/compiler-core-metamodel-pdb-writer/module.json",
 )
 pure_suites.module(
     manifest = "//pure/specification:compiler/compiler-island-pdb-writer/module.json",

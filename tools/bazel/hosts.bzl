@@ -22,9 +22,9 @@ dependencies and testDependencies of the manifests; what runs it is the host des
 load("@pure_suites//:suites.bzl", "MODULES")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
-_CORE = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler"
+_CORE = "//pure/specification"
 
-_PARSER_MAPPINGS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb"
+_PARSER_MAPPINGS = "//pure/specification:parser-mappings.pdb"
 
 # The M3 schema beside the fragments of the test island values, as a reader of the schema expects (//:shared).
 _M3_FBS = "//:shared/specification/m3.fbs"
@@ -36,7 +36,7 @@ _PDBS = {
     "core-tests": _CORE + ":core-tests.pdb",
     "compiler": "//pure/specification:compiler.pdb",
     "compiler-tests": "//pure/specification:compiler-tests.pdb",
-    "pure_pdb_writer": "//pure/specification:pure_pdb_writer.pdb",
+    "core_metamodel_pdb_writer": "//pure/specification:core_metamodel_pdb_writer.pdb",
     "island_pdb_writer": "//pure/specification:island_pdb_writer-with-tests.pdb",
     "parser-mappings": _PARSER_MAPPINGS,
 }
@@ -44,7 +44,7 @@ _PDBS = {
 # What is generated from a PDB, compiled after it, so no manifest of the compiler can name it: what loads the first
 # loads the second right after. {module: what is generated from it}.
 _GENERATED_FROM = {
-    "compiler": "pure_pdb_writer",
+    "compiler": "core_metamodel_pdb_writer",
     "compiler-tests": "island_pdb_writer",
 }
 
@@ -176,31 +176,31 @@ HOSTS = {
                 "command": ["execute"],
                 "prelude": ["core", "parser-mappings", "core-tests", "compiler"],
                 "pdbs": {
-                    "compiler": "//pure/specification:selfhost/compiler.pdb",
-                    "compiler-tests": "//pure/specification:selfhost/compiler-tests.pdb",
-                    "pure_pdb_writer": "//pure/specification:selfhost/pure_pdb_writer.pdb",
-                    "island_pdb_writer": "//pure/specification:selfhost/island_pdb_writer-with-tests.pdb",
+                    "compiler": "//platforms/truffle:selfhost_truffle/compiler.pdb",
+                    "compiler-tests": "//platforms/truffle:selfhost_truffle/compiler-tests.pdb",
+                    "core_metamodel_pdb_writer": "//platforms/truffle:selfhost_truffle/core_metamodel_pdb_writer.pdb",
+                    "island_pdb_writer": "//platforms/truffle:selfhost_truffle/island_pdb_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
             },
             # The compiler corpus on compiler-pure as the native image compiles it (self-host): on demand.
-            "nativeSelfhost": {
+            "native_selfhost": {
                 "tool": "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle-native",
                 "report": "pure@cli-truffle-native+selfhost",
                 "command": ["execute"],
                 "prelude": ["core", "parser-mappings", "core-tests", "compiler"],
                 "pdbs": {
-                    "compiler": "//pure/specification:selfhost-native/compiler.pdb",
-                    "compiler-tests": "//pure/specification:selfhost-native/compiler-tests.pdb",
-                    "pure_pdb_writer": "//pure/specification:selfhost-native/pure_pdb_writer.pdb",
-                    "island_pdb_writer": "//pure/specification:selfhost-native/island_pdb_writer-with-tests.pdb",
+                    "compiler": "//platforms/truffle:selfhost_truffle_native/compiler.pdb",
+                    "compiler-tests": "//platforms/truffle:selfhost_truffle_native/compiler-tests.pdb",
+                    "core_metamodel_pdb_writer": "//platforms/truffle:selfhost_truffle_native/core_metamodel_pdb_writer.pdb",
+                    "island_pdb_writer": "//platforms/truffle:selfhost_truffle_native/island_pdb_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
             },
             # The owner compiled from its sources in memory, on top of core.pdb, in place of its PDBs.
-            "inMemory": {
+            "in_memory": {
                 "report": "pure@cli-truffle+inMemory",
                 "command": ["execute-from-memory"],
                 # The owner tests come from its sources, runners included: no test PDB.
@@ -234,10 +234,10 @@ HOSTS = {
                 "command": ["execute"],
                 "prelude": ["core", "core-tests", "compiler"],
                 "pdbs": {
-                    "compiler": "//pure/specification:selfhost-bootstrap/compiler.pdb",
-                    "compiler-tests": "//pure/specification:selfhost-bootstrap/compiler-tests.pdb",
-                    "pure_pdb_writer": "//pure/specification:selfhost-bootstrap/pure_pdb_writer.pdb",
-                    "island_pdb_writer": "//pure/specification:selfhost-bootstrap/island_pdb_writer-with-tests.pdb",
+                    "compiler": "//bootstrap:selfhost_bootstrap/compiler.pdb",
+                    "compiler-tests": "//bootstrap:selfhost_bootstrap/compiler-tests.pdb",
+                    "core_metamodel_pdb_writer": "//bootstrap:selfhost_bootstrap/core_metamodel_pdb_writer.pdb",
+                    "island_pdb_writer": "//bootstrap:selfhost_bootstrap/island_pdb_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost", "bootstrap"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
@@ -292,7 +292,7 @@ HOSTS = {
                 "command": ["--root", "."],
                 "prelude": ["core-tests"],
                 # The PDBs it loads itself: the languages (language_*.json) and its own modules.
-                "supplies": ["core", "parser-mappings", "compiler", "pure_pdb_writer", "diagram", "tds", "java", "translation-shared", "java-translation"],
+                "supplies": ["core", "parser-mappings", "compiler", "core_metamodel_pdb_writer", "diagram", "tds", "java", "translation-shared", "java-translation"],
                 # The test companion of the translator the platform runs.
                 "extra_pdbs": ["//pure/modules/translation/java:build/java-translation-tests.pdb"],
                 "data": ["//platforms/java:runtime_data"],
@@ -360,7 +360,7 @@ def _suite_test(host_name, host, variant_name, variant, owner, test):
     command = variant["command"]
     if "--strict-jit" in command and ("%s/%s" % (owner, test["suite"])) in host.get("lenient_jit", []):
         command = [c for c in command if c != "--strict-jit"]
-    if variant_name == "inMemory":
+    if variant_name == "in_memory":
         pdbs = [_pdb(m) for m in variant["prelude"]]
         loads = [a for pdb in pdbs for a in ["--pdb", "$(rootpath %s)" % pdb]] + \
                 [a for source in manifest["sources"] for a in ["--source-dir", manifest["dir"] + "/" + source]]
@@ -372,7 +372,7 @@ def _suite_test(host_name, host, variant_name, variant, owner, test):
     # In the environment: Bazel splits args as a shell would, and a reason has spaces and quotes.
     env = {"PURE_PENDING": reason} if reason else {}
     sh_test(
-        name = "%s_%s_%s" % (owner, test["suite"], variant_name),
+        name = "test_%s_%s_%s" % (owner, test["suite"], variant_name),
         srcs = ["//tools/bazel:run-suite.sh"],
         args = [report, "$(rootpath %s)" % tool] + command + loads +
                ["--function", function, "--args"] + args,
@@ -398,7 +398,7 @@ def host_specs(host):
     default = description["default"]
     variant = description["variants"][default]
     [sh_test(
-        name = "%s_none_%s" % (owner, default),
+        name = "test_%s_none_%s" % (owner, default),
         srcs = ["//tools/bazel:empty-report.sh"],
         # Where the module's unit suite would report (the dashboard reads modules there).
         args = ["%s/unit/%s.json" % (MODULES[owner]["reportDir"], variant["report"])],
@@ -424,7 +424,7 @@ def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compile
     pdbs = _variant_loads(owner, variant)
     command = [c for c in variant["command"] if c != "--strict-jit"]
     [sh_test(
-        name = "%s_read_back_%s" % (owner, fixture.replace("/", "_")),
+        name = "test_%s_read_back_%s" % (owner, fixture.replace("/", "_")),
         srcs = ["//tools/bazel:run-suite.sh"],
         # Every read-back of the host shares one report, a case per fixture (run-suite.sh: PURE_CASE).
         args = ["%s/read-back/%s.json" % (manifest["reportDir"], variant["report"]), "$(rootpath %s)" % description["tool"]] + command +

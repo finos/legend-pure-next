@@ -256,7 +256,7 @@ function platform::pure::compiler::pdb::generator::unionByteFor(members:String[*
 // testReadArchiveRoundTrip and testArchiveEntriesVsJavaPdb (which diffs entries
 // against the Java-written PDB) pin that the two agree.
 //
-// The writer is still regenerated on every build (//pure/specification:pure_pdb_writer_generate,
+// The writer is still regenerated on every build (//pure/specification:core_metamodel_pdb_writer_generate,
 // a prerequisite of compiler_compile) rather than committed: which properties a
 // class has, and how each is written, still come from the metamodel.
 //

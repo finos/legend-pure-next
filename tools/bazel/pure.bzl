@@ -86,7 +86,7 @@ def pure_bootstrap_compile(**kwargs):
     """pure_compile with the bootstrap CLI: for what Truffle is built from (core, the compiler, the reader PDBs)."""
     pure_compile(tool = "bootstrap", **kwargs)
 
-_CORE = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler"
+_CORE = "//pure/specification"
 
 _M3_FBS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:generated-specification/m3.fbs"
 
@@ -138,7 +138,7 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
     - 'generated/protocol.pure', its protocol classes, when 'protocol_package' is given.
 
     Each from the metamodel alone, staged with the module.json of the package and compiled against core and the
-    compiler on the bootstrap ('<name>_metamodel'). The bootstrap writes the fragment, which the Truffle jars
+    compiler on the bootstrap ('<name>_metamodel_compile'). The bootstrap writes the fragment, which the Truffle jars
     package; the Truffle CLI writes the writer and the protocol.
 
     Args:
@@ -150,16 +150,16 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
       protocol_package: the Pure package of the generated protocol classes.
     """
     pure_compile(
-        name = name + "_metamodel",
+        name = name + "_metamodel_compile",
         srcs = ["module.json", metamodel],
-        base_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:pure_pdb_writer.pdb", _CORE + ":core-tests.pdb", "//pure/specification:compiler-tests.pdb"],
+        base_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb", _CORE + ":core-tests.pdb", "//pure/specification:compiler-tests.pdb"],
         outs = ["metamodel/%s.pdb" % name],
         source_dir = native.package_name(),
         tool = "bootstrap",
     )
-    metamodel_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:pure_pdb_writer.pdb", ":metamodel/%s.pdb" % name]
+    metamodel_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb", ":metamodel/%s.pdb" % name]
     native.genrule(
-        name = name + "_fbs",
+        name = name + "_fbs_generate",
         srcs = metamodel_pdbs + [ids, _M3_FBS],
         outs = ["generated/%s.fbs" % name, "generated/%s-fbs-field-ids.txt" % name],
         cmd = """
@@ -183,7 +183,7 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
         visibility = ["//visibility:public"],
     )
     pure_generate(
-        name = name + "_writer",
+        name = name + "_pdb_writer_generate",
         out = "generated/writer.pure",
         pdbs = metamodel_pdbs,
         function = "platform::pure::compiler::pdb::generator::printExtensionWriter_String_1__String_1__String_1__String_1__Boolean_1_",
@@ -193,14 +193,14 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
     )
     if protocol_package:
         pure_generate(
-            name = name + "_protocol",
+            name = name + "_protocol_generate",
             out = "generated/protocol.pure",
-            pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:pure_pdb_writer.pdb", "//pure/modules/protocol:build/protocol.pdb", ":metamodel/%s.pdb" % name],
+            pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb", "//pure/modules/protocol:build/protocol.pdb", ":metamodel/%s.pdb" % name],
             function = "platform::pure::protocol::generation::generateProtocol_String_1__String_1__String_1_",
             args = [metamodel_package, protocol_package],
         )
 
-_PARSER_MAPPINGS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb"
+_PARSER_MAPPINGS = "//pure/specification:parser-mappings.pdb"
 
 def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None, bootstrap_base_pdbs = None):
     """A module or extension: 'build/<name>.pdb' and 'build/<name>-tests.pdb', compiled by the Truffle CLI ('pdbs'),
@@ -208,7 +208,7 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None, b
 
     The Truffle CLI parses with the compiler written in Pure, so core, parser-mappings and the compiler come first
     in its base PDBs, before 'base_pdbs'. With 'bootstrap_base_pdbs', the module is also compiled by the bootstrap
-    ('compile_bootstrap') and 'compile_matches_bootstrap' checks the two are the same element for
+    ('compile_bootstrap') and 'test_compile_matches_bootstrap' checks the two are the same element for
     element: a self-host check, run on demand (tags 'manual', 'selfhost').
 
     Args:
@@ -224,7 +224,7 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None, b
     pure_compile(
         name = "compile",
         srcs = srcs,
-        base_pdbs = [_CORE + ":core.pdb", _PARSER_MAPPINGS, "//pure/specification:compiler.pdb", "//pure/specification:pure_pdb_writer.pdb"] + base_pdbs,
+        base_pdbs = [_CORE + ":core.pdb", _PARSER_MAPPINGS, "//pure/specification:compiler.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb"] + base_pdbs,
         outs = outs,
         source_dir = native.package_name(),
         sources = sources,
@@ -247,7 +247,7 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None, b
         tool = "bootstrap",
     )
     [sh_test(
-        name = "compile_matches_bootstrap" + suffix,
+        name = "test_compile_matches_bootstrap" + suffix,
         srcs = ["//tools/bazel:pdb-diff.sh"],
         args = [
             "$(rootpath %s)" % _CLI,
@@ -258,3 +258,70 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None, b
         data = [_CLI, _CORE + ":core.pdb", ":" + out.replace("build/", "bootstrap/"), ":" + out],
         tags = ["manual", "selfhost"],
     ) for suffix, out in [("", outs[0]), ("_tests", outs[1])]]
+
+_SPECIFICATION = "//pure/specification"
+
+def compiler_selfhost(chain, tool, command = "compile", parser_mappings = True, tags = []):
+    """The compiler written in Pure, and what is generated from it, compiled by one host and compared, element for
+    element, with what the bootstrap compiles. The PDBs land in '<chain>/'.
+
+    Args:
+      chain: the name of the chain, in the names of its targets.
+      tool: the CLI that compiles, as for pure_compile.
+      command: the compile command, as for pure_compile.
+      parser_mappings: whether the compile loads parser-mappings.pdb (a host that parses with it).
+      tags: more tags on the targets, beside 'manual' and 'selfhost'.
+    """
+    base_pdbs = [_CORE + ":core.pdb"] + ([_PARSER_MAPPINGS] if parser_mappings else []) + [
+        _CORE + ":core-tests.pdb",
+        _SPECIFICATION + ":compiler.pdb",
+        _SPECIFICATION + ":core_metamodel_pdb_writer.pdb",
+    ]
+    directory = "%s/" % chain
+    pure_compile(
+        name = "compiler_compile_" + chain,
+        srcs = [_SPECIFICATION + ":compiler_sources"],
+        base_pdbs = base_pdbs,
+        outs = [directory + "compiler.pdb", directory + "compiler-tests.pdb"],
+        source_dir = "pure/specification/compiler/compiler-pure",
+        split_tests = True,
+        command = command,
+        tool = tool,
+        tags = ["manual"] + tags,
+        visibility = ["//visibility:public"],
+    )
+    for module, source, generated, out, with_tests in [
+        ("core_metamodel_pdb_writer", "core-metamodel-pdb-writer", "core_metamodel_pdb_writer_generate", "generatedWriter", False),
+        ("island_pdb_writer", "island-pdb-writer", "island_pdb_writer_generate", "islandWriter", True),
+    ]:
+        pure_compile(
+            name = "%s_compile_%s" % (module, chain),
+            srcs = [_SPECIFICATION + ":compiler/compiler-%s/module.json" % source],
+            base_pdbs = base_pdbs + [_SPECIFICATION + ":compiler-tests.pdb"],
+            generated = {_SPECIFICATION + ":compiler/generated/%s.pure" % out: "generated/writer.pure"},
+            outs = [directory + ("island_pdb_writer-with-tests.pdb" if with_tests else "core_metamodel_pdb_writer.pdb")],
+            source_dir = "pure/specification/compiler/compiler-%s" % source,
+            with_tests = with_tests,
+            command = command,
+            tool = tool,
+            tags = ["manual"] + tags,
+            visibility = ["//visibility:public"],
+        )
+    for module, pdb in [
+        ("compiler", "compiler.pdb"),
+        ("compiler_tests", "compiler-tests.pdb"),
+        ("core_metamodel_pdb_writer", "core_metamodel_pdb_writer.pdb"),
+        ("island_pdb_writer", "island_pdb_writer-with-tests.pdb"),
+    ]:
+        sh_test(
+            name = "test_%s_%s_matches_bootstrap" % (module, chain),
+            srcs = ["//tools/bazel:pdb-diff.sh"],
+            args = [
+                "$(rootpath %s)" % _CLI,
+                "$(rootpath %s:core.pdb)" % _CORE,
+                "$(rootpath %s:%s)" % (_SPECIFICATION, pdb),
+                "$(rootpath :%s%s)" % (directory, pdb),
+            ],
+            data = [_CLI, _CORE + ":core.pdb", _SPECIFICATION + ":" + pdb, ":" + directory + pdb],
+            tags = ["manual", "selfhost"] + tags,
+        )

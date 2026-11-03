@@ -42,7 +42,7 @@ java_binary(
 # The example runs: it asserts nothing, but an example that stopped
 # working cannot go unnoticed.
 sh_test(
-    name = "usage-example_runs",
+    name = "test_usage_example",
     tags = ["job:truffle"],
     srcs = ["//tools/bazel:runs.sh"],
     args = ["$(rootpath :usage-example)"],

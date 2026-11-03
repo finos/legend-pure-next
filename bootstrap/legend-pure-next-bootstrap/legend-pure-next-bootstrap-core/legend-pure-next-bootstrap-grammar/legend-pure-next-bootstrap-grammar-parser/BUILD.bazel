@@ -24,7 +24,7 @@ _GENERATORS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap
 
 antlr_srcjar(
     name = "antlr_sources",
-    srcs = ["//pure/specification:grammar_antlr"],
+    srcs = ["//pure/specification:grammar_sources"],
     grammar_dir = "pure/specification/grammar/antlr",
     grammars = [
         ("", ["TopLexer.g4", "TopParser.g4"]),
@@ -57,11 +57,11 @@ java_library(
 )
 
 junit5_test(
-    name = "tests",
+    name = "junit",
     # On every pull request, in the bootstrap job: the bootstrap builds every PDB the hosts load.
     tags = ["bootstrap", "job:bootstrap"],
     srcs = glob(["src/test/java/**/*.java"]),
-    data = ["//pure/specification:grammar_tests"],
+    data = ["//pure/specification:grammar_test_data"],
     deps = [
         ":grammar-parser",
         "@maven//:com_fasterxml_jackson_core_jackson_annotations",

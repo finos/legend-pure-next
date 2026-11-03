@@ -1,7 +1,7 @@
 {
   "name": "diagram",
   "packagePattern": "(platform::extensions::pure::diagram)(::.*)?",
-  "dependencies": ["core", "compiler", "pure_pdb_writer"],
+  "dependencies": ["core", "compiler", "core_metamodel_pdb_writer"],
   "testDependencies": ["core-tests", "compiler-tests"],
   "tests": [
     {"suite": "grammar", "runner": "grammar", "target": "tests/grammar"},

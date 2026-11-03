@@ -34,14 +34,14 @@ exports_files([
 # The runtime translated from Pure to JavaScript each package with every PDB the platform
 # translates against (_EMIT_PDBS). The extensions: their LANGUAGES[].translate, from their language manifests.
 
-_CORE = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler"
+_CORE = "//pure/specification"
 
 _EMIT_PDBS = [
     _CORE + ":core.pdb",
     _CORE + ":core-tests.pdb",
-    "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
+    "//pure/specification:parser-mappings.pdb",
     "//pure/specification:compiler.pdb",
-    "//pure/specification:pure_pdb_writer.pdb",
+    "//pure/specification:core_metamodel_pdb_writer.pdb",
     "//pure/specification:compiler-tests.pdb",
     "//pure/specification:island_pdb_writer-with-tests.pdb",
     "//pure/modules/language/javascript:build/javascript.pdb",
@@ -168,7 +168,7 @@ genrule(
     srcs = [
         ":node_modules/antlr4ng-cli/dir",
         "//pure/extensions/diagram:grammar_antlr",
-        "//pure/specification:grammar_antlr",
+        "//pure/specification:grammar_sources",
     ],
     outs = ["%s/%s.%s" % (out, grammar, ext) for out, grammars in _PARSERS.values() for grammar in grammars for ext in ["js", "interp", "tokens"]],
     cmd = """
@@ -242,7 +242,7 @@ _TEST_DATA = _RUNTIME_SOURCES + [
     "//:shared",
     "//pure/extensions/diagram:test_data_in_bin",
     "//pure/extensions/pure/tds:test_data_in_bin",
-    "//pure/specification:all_in_bin",
+    "//pure/specification:specification_files_in_bin",
 ] + _RELATION_PDBS + [pdb for pdb in _EMIT_PDBS if pdb not in _RUNTIME_SOURCES]
 
 # {test: (script, report, tags)}
@@ -268,7 +268,7 @@ _NODE_TESTS = {
 ) for name, (script, _, _) in _NODE_TESTS.items()]
 
 [sh_test(
-    name = name + "_tests",
+    name = "test_" + name.replace("-", "_"),
     srcs = ["//tools/bazel:run-suite.sh"],
     args = [report or "javascript/%s/none.json" % name, "$(rootpath :%s_script)" % name] + (["--report", "{report}"] if report else []),
     data = [":%s_script" % name],
@@ -289,7 +289,7 @@ _GALLERY_PDBS = [
     _CORE + ":core.pdb",
     _CORE + ":core-tests.pdb",
     "//pure/specification:compiler.pdb",
-    "//pure/specification:pure_pdb_writer.pdb",
+    "//pure/specification:core_metamodel_pdb_writer.pdb",
     "//pure/modules/language/javascript:build/javascript.pdb",
     "//pure/modules/translation/shared:build/translation-shared.pdb",
     "//pure/modules/translation/javascript:build/javascript-translation.pdb",

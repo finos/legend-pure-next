@@ -10,8 +10,8 @@ package below is relative to `bootstrap/legend-pure-next-bootstrap/`.
 |---|---|
 | `…-core/legend-pure-next-bootstrap-generators:generated_specification` | `m3.pure`, `m3.fbs` and the protocol model (`m3_protocol.pure`), generated from `pure/specification/m3.ttl` |
 | `…-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-parser:grammar-parser` | the ANTLR parser (`//tools/bazel:antlr`) and the protocol model |
-| `…-core/legend-pure-next-bootstrap-compiler:compiler` | the Java compiler, and `core.pdb` / `core-tests.pdb` (`core_pdbs`) |
-| `…-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser_mappings_pdb` | `parser-mappings.pdb`, the grammar mappings the Pure parser runs |
+| `…-core/legend-pure-next-bootstrap-compiler:compiler` | the Java compiler |
+| `//pure/specification:core_compile`, `:parser_mappings_compile`, `:compiler_compile` | `core.pdb` and `core-tests.pdb`, `parser-mappings.pdb`, `compiler.pdb` and `compiler-tests.pdb`: built by these tools, beside their sources |
 | `…-core/legend-pure-next-bootstrap-execution:execution`, `…-runtime:runtime` | the tree-walking interpreter and its natives |
 | `…-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap` | the CLI: `compile`, `compile-via-pure`, `execute` |
 | `…-interfaces/legend-pure-next-bootstrap-ide:pure-ide` | the IDE server |
@@ -25,8 +25,8 @@ compiler-pure is compiled from these in `//pure/specification` (`compiler_pass1`
 | Tests | Tier |
 |---|---|
 | the JUnit tests of each module (`…:tests`) | required (`bazel test //...`), CI job `bootstrap` |
-| the field-ID registry checks (`//tools/bazel:fbs_ids_up_to_date__*`) | required, CI job `bootstrap` |
-| the specification suites on the interpreter (`//bootstrap:*_cli`: `core` and `compiler` suites, the legacy layer) | `bootstrap` (manual; CI job `bootstrap-self-host`) |
+| the field-ID registry checks (`//tools/bazel:test_fbs_ids_up_to_date__*`) | required, CI job `bootstrap` |
+| the specification suites on the interpreter (`//bootstrap:test_*_cli`: `core` and `compiler` suites, the legacy layer) | `bootstrap` (manual; CI job `bootstrap-self-host`) |
 | compiler-pure compiled by the compiler written in Pure (`compile-via-pure`), against the Java compile | `selfhost` (manual; CI job `bootstrap-self-host`) |
 
 The manual tiers run with

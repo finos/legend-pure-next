@@ -34,7 +34,7 @@ java_binary(
 )
 
 sh_test(
-    name = "usage-example_runs",
+    name = "test_usage_example",
     tags = ["job:translations/java"],
     srcs = ["//tools/bazel:runs.sh"],
     args = ["$(rootpath :usage-example)"],

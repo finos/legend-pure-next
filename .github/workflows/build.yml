@@ -154,15 +154,15 @@ jobs:
       matrix:
         include:
           - part: pdb-golden
-            query: //bootstrap:compiler_pdb_cli
+            query: //bootstrap:test_compiler_pdb_cli
           - part: compiler
-            query: //bootstrap:compiler_compiler_cli
+            query: //bootstrap:test_compiler_compiler_cli
           - part: printer-compiled
-            query: //bootstrap:compiler_printer-compiled_cli
+            query: //bootstrap:test_compiler_printer-compiled_cli
           - part: self-host
-            query: //bootstrap:compiler_compiler_selfhost + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests + //pure/specification:pure_pdb_writer_bootstrap_via_pure_matches_bootstrap + //pure/specification:island_pdb_writer_bootstrap_via_pure_matches_bootstrap
+            query: //bootstrap:test_compiler_compiler_selfhost + //bootstrap:test_compiler_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_compiler_tests_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_core_metamodel_pdb_writer_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_island_pdb_writer_selfhost_bootstrap_matches_bootstrap
           - part: rest
-            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap:compiler_pdb_cli - //bootstrap:compiler_compiler_cli - //bootstrap:compiler_printer-compiled_cli - //bootstrap:compiler_compiler_selfhost - (//pure/specification:compiler_selfhost_bootstrap_matches_bootstrap + //pure/specification:compiler_selfhost_bootstrap_matches_bootstrap_tests + //pure/specification:pure_pdb_writer_bootstrap_via_pure_matches_bootstrap + //pure/specification:island_pdb_writer_bootstrap_via_pure_matches_bootstrap)
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap:test_compiler_pdb_cli - //bootstrap:test_compiler_compiler_cli - //bootstrap:test_compiler_printer-compiled_cli - //bootstrap:test_compiler_compiler_selfhost - (//bootstrap:test_compiler_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_compiler_tests_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_core_metamodel_pdb_writer_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_island_pdb_writer_selfhost_bootstrap_matches_bootstrap)
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6

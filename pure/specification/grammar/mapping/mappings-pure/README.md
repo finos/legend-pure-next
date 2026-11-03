@@ -50,7 +50,7 @@ mappings-pure/
 ## Build
 
 ```
-bazel build //bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser_mappings_pdb
+bazel build //pure/specification:parser_mappings_compile
 ```
 
 Compiles to `parser-mappings.pdb` (~120 elements, ~400 KB), which `//:shared` publishes as

@@ -46,13 +46,13 @@ alias(
 # The PDBs and schemas the Java tests and the suites find in a 'shared' directory: a test runs from the root of its runfiles, where these land. The source directory 'shared' is never
 # read (REPO.bazel).
 _SHARED = {
-    "core.pdb": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb",
-    "core-tests.pdb": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb",
+    "core.pdb": "//pure/specification:core.pdb",
+    "core-tests.pdb": "//pure/specification:core-tests.pdb",
     "compiler.pdb": "//pure/specification:compiler.pdb",
     "compiler-tests.pdb": "//pure/specification:compiler-tests.pdb",
-    "pure_pdb_writer.pdb": "//pure/specification:pure_pdb_writer.pdb",
+    "core_metamodel_pdb_writer.pdb": "//pure/specification:core_metamodel_pdb_writer.pdb",
     "island_pdb_writer-with-tests.pdb": "//pure/specification:island_pdb_writer-with-tests.pdb",
-    "parser-mappings.pdb": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
+    "parser-mappings.pdb": "//pure/specification:parser-mappings.pdb",
     # The schemas, side by side: a reader given m3.fbs finds the test island fragment beside it.
     "specification/m3.fbs": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:generated-specification/m3.fbs",
     "specification/islandTest.fbs": "//pure/specification:compiler/generated/islandTest.fbs",

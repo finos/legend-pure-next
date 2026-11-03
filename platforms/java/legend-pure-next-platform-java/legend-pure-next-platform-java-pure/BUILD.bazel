@@ -21,7 +21,7 @@ load("//tools/bazel:junit5.bzl", "junit5_test")
 
 antlr_srcjar(
     name = "antlr_sources",
-    srcs = ["//pure/specification:grammar_antlr"],
+    srcs = ["//pure/specification:grammar_sources"],
     grammar_dir = "pure/specification/grammar/antlr",
     grammars = [
         ("", ["TopLexer.g4", "TopParser.g4"]),
@@ -70,14 +70,14 @@ java_library(
 
 # The tests run from the repository root: the root of their runfiles.
 junit5_test(
-    name = "tests",
+    name = "junit",
     tags = ["job:translations/java"],
     srcs = glob(["src/test/java/**/*.java"]),
     data = [
         "//platforms/java:runtime_data",
         "//pure/extensions/diagram:compiler_pdb_goldens",
         "//pure/extensions/pure/tds:test_data",
-        "//pure/specification:all",
+        "//pure/specification:specification_files",
     ],
     deps = [
         ":engine",

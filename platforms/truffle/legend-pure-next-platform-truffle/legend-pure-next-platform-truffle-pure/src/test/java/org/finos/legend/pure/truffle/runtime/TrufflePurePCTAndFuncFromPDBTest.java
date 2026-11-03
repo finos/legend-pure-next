@@ -94,7 +94,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         compilerLoader = new PdbModule(compilerPdb);
         compilerTestsLoader = new PdbModule(compilerTestsPdb);
         // What is generated from those two: the m3 writer and the writer of the test island values.
-        PdbModule pdbWriterLoader = new PdbModule(sharedDir.resolve("pure_pdb_writer.pdb"));
+        PdbModule pdbWriterLoader = new PdbModule(sharedDir.resolve("core_metamodel_pdb_writer.pdb"));
         PdbModule islandWriterLoader = new PdbModule(sharedDir.resolve("island_pdb_writer-with-tests.pdb"));
         // parser-mappings.pdb is required for the `parse` Pure native to resolve
         // `platform::pure::parser::mappings::interpreter::parseDocument` — TrufflePureParser

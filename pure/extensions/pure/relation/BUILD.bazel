@@ -24,6 +24,6 @@ exports_files(
 pure_module(
     name = "relation",
     srcs = glob(["code/**/*.pure", "module.json"]),
-    base_pdbs = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb", "//pure/extensions/pure/tds:build/tds.pdb"],
+    base_pdbs = ["//pure/specification:core-tests.pdb", "//pure/extensions/pure/tds:build/tds.pdb"],
     sources = ["code"],
 )

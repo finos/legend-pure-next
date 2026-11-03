@@ -18,17 +18,17 @@
 load("//tools/bazel:hosts.bzl", "host_specs", "pdb_read_backs")
 load(":translation.bzl", "java_translation_srcjar")
 
-_CORE = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb"
+_CORE = "//pure/specification:core.pdb"
 
-_CORE_TESTS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb"
+_CORE_TESTS = "//pure/specification:core-tests.pdb"
 
 _COMPILER = "//pure/specification:compiler.pdb"
 
 _COMPILER_TESTS = "//pure/specification:compiler-tests.pdb"
 
-_PDB_WRITER = "//pure/specification:pure_pdb_writer.pdb"
+_PDB_WRITER = "//pure/specification:core_metamodel_pdb_writer.pdb"
 
-_PARSER_MAPPINGS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb"
+_PARSER_MAPPINGS = "//pure/specification:parser-mappings.pdb"
 
 # The Java translator.
 _TRANSLATOR = [

@@ -19,7 +19,7 @@ load("//tools/bazel:pure.bzl", "pure_bootstrap_compile")
 pure_bootstrap_compile(
     name = "compile",
     srcs = glob(["**/*.pure", "module.json"]),
-    base_pdbs = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb"],
+    base_pdbs = ["//pure/specification:core.pdb"],
     outs = ["build/java.pdb", "build/java-tests.pdb"],
     source_dir = package_name(),
     split_tests = True,

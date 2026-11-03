@@ -19,7 +19,7 @@ load("//tools/bazel:pure.bzl", "pure_module")
 pure_module(
     name = "javascript-translation",
     srcs = glob(["code/**/*.pure", "module.json"]),
-    base_pdbs = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb", "//pure/modules/language/javascript:build/javascript.pdb", "//pure/modules/translation/shared:build/translation-shared.pdb"],
-    bootstrap_base_pdbs = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb", "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb", "//pure/modules/language/javascript:build/javascript.pdb", "//pure/modules/translation/shared:build/translation-shared.pdb"],
+    base_pdbs = ["//pure/specification:core-tests.pdb", "//pure/modules/language/javascript:build/javascript.pdb", "//pure/modules/translation/shared:build/translation-shared.pdb"],
+    bootstrap_base_pdbs = ["//pure/specification:core.pdb", "//pure/specification:core-tests.pdb", "//pure/modules/language/javascript:build/javascript.pdb", "//pure/modules/translation/shared:build/translation-shared.pdb"],
     sources = ["code"],
 )

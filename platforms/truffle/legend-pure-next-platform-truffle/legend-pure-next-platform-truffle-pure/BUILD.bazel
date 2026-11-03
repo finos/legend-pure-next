@@ -22,14 +22,14 @@ load("//tools/bazel:srcjar.bzl", "generated_srcjar")
 
 _CLI = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap"
 
-_CORE = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler"
+_CORE = "//pure/specification"
 
 # What the reader is translated with: the reader and schema packages (compiler.pdb), and the Java translator.
 _READER_PDBS = [
     _CORE + ":core.pdb",
     _CORE + ":core-tests.pdb",
     "//pure/specification:compiler.pdb",
-    "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
+    "//pure/specification:parser-mappings.pdb",
     "//pure/modules/language/java:build/java.pdb",
     "//pure/modules/translation/shared:build/translation-shared.pdb",
     "//pure/modules/translation/java:build/java-translation.pdb",
@@ -58,7 +58,7 @@ generated_srcjar(
 
 antlr_srcjar(
     name = "antlr_sources",
-    srcs = ["//pure/specification:grammar_antlr"],
+    srcs = ["//pure/specification:grammar_sources"],
     grammar_dir = "pure/specification/grammar/antlr",
     grammars = [
         ("", ["TopLexer.g4", "TopParser.g4"]),
@@ -153,13 +153,13 @@ _TRUFFLE_TEST_JVM_FLAGS = [
 ]
 
 junit5_test(
-    name = "tests",
+    name = "junit",
     tags = ["job:truffle"],
     srcs = glob(["src/test/java/**/*.java"]),
     data = [
         "//:shared",
         "//pure/extensions/diagram:compiler_pdb_goldens",
-        "//pure/specification:all",
+        "//pure/specification:specification_files",
     ],
     jvm_flags = _TRUFFLE_TEST_JVM_FLAGS,
     plugins = [":jmh"],

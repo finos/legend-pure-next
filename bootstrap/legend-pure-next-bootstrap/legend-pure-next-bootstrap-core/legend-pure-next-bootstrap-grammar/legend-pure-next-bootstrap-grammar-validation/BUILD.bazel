@@ -12,46 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The Pure parser checked against the Java one: parser-mappings.pdb, compiled by the bootstrap CLI from the grammar
-# mappings, and the tests that read it from the classpath.
+# The Pure parser checked against the Java one: parser-mappings.pdb (//pure/specification:parser_mappings_compile),
+# and the tests that read it from the classpath.
 
 load("@rules_java//java:defs.bzl", "java_library")
 load("//tools/bazel:junit5.bzl", "junit5_test")
 
 _CLI = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap"
 
-_CORE_PDB = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb"
-
-genrule(
-    name = "parser_mappings_pdb",
-    srcs = [
-        _CORE_PDB,
-        "//pure/specification:parser_mappings_sources",
-    ],
-    outs = ["parser-mappings.pdb"],
-    cmd = """
-        set -e
-        T=$$(mktemp -d)
-        $(execpath %s) compile --base-pdb $(execpath %s) --source pure/specification/grammar/mapping/mappings-pure \
-            --output-dir $$T > /dev/null
-        cp $$T/parser-mappings.pdb $@
-    """ % (_CLI, _CORE_PDB),
-    tools = [_CLI],
-    visibility = ["//visibility:public"],
-)
+_CORE_PDB = "//pure/specification:core.pdb"
 
 java_library(
     name = "parser_mappings",
-    resource_strip_prefix = package_name(),
-    resources = [":parser-mappings.pdb"],
+    resource_strip_prefix = "pure/specification",
+    resources = ["//pure/specification:parser-mappings.pdb"],
 )
 
 junit5_test(
-    name = "tests",
+    name = "junit",
     # On every pull request, in the bootstrap job: the bootstrap builds every PDB the hosts load.
     tags = ["bootstrap", "job:bootstrap"],
     srcs = glob(["src/test/java/**/*.java"]),
-    data = ["//pure/specification:all"],
+    data = ["//pure/specification:specification_files"],
     jvm_flags = ["-Duser.timezone=UTC"],
     runtime_deps = [":parser_mappings"],
     deps = [

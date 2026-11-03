@@ -19,7 +19,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 # Build helpers (junit5.bzl, srcjar.bzl), flatc, and the field-ID registry check.
 
 # Each tracked field-ID registry: a test that it holds every ID its schema generation assigned, and the command that
-# writes them back: fbs_ids_up_to_date__<registry> and update_fbs_ids__<registry>. {registry: (tracked, generated)}.
+# writes them back: test_fbs_ids_up_to_date__<registry> and update_fbs_ids__<registry>. {registry: (tracked, generated)}.
 _FBS_ID_REGISTRIES = {
     "m3": (
         "//pure/specification:m3-fbs-field-ids.txt",
@@ -40,7 +40,7 @@ _FBS_ID_REGISTRIES = {
 }
 
 [sh_test(
-    name = "fbs_ids_up_to_date__" + name,
+    name = "test_fbs_ids_up_to_date__" + name,
     tags = ["job:bootstrap"],
     srcs = ["fbs-ids-up-to-date.sh"],
     args = [
@@ -65,17 +65,19 @@ _FBS_ID_REGISTRIES = {
     visibility = ["//:__pkg__"],
 ) for name, (tracked, generated) in _FBS_ID_REGISTRIES.items()]
 
-_BOOTSTRAP_COMPILER = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler"
+_BOOTSTRAP_COMPILER = "//pure/specification"
+
+_BOOTSTRAP_TESTS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler"
 
 _TRUFFLE_CLI = "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle"
 
 # What Truffle loads to run Pure, as its suites do (hosts.bzl: prelude).
 _TRUFFLE_PRELUDE = [
     _BOOTSTRAP_COMPILER + ":core.pdb",
-    "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:parser-mappings.pdb",
+    "//pure/specification:parser-mappings.pdb",
     _BOOTSTRAP_COMPILER + ":core-tests.pdb",
     "//pure/specification:compiler.pdb",
-    "//pure/specification:pure_pdb_writer.pdb",
+    "//pure/specification:core_metamodel_pdb_writer.pdb",
     "//pure/specification:compiler-tests.pdb",
     "//pure/specification:island_pdb_writer-with-tests.pdb",
 ]
@@ -90,7 +92,7 @@ _PDB_GOLDENS = {
             _BOOTSTRAP_COMPILER + ":core.pdb",
             _BOOTSTRAP_COMPILER + ":core-tests.pdb",
             "//pure/specification:compiler.pdb",
-            "//pure/specification:pure_pdb_writer.pdb",
+            "//pure/specification:core_metamodel_pdb_writer.pdb",
             "//pure/specification:compiler-tests.pdb",
             "//pure/specification:island_pdb_writer-with-tests.pdb",
         ],
@@ -137,13 +139,13 @@ sh_binary(
     testonly = True,
     srcs = ["update-pdb-goldens-junit.sh"],
     args = [
-        "$(rootpath %s:tests_runner)" % _BOOTSTRAP_COMPILER,
+        "$(rootpath %s:junit_runner)" % _BOOTSTRAP_TESTS,
         "org.finos.legend.pure.m3.specification.PdbGoldenGeneratorTest",
         "pure/specification/compiler/tests-pdb-serialization",
     ],
     data = [
-        _BOOTSTRAP_COMPILER + ":tests_runner",
-        "//pure/specification:all",
+        _BOOTSTRAP_TESTS + ":junit_runner",
+        "//pure/specification:specification_files",
     ],
     visibility = ["//:__pkg__"],
 )

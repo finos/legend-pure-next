@@ -129,11 +129,11 @@ fetch() {
 base_pdbs() {
     printf -- '--base-pdb\n%s\n' "$shared/core.pdb"
     if [[ "${1:-}" == "with-tests" ]]; then printf -- '--base-pdb\n%s\n' "$shared/core-tests.pdb"; fi
-    printf -- '--base-pdb\n%s\n' "$shared/parser-mappings.pdb" "$shared/compiler.pdb" "$shared/pure_pdb_writer.pdb" "$tds_pdb" "$legacy_pdb"
+    printf -- '--base-pdb\n%s\n' "$shared/parser-mappings.pdb" "$shared/compiler.pdb" "$shared/core_metamodel_pdb_writer.pdb" "$tds_pdb" "$legacy_pdb"
 }
 
 run_pdbs() {
-    printf -- '--pdb\n%s\n' "$shared/core.pdb" "$shared/core-tests.pdb" "$shared/parser-mappings.pdb" "$shared/compiler.pdb" "$shared/pure_pdb_writer.pdb" "$tds_pdb" "$legacy_pdb"
+    printf -- '--pdb\n%s\n' "$shared/core.pdb" "$shared/core-tests.pdb" "$shared/parser-mappings.pdb" "$shared/compiler.pdb" "$shared/core_metamodel_pdb_writer.pdb" "$tds_pdb" "$legacy_pdb"
 }
 
 read_lines() {

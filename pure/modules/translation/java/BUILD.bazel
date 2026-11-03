@@ -19,7 +19,7 @@ load("//tools/bazel:pure.bzl", "pure_bootstrap_compile")
 pure_bootstrap_compile(
     name = "compile",
     srcs = glob(["**/*.pure", "module.json"]),
-    base_pdbs = ["//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core.pdb", "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:core-tests.pdb", "//pure/modules/language/java:build/java.pdb", "//pure/modules/translation/shared:build/translation-shared.pdb"],
+    base_pdbs = ["//pure/specification:core.pdb", "//pure/specification:core-tests.pdb", "//pure/modules/language/java:build/java.pdb", "//pure/modules/translation/shared:build/translation-shared.pdb"],
     outs = ["build/java-translation.pdb", "build/java-translation-tests.pdb"],
     source_dir = package_name(),
     split_tests = True,
