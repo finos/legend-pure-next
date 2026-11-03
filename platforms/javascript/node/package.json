@@ -1,0 +1,12 @@
+{
+  "name": "@finos/legend-pure-next-node",
+  "private": true,
+  "devDependencies": {
+    "antlr4ng-cli": "^2.0.0",
+    "esbuild": "^0.24.0",
+    "monaco-editor": "0.52.2"
+  },
+  "dependencies": {
+    "antlr4": "^4.13.2"
+  }
+}

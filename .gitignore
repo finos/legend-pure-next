@@ -34,7 +34,7 @@ website/yarn-error.log*
 **/graal_dumps/
 
 # Platforms
-/platforms/javascript/node_modules/
+/platforms/javascript/node/node_modules/
 
 # Bazel
 /bazel-*

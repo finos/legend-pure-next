@@ -16,19 +16,13 @@
 
 load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_run_binary")
-load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-load("@npm//platforms/javascript:esbuild/package_json.bzl", esbuild = "bin")
+load("@npm//platforms/javascript/node:esbuild/package_json.bzl", esbuild = "bin")
 load("//tools/bazel:hosts.bzl", "host_specs")
 load("//tools/bazel:pure.bzl", "pure_generate")
 
-npm_link_all_packages(name = "node_modules")
-
-exports_files([
-    "package.json",
-    "pnpm-lock.yaml",
-])
+exports_files(["package.json"])
 
 # ---------------------------------------------------------------------------------------------------------------------
 # The runtime translated from Pure to JavaScript each package with every PDB the platform
@@ -166,14 +160,14 @@ _PARSERS = {
 genrule(
     name = "parsers",
     srcs = [
-        ":node_modules/antlr4ng-cli/dir",
+        "//platforms/javascript/node:node_modules/antlr4ng-cli/dir",
         "//pure/extensions/diagram:grammar_antlr",
         "//pure/specification:grammar_sources",
     ],
     outs = ["%s/%s.%s" % (out, grammar, ext) for out, grammars in _PARSERS.values() for grammar in grammars for ext in ["js", "interp", "tokens"]],
     cmd = """
         set -e
-        JAR=$$PWD/$$(ls $(execpath :node_modules/antlr4ng-cli/dir)/antlr4-*-complete.jar | head -1)
+        JAR=$$PWD/$$(ls $(execpath //platforms/javascript/node:node_modules/antlr4ng-cli/dir)/antlr4-*-complete.jar | head -1)
         JAVA=$$PWD/$(JAVA)
         %s
     """ % "\n        ".join([
@@ -197,7 +191,7 @@ filegroup(
 
 _RUNTIME_SOURCES = glob(["src/**"]) + [
     ":generated",
-    ":node_modules/antlr4",
+    "//platforms/javascript/node:node_modules/antlr4",
     "//pure/modules/translation/javascript/js:runtime_lib",
 ]
 
@@ -214,6 +208,8 @@ _RUNTIME_SOURCES = glob(["src/**"]) + [
         "--log-level=warning",
     ],
     chdir = package_name(),
+    # antlr4 is inlined here, and only here: its package is not in a parent directory of src/.
+    env = {"NODE_PATH": "node/node_modules"},
 ) for name, entry, out, extra in [
     ("antlr_bundle", "antlr-entry.js", "antlr-bundle.js", ["--global-name=PureAntlr"]),
     ("parser_mappings_bundle", "parser-mappings-entry.js", "parser-mappings-bundle.js", []),
@@ -278,7 +274,7 @@ _NODE_TESTS = {
 # The Monaco editor the web IDE loads from build/vs: the min/vs directory of its package.
 copy_to_directory(
     name = "monaco",
-    srcs = [":node_modules/monaco-editor/dir"],
+    srcs = ["//platforms/javascript/node:node_modules/monaco-editor/dir"],
     out = "build/vs",
     include_srcs_patterns = ["**/min/vs/**"],
     replace_prefixes = {"**/min/vs/": ""},

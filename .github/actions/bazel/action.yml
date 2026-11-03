@@ -42,7 +42,7 @@ runs:
     - name: Name the repository cache
       id: repository
       shell: bash
-      run: echo "key=bazel-repo-${{ runner.os }}-${{ hashFiles('.bazelversion', 'MODULE.bazel', 'MODULE.bazel.lock', 'maven_install.json', 'tools/bazel/*.bzl', 'platforms/javascript/pnpm-lock.yaml') }}" >> "$GITHUB_OUTPUT"
+      run: echo "key=bazel-repo-${{ runner.os }}-${{ hashFiles('.bazelversion', 'MODULE.bazel', 'MODULE.bazel.lock', 'maven_install.json', 'tools/bazel/*.bzl', 'platforms/javascript/node/pnpm-lock.yaml') }}" >> "$GITHUB_OUTPUT"
 
     - name: Restore the Bazel repository cache
       id: restore-repository

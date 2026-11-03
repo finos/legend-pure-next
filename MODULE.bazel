@@ -212,6 +212,6 @@ npm.npm_translate_lock(
     # esbuild's postinstall swaps its JavaScript launcher for the native binary, which a js_binary cannot run:
     # without it, the launcher runs the binary of the @esbuild/<platform> package itself.
     lifecycle_hooks_exclude = ["esbuild"],
-    pnpm_lock = "//platforms/javascript:pnpm-lock.yaml",
+    pnpm_lock = "//platforms/javascript/node:pnpm-lock.yaml",
 )
 use_repo(npm, "npm")
