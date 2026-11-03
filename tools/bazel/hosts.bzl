@@ -181,10 +181,10 @@ HOSTS = {
                 "command": ["execute"],
                 "prelude": ["core", "parser-mappings", "core-tests", "compiler"],
                 "pdbs": {
-                    "compiler": "//platforms/truffle:selfhost_truffle/compiler.pdb",
-                    "compiler-tests": "//platforms/truffle:selfhost_truffle/compiler-tests.pdb",
-                    "core_metamodel_pdb_writer": "//platforms/truffle:selfhost_truffle/core_metamodel_pdb_writer.pdb",
-                    "island_pdb_writer": "//platforms/truffle:selfhost_truffle/island_pdb_writer-with-tests.pdb",
+                    "compiler": "//platforms/truffle/pdb-check:truffle/compiler.pdb",
+                    "compiler-tests": "//platforms/truffle/pdb-check:truffle/compiler-tests.pdb",
+                    "core_metamodel_pdb_writer": "//platforms/truffle/pdb-check:truffle/core_metamodel_pdb_writer.pdb",
+                    "island_pdb_writer": "//platforms/truffle/pdb-check:truffle/island_pdb_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
@@ -196,10 +196,10 @@ HOSTS = {
                 "command": ["execute"],
                 "prelude": ["core", "parser-mappings", "core-tests", "compiler"],
                 "pdbs": {
-                    "compiler": "//platforms/truffle:selfhost_truffle_native/compiler.pdb",
-                    "compiler-tests": "//platforms/truffle:selfhost_truffle_native/compiler-tests.pdb",
-                    "core_metamodel_pdb_writer": "//platforms/truffle:selfhost_truffle_native/core_metamodel_pdb_writer.pdb",
-                    "island_pdb_writer": "//platforms/truffle:selfhost_truffle_native/island_pdb_writer-with-tests.pdb",
+                    "compiler": "//platforms/truffle/pdb-check:truffle_native/compiler.pdb",
+                    "compiler-tests": "//platforms/truffle/pdb-check:truffle_native/compiler-tests.pdb",
+                    "core_metamodel_pdb_writer": "//platforms/truffle/pdb-check:truffle_native/core_metamodel_pdb_writer.pdb",
+                    "island_pdb_writer": "//platforms/truffle/pdb-check:truffle_native/island_pdb_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
@@ -239,10 +239,10 @@ HOSTS = {
                 "command": ["execute"],
                 "prelude": ["core", "core-tests", "compiler"],
                 "pdbs": {
-                    "compiler": "//bootstrap:selfhost_bootstrap/compiler.pdb",
-                    "compiler-tests": "//bootstrap:selfhost_bootstrap/compiler-tests.pdb",
-                    "core_metamodel_pdb_writer": "//bootstrap:selfhost_bootstrap/core_metamodel_pdb_writer.pdb",
-                    "island_pdb_writer": "//bootstrap:selfhost_bootstrap/island_pdb_writer-with-tests.pdb",
+                    "compiler": "//bootstrap/pdb-check:bootstrap/compiler.pdb",
+                    "compiler-tests": "//bootstrap/pdb-check:bootstrap/compiler-tests.pdb",
+                    "core_metamodel_pdb_writer": "//bootstrap/pdb-check:bootstrap/core_metamodel_pdb_writer.pdb",
+                    "island_pdb_writer": "//bootstrap/pdb-check:bootstrap/island_pdb_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost", "bootstrap"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
@@ -443,7 +443,7 @@ def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compile
 
 def module_selfhost(modules):
     """Each module compiled by the bootstrap too, and compared, element for element, with what the Truffle CLI compiles
-    (test_<module>_selfhost_truffle_matches_bootstrap, and test_<module>_tests_...). What the bootstrap compile loads is
+    (test_<module>_truffle, and test_<module>_tests_truffle). What the bootstrap compile loads is
     derived from the manifest of the module.
 
     Args:
@@ -468,7 +468,7 @@ def module_selfhost(modules):
         )
         for name, pdb in [(module, module), (module + "_tests", module + "-tests")]:
             sh_test(
-                name = "test_%s_selfhost_truffle_matches_bootstrap" % name,
+                name = "test_%s_truffle" % name,
                 srcs = ["//tools/bazel:pdb-diff.sh"],
                 args = [
                     "$(rootpath //bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap)",

@@ -16,15 +16,5 @@
 # (tags 'manual', 'bootstrap'): the bootstrap builds Truffle, which tests compiler-pure on every pull request.
 
 load("//tools/bazel:hosts.bzl", "host_specs")
-load("//tools/bazel:pure.bzl", "compiler_selfhost")
 
 host_specs(host = "bootstrap")
-
-# The compiler written in Pure compiled on the bootstrap (compile-via-pure), against the one it compiles in Java.
-compiler_selfhost(
-    "selfhost_bootstrap",
-    command = "compile-via-pure",
-    parser_mappings = False,
-    tags = ["bootstrap"],
-    tool = "bootstrap",
-)

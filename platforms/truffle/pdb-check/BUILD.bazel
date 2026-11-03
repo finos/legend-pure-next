@@ -1,0 +1,36 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# PDBs compiled by Truffle, against what the bootstrap compiles, element for element.
+
+load("//tools/bazel:hosts.bzl", "module_selfhost")
+load("//tools/bazel:pure.bzl", "compiler_selfhost")
+
+# The compiler written in Pure, and what is generated from it, on Truffle: JIT and native image.
+compiler_selfhost("truffle", tool = "truffle")
+
+compiler_selfhost("truffle_native", tool = "truffle-native")
+
+# The modules the Truffle CLI compiles, against what the bootstrap compiles from the same sources.
+module_selfhost({
+    "diagram": {"sources": ["code", "generated"], "generated": ["generated/protocol.pure", "generated/writer.pure"]},
+    "tds": {"sources": ["code", "generated"], "generated": ["generated/writer.pure"]},
+    "legacy": {"sources": ["code"]},
+    "legacy_loader": {},
+    "diagram-analysis": {},
+    "javascript": {},
+    "protocol": {},
+    "javascript-translation": {"sources": ["code"]},
+    "truffle-translation-gallery": {},
+})

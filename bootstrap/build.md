@@ -27,7 +27,7 @@ compiler-pure is compiled from these in `//pure/specification` (`compiler_pass1`
 | the JUnit tests of each module (`…:tests`) | required (`bazel test //...`), CI job `bootstrap` |
 | the field-ID registry checks (`//tools/bazel:test_fbs_ids_up_to_date__*`) | required, CI job `bootstrap` |
 | the specification suites on the interpreter (`//bootstrap:test_*_cli`: `core` and `compiler` suites, the legacy layer) | `bootstrap` (manual; CI job `bootstrap-self-host`) |
-| compiler-pure compiled by the compiler written in Pure (`compile-via-pure`), against the Java compile | `selfhost` (manual; CI job `bootstrap-self-host`) |
+| compiler-pure compiled by the compiler written in Pure (`compile-via-pure`), against the Java compile (`pdb-check`) | `selfhost` (manual; CI job `bootstrap-self-host`) |
 
 The manual tiers run with
 `bazel test $(bazel query 'attr(tags, "[\[ ]bootstrap[,\]]", //...)')` (or `selfhost`).

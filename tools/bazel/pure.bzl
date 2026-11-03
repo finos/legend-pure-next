@@ -292,7 +292,7 @@ def compiler_selfhost(chain, tool, command = "compile", parser_mappings = True, 
         ("island_pdb_writer", "island_pdb_writer-with-tests.pdb"),
     ]:
         sh_test(
-            name = "test_%s_%s_matches_bootstrap" % (module, chain),
+            name = "test_%s_%s" % (module, chain),
             srcs = ["//tools/bazel:pdb-diff.sh"],
             args = [
                 "$(rootpath %s)" % _CLI,

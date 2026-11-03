@@ -14,8 +14,7 @@
 
 # Every suite of every owner on Truffle (tools/bazel/hosts.bzl): '<owner>_<suite>_<variant>'.
 
-load("//tools/bazel:hosts.bzl", "host_specs", "module_selfhost", "pdb_read_backs")
-load("//tools/bazel:pure.bzl", "compiler_selfhost")
+load("//tools/bazel:hosts.bzl", "host_specs", "pdb_read_backs")
 
 host_specs(host = "truffle")
 
@@ -86,21 +85,3 @@ genrule(
     tools = [_TRUFFLE_CLI],
     visibility = ["//visibility:public"],
 )
-
-# The compiler written in Pure compiled on Truffle, JIT and native image, against the one the bootstrap compiles.
-compiler_selfhost("selfhost_truffle", tool = "truffle")
-
-compiler_selfhost("selfhost_truffle_native", tool = "truffle-native")
-
-# The modules the Truffle CLI compiles, against what the bootstrap compiles from the same sources.
-module_selfhost({
-    "diagram": {"sources": ["code", "generated"], "generated": ["generated/protocol.pure", "generated/writer.pure"]},
-    "tds": {"sources": ["code", "generated"], "generated": ["generated/writer.pure"]},
-    "legacy": {"sources": ["code"]},
-    "legacy_loader": {},
-    "diagram-analysis": {},
-    "javascript": {},
-    "protocol": {},
-    "javascript-translation": {"sources": ["code"]},
-    "truffle-translation-gallery": {},
-})

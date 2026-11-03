@@ -160,9 +160,9 @@ jobs:
           - part: printer-compiled
             query: //bootstrap:test_compiler_printer-compiled_cli
           - part: self-host
-            query: //bootstrap:test_compiler_compiler_selfhost + //bootstrap:test_compiler_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_compiler_tests_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_core_metamodel_pdb_writer_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_island_pdb_writer_selfhost_bootstrap_matches_bootstrap
+            query: //bootstrap:test_compiler_compiler_selfhost + //bootstrap/pdb-check:test_compiler_bootstrap + //bootstrap/pdb-check:test_compiler_tests_bootstrap + //bootstrap/pdb-check:test_core_metamodel_pdb_writer_bootstrap + //bootstrap/pdb-check:test_island_pdb_writer_bootstrap
           - part: rest
-            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap:test_compiler_pdb_cli - //bootstrap:test_compiler_compiler_cli - //bootstrap:test_compiler_printer-compiled_cli - //bootstrap:test_compiler_compiler_selfhost - (//bootstrap:test_compiler_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_compiler_tests_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_core_metamodel_pdb_writer_selfhost_bootstrap_matches_bootstrap + //bootstrap:test_island_pdb_writer_selfhost_bootstrap_matches_bootstrap)
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap:test_compiler_pdb_cli - //bootstrap:test_compiler_compiler_cli - //bootstrap:test_compiler_printer-compiled_cli - //bootstrap:test_compiler_compiler_selfhost - (//bootstrap/pdb-check:test_compiler_bootstrap + //bootstrap/pdb-check:test_compiler_tests_bootstrap + //bootstrap/pdb-check:test_core_metamodel_pdb_writer_bootstrap + //bootstrap/pdb-check:test_island_pdb_writer_bootstrap)
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6

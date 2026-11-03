@@ -22,7 +22,7 @@ below is relative to `platforms/truffle/legend-pure-next-platform-truffle/`.
 | its JUnit tests (`…-pure:test_junit`), the usage example (`…-usage-example:test_usage_example`) | required, CI job `truffle` |
 | every owner's suites on the JIT (`//platforms/truffle:<owner>_<suite>_jit`) | required, CI jobs `truffle`, `truffle-specifications` and others (`tools/bazel/hosts.bzl`: `job_of`) |
 | the same on the native image (`…_native`) | required, CI job `truffle-native` |
-| compiler-pure compiled by Truffle, JIT and native, against the bootstrap compile (`…_selfhost`, `…_native_selfhost`) | `selfhost` (manual; CI job `truffle-native`) |
+| compiler-pure compiled by Truffle, JIT and native, against the bootstrap compile (`pdb-check`, and the corpus on them: `…_selfhost`, `…_native_selfhost`) | `selfhost` (manual; CI job `truffle-native`) |
 
 What a suite loads is derived from the module manifests (`module.json`), and a known gap is a `PENDING` entry in
 `tools/bazel/hosts.bzl`, whose test fails once the suite passes.
