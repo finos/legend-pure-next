@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // The diagram is tested the way the specification is: parser fixtures (tests/grammar/<case>/grammar.pure
-// beside the expected protocol.json) and compiler fixtures (tests/compiler/<area>/<case>.pure with
+// beside the expected protocol.json) and compiler fixtures (tests/compiler/definition/<area>/<case>.pure with
 // ###CompiledGraph + ###ReverseIndex, or ###Error + ###CompilerStats), run by the specification's own
 // runners. What the diagram adds is its compiler passes and how a compiled Diagram prints.
 
@@ -31,14 +31,14 @@ function <<platform::pure::profiles::test.TestDependency>> platform::extensions:
    platform::pure::test::grammar::runGrammarCorpus($testDir, $reportPath);
 }
 
-// Every tests/compiler/**/*.pure compiles to its ###CompiledGraph / ###Error, with the diagram's passes.
+// Every tests/compiler/definition/**/*.pure compiles to its ###CompiledGraph / ###Error, with the diagram's passes.
 function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::runCompilerTests(testDir: String[1], reportPath: String[1]): String[1]
 {
    platform::pure::compiler::test::runCompiledGraphTests($testDir, $reportPath, diagramExtension(),
       {e: PackageableElement[1], c: CompilerContext[1] | platform::extensions::pure::diagram::tests::printDiagram($e, $c)});
 }
 
-// Every tests/compiler-pdb-serialization/<area>/<case>.pdb is what tests/compiler/<area>/<case>.pure writes,
+// Every tests/compiler/pdb/<area>/<case>.pdb is what tests/compiler/definition/<area>/<case>.pure writes,
 // table by table — the specification's golden runner, with the diagram's passes (which write its elements)
 // and its schema (m3's, then the diagram fragment).
 function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::runPdbGoldenTests(testDir: String[1], goldenDir: String[1], m3Fbs: String[1], diagramFbs: String[1], reportPath: String[1]): String[1]

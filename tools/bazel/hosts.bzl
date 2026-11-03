@@ -21,6 +21,7 @@ dependencies and testDependencies of the manifests; what runs it is the host des
 
 load("@pure_suites//:suites.bzl", "MODULES")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load(":pure.bzl", "pure_bootstrap_compile")
 
 _CORE = "//pure/specification"
 
@@ -95,6 +96,10 @@ def _variant_loads(owner, variant):
     pdbs = [pdb for pdb in _loads(owner, variant["prelude"], variant.get("pdbs", {})) if pdb not in supplied]
     return pdbs + [pdb for pdb in variant.get("extra_pdbs", []) if pdb not in pdbs]
 
+def _goldens(fixture_dir):
+    """The directory of the PDB goldens of a fixture directory: '<x>/definition' to '<x>/pdb'."""
+    return fixture_dir.removesuffix("definition") + "pdb"
+
 def _normalize(path):
     """A path with its '.' and '..' segments resolved."""
     parts = []
@@ -114,8 +119,8 @@ RUNNERS = {
     "grammar": ("platform::pure::test::grammar::runGrammarCorpus_String_1__String_1__String_1_", ["{target}", "{report}"]),
     "printerCompiled": ("platform::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1__String_1_", ["{target}", "{report}"]),
     "printerProtocol": ("platform::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1__String_1_", ["{target}", "{report}"]),
-    # The goldens of a fixture directory sit beside it, in '<directory>-pdb-serialization'.
-    "pdbGolden": ("platform::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_", ["{target}", "{target}-pdb-serialization", "{m3_fbs}", "{report}"]),
+    # The goldens of a fixture directory '<x>/definition' are in '<x>/pdb' ('{goldens}').
+    "pdbGolden": ("platform::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_", ["{target}", "{goldens}", "{m3_fbs}", "{report}"]),
 }
 
 _PACKAGE_RUNNERS = ["tests", "pct"]
@@ -125,10 +130,10 @@ _PACKAGE_RUNNERS = ["tests", "pct"]
 _OWNER_RUNNERS = {
     ("diagram", "grammar"): ("platform::extensions::pure::diagram::tests::runGrammarTests_String_1__String_1__String_1_", ["{target}", "{report}"]),
     ("diagram", "compiler"): ("platform::extensions::pure::diagram::tests::runCompilerTests_String_1__String_1__String_1_", ["{target}", "{report}"]),
-    ("diagram", "pdbGolden"): ("platform::extensions::pure::diagram::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_", ["{target}", "{target}-pdb-serialization", "{m3_fbs}", "{owner_fbs}", "{report}"]),
+    ("diagram", "pdbGolden"): ("platform::extensions::pure::diagram::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_", ["{target}", "{goldens}", "{m3_fbs}", "{owner_fbs}", "{report}"]),
     ("tds", "compiler"): ("platform::extensions::pure::tds::tests::runCompilerTests_String_1__String_1__String_1_", ["{target}", "{report}"]),
     ("tds", "printerCompiled"): ("platform::extensions::pure::tds::tests::runPrinterCorpus_String_1__String_1__String_1_", ["{target}", "{report}"]),
-    ("tds", "pdbGolden"): ("platform::extensions::pure::tds::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_", ["{target}", "{target}-pdb-serialization", "{m3_fbs}", "{owner_fbs}", "{report}"]),
+    ("tds", "pdbGolden"): ("platform::extensions::pure::tds::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_", ["{target}", "{goldens}", "{m3_fbs}", "{owner_fbs}", "{report}"]),
 }
 
 def _runner(owner, runner):
@@ -354,7 +359,7 @@ def _suite_test(host_name, host, variant_name, variant, owner, test):
     function, template = variant.get("runners", {}).get(test["runner"]) or _runner(owner, test["runner"])
     owner_fbs = [_owner_fbs(owner)] if [arg for arg in template if "{owner_fbs}" in arg] else []
     args = [
-        arg.replace("{target}", target).replace("{m3_fbs}", "$(rootpath %s)" % _M3_FBS).replace("{owner_fbs}", " ".join(["$(rootpath %s)" % f for f in owner_fbs]))
+        arg.replace("{target}", target).replace("{goldens}", _goldens(target)).replace("{m3_fbs}", "$(rootpath %s)" % _M3_FBS).replace("{owner_fbs}", " ".join(["$(rootpath %s)" % f for f in owner_fbs]))
         for arg in template
     ]
     command = variant["command"]
@@ -407,7 +412,7 @@ def host_specs(host):
     ) for owner in sorted(MODULES.keys())
       if not MODULES[owner]["tests"] and variant["runs"](owner, {"suite": "unit", "runner": "tests", "target": ""})]
 
-def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compiler"):
+def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compiler/definition"):
     """Host checks: each golden of 'owner' read back by the host decoder, which must find in it the element its
     fixture defines: '<owner>_read_back_<fixture>', on the default variant of 'host'.
 
@@ -416,7 +421,7 @@ def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compile
       owner: the owner of the goldens.
       function: the read-back function, (fixture source, element path).
       fixtures: {fixture, as '<directory>/<name>' below 'fixture_dir': the element path it defines}.
-      fixture_dir: the fixture directory of the owner; its goldens are in '<fixture_dir>-pdb-serialization'.
+      fixture_dir: the fixture directory of the owner; its goldens are in '<x>/pdb' when it is '<x>/definition'.
     """
     description = HOSTS[host]
     variant = description["variants"][description["default"]]
@@ -429,9 +434,53 @@ def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compile
         # Every read-back of the host shares one report, a case per fixture (run-suite.sh: PURE_CASE).
         args = ["%s/read-back/%s.json" % (manifest["reportDir"], variant["report"]), "$(rootpath %s)" % description["tool"]] + command +
                [a for pdb in pdbs for a in ["--pdb", "$(rootpath %s)" % pdb]] +
-               ["--pdb", "%s/%s-pdb-serialization/%s.pdb" % (manifest["dir"], fixture_dir, fixture),
+               ["--pdb", "%s/%s/%s.pdb" % (manifest["dir"], _goldens(fixture_dir), fixture),
                 "--function", function, "--args", "%s/%s/%s.pure" % (manifest["dir"], fixture_dir, fixture), element],
         data = [description["tool"], "//:shared"] + pdbs + manifest["data"] + variant.get("data", []),
         env = {"PURE_CASE": fixture},
         tags = ["host:" + host, "job:" + job_of(host, description["default"], owner, "read-back")],
     ) for fixture, element in fixtures.items()]
+
+def module_selfhost(modules):
+    """Each module compiled by the bootstrap too, and compared, element for element, with what the Truffle CLI compiles
+    (test_<module>_selfhost_truffle_matches_bootstrap, and test_<module>_tests_...). What the bootstrap compile loads is
+    derived from the manifest of the module.
+
+    Args:
+      modules: {module: {"sources": its --source directories, "generated": its generated sources, by path}}.
+    """
+    for module, description in modules.items():
+        manifest = MODULES[module]
+        test_dependencies = manifest["testDependencies"]
+        mains = _closure(manifest["dependencies"] + [d for d in test_dependencies if not d.endswith("-tests")])
+        base_pdbs = [_pdb(m) for m in mains + [d for d in test_dependencies if d.endswith("-tests")]]
+        directory = "module_bootstrap/%s/" % module
+        pure_bootstrap_compile(
+            name = "%s_compile_bootstrap" % module,
+            srcs = ["//%s:compile_sources" % manifest["dir"]],
+            base_pdbs = base_pdbs,
+            outs = [directory + module + ".pdb", directory + module + "-tests.pdb"],
+            source_dir = manifest["dir"],
+            sources = description.get("sources", ["."]),
+            generated = {"//%s:%s" % (manifest["dir"], path): path for path in description.get("generated", [])},
+            split_tests = True,
+            tags = ["manual"],
+        )
+        for name, pdb in [(module, module), (module + "_tests", module + "-tests")]:
+            sh_test(
+                name = "test_%s_selfhost_truffle_matches_bootstrap" % name,
+                srcs = ["//tools/bazel:pdb-diff.sh"],
+                args = [
+                    "$(rootpath //bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap)",
+                    "$(rootpath %s)" % _pdb("core"),
+                    "$(rootpath :%s%s.pdb)" % (directory, pdb),
+                    "$(rootpath %s)" % _pdb(pdb),
+                ],
+                data = [
+                    "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap",
+                    _pdb("core"),
+                    ":%s%s.pdb" % (directory, pdb),
+                    _pdb(pdb),
+                ],
+                tags = ["manual", "selfhost"],
+            )

@@ -79,11 +79,11 @@ public class TruffleCompileToPdbTest
         Path current = Path.of("").toAbsolutePath();
         while (current != null)
         {
-            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests");
+            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests").resolve("definition");
             if (Files.isDirectory(candidate)) return candidate;
             current = current.getParent();
         }
-        throw new RuntimeException("Cannot locate pure/specification/compiler/tests");
+        throw new RuntimeException("Cannot locate pure/specification/compiler/tests/definition");
     }
 
     @BeforeAll
@@ -130,7 +130,7 @@ public class TruffleCompileToPdbTest
 
         // Silent variant — tests pull errors/stats structurally off the result; the live progress bar +
         // stats summary would flood the test output. With the specification's island handlers, as every
-        // runner of pure/specification/compiler/tests compiles (valueSpecification/island needs them).
+        // runner of pure/specification/compiler/tests/definition compiles (valueSpecification/island needs them).
         compileFn = resolver.getElement("platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__Boolean_1__CompilationResult_1_");
         if (compileFn == null
                 || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(compileFn,

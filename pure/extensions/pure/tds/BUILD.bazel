@@ -37,7 +37,6 @@ pure_module(
     name = "tds",
     srcs = glob(["code/**/*.pure", "module.json"]),
     base_pdbs = ["//pure/specification:core-tests.pdb", "//pure/specification:compiler-tests.pdb"],
-    bootstrap_base_pdbs = ["//pure/specification:core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:core-tests.pdb", "//pure/specification:compiler-tests.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb"],
     generated = {":generated/writer.pure": "generated/writer.pure"},
     sources = ["code", "generated"],
 )

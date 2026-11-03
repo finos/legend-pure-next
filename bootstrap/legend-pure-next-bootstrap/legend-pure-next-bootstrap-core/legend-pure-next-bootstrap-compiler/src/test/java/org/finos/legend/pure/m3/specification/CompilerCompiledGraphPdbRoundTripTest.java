@@ -69,14 +69,14 @@ public class CompilerCompiledGraphPdbRoundTripTest
         Path current = Path.of("").toAbsolutePath();
         while (current != null)
         {
-            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests");
+            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests").resolve("definition");
             if (Files.isDirectory(candidate))
             {
                 return candidate;
             }
             current = current.getParent();
         }
-        throw new RuntimeException("Cannot locate pure/specification/compiler/tests");
+        throw new RuntimeException("Cannot locate pure/specification/compiler/tests/definition");
     }
 
     public static Collection<Arguments> discoverTests() throws IOException

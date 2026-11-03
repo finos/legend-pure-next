@@ -32,7 +32,7 @@ import java.nio.file.Paths;
  */
 public class IslandValueReadTest
 {
-    private static final String REF = "pure/specification/compiler/tests-pdb-serialization/valueSpecification/island/ref.pdb";
+    private static final String REF = "pure/specification/compiler/tests/pdb/valueSpecification/island/ref.pdb";
 
     @Test
     public void anIslandValueReadsBackAsAnObjectOfItsClass() throws Exception

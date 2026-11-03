@@ -60,7 +60,7 @@ Compiles to `parser-mappings.pdb` (~120 elements, ~400 KB), which `//:shared` pu
 
 The downstream `legend-pure-next-bootstrap-grammar-validation` module's
 `PureParserMatchesJavaParserTest` parses every `.pure` fixture of `pure/specification/grammar/tests`
-and `pure/specification/compiler/tests` as a whole document (sections, imports,
+and `pure/specification/compiler/tests/definition` as a whole document (sections, imports,
 elements) with the Java reference parser (`TopLevelParser` + `PureLanguageParser`)
 AND with the Pure parser from `shared/parser-mappings.pdb` interpreted on the
 bootstrap runtime, and asserts the `PureFile` protocols match via `ProtocolPrinter`

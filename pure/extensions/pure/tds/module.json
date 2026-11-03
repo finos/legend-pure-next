@@ -4,9 +4,9 @@
   "dependencies": ["core", "compiler", "core_metamodel_pdb_writer"],
   "testDependencies": ["core-tests", "compiler-tests"],
   "tests": [
-    {"suite": "compiler", "runner": "compiler", "target": "tests/compiler"},
-    {"suite": "printer", "runner": "printerCompiled", "target": "tests/compiler"},
+    {"suite": "compiler", "runner": "compiler", "target": "tests/compiler/definition"},
+    {"suite": "printer", "runner": "printerCompiled", "target": "tests/compiler/definition"},
     {"suite": "unit", "runner": "tests", "target": "platform::extensions::pure::tds::tests"},
-    {"suite": "pdb", "runner": "pdbGolden", "target": "tests/compiler"}
+    {"suite": "pdb", "runner": "pdbGolden", "target": "tests/compiler/definition"}
   ]
 }

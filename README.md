@@ -97,8 +97,8 @@ pure/specification/
 
 **Compiler** ([`compiler/`](pure/specification/compiler/)) — lowering from AST to resolved metamodel:
 - [`compiler.md`](pure/specification/compiler/compiler.md) — the normative three-pass model (skeleton → structural resolution → expression resolution + validation) and reverse-reference-index semantics.
-- [`tests/`](pure/specification/compiler/tests/) — parameterized `###CompiledGraph` and `###Error` fixtures, mirrored per construct.
-- [`compiler-pure/`](pure/specification/compiler/compiler-pure/) — **the slice of the compiler written in Pure itself**. Its own `compiler/`, `printer/`, `test/` trees; this is what makes Legend Pure Next self-describing.
+- [`tests/`](pure/specification/compiler/tests/definition/) — parameterized `###CompiledGraph` and `###Error` fixtures, mirrored per construct.
+- [`compiler-pure/`](pure/specification/compiler/code/compiler-pure/) — **the slice of the compiler written in Pure itself**. Its own `compiler/`, `printer/`, `test/` trees; this is what makes Legend Pure Next self-describing.
 
 **Runtime** ([`runtime/`](pure/specification/runtime/)) — the executable surface area:
 - [`functions/`](pure/specification/runtime/functions/) — the `platform::pure::functions::*` standard library, grouped by domain: [`collection/`](pure/specification/runtime/functions/collection/), [`string/`](pure/specification/runtime/functions/string/), [`relation/`](pure/specification/runtime/functions/relation/), [`date/`](pure/specification/runtime/functions/date/), [`math/`](pure/specification/runtime/functions/math/), [`boolean/`](pure/specification/runtime/functions/boolean/), [`lang/`](pure/specification/runtime/functions/lang/), [`meta/`](pure/specification/runtime/functions/meta/), [`io/`](pure/specification/runtime/functions/io/), [`asserts/`](pure/specification/runtime/functions/asserts/).
@@ -199,9 +199,9 @@ one self-contained page you can open from disk, `test-results/dashboard.html` (a
 as a PDB comparison, is a check of one case; a module with no suite is 0/0). CI publishes the same page for `main`: [Test dashboard ↗](https://finos.github.io/legend-pure-next/dashboard.html), alongside the [translation galleries](https://finos.github.io/legend-pure-next/).
 
 What the legacy layer needs the upstream legend-pure and legend-engine sources for is not part of `//...`: run
-`bazel run //pure/extensions/legacy:<command>`, the commands being `fetch`, `generate`, `generate_loader`, `load`,
-`test_loaded`, `test_usecases`, `update_usecases` and `test_usecases_on_legacy`
-([tools/legacy.sh](pure/extensions/legacy/tools/legacy.sh)).
+`bazel run //pure/legacy:<command>`, the commands being `legend_sources_fetch`, `bridge_generate`, `legend_modules_load`,
+`test_legend_modules`, `test_legacy_pure_on_next`, `legacy_pure_expected_update` and `test_legacy_pure_on_legend_pure`
+([tools/legacy.sh](pure/legacy/tools/legacy.sh)). The loader has `bazel run //pure/legacy/loader:rewrite_generate`.
 
 ## Usage example
 

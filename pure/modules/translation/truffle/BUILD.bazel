@@ -19,7 +19,6 @@ load("//tools/bazel:pure.bzl", "pure_module")
 pure_module(
     name = "truffle-translation-gallery",
     base_pdbs = ["//pure/specification:core-tests.pdb", "//pure/modules/translation/shared:build/translation-shared.pdb"],
-    bootstrap_base_pdbs = ["//pure/specification:core.pdb", "//pure/specification:core-tests.pdb", "//pure/specification:compiler.pdb", "//pure/modules/translation/shared:build/translation-shared.pdb"],
 )
 
 exports_files(

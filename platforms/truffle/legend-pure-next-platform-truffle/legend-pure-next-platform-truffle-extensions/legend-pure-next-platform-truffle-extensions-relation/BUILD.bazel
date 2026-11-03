@@ -18,7 +18,7 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 # The language manifest and schemas the extension adds to a host, under languages/.
 _LANGUAGE_RESOURCES = {
-    "language_relation.json": "//pure/extensions/pure/relation:language_relation.json",
+    "language_relation.json": "//pure/modules/functions/relation:language_relation.json",
 }
 
 genrule(

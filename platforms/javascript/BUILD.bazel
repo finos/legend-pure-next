@@ -90,8 +90,8 @@ _TRANSLATED = {
     "extensions/diagram/grammar/parser.js": ("platform::extensions::pure::diagram::parser", _ALL),
     "extensions/diagram/compiler/compiler.js": ("platform::extensions::pure::diagram::compiler", _ALL),
     "extensions/diagram/tests.js": ("platform::extensions::pure::diagram::tests", _ALL),
-    "extensions/pure/relation/relation.js": ("platform::pure::functions::relation", _ALL),
-    "extensions/pure/relation/tests.js": ("platform::pure::functions::relation::tests", _ALL),
+    "extensions/functions/relation/relation.js": ("platform::pure::functions::relation", _ALL),
+    "extensions/functions/relation/tests.js": ("platform::pure::functions::relation::tests", _ALL),
     "extensions/pure/tds/compiler/metamodel.js": ("platform::extensions::pure::tds::metamodel", _ALL),
     "extensions/pure/tds/compiler/compiler.js": ("platform::extensions::pure::tds::compiler", _ALL),
     "extensions/pure/tds/pdb/gen.js": ("platform::extensions::pure::tds::pdb::gen", _ALL),
@@ -101,8 +101,8 @@ _TRANSLATED = {
 # The relation extension is translated from its own PDBs, which _EMIT_PDBS leaves out (its translation was
 # then empty: 'no translated function' for every relation test).
 _RELATION_PDBS = [
-    "//pure/extensions/pure/relation:build/relation.pdb",
-    "//pure/extensions/pure/relation:build/relation-tests.pdb",
+    "//pure/modules/functions/relation:build/relation.pdb",
+    "//pure/modules/functions/relation:build/relation-tests.pdb",
 ]
 
 [pure_generate(
@@ -110,7 +110,7 @@ _RELATION_PDBS = [
     out = "generated/" + out,
     args = [package],
     function = function,
-    pdbs = _EMIT_PDBS + (_RELATION_PDBS if out.startswith("extensions/pure/relation/") else []),
+    pdbs = _EMIT_PDBS + (_RELATION_PDBS if out.startswith("extensions/functions/relation/") else []),
 ) for out, (package, function) in _TRANSLATED.items()]
 
 # The languages the platform knows, from the specification and extension manifests:
@@ -119,7 +119,7 @@ _LANGUAGE_INPUTS = {
     "pure/specification/language_pure.json": "//pure/specification:language_pure.json",
     "pure/specification/language_test.json": "//pure/specification:language_test.json",
     "pure/extensions/diagram/language_diagram.json": "//pure/extensions/diagram:language_diagram.json",
-    "pure/extensions/pure/relation/language_relation.json": "//pure/extensions/pure/relation:language_relation.json",
+    "pure/modules/functions/relation/language_relation.json": "//pure/modules/functions/relation:language_relation.json",
     "pure/extensions/pure/tds/language_tds.json": "//pure/extensions/pure/tds:language_tds.json",
     "shared/specification/m3.fbs": "//:shared/specification/m3.fbs",
     "shared/specification/islandTest.fbs": "//:shared/specification/islandTest.fbs",
@@ -133,7 +133,7 @@ _LANGUAGE_OUTPUTS = [
     "generated/pure/language_pure.js",
     "generated/pure/language_test.js",
     "generated/extensions/diagram/language_diagram.js",
-    "generated/extensions/pure/relation/language_relation.js",
+    "generated/extensions/functions/relation/language_relation.js",
     "generated/extensions/pure/tds/language_tds.js",
 ]
 
@@ -322,7 +322,7 @@ copy_to_directory(
         ":parser_mappings_bundle",
         "//:shared",
         "//pure/extensions/diagram:build/diagram.pdb",
-        "//pure/extensions/pure/relation:build/relation.pdb",
+        "//pure/modules/functions/relation:build/relation.pdb",
         "//pure/extensions/pure/tds:build/tds.pdb",
         "//pure/modules/language/javascript:build/javascript.pdb",
         "//pure/modules/translation/javascript:build/javascript-translation.pdb",

@@ -71,7 +71,7 @@ maven.install(
     version_conflict_policy = "pinned",
 )
 
-# legend-pure itself, to run legacy Pure (pure/extensions/legacy/tools/legacy-pure-runner), apart from the versions
+# legend-pure itself, to run legacy Pure (pure/legacy/tools/legacy-pure-runner), apart from the versions
 # above: it is fetched only when that runner is built. The version is legend_pure_version in tools/legacy.sh there.
 maven.install(
     name = "legend_pure_runner",
@@ -136,14 +136,14 @@ pure_suites.module(
 )
 pure_suites.module(
     data = ["//pure/specification:specification_files"],
-    manifest = "//pure/specification:compiler/compiler-pure/module.json",
+    manifest = "//pure/specification:compiler/code/compiler-pure/module.json",
     report_dir = "spec",
 )
 pure_suites.module(
-    manifest = "//pure/specification:compiler/compiler-core-metamodel-pdb-writer/module.json",
+    manifest = "//pure/specification:compiler/code/compiler-core-metamodel-pdb-writer/module.json",
 )
 pure_suites.module(
-    manifest = "//pure/specification:compiler/compiler-island-pdb-writer/module.json",
+    manifest = "//pure/specification:compiler/code/compiler-island-pdb-writer/module.json",
 )
 pure_suites.module(
     manifest = "//pure/modules/protocol:module.json",
@@ -188,15 +188,15 @@ pure_suites.module(
     report_dir = "spec/tds",
 )
 pure_suites.module(
-    manifest = "//pure/extensions/pure/relation:module.json",
+    manifest = "//pure/modules/functions/relation:module.json",
     report_dir = "spec/relation",
 )
 pure_suites.module(
-    manifest = "//pure/extensions/legacy:module.json",
+    manifest = "//pure/legacy:module.json",
     report_dir = "spec/legacy",
 )
 pure_suites.module(
-    manifest = "//pure/extensions/legacy/loader:module.json",
+    manifest = "//pure/legacy/loader:module.json",
     report_dir = "spec/legacy",
 )
 use_repo(pure_suites, "pure_suites")

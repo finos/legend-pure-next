@@ -25,10 +25,10 @@ exports_files(
         "m3_fbs_addition.fbs",
         "m3_protocol_addition.ttl",
         "module.json",
-        "compiler/compiler-pure/module.json",
-        "compiler/compiler-core-metamodel-pdb-writer/module.json",
-        "compiler/compiler-island-pdb-writer/module.json",
-        "compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt",
+        "compiler/code/compiler-pure/module.json",
+        "compiler/code/compiler-core-metamodel-pdb-writer/module.json",
+        "compiler/code/compiler-island-pdb-writer/module.json",
+        "compiler/code/compiler-pure/test/islands/islandTest-fbs-field-ids.txt",
         "language_pure.json",
         "language_test.json",
         "grammar/antlr/m3/M3Lexer.g4",
@@ -190,8 +190,8 @@ _COMPILER_INPUTS = [
 filegroup(
     name = "compiler_sources",
     srcs = glob([
-        "compiler/compiler-pure/**/*.pure",
-        "compiler/compiler-pure/module.json",
+        "compiler/code/compiler-pure/**/*.pure",
+        "compiler/code/compiler-pure/module.json",
     ]),
     visibility = ["//visibility:public"],
 )
@@ -204,7 +204,7 @@ pure_bootstrap_compile(
         "compiler.pdb",
         "compiler-tests.pdb",
     ],
-    source_dir = "pure/specification/compiler/compiler-pure",
+    source_dir = "pure/specification/compiler/code/compiler-pure",
     split_tests = True,
     visibility = ["//visibility:public"],
 )
@@ -227,7 +227,7 @@ genrule(
 # tracked registry is an input: //tools/bazel:test_fbs_ids_up_to_date__island checks it is current).
 genrule(
     name = "island_fbs_generate",
-    srcs = _COMPILER_INPUTS + ["compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt"],
+    srcs = _COMPILER_INPUTS + ["compiler/code/compiler-pure/test/islands/islandTest-fbs-field-ids.txt"],
     outs = [
         "compiler/generated/islandTest.fbs",
         "compiler/generated/islandTest-fbs-field-ids.txt",
@@ -235,7 +235,7 @@ genrule(
     cmd = _EXECUTE_ON_COMPILER + """
         run --function "platform::pure::compiler::pdb::fbsgen::printFbs_String_1__String_1__String_1__Boolean_1_" \\
             --args "platform::pure::compiler::test::islands::metamodel" $$M3_FBS \\
-            $$R/$(execpath compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt)
+            $$R/$(execpath compiler/code/compiler-pure/test/islands/islandTest-fbs-field-ids.txt)
         awk '/^===FBS-BEGIN===$$/{f=1;next} /^===FBS-END===$$/{f=0} f' $$OUT > $(execpath compiler/generated/islandTest.fbs)
         awk '/^===IDS-BEGIN===$$/{f=1;next} /^===IDS-END===$$/{f=0} f' $$OUT > $(execpath compiler/generated/islandTest-fbs-field-ids.txt)
         test -s $(execpath compiler/generated/islandTest.fbs) || { echo "printFbs produced nothing for the test island values" >&2; exit 1; }
@@ -261,21 +261,21 @@ genrule(
 
 pure_bootstrap_compile(
     name = "core_metamodel_pdb_writer_compile",
-    srcs = ["compiler/compiler-core-metamodel-pdb-writer/module.json"],
+    srcs = ["compiler/code/compiler-core-metamodel-pdb-writer/module.json"],
     base_pdbs = [_CORE_PDB, ":compiler.pdb"],
     generated = {":compiler/generated/generatedWriter.pure": "generated/writer.pure"},
     outs = ["core_metamodel_pdb_writer.pdb"],
-    source_dir = "pure/specification/compiler/compiler-core-metamodel-pdb-writer",
+    source_dir = "pure/specification/compiler/code/compiler-core-metamodel-pdb-writer",
     visibility = ["//visibility:public"],
 )
 
 pure_bootstrap_compile(
     name = "island_pdb_writer_compile",
-    srcs = ["compiler/compiler-island-pdb-writer/module.json"],
+    srcs = ["compiler/code/compiler-island-pdb-writer/module.json"],
     base_pdbs = [_CORE_PDB, _CORE_TESTS_PDB, ":compiler.pdb", ":compiler-tests.pdb", ":core_metamodel_pdb_writer.pdb"],
     generated = {":compiler/generated/islandWriter.pure": "generated/writer.pure"},
     outs = ["island_pdb_writer-with-tests.pdb"],
-    source_dir = "pure/specification/compiler/compiler-island-pdb-writer",
+    source_dir = "pure/specification/compiler/code/compiler-island-pdb-writer",
     with_tests = True,
     visibility = ["//visibility:public"],
 )

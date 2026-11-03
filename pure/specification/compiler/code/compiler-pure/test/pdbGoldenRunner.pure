@@ -1,0 +1,323 @@
+// Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::compiler::test::*;
+import platform::pure::functions::date::*;
+import platform::pure::functions::io::*;
+import platform::pure::functions::string::*;
+import platform::pure::ui::progress::*;
+
+// ---------------------------------------------------------------------------
+// PDB wire contract: the Pure compiler and PDB writer against the Java reference.
+//
+//   pure-<platform> execute ... \
+//       --function "platform::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
+//       --args pure/specification/compiler/tests/definition \
+//              pure/specification/compiler/tests/pdb \
+//              shared/specification/m3.fbs \
+//              <report.json>
+//
+// Each golden <name>.pdb was written by the Java reference writer from the fixture
+// <name>.pure. The fixture is compiled with the Pure compiler, written with the Pure
+// writer, and both archives are decoded with the Pure reader (inflate.pure opens the
+// golden's deflated entries) and compared, following the rules of the JavaScript
+// platform's struct-diff.js:
+//   - element entries: same type, then every schema field, recursively;
+//     PointerRefs by kind and path, AncestorRefs by depth, set-like vectors
+//     (children, resolved type and multiplicity parameters) as multisets;
+//   - a Package entry only in the golden is skipped (the Java compiler registers
+//     file-anchor packages that the Pure compile result doesn't include);
+//   - other sections (manifest, functionIndex, reverseReferenceIndex) byte for byte,
+//     and elementIndex too when both archives hold the same element entries.
+// ---------------------------------------------------------------------------
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::runPdbGoldenTests(testDir:String[1], goldenDir:String[1], schemaPath:String[1], reportPath:String[1]):String[1]
+{
+    // With the test package's island handlers, as the compiled-graph runner: valueSpecification/island has a golden too.
+    // Their values are written with the test package's schema fragment, staged beside m3.fbs (islandTest.fbs).
+    let dir = $schemaPath->substring(0, $schemaPath->lastIndexOf('/'));
+    let fragment = directoryTree($dir)->filter(f | $f->endsWith('/islandTest.fbs'));
+    platform::pure::compiler::test::pdb::runPdbGoldenTests($testDir, $goldenDir, $schemaPath->concatenate($fragment), $reportPath, platform::pure::compiler::test::islandTestExtension());
+}
+
+// With a language extension's compiler passes (which also write its elements): its fixtures compile and
+// archive like any other. The schema files are read as ONE text — m3's, then the extension's fragment,
+// which refers to m3's tables. The call above passes the test package's island handlers.
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::runPdbGoldenTests(testDir:String[1], goldenDir:String[1], schemaPaths:String[*], reportPath:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):String[1]
+{
+    let schema = platform::pure::compiler::pdb::schema::parseFbs($schemaPaths->map(p | readFile($p))->joinStrings('\n'));
+    let goldens = directoryTree($goldenDir)->filter(f | $f->endsWith('.pdb'));
+    let total = $goldens->size();
+    startProgress('Comparing ' + $total->toString() + ' PDB archives with the Java goldens in ' + $goldenDir + '...');
+    let start = currentTimeMillis();
+    let results = range(0, $total)->map(i | platform::pure::compiler::test::pdb::goldenCase($testDir, $goldenDir, $schema, $goldens->at($i), $i, $total, $extensions));
+    let elapsedMs = currentTimeMillis() - $start;
+    finishProgress();
+
+    let failures = $results->filter(r | $r.error->isNotEmpty());
+    $failures->map(r |
+        println('  FAIL: ' + $r.name);
+        println('    ' + $r.error->toOne().message);
+    );
+    let failed = $failures->size();
+    let summary = if($failed > 0,
+        | 'FAIL: ' + ($total - $failed)->toString() + ' / ' + $total->toString() + ' archives match their golden (' + $failed->toString() + ' differ) in ' + $elapsedMs->toString() + ' ms',
+        | 'OK: ' + $total->toString() + ' / ' + $total->toString() + ' archives match their golden in ' + $elapsedMs->toString() + ' ms');
+    platform::pure::test::report::writeSuiteReport($reportPath, 'pdbGolden', $elapsedMs,
+        $results->map(r | ^platform::pure::test::report::TestCaseReport(id = $r.name, durationMs = $r.durationMs, error = $r.error)));
+    assert($failed == 0, $summary);
+    $summary;
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::goldenCase(testDir:String[1], goldenDir:String[1], schema:platform::pure::compiler::pdb::schema::FbsSchema[1], goldenPath:String[1], i:Integer[1], total:Integer[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):platform::pure::compiler::test::CompiledGraphTestResult[1]
+{
+    let name = $goldenPath->substring($goldenDir->length() + 1, $goldenPath->length() - 4);
+    tickProgress($i + 1, $total, $name);
+    let caseStart = currentTimeMillis();
+    let result = tryEval(| platform::pure::compiler::test::pdb::assertMatchesGolden(readFile($testDir + '/' + $name + '.pure'), $name, readFileBytes($goldenPath), $schema, $extensions));
+    ^platform::pure::compiler::test::CompiledGraphTestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $caseStart);
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::assertMatchesGolden(content:String[1], sourceId:String[1], golden:Binary[1], schema:platform::pure::compiler::pdb::schema::FbsSchema[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):Boolean[1]
+{
+    let written = platform::pure::compiler::test::pdb::writeFixture($content, $sourceId, $extensions);
+    let findings = platform::pure::compiler::test::pdb::diffArchives($schema, $written, $golden);
+    assert($findings->isEmpty(), | $findings->size()->toString() + ' difference(s) from the golden, first: ' + $findings->at(0));
+}
+
+// The archive a fixture compiles to, as hex, with the specification's island handlers — how the island
+// goldens (valueSpecification/island) are written: by the Pure writer, as the diagram's are, since the
+// Java compiler cannot build the test package's island values (`bazel run //:update_pdb_goldens__island`).
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::goldenHexOf(testDir:String[1], name:String[1]):String[1]
+{
+    platform::pure::compiler::test::pdb::writeFixture(readFile($testDir + '/' + $name + '.pure'), $name, platform::pure::compiler::test::islandTestExtension())
+       ->platform::pure::functions::binary::binaryToHex();
+}
+
+// The archive a fixture compiles to — what its golden holds. The writer asks the given extensions
+// (pureExtension() is always among them) for each element's serializer.
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::writeFixture(content:String[1], sourceId:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):Binary[1]
+{
+    let result = platform::pure::compiler::test::pdb::compileFixture($content, $sourceId, $extensions);
+    assert($result.errors->isEmpty(), | 'the fixture does not compile: ' + $result.errors->joinStrings('; '));
+    if($result.context->isEmpty(),
+        | platform::pure::compiler::pdb::archive::writeArchive($result.elements, platform::pure::compiler::extension::pureExtension()->concatenate($extensions), 'test', '*', ['core']),
+        | platform::pure::compiler::pdb::archive::writeArchive($result.elements, platform::pure::compiler::extension::pureExtension()->concatenate($extensions), 'test', '*', ['core'], $result.context->toOne().referencedBy));
+}
+
+// Compiles a fixture as assertCompiledGraph does: lines before ###Pure are blanked so
+// positions stay aligned, and each ###Pure / ###File chunk becomes its own file.
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::compileFixture(content:String[1], sourceId:String[1]):platform::pure::compiler::CompilationResult[1]
+{
+    platform::pure::compiler::test::pdb::compileFixture($content, $sourceId, []);
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::compileFixture(content:String[1], sourceId:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):platform::pure::compiler::CompilationResult[1]
+{
+    let pureStart = $content->indexOf('###' + 'Pure');
+    let prepared = if($pureStart > 0,
+        | $content->substring(0, $pureStart)->split('\n')->map(l | '')->joinStrings('\n') + $content->substring($pureStart),
+        | $content);
+    let files = manageFileSections(platform::pure::functions::meta::parse($sourceId, $prepared));
+    if($extensions->isEmpty(),
+        | platform::pure::compiler::compile($files, false, true),
+        | platform::pure::compiler::compile($files, $extensions, false, true));
+}
+
+// --- archive diff ----------------------------------------------------------
+
+// Every difference between the Pure-written archive and the golden, as readable lines.
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::diffArchives(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], pure:Binary[1], golden:Binary[1]):String[*]
+{
+    let pureEntries   = platform::pure::compiler::pdb::archive::entryNames($pure);
+    let goldenEntries = platform::pure::compiler::pdb::archive::entryNames($golden);
+    let pureElements   = $pureEntries->filter(n | platform::pure::compiler::pdb::schema::startsWith($n, 'elements/'));
+    let goldenElements = $goldenEntries->filter(n | platform::pure::compiler::pdb::schema::startsWith($n, 'elements/'));
+    let goldenPaths = $goldenElements->map(n | platform::pure::compiler::test::pdb::entryPath($n));
+    let sameElements = ($pureElements->size() == $goldenElements->size()) && $pureElements->forAll(n | $goldenElements->contains($n));
+    let elementFindings = $goldenElements->map(g | platform::pure::compiler::test::pdb::elementFinding($schema, $pure, $pureElements, $golden, $g));
+    let extraFindings = $pureElements
+        ->filter(n | !$goldenPaths->contains(platform::pure::compiler::test::pdb::entryPath($n)))
+        ->map(n | 'only in the Pure archive: ' + platform::pure::compiler::test::pdb::entryPath($n));
+    let sectionNames = $pureEntries->concatenate($goldenEntries)
+        ->filter(n | !platform::pure::compiler::pdb::schema::startsWith($n, 'elements/'))
+        ->removeDuplicates()
+        ->filter(n | $sameElements || ($n != 'elementIndex'));
+    let sectionFindings = $sectionNames->map(n | platform::pure::compiler::test::pdb::sectionFinding($pure, $pureEntries, $golden, $goldenEntries, $n));
+    $elementFindings->concatenate($extraFindings)->concatenate($sectionFindings);
+}
+
+// "elements/a/b/C.Class" -> "a::b::C"
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::entryPath(name:String[1]):String[1]
+{
+    let rest = $name->substring(9);
+    $rest->substring(0, $rest->lastIndexOf('.'))->split('/')->joinStrings('::');
+}
+
+// "elements/a/b/C.Class" -> "Class"
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::entryType(name:String[1]):String[1]
+{
+    $name->substring($name->lastIndexOf('.') + 1);
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::elementFinding(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], pure:Binary[1], pureElements:String[*], golden:Binary[1], goldenEntry:String[1]):String[*]
+{
+    let path = platform::pure::compiler::test::pdb::entryPath($goldenEntry);
+    let type = platform::pure::compiler::test::pdb::entryType($goldenEntry);
+    let match = $pureElements->filter(n | platform::pure::compiler::test::pdb::entryPath($n) == $path);
+    if([pair(| $match->isEmpty() && ($type == 'Package'), | []->cast(@String)),
+        pair(| $match->isEmpty(), | ['missing from the Pure archive: ' + $path]),
+        pair(| platform::pure::compiler::test::pdb::entryType($match->at(0)) != $type,
+             | [$path + ' is a ' + platform::pure::compiler::test::pdb::entryType($match->at(0)) + ' in the Pure archive, a ' + $type + ' in the golden'])],
+       | platform::pure::compiler::test::pdb::compareNode($schema,
+            platform::pure::compiler::pdb::reader::elementNode(platform::pure::compiler::pdb::archive::entryBytes($pure, $match->at(0)), $type),
+            platform::pure::compiler::pdb::reader::elementNode(platform::pure::compiler::pdb::archive::entryBytes($golden, $goldenEntry), $type),
+            $path)->take(1));
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::sectionFinding(pure:Binary[1], pureEntries:String[*], golden:Binary[1], goldenEntries:String[*], name:String[1]):String[*]
+{
+    let inPure   = $pureEntries->contains($name);
+    let inGolden = $goldenEntries->contains($name);
+    if([pair(| !$inPure,   | ['section missing from the Pure archive: ' + $name]),
+        pair(| !$inGolden, | ['section only in the Pure archive: ' + $name]),
+        pair(| !platform::pure::compiler::test::pdb::sameBytes(
+                    platform::pure::compiler::pdb::archive::entryBytes($pure, $name),
+                    platform::pure::compiler::pdb::archive::entryBytes($golden, $name)),
+             | ['section bytes differ: ' + $name])],
+       | []->cast(@String));
+}
+
+// Whole-buffer comparison, now one native call rather than an index-by-index
+// walk over two boxed lists.
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::sameBytes(a:Binary[1], b:Binary[1]):Boolean[1]
+{
+    $a->platform::pure::functions::binary::binaryEquals($b);
+}
+
+// --- node comparison ----------------------------------------------------------
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::compareNode(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], a:platform::pure::compiler::pdb::reader::FbsNode[1], b:platform::pure::compiler::pdb::reader::FbsNode[1], path:String[1]):String[*]
+{
+    if([pair(| $a.type != $b.type,
+             | [$path + ': a ' + $a.type + ' in the Pure archive, a ' + $b.type + ' in the golden']),
+        // A language extension's value: its blobs compare as the tables they hold (the schema includes the
+        // extension's fragment), which says WHERE they differ rather than that two byte runs do.
+        pair(| $a.type == 'ExtensionValueDef',
+             | platform::pure::compiler::test::pdb::compareNode($schema,
+                  platform::pure::compiler::pdb::reader::decodeExtensionValue($schema, $a),
+                  platform::pure::compiler::pdb::reader::decodeExtensionValue($schema, $b), $path))],
+        | platform::pure::compiler::pdb::schema::table($schema, $a.type)->toOne().fields
+            ->map(f | platform::pure::compiler::test::pdb::compareField($schema, $a, $b, $f, $path + '.' + $f.name)));
+}
+
+// Vectors are compared for presence first (absent differs from present-but-empty);
+// scalars compare present-or-default, as the writers elide default scalars.
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::compareField(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], a:platform::pure::compiler::pdb::reader::FbsNode[1], b:platform::pure::compiler::pdb::reader::FbsNode[1], field:platform::pure::compiler::pdb::schema::FbsField[1], path:String[1]):String[*]
+{
+    let inPure   = platform::pure::compiler::pdb::reader::fieldPos($a, $field.id) != -1;
+    let inGolden = platform::pure::compiler::pdb::reader::fieldPos($b, $field.id) != -1;
+    if([pair(| !$field.vector,
+             | platform::pure::compiler::test::pdb::compareValue($schema,
+                  platform::pure::compiler::pdb::reader::readField($schema, $a, $field.name)->head(),
+                  platform::pure::compiler::pdb::reader::readField($schema, $b, $field.name)->head(), $path)),
+        pair(| $inPure != $inGolden,
+             | [$path + ': ' + if($inPure, | 'present', | 'absent') + ' in the Pure archive, ' + if($inGolden, | 'present', | 'absent') + ' in the golden']),
+        pair(| !$inPure, | []->cast(@String)),
+        // A byte vector compares by content (`==` on Binary is identity on every platform), decided by the
+        // field's declared type rather than by asking the value what it is.
+        pair(| $field.type == 'ubyte',
+             | if(platform::pure::compiler::test::pdb::sameBytes(
+                     platform::pure::compiler::pdb::reader::readField($schema, $a, $field.name)->cast(@Binary)->toOne(),
+                     platform::pure::compiler::pdb::reader::readField($schema, $b, $field.name)->cast(@Binary)->toOne()),
+                  | []->cast(@String),
+                  | [$path + ': different bytes in the Pure archive and the golden']))],
+       | platform::pure::compiler::test::pdb::compareVector($schema,
+            platform::pure::compiler::pdb::reader::readField($schema, $a, $field.name),
+            platform::pure::compiler::pdb::reader::readField($schema, $b, $field.name), $field.name, $path));
+}
+
+// children and the resolved type/multiplicity parameters are sets: their stored order
+// differs between writers and carries no meaning, so they are compared sorted.
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::compareVector(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], a:Any[*], b:Any[*], fieldName:String[1], path:String[1]):String[*]
+{
+    let isSet = ['children', 'resolved_type_parameters', 'resolved_multiplicity_parameters']->contains($fieldName);
+    let left  = if($isSet, | platform::pure::compiler::test::pdb::sortedForSet($schema, $a), | $a);
+    let right = if($isSet, | platform::pure::compiler::test::pdb::sortedForSet($schema, $b), | $b);
+    if($left->size() != $right->size(),
+        | [$path + '.length: ' + $left->size()->toString() + ' in the Pure archive, ' + $right->size()->toString() + ' in the golden'],
+        | range(0, $left->size())->map(i | platform::pure::compiler::test::pdb::compareValue($schema,
+              $left->at($i), $right->at($i), $path + '[' + $i->toString() + ']')));
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::compareValue(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], a:Any[0..1], b:Any[0..1], path:String[1]):String[*]
+{
+    let differs = [$path + ': ' + platform::pure::compiler::test::pdb::describe($a) + ' in the Pure archive, ' + platform::pure::compiler::test::pdb::describe($b) + ' in the golden'];
+    if([pair(| $a->isEmpty() && $b->isEmpty(), | []->cast(@String)),
+        pair(| $a->isEmpty() || $b->isEmpty(), | $differs),
+        pair(| $a->toOne()->instanceOf(platform::pure::compiler::pdb::reader::ReadPointerRef) || $b->toOne()->instanceOf(platform::pure::compiler::pdb::reader::ReadPointerRef),
+             | if(platform::pure::compiler::test::pdb::sameValueKey($schema, $a->toOne(), $b->toOne()), | []->cast(@String), | $differs)),
+        pair(| $a->toOne()->instanceOf(platform::pure::compiler::pdb::reader::ReadAncestorRef) || $b->toOne()->instanceOf(platform::pure::compiler::pdb::reader::ReadAncestorRef),
+             | if(platform::pure::compiler::test::pdb::sameValueKey($schema, $a->toOne(), $b->toOne()), | []->cast(@String), | $differs)),
+        pair(| $a->toOne()->instanceOf(platform::pure::compiler::pdb::reader::FbsNode) && $b->toOne()->instanceOf(platform::pure::compiler::pdb::reader::FbsNode),
+             | platform::pure::compiler::test::pdb::compareNode($schema, $a->toOne()->cast(@platform::pure::compiler::pdb::reader::FbsNode), $b->toOne()->cast(@platform::pure::compiler::pdb::reader::FbsNode), $path)),
+        pair(| $a->toOne()->instanceOf(platform::pure::compiler::pdb::reader::FbsNode) || $b->toOne()->instanceOf(platform::pure::compiler::pdb::reader::FbsNode), | $differs),
+        pair(| $a->toOne() == $b->toOne(), | []->cast(@String))],
+       | $differs);
+}
+
+// References compare by what they point at: kind and path, or ancestor depth.
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::sameValueKey(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], a:Any[1], b:Any[1]):Boolean[1]
+{
+    platform::pure::compiler::test::pdb::valueKey($schema, $a) == platform::pure::compiler::test::pdb::valueKey($schema, $b);
+}
+
+// A key identifying a value: used to compare references and to order set members
+// (a named node by its name, a reference by its target).
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::valueKey(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], v:Any[1]):String[1]
+{
+    if([pair(| $v->instanceOf(platform::pure::compiler::pdb::reader::ReadPointerRef),
+             | let ref = $v->cast(@platform::pure::compiler::pdb::reader::ReadPointerRef);
+               'P' + $ref.kind->toString() + ':' + $ref.segs->joinStrings('::');),
+        pair(| $v->instanceOf(platform::pure::compiler::pdb::reader::ReadAncestorRef),
+             | 'A:' + $v->cast(@platform::pure::compiler::pdb::reader::ReadAncestorRef).depth->toString()),
+        pair(| $v->instanceOf(platform::pure::compiler::pdb::reader::FbsNode),
+             | platform::pure::compiler::test::pdb::nodeKey($schema, $v->cast(@platform::pure::compiler::pdb::reader::FbsNode)))],
+       | 'S:' + $v->toString());
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::nodeKey(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], node:platform::pure::compiler::pdb::reader::FbsNode[1]):String[1]
+{
+    let hasName = platform::pure::compiler::pdb::schema::table($schema, $node.type)->toOne().fields->exists(f | $f.name == 'name');
+    let name = if($hasName, | platform::pure::compiler::pdb::reader::readField($schema, $node, 'name')->take(1), | []);
+    if($name->isNotEmpty() && $name->toOne()->instanceOf(String),
+        | 'M:' + $name->toOne()->cast(@String),
+        | 'N:' + $node.type);
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::sortedForSet(schema:platform::pure::compiler::pdb::schema::FbsSchema[1], values:Any[*]):Any[*]
+{
+    $values->sort({x, y | platform::pure::compiler::test::pdb::valueKey($schema, $x)->compare(platform::pure::compiler::test::pdb::valueKey($schema, $y))});
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::describe(v:Any[0..1]):String[1]
+{
+    if([pair(| $v->isEmpty(), | '<absent>'),
+        pair(| $v->toOne()->instanceOf(String), | '\'' + $v->toOne()->cast(@String) + '\''),
+        pair(| $v->toOne()->instanceOf(platform::pure::compiler::pdb::reader::FbsNode), | '<' + $v->toOne()->cast(@platform::pure::compiler::pdb::reader::FbsNode).type + '>'),
+        pair(| $v->toOne()->instanceOf(platform::pure::compiler::pdb::reader::ReadPointerRef), | '<reference ' + $v->toOne()->cast(@platform::pure::compiler::pdb::reader::ReadPointerRef).segs->joinStrings('::') + '>'),
+        pair(| $v->toOne()->instanceOf(platform::pure::compiler::pdb::reader::ReadAncestorRef), | '<ancestor ' + $v->toOne()->cast(@platform::pure::compiler::pdb::reader::ReadAncestorRef).depth->toString() + '>')],
+       | $v->toOne()->toString());
+}

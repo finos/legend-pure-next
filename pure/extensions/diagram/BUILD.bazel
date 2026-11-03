@@ -43,7 +43,7 @@ filegroup(
 
 filegroup(
     name = "compiler_pdb_goldens",
-    srcs = glob(["tests/compiler-pdb-serialization/**"]),
+    srcs = glob(["tests/compiler/pdb/**"]),
     visibility = ["//visibility:public"],
 )
 
@@ -51,7 +51,6 @@ pure_module(
     name = "diagram",
     srcs = glob(["code/**/*.pure", "module.json"]),
     base_pdbs = ["//pure/specification:core-tests.pdb", "//pure/specification:compiler-tests.pdb"],
-    bootstrap_base_pdbs = ["//pure/specification:core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:core-tests.pdb", "//pure/specification:compiler-tests.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb"],
     generated = {
         ":generated/protocol.pure": "generated/protocol.pure",
         ":generated/writer.pure": "generated/writer.pure",

@@ -19,7 +19,6 @@ load("//tools/bazel:pure.bzl", "pure_module")
 pure_module(
     name = "javascript",
     base_pdbs = [],
-    bootstrap_base_pdbs = ["//pure/specification:core.pdb"],
 )
 
 exports_files(

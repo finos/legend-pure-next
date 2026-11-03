@@ -19,7 +19,6 @@ load("//tools/bazel:pure.bzl", "pure_module")
 pure_module(
     name = "diagram-analysis",
     base_pdbs = ["//pure/extensions/diagram:build/diagram.pdb"],
-    bootstrap_base_pdbs = ["//pure/specification:core.pdb", "//pure/extensions/diagram:build/diagram.pdb"],
 )
 
 exports_files(

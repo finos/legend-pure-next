@@ -20,6 +20,5 @@ pure_module(
     name = "javascript-translation",
     srcs = glob(["code/**/*.pure", "module.json"]),
     base_pdbs = ["//pure/specification:core-tests.pdb", "//pure/modules/language/javascript:build/javascript.pdb", "//pure/modules/translation/shared:build/translation-shared.pdb"],
-    bootstrap_base_pdbs = ["//pure/specification:core.pdb", "//pure/specification:core-tests.pdb", "//pure/modules/language/javascript:build/javascript.pdb", "//pure/modules/translation/shared:build/translation-shared.pdb"],
     sources = ["code"],
 )

@@ -1,0 +1,1 @@
+{"name":"legacy_pure_functionValues","pattern":"(usecases::functionValues)(::.*)?","dependencies":["platform","legacy_pure_reflection"]}

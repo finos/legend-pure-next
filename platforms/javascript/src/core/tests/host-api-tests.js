@@ -437,10 +437,10 @@ check("a ###Diagram section compiles to a Diagram element with its types resolve
     host.module("runtime").removeSource("diagram.pure");
 });
 
-// A golden beside the diagram's compiler fixtures (pure/extensions/diagram/tests/compiler-pdb-serialization,
+// A golden beside the diagram's compiler fixtures (pure/extensions/diagram/tests/compiler/pdb,
 // regenerated with `bazel run //:update_pdb_goldens__diagram`): every view kind, with an association-
 // owned property pointer, read back with THIS host's decoder.
-const DIAGRAM_GOLDEN = join(REPO, "pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/propertyAndAssociation.pdb");
+const DIAGRAM_GOLDEN = join(REPO, "pure/extensions/diagram/tests/compiler/pdb/diagram/propertyAndAssociation.pdb");
 
 check("a PDB holding ###Diagram elements reads back once the diagram language is registered", () => {
     // The host registered the diagram extension, and with it the schema fragment generated from its
@@ -465,7 +465,7 @@ check("a PDB holding ###Diagram elements reads back once the diagram language is
     }
 });
 
-const DIAGRAM_GOLDENS = join(REPO, "pure/extensions/diagram/tests/compiler-pdb-serialization/diagram");
+const DIAGRAM_GOLDENS = join(REPO, "pure/extensions/diagram/tests/compiler/pdb/diagram");
 
 check("a ###Diagram golden reads back every edge styling field and multi-point path", () => {
     host.register(PdbModule.open(join(DIAGRAM_GOLDENS, "complexGeometry.pdb")));
@@ -512,7 +512,7 @@ check("a ###Diagram golden reads back pointers to class-typed, generic and inher
 // ExtensionValueDef) reads back as an object of its own class, its pointers resolved like any other. The
 // archive is the specification's island golden for `#REF{m::Person}#`; the schema fragment comes with the
 // test language (language_test.json).
-const ISLAND_GOLDEN = join(REPO, "pure/specification/compiler/tests-pdb-serialization/valueSpecification/island/ref.pdb");
+const ISLAND_GOLDEN = join(REPO, "pure/specification/compiler/tests/pdb/valueSpecification/island/ref.pdb");
 
 check("an island value reads back as an object of its own class", () => {
     host.register(PdbModule.open(ISLAND_GOLDEN));
@@ -541,10 +541,10 @@ check("the TDS extension is found under pure/extensions/pure", () => {
     assert.deepEqual(tds.pdbs, ["pure/extensions/pure/tds/build/tds.pdb"]);
 });
 
-// A TDS golden (pure/extensions/pure/tds/tests/compiler-pdb-serialization, regenerated with
+// A TDS golden (pure/extensions/pure/tds/tests/compiler/pdb, regenerated with
 // `bazel run //:update_pdb_goldens__tds`): the `#TDS{…}#` in its fixture's function, decoded by THIS
 // host with the schema fragment the tds language declares.
-const TDS_GOLDEN = join(REPO, "pure/extensions/pure/tds/tests/compiler-pdb-serialization/tds/typedHeader.pdb");
+const TDS_GOLDEN = join(REPO, "pure/extensions/pure/tds/tests/compiler/pdb/tds/typedHeader.pdb");
 
 check("a TDS value reads back as the relation it compiled to", () => {
     host.register(PdbModule.open(TDS_GOLDEN));

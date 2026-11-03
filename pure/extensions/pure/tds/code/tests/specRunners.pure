@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The TDS is tested the way the specification is: compiler fixtures (tests/compiler/<area>/<case>.pure with
+// The TDS is tested the way the specification is: compiler fixtures (tests/compiler/definition/<area>/<case>.pure with
 // ###CompiledGraph + ###ReverseIndex, or ###Error + ###CompilerStats), run by the specification's own
 // runner with the TDS extension, plus the line a TDS prints as in ###CompiledGraph.
 
@@ -37,20 +37,20 @@ function <<platform::pure::profiles::test.TestDependency>> platform::extensions:
    $indent + 'TDS' + platform::pure::compiler::test::islandGraphSuffix($tds, $ctx) + $rows->map(r | '\n' + $indent + '  | ' + $r)->joinStrings('');
 }
 
-// Every tests/compiler/**/*.pure compiles to its ###CompiledGraph / ###Error, with the TDS extension.
+// Every tests/compiler/definition/**/*.pure compiles to its ###CompiledGraph / ###Error, with the TDS extension.
 function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::tds::tests::runCompilerTests(testDir: String[1], reportPath: String[1]): String[1]
 {
    platform::pure::compiler::test::runCompiledGraphTests($testDir, $reportPath, platform::extensions::pure::tds::tests::tdsTestExtension(), []);
 }
 
-// Every success fixture under tests/compiler prints back as written: its TDS literals through the TDS
+// Every success fixture under tests/compiler/definition prints back as written: its TDS literals through the TDS
 // handler's printer.
 function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::tds::tests::runPrinterCorpus(testDir: String[1], reportPath: String[1]): String[1]
 {
    platform::pure::compiler::test::printer::runCompiledPrinterCorpus($testDir, $reportPath, tdsExtension());
 }
 
-// Every tests/compiler-pdb-serialization/<area>/<case>.pdb is what tests/compiler/<area>/<case>.pure writes,
+// Every tests/compiler/pdb/<area>/<case>.pdb is what tests/compiler/definition/<area>/<case>.pure writes,
 // table by table — the specification's golden runner with the TDS extension and its schema fragment.
 function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::tds::tests::runPdbGoldenTests(testDir: String[1], goldenDir: String[1], m3Fbs: String[1], tdsFbs: String[1], reportPath: String[1]): String[1]
 {

@@ -30,7 +30,7 @@ _FBS_ID_REGISTRIES = {
         "//pure/extensions/diagram:generated/diagram-fbs-field-ids.txt",
     ),
     "island": (
-        "//pure/specification:compiler/compiler-pure/test/islands/islandTest-fbs-field-ids.txt",
+        "//pure/specification:compiler/code/compiler-pure/test/islands/islandTest-fbs-field-ids.txt",
         "//pure/specification:compiler/generated/islandTest-fbs-field-ids.txt",
     ),
     "tds": (
@@ -97,25 +97,25 @@ _PDB_GOLDENS = {
             "//pure/specification:island_pdb_writer-with-tests.pdb",
         ],
         "platform::pure::compiler::test::pdb::goldenHexOf_String_1__String_1__String_1_",
-        "pure/specification/compiler/tests",
+        "pure/specification/compiler/tests/definition",
         "valueSpecification/island",
-        "pure/specification/compiler/tests-pdb-serialization",
+        "pure/specification/compiler/tests/pdb",
     ),
     "diagram": (
         _TRUFFLE_CLI,
         _TRUFFLE_PRELUDE + ["//pure/extensions/diagram:build/diagram.pdb", "//pure/extensions/diagram:build/diagram-tests.pdb"],
         "platform::extensions::pure::diagram::tests::goldenHexOf_String_1__String_1__String_1_",
-        "pure/extensions/diagram/tests/compiler",
+        "pure/extensions/diagram/tests/compiler/definition",
         ".",
-        "pure/extensions/diagram/tests/compiler-pdb-serialization",
+        "pure/extensions/diagram/tests/compiler/pdb",
     ),
     "tds": (
         _TRUFFLE_CLI,
         _TRUFFLE_PRELUDE + ["//pure/extensions/pure/tds:build/tds.pdb", "//pure/extensions/pure/tds:build/tds-tests.pdb"],
         "platform::extensions::pure::tds::tests::goldenHexOf_String_1__String_1__String_1_",
-        "pure/extensions/pure/tds/tests/compiler",
+        "pure/extensions/pure/tds/tests/compiler/definition",
         ".",
-        "pure/extensions/pure/tds/tests/compiler-pdb-serialization",
+        "pure/extensions/pure/tds/tests/compiler/pdb",
     ),
 }
 
@@ -141,7 +141,7 @@ sh_binary(
     args = [
         "$(rootpath %s:junit_runner)" % _BOOTSTRAP_TESTS,
         "org.finos.legend.pure.m3.specification.PdbGoldenGeneratorTest",
-        "pure/specification/compiler/tests-pdb-serialization",
+        "pure/specification/compiler/tests/pdb",
     ],
     data = [
         _BOOTSTRAP_TESTS + ":junit_runner",
