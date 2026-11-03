@@ -154,15 +154,15 @@ jobs:
       matrix:
         include:
           - part: pdb-golden
-            query: //bootstrap:test_compiler_pdb_cli
+            query: //bootstrap/modules/test:test_compiler_pdb_cli
           - part: compiler
-            query: //bootstrap:test_compiler_compiler_cli
+            query: //bootstrap/modules/test:test_compiler_compiler_cli
           - part: printer-compiled
-            query: //bootstrap:test_compiler_printer-compiled_cli
+            query: //bootstrap/modules/test:test_compiler_printer-compiled_cli
           - part: self-host
-            query: //bootstrap:test_compiler_compiler_selfhost + //bootstrap/pdb-check:test_compiler_bootstrap + //bootstrap/pdb-check:test_compiler_tests_bootstrap + //bootstrap/pdb-check:test_core_metamodel_pdb_writer_bootstrap + //bootstrap/pdb-check:test_island_pdb_writer_bootstrap
+            query: //bootstrap/modules/test:test_compiler_compiler_selfhost + //bootstrap/modules/pdb-check:test_compiler_pure + //bootstrap/modules/pdb-check:test_compiler_tests_pure + //bootstrap/modules/pdb-check:test_core_metamodel_pdb_writer_pure + //bootstrap/modules/pdb-check:test_island_pdb_writer_pure
           - part: rest
-            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap:test_compiler_pdb_cli - //bootstrap:test_compiler_compiler_cli - //bootstrap:test_compiler_printer-compiled_cli - //bootstrap:test_compiler_compiler_selfhost - (//bootstrap/pdb-check:test_compiler_bootstrap + //bootstrap/pdb-check:test_compiler_tests_bootstrap + //bootstrap/pdb-check:test_core_metamodel_pdb_writer_bootstrap + //bootstrap/pdb-check:test_island_pdb_writer_bootstrap)
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap/modules/test:test_compiler_pdb_cli - //bootstrap/modules/test:test_compiler_compiler_cli - //bootstrap/modules/test:test_compiler_printer-compiled_cli - //bootstrap/modules/test:test_compiler_compiler_selfhost - (//bootstrap/modules/pdb-check:test_compiler_pure + //bootstrap/modules/pdb-check:test_compiler_tests_pure + //bootstrap/modules/pdb-check:test_core_metamodel_pdb_writer_pure + //bootstrap/modules/pdb-check:test_island_pdb_writer_pure)
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6

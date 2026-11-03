@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The suites of the specification on the bootstrap (tools/bazel/hosts.bzl): '<owner>_<suite>_<variant>', on demand
-# (tags 'manual', 'bootstrap'): the bootstrap builds Truffle, which tests compiler-pure on every pull request.
+# Step 2 on the bootstrap: the compiler written in Pure, against the Java compiler.
 
-load("//tools/bazel:hosts.bzl", "host_specs")
+load("//tools/bazel:hosts.bzl", "module_pdb_checks")
 
-host_specs(host = "bootstrap")
+module_pdb_checks(
+    "pure",
+    "//bootstrap/modules/compile",
+    modules = ["compiler", "core_metamodel_pdb_writer", "island_pdb_writer"],
+    tags = ["bootstrap"],
+)

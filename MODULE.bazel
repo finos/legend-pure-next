@@ -137,13 +137,25 @@ pure_suites.module(
 pure_suites.module(
     data = ["//pure/specification:specification_files"],
     manifest = "//pure/specification:compiler/code/compiler-pure/module.json",
+    compile_srcs = ["//pure/specification:compiler_sources"],
     report_dir = "spec",
 )
 pure_suites.module(
     manifest = "//pure/specification:compiler/code/compiler-core-metamodel-pdb-writer/module.json",
+    compile_srcs = ["//pure/specification:compiler/code/compiler-core-metamodel-pdb-writer/module.json"],
+    generated = {"//pure/specification:compiler/generated/generatedWriter.pure": "generated/writer.pure"},
+    tests_mode = "none",
 )
 pure_suites.module(
     manifest = "//pure/specification:compiler/code/compiler-island-pdb-writer/module.json",
+    compile_srcs = ["//pure/specification:compiler/code/compiler-island-pdb-writer/module.json"],
+    generated = {"//pure/specification:compiler/generated/islandWriter.pure": "generated/writer.pure"},
+    tests_mode = "with",
+)
+pure_suites.module(
+    manifest = "//pure/specification:grammar/mapping/mappings-pure/module.json",
+    compile_srcs = ["//pure/specification:parser_mappings_sources"],
+    tests_mode = "none",
 )
 pure_suites.module(
     manifest = "//pure/modules/protocol:module.json",
@@ -171,6 +183,7 @@ pure_suites.module(
 )
 pure_suites.module(
     manifest = "//pure/modules/translation/javascript:module.json",
+    source_dirs = ["code"],
     report_dir = "pure/translation-javascript",
 )
 pure_suites.module(
@@ -180,19 +193,30 @@ pure_suites.module(
 pure_suites.module(
     data = ["//pure/extensions/diagram:test_data"],
     manifest = "//pure/extensions/diagram:module.json",
+    source_dirs = ["code", "generated"],
+    generated = {
+        "//pure/extensions/diagram:generated/protocol.pure": "generated/protocol.pure",
+        "//pure/extensions/diagram:generated/writer.pure": "generated/writer.pure",
+    },
     report_dir = "spec/diagram",
 )
 pure_suites.module(
     data = ["//pure/extensions/pure/tds:test_data"],
     manifest = "//pure/extensions/pure/tds:module.json",
+    source_dirs = ["code", "generated"],
+    generated = {
+        "//pure/extensions/pure/tds:generated/writer.pure": "generated/writer.pure",
+    },
     report_dir = "spec/tds",
 )
 pure_suites.module(
     manifest = "//pure/modules/functions/relation:module.json",
+    source_dirs = ["code"],
     report_dir = "spec/relation",
 )
 pure_suites.module(
     manifest = "//pure/legacy:module.json",
+    source_dirs = ["code"],
     report_dir = "spec/legacy",
 )
 pure_suites.module(

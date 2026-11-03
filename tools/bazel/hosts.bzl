@@ -21,7 +21,7 @@ dependencies and testDependencies of the manifests; what runs it is the host des
 
 load("@pure_suites//:suites.bzl", "MODULES")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-load(":pure.bzl", "pure_bootstrap_compile")
+load(":pure.bzl", "pure_compile")
 
 _CORE = "//pure/specification"
 
@@ -41,6 +41,9 @@ _PDBS = {
     "island_pdb_writer": "//pure/specification:island_pdb_writer-with-tests.pdb",
     "parser-mappings": _PARSER_MAPPINGS,
 }
+
+# Modules with nothing of their own to report: the writers are generated, the parser mappings tested through the grammar.
+_GENERATED_MODULES = ["core_metamodel_pdb_writer", "island_pdb_writer", "parser-mappings"]
 
 # What is generated from a PDB, compiled after it, so no manifest of the compiler can name it: what loads the first
 # loads the second right after. {module: what is generated from it}.
@@ -149,6 +152,8 @@ def _owner_fbs(owner):
 
 _JAVA_CLI = "//platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-interfaces/legend-pure-next-platform-java-cli:pure-java"
 
+_HOST_CLI = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap"
+
 _TRUFFLE_CLI = "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle"
 
 # The hosts (Section 2.3). Each variant: its report name, the command, the PDBs it always loads, and the suites it
@@ -181,10 +186,10 @@ HOSTS = {
                 "command": ["execute"],
                 "prelude": ["core", "parser-mappings", "core-tests", "compiler"],
                 "pdbs": {
-                    "compiler": "//platforms/truffle/pdb-check:truffle/compiler.pdb",
-                    "compiler-tests": "//platforms/truffle/pdb-check:truffle/compiler-tests.pdb",
-                    "core_metamodel_pdb_writer": "//platforms/truffle/pdb-check:truffle/core_metamodel_pdb_writer.pdb",
-                    "island_pdb_writer": "//platforms/truffle/pdb-check:truffle/island_pdb_writer-with-tests.pdb",
+                    "compiler": "//platforms/truffle/modules/compile:jit/compiler.pdb",
+                    "compiler-tests": "//platforms/truffle/modules/compile:jit/compiler-tests.pdb",
+                    "core_metamodel_pdb_writer": "//platforms/truffle/modules/compile:jit/core_metamodel_pdb_writer.pdb",
+                    "island_pdb_writer": "//platforms/truffle/modules/compile:jit/island_pdb_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
@@ -196,10 +201,10 @@ HOSTS = {
                 "command": ["execute"],
                 "prelude": ["core", "parser-mappings", "core-tests", "compiler"],
                 "pdbs": {
-                    "compiler": "//platforms/truffle/pdb-check:truffle_native/compiler.pdb",
-                    "compiler-tests": "//platforms/truffle/pdb-check:truffle_native/compiler-tests.pdb",
-                    "core_metamodel_pdb_writer": "//platforms/truffle/pdb-check:truffle_native/core_metamodel_pdb_writer.pdb",
-                    "island_pdb_writer": "//platforms/truffle/pdb-check:truffle_native/island_pdb_writer-with-tests.pdb",
+                    "compiler": "//platforms/truffle/modules/compile:native/compiler.pdb",
+                    "compiler-tests": "//platforms/truffle/modules/compile:native/compiler-tests.pdb",
+                    "core_metamodel_pdb_writer": "//platforms/truffle/modules/compile:native/core_metamodel_pdb_writer.pdb",
+                    "island_pdb_writer": "//platforms/truffle/modules/compile:native/island_pdb_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
@@ -239,10 +244,10 @@ HOSTS = {
                 "command": ["execute"],
                 "prelude": ["core", "core-tests", "compiler"],
                 "pdbs": {
-                    "compiler": "//bootstrap/pdb-check:bootstrap/compiler.pdb",
-                    "compiler-tests": "//bootstrap/pdb-check:bootstrap/compiler-tests.pdb",
-                    "core_metamodel_pdb_writer": "//bootstrap/pdb-check:bootstrap/core_metamodel_pdb_writer.pdb",
-                    "island_pdb_writer": "//bootstrap/pdb-check:bootstrap/island_pdb_writer-with-tests.pdb",
+                    "compiler": "//bootstrap/modules/compile:pure/compiler.pdb",
+                    "compiler-tests": "//bootstrap/modules/compile:pure/compiler-tests.pdb",
+                    "core_metamodel_pdb_writer": "//bootstrap/modules/compile:pure/core_metamodel_pdb_writer.pdb",
+                    "island_pdb_writer": "//bootstrap/modules/compile:pure/island_pdb_writer-with-tests.pdb",
                 },
                 "tags": ["manual", "selfhost", "bootstrap"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
@@ -410,7 +415,7 @@ def host_specs(host):
         tags = ["host:" + host] + variant.get("tags", []) +
                ([] if "manual" in variant.get("tags", []) else ["job:" + job_of(host, default, owner, "unit")]),
     ) for owner in sorted(MODULES.keys())
-      if not MODULES[owner]["tests"] and variant["runs"](owner, {"suite": "unit", "runner": "tests", "target": ""})]
+      if not MODULES[owner]["tests"] and owner not in _GENERATED_MODULES and variant["runs"](owner, {"suite": "unit", "runner": "tests", "target": ""})]
 
 def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compiler/definition"):
     """Host checks: each golden of 'owner' read back by the host decoder, which must find in it the element its
@@ -441,46 +446,104 @@ def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compile
         tags = ["host:" + host, "job:" + job_of(host, description["default"], owner, "read-back")],
     ) for fixture, element in fixtures.items()]
 
-def module_selfhost(modules):
-    """Each module compiled by the bootstrap too, and compared, element for element, with what the Truffle CLI compiles
-    (test_<module>_truffle, and test_<module>_tests_truffle). What the bootstrap compile loads is
-    derived from the manifest of the module.
+# The modules the bootstrap builds, as Truffle is generated from them; every other is built by the Truffle CLI. 'core' has
+# no PDB to be compiled against, so it is not compiled by a host.
+_BOOTSTRAP_BUILT = [
+    "compiler",
+    "core_metamodel_pdb_writer",
+    "island_pdb_writer",
+    "parser-mappings",
+    "java",
+    "translation-shared",
+    "java-translation",
+]
+
+# What the bootstrap cannot compile, so has no reference to compare with: {module: why}.
+_NO_REFERENCE = {
+    "relation": "its tests hold #TDS islands, and the Java compiler has no handler for an island",
+}
+
+_CHECKED = [module for module in sorted(MODULES.keys()) if module != "core" and module not in _NO_REFERENCE]
+
+_TRUFFLE_BUILT = [module for module in _CHECKED if module not in _BOOTSTRAP_BUILT]
+
+def _pdb_files(module):
+    """The PDBs a module compiles to: {file: the label of the one built by the build}."""
+    mode = MODULES[module]["testsMode"]
+    if mode == "with":
+        return {module + "-with-tests.pdb": _pdb(module)}
+    if mode == "none":
+        return {module + ".pdb": _pdb(module)}
+    return {module + ".pdb": _pdb(module), module + "-tests.pdb": _pdb(module + "-tests")}
+
+def _module_compile(module, name, directory, base_pdbs, tool, command, tags):
+    manifest = MODULES[module]
+    mode = manifest["testsMode"]
+    pure_compile(
+        name = name,
+        srcs = manifest["compileSrcs"] or ["//%s:compile_sources" % manifest["dir"]],
+        base_pdbs = base_pdbs,
+        outs = [directory + "/" + pdb for pdb in _pdb_files(module).keys()],
+        source_dir = manifest["dir"],
+        sources = manifest["sourceDirs"] or ["."],
+        generated = manifest["generated"],
+        split_tests = mode == "split",
+        with_tests = mode == "with",
+        tool = tool,
+        command = command,
+        tags = ["manual"] + tags,
+        visibility = ["//visibility:public"],
+    )
+
+def _dependency_pdbs(module):
+    """What a module is compiled against, from its manifest: its dependencies, then its test dependencies."""
+    manifest = MODULES[module]
+    tests = manifest["testDependencies"]
+    return [_pdb(m) for m in _closure(manifest["dependencies"] + [d for d in tests if not d.endswith("-tests")])] + \
+           [_pdb(d) for d in tests if d.endswith("-tests")]
+
+def module_reference_compiles():
+    """Step 1 of the reference: what the Truffle CLI builds, compiled by the bootstrap too, into 'reference/'."""
+    for module in _TRUFFLE_BUILT:
+        _module_compile(module, module + "_compile", "reference", _dependency_pdbs(module), "bootstrap", "compile", [])
+
+def module_compiles(chain, tool, command = "compile", modules = _BOOTSTRAP_BUILT, parser_mappings = True, tags = []):
+    """Step 1: the modules compiled with the compiler of a platform, into '<chain>/'.
 
     Args:
-      modules: {module: {"sources": its --source directories, "generated": its generated sources, by path}}.
+      chain: the name of the compiler, in the names of the targets.
+      tool: the CLI, as for pure_compile.
+      command: the compile command, as for pure_compile.
+      modules: the modules it compiles.
+      parser_mappings: whether the CLI parses with parser-mappings.pdb.
+      tags: more tags, beside 'manual'.
     """
-    for module, description in modules.items():
-        manifest = MODULES[module]
-        test_dependencies = manifest["testDependencies"]
-        mains = _closure(manifest["dependencies"] + [d for d in test_dependencies if not d.endswith("-tests")])
-        base_pdbs = [_pdb(m) for m in mains + [d for d in test_dependencies if d.endswith("-tests")]]
-        directory = "module_bootstrap/%s/" % module
-        pure_bootstrap_compile(
-            name = "%s_compile_bootstrap" % module,
-            srcs = ["//%s:compile_sources" % manifest["dir"]],
-            base_pdbs = base_pdbs,
-            outs = [directory + module + ".pdb", directory + module + "-tests.pdb"],
-            source_dir = manifest["dir"],
-            sources = description.get("sources", ["."]),
-            generated = {"//%s:%s" % (manifest["dir"], path): path for path in description.get("generated", [])},
-            split_tests = True,
-            tags = ["manual"],
-        )
-        for name, pdb in [(module, module), (module + "_tests", module + "-tests")]:
+    prelude = [_pdb("core")] + ([_pdb("parser-mappings")] if parser_mappings else []) + \
+              [_pdb("core-tests"), _pdb("compiler"), _pdb("core_metamodel_pdb_writer")]
+    for module in modules:
+        base_pdbs = prelude + [pdb for pdb in _dependency_pdbs(module) if pdb not in prelude]
+        _module_compile(module, "%s_compile_%s" % (module, chain), chain, base_pdbs, tool, command, tags)
+
+def module_pdb_checks(chain, compile_package, modules = _CHECKED, tags = []):
+    """Step 2: each PDB of the modules against the bootstrap's, element for element: 'test_<module>_<chain>', and
+    'test_<module>_tests_<chain>'.
+
+    Args:
+      chain: the name of the compiler, as for module_compiles.
+      compile_package: the package of its compiles. A module it does not compile is the one the build holds.
+      modules: the modules checked.
+      tags: more tags, beside 'manual' and 'selfhost'.
+    """
+    for module in modules:
+        for pdb, built in _pdb_files(module).items():
+            bootstrap_built = module in _BOOTSTRAP_BUILT
+            reference = built if bootstrap_built else "//bootstrap/modules/compile:reference/" + pdb
+            # What this compiler made: its own compile where the build does not use it.
+            platform = "%s:%s/%s" % (compile_package, chain, pdb) if bootstrap_built else built
             sh_test(
-                name = "test_%s_truffle" % name,
+                name = "test_%s_%s" % (module + ("_tests" if pdb.endswith("-tests.pdb") else ""), chain),
                 srcs = ["//tools/bazel:pdb-diff.sh"],
-                args = [
-                    "$(rootpath //bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap)",
-                    "$(rootpath %s)" % _pdb("core"),
-                    "$(rootpath :%s%s.pdb)" % (directory, pdb),
-                    "$(rootpath %s)" % _pdb(pdb),
-                ],
-                data = [
-                    "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap",
-                    _pdb("core"),
-                    ":%s%s.pdb" % (directory, pdb),
-                    _pdb(pdb),
-                ],
-                tags = ["manual", "selfhost"],
+                args = ["$(rootpath %s)" % _HOST_CLI, "$(rootpath %s)" % _pdb("core"), "$(rootpath %s)" % reference, "$(rootpath %s)" % platform],
+                data = [_HOST_CLI, _pdb("core"), reference, platform],
+                tags = ["manual", "selfhost"] + tags,
             )

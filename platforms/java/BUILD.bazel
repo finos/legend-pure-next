@@ -15,7 +15,6 @@
 # The Java platform runtime, translated from Pure on the Truffle CLI: the engine (types, the
 # PDB reader, the translator, the functions, the tests), and the diagram and TDS extensions.
 
-load("//tools/bazel:hosts.bzl", "host_specs", "pdb_read_backs")
 load(":translation.bzl", "java_translation_srcjar")
 
 _CORE = "//pure/specification:core.pdb"
@@ -106,42 +105,6 @@ filegroup(
 )
 
 # Every suite of every owner on the Java platform (tools/bazel/hosts.bzl): '<owner>_<suite>_platform'.
-host_specs(host = "java")
-
-# The extension goldens read back by the Java platform decoder.
-
-pdb_read_backs(
-    fixtures = {
-        "diagram/" + name: "m::D"
-        for name in [
-            "propertyAndAssociation",
-            "complexGeometry",
-            "complexTypeProperties",
-        ]
-    },
-    function = "platform::extensions::pure::diagram::tests::readBack_String_1__String_1__String_1_",
-    host = "java",
-    owner = "diagram",
-)
-
-pdb_read_backs(
-    fixtures = {
-        "tds/" + name: "test::tds::%s__Any_MANY_" % name
-        for name in [
-            "typedHeader",
-            "inferredColumns",
-            "mixedInference",
-            "quotedNamesAndCells",
-            "enumeration",
-            "quotedValues",
-            "manyMultiplicity",
-            "primitiveExtension",
-        ]
-    },
-    function = "platform::extensions::pure::tds::tests::readBack_String_1__String_1__String_1_",
-    host = "java",
-    owner = "tds",
-)
 
 # The Java platform gallery, which publish-gallery deploys. The platform reads its PDBs below
 # --root at their repository paths: the action stages them so, in a root of its own.

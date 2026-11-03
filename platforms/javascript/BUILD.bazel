@@ -19,7 +19,6 @@ load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_run_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@npm//platforms/javascript/node:esbuild/package_json.bzl", esbuild = "bin")
-load("//tools/bazel:hosts.bzl", "host_specs")
 load("//tools/bazel:pure.bzl", "pure_generate")
 
 exports_files(["package.json"])
@@ -228,7 +227,6 @@ js_binary(
 )
 
 # Every suite of every owner on the JavaScript platform (tools/bazel/hosts.bzl): '<owner>_<suite>_cli'.
-host_specs(host = "javascript")
 
 # The platform's own tests, each a script run from the output tree, with its
 # report among the test outputs at javascript/<area>/<name>.json.

@@ -25,3 +25,9 @@ pure_bootstrap_compile(
     split_tests = True,
     visibility = ["//visibility:public"],
 )
+
+filegroup(
+    name = "compile_sources",
+    srcs = glob(["**/*.pure", "module.json"]),
+    visibility = ["//visibility:public"],
+)

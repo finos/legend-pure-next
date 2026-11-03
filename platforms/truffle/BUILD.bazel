@@ -14,44 +14,6 @@
 
 # Every suite of every owner on Truffle (tools/bazel/hosts.bzl): '<owner>_<suite>_<variant>'.
 
-load("//tools/bazel:hosts.bzl", "host_specs", "pdb_read_backs")
-
-host_specs(host = "truffle")
-
-# The extension goldens read back by Truffle's own decoder.
-
-pdb_read_backs(
-    fixtures = {
-        "diagram/" + name: "m::D"
-        for name in [
-            "propertyAndAssociation",
-            "complexGeometry",
-            "complexTypeProperties",
-        ]
-    },
-    function = "platform::extensions::pure::diagram::tests::readBack_String_1__String_1__String_1_",
-    host = "truffle",
-    owner = "diagram",
-)
-
-pdb_read_backs(
-    fixtures = {
-        "tds/" + name: "test::tds::%s__Any_MANY_" % name
-        for name in [
-            "typedHeader",
-            "inferredColumns",
-            "mixedInference",
-            "quotedNamesAndCells",
-            "enumeration",
-            "quotedValues",
-            "manyMultiplicity",
-            "primitiveExtension",
-        ]
-    },
-    function = "platform::extensions::pure::tds::tests::readBack_String_1__String_1__String_1_",
-    host = "truffle",
-    owner = "tds",
-)
 
 # The Truffle translation gallery, which publish-gallery deploys: the HTML that
 # renderGallery prints, from its doctype on.

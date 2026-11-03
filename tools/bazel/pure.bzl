@@ -209,8 +209,8 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None):
     where the language manifests and module runfiles name them.
 
     The Truffle CLI parses with the compiler written in Pure, so core, parser-mappings and the compiler come first
-    in its base PDBs, before 'base_pdbs'. 'compile_sources' is what it compiles, for the self-host check of the module
-    (hosts.bzl: module_selfhost).
+    in its base PDBs, before 'base_pdbs'. 'compile_sources' is what it compiles, for the PDB checks of the hosts (hosts.bzl:
+    module_pdb_checks).
     Args:
       name: the module, as its module.json names it.
       base_pdbs: the PDBs of its dependencies and test dependencies, after core, parser-mappings and the compiler.
@@ -236,70 +236,3 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None):
         srcs = srcs,
         visibility = ["//visibility:public"],
     )
-
-_SPECIFICATION = "//pure/specification"
-
-def compiler_selfhost(chain, tool, command = "compile", parser_mappings = True, tags = []):
-    """The compiler written in Pure, and what is generated from it, compiled by one host and compared, element for
-    element, with what the bootstrap compiles. The PDBs land in '<chain>/'.
-
-    Args:
-      chain: the name of the chain, in the names of its targets.
-      tool: the CLI that compiles, as for pure_compile.
-      command: the compile command, as for pure_compile.
-      parser_mappings: whether the compile loads parser-mappings.pdb (a host that parses with it).
-      tags: more tags on the targets, beside 'manual' and 'selfhost'.
-    """
-    base_pdbs = [_CORE + ":core.pdb"] + ([_PARSER_MAPPINGS] if parser_mappings else []) + [
-        _CORE + ":core-tests.pdb",
-        _SPECIFICATION + ":compiler.pdb",
-        _SPECIFICATION + ":core_metamodel_pdb_writer.pdb",
-    ]
-    directory = "%s/" % chain
-    pure_compile(
-        name = "compiler_compile_" + chain,
-        srcs = [_SPECIFICATION + ":compiler_sources"],
-        base_pdbs = base_pdbs,
-        outs = [directory + "compiler.pdb", directory + "compiler-tests.pdb"],
-        source_dir = "pure/specification/compiler/code/compiler-pure",
-        split_tests = True,
-        command = command,
-        tool = tool,
-        tags = ["manual"] + tags,
-        visibility = ["//visibility:public"],
-    )
-    for module, source, generated, out, with_tests in [
-        ("core_metamodel_pdb_writer", "core-metamodel-pdb-writer", "core_metamodel_pdb_writer_generate", "generatedWriter", False),
-        ("island_pdb_writer", "island-pdb-writer", "island_pdb_writer_generate", "islandWriter", True),
-    ]:
-        pure_compile(
-            name = "%s_compile_%s" % (module, chain),
-            srcs = [_SPECIFICATION + ":compiler/code/compiler-%s/module.json" % source],
-            base_pdbs = base_pdbs + [_SPECIFICATION + ":compiler-tests.pdb"],
-            generated = {_SPECIFICATION + ":compiler/generated/%s.pure" % out: "generated/writer.pure"},
-            outs = [directory + ("island_pdb_writer-with-tests.pdb" if with_tests else "core_metamodel_pdb_writer.pdb")],
-            source_dir = "pure/specification/compiler/code/compiler-%s" % source,
-            with_tests = with_tests,
-            command = command,
-            tool = tool,
-            tags = ["manual"] + tags,
-            visibility = ["//visibility:public"],
-        )
-    for module, pdb in [
-        ("compiler", "compiler.pdb"),
-        ("compiler_tests", "compiler-tests.pdb"),
-        ("core_metamodel_pdb_writer", "core_metamodel_pdb_writer.pdb"),
-        ("island_pdb_writer", "island_pdb_writer-with-tests.pdb"),
-    ]:
-        sh_test(
-            name = "test_%s_%s" % (module, chain),
-            srcs = ["//tools/bazel:pdb-diff.sh"],
-            args = [
-                "$(rootpath %s)" % _CLI,
-                "$(rootpath %s:core.pdb)" % _CORE,
-                "$(rootpath %s:%s)" % (_SPECIFICATION, pdb),
-                "$(rootpath :%s%s)" % (directory, pdb),
-            ],
-            data = [_CLI, _CORE + ":core.pdb", _SPECIFICATION + ":" + pdb, ":" + directory + pdb],
-            tags = ["manual", "selfhost"] + tags,
-        )

@@ -25,6 +25,7 @@ exports_files(
         "m3_fbs_addition.fbs",
         "m3_protocol_addition.ttl",
         "module.json",
+        "grammar/mapping/mappings-pure/module.json",
         "compiler/code/compiler-pure/module.json",
         "compiler/code/compiler-core-metamodel-pdb-writer/module.json",
         "compiler/code/compiler-island-pdb-writer/module.json",
