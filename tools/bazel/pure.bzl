@@ -15,17 +15,21 @@
 """Pure compiled to PDBs, from exactly the sources a target declares, and the generators run over them."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//tools/bazel:target_genrule.bzl", "target_genrule")
 
 _CLI = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap"
 
 _TOOLS = {
     "bootstrap": _CLI,
     "truffle": "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle",
+    # The Java and JavaScript platforms, for their PDB checks.
+    "java": "//platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-interfaces/legend-pure-next-platform-java-cli:pure-java",
+    "javascript": "//platforms/javascript:pure-js",
     # The native image: only for the self-host check of the native image.
     "truffle-native": "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle-native",
 }
 
-def pure_compile(name, srcs, source_dir, outs, base_pdbs = [], sources = ["."], split_tests = False, with_tests = False, generated = {}, tool = "truffle", command = "compile", **kwargs):
+def pure_compile(name, srcs, source_dir, outs, base_pdbs = [], sources = ["."], split_tests = False, with_tests = False, generated = {}, tool = "truffle", command = "compile", root_data = [], **kwargs):
     """'<tool> compile' over a staged copy of 'source_dir': its declared files, and generated ones.
 
     A CLI compiles every .pure file below each --source, each named by its path relative to that source, and finds
@@ -37,17 +41,17 @@ def pure_compile(name, srcs, source_dir, outs, base_pdbs = [], sources = ["."], 
       name: the rule.
       srcs: the source files, all below 'source_dir' (its .pure files and module.json).
       source_dir: the directory of the module, relative to the repository root.
-      outs: the PDBs the compile writes, by file name (the module name of module.json, '-tests' for the tests),
-        in a directory of the package when two compiles of one package write the same names ('selfhost/compiler.pdb').
+      outs: the PDBs the compile writes, by file name (the module name of module.json, '-tests' for the tests),.
       base_pdbs: the PDBs compiled against, in order (--base-pdb).
       sources: the --source directories, relative to 'source_dir'.
       split_tests: true for '--tests split': the <<test.*>> elements in their own PDB.
       with_tests: true for '--tests with': one PDB holding them all, '<module>-with-tests.pdb'.
       generated: generated sources: {label: path below source_dir}.
-      tool: 'truffle' (the Truffle CLI, which builds every module), 'bootstrap' (only what Truffle is built from), or
-        'truffle-native' (the native image, for its self-host check).
+      tool: 'truffle' (the Truffle CLI, which builds every module), 'bootstrap' (only what Truffle is built from),
+        'truffle-native' (the native image, for its self-host check), or 'java' or 'javascript' (for their PDB checks).
       command: the compile command: 'compile', or 'compile-via-pure' (the bootstrap running the compiler written
         in Pure, for its self-host check).
+      root_data: what the CLI reads below its --root, staged there at its repository paths (the Java platform).
       **kwargs: passed to the genrule.
     """
     cli = _TOOLS[tool]
@@ -55,9 +59,17 @@ def pure_compile(name, srcs, source_dir, outs, base_pdbs = [], sources = ["."], 
         "mkdir -p $$(dirname $$T/pkg/%s) && cp $(execpath %s) $$T/pkg/%s;" % (path, label, path)
         for label, path in generated.items()
     ])
-    native.genrule(
+    stage = """
+            EXEC=({execs})
+            REPO=({repos})
+            for i in "$${{!EXEC[@]}}"; do mkdir -p "$$T/root/$$(dirname "$${{REPO[$$i]}}")"; cp "$${{EXEC[$$i]}}" "$$T/root/$${{REPO[$$i]}}"; done
+    """.format(
+        execs = " ".join(["$(execpaths %s)" % label for label in root_data]),
+        repos = " ".join(["$(rootpaths %s)" % label for label in root_data]),
+    ) if root_data else ""
+    target_genrule(
         name = name,
-        srcs = srcs + base_pdbs + list(generated.keys()),
+        srcs = srcs + base_pdbs + list(generated.keys()) + root_data,
         outs = outs,
         cmd = """
             set -e
@@ -65,7 +77,8 @@ def pure_compile(name, srcs, source_dir, outs, base_pdbs = [], sources = ["."], 
             mkdir -p $$T/pkg $$T/out
             cp -RL {source_dir}/. $$T/pkg/
             {copies}
-            $(execpath {cli}) {command} {bases} {sources} --output-dir $$T/out {split} > $$T/log 2>&1 \\
+            {stage}
+            {env}$(execpath {cli}) {command} {root} {bases} {sources} --output-dir $$T/out {split} > $$T/log 2>&1 \\
                 || {{ cat $$T/log >&2; exit 1; }}
             {collect}
         """.format(
@@ -73,7 +86,11 @@ def pure_compile(name, srcs, source_dir, outs, base_pdbs = [], sources = ["."], 
             copies = copies,
             cli = cli,
             command = command,
-            bases = " ".join(["--base-pdb $(execpath %s)" % pdb for pdb in base_pdbs]),
+            stage = stage,
+            # A js_binary runs from the bin directory.
+            env = "BAZEL_BINDIR=$(BINDIR) " if tool == "javascript" else "",
+            root = "--root $$T/root" if root_data else "",
+            bases = " ".join(["--base-pdb %s$(execpath %s)" % ("$$PWD/" if tool == "javascript" else "", pdb) for pdb in base_pdbs]),
             sources = " ".join(["--source $$T/pkg/%s" % source for source in sources]),
             split = "--tests split" if split_tests else "--tests with" if with_tests else "",
             collect = " ".join(["cp $$T/out/%s $(RULEDIR)/%s;" % (out.split("/")[-1], out) for out in outs]),
@@ -107,7 +124,7 @@ def pure_generate(name, out, pdbs, function, args = [], srcs = [], markers = Non
     cli = _TOOLS[tool]
     # The JIT tripwire summary is the tool own output, never the generator.
     keep = ("awk '/^%s$$/{f=1;next} /^%s$$/{f=0} f' $$T/stdout" % markers) if markers else "grep -v '^\\[graal-tripwire\\]' $$T/stdout"
-    native.genrule(
+    target_genrule(
         name = name,
         srcs = pdbs + srcs,
         outs = [out],
@@ -158,7 +175,7 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
         tool = "bootstrap",
     )
     metamodel_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb", ":metamodel/%s.pdb" % name]
-    native.genrule(
+    target_genrule(
         name = name + "_fbs_generate",
         srcs = metamodel_pdbs + [ids, _M3_FBS],
         outs = ["generated/%s.fbs" % name, "generated/%s-fbs-field-ids.txt" % name],
@@ -210,7 +227,7 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None):
 
     The Truffle CLI parses with the compiler written in Pure, so core, parser-mappings and the compiler come first
     in its base PDBs, before 'base_pdbs'. 'compile_sources' is what it compiles, for the PDB checks of the hosts (hosts.bzl:
-    module_pdb_checks).
+    platform_module).
     Args:
       name: the module, as its module.json names it.
       base_pdbs: the PDBs of its dependencies and test dependencies, after core, parser-mappings and the compiler.

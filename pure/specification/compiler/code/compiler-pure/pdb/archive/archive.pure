@@ -203,16 +203,6 @@ function platform::pure::compiler::pdb::archive::reverseIndexText(referencedBy:M
    ->joinStrings('');
 }
 
-// Adapter for hosts that carry the (already partition-filtered) reverse index
-// as parallel primitive lists — targets[i] with its callers '\n'-joined — so
-// they can call the Map-taking writeArchive without host-side Pure-Map
-// construction. Paths never contain '\n', so the join is lossless.
-function platform::pure::compiler::pdb::archive::referencedByFromLists(targets:String[*], joinedCallers:String[*]):Map<String, List<String>>[1]
-{
-   newMap($targets->zip($joinedCallers)->map(p |
-      pair($p.first, ^List<String>(values = $p.second->split('\n')))));
-}
-
 // --- manifest section -----------------------------------------------------------
 
 // One JSON string value, escaped as the reference ModuleManifest.quote does.

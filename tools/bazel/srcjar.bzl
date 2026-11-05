@@ -14,6 +14,8 @@
 
 """Java sources a generator writes to a directory, as a .srcjar a java_library compiles."""
 
+load("//tools/bazel:target_genrule.bzl", "target_genrule")
+
 def generated_srcjar(name, cmd, srcs = [], tools = [], **kwargs):
     """'<name>.srcjar': the .java files that 'cmd' writes below $$OUT_DIR, at their paths relative to it.
 
@@ -24,7 +26,7 @@ def generated_srcjar(name, cmd, srcs = [], tools = [], **kwargs):
       tools: the tools of the command.
       **kwargs: passed to the genrule.
     """
-    native.genrule(
+    target_genrule(
         name = name,
         srcs = srcs,
         outs = [name + ".srcjar"],
@@ -37,6 +39,7 @@ def generated_srcjar(name, cmd, srcs = [], tools = [], **kwargs):
             cd $$OUT_DIR
             $$ZIPPER c $$SRCJAR $$(find . -name '*.java' | sed 's|^\\./||' | sort)
         """ % cmd,
-        tools = tools + ["@bazel_tools//tools/zip:zipper"],
+        tools = tools,
+        exec_tools = ["@bazel_tools//tools/zip:zipper"],
         **kwargs
     )

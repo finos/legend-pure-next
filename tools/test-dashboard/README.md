@@ -12,7 +12,7 @@ tools/test-dashboard/build.mjs --results <dir> --out <file>
 `bazel run //:dashboard` runs `tools/bazel/collect-reports.mjs` over the tests the workspace has (Bazel keeps the logs
 of a test it no longer has), which replaces its previous collection, then `build.mjs`. A test that ran with no
 report of its own (a PDB comparison, a registry check, a usage example) is a `checks` report of one case; the
-reports several tests write at one path (a host's PDB read-backs) are one report; a module with no suite reports
+reports several tests write at one path are one report; a module with no suite reports
 0/0 on each host.
 
 On GitHub, every test job in `.github/workflows/build.yml` converts its JUnit XML and uploads its

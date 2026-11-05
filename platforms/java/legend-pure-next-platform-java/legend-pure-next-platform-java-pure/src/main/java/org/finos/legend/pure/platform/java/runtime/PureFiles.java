@@ -51,6 +51,25 @@ public final class PureFiles
         }
     }
 
+    /** {@code writeFileBytes(path, content)}: writes a Binary to the file, parent directories included, and returns the path. */
+    public static String writeFileBytes(String path, byte[] content)
+    {
+        try
+        {
+            Path file = Path.of(path);
+            if (file.getParent() != null)
+            {
+                Files.createDirectories(file.getParent());
+            }
+            Files.write(file, content);
+            return path;
+        }
+        catch (IOException e)
+        {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     /** {@code readFileBytes(path)}: the file as a Binary. */
     public static byte[] readFileBytes(String path)
     {

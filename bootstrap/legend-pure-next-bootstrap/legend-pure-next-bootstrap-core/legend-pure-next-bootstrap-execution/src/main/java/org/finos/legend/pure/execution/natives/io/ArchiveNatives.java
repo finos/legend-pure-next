@@ -76,13 +76,7 @@ public class ArchiveNatives
 
     private static byte[] bytes(Object argument)
     {
-        Object raw = _E_ValueSpecification.unwrap(argument);
-        if (raw instanceof byte[] b)
-        {
-            return b;
-        }
-        throw new IllegalArgumentException(
-                "Expected a Binary (byte[]) archive, got " + (raw == null ? "null" : raw.getClass().getName()));
+        return org.finos.legend.pure.execution.natives.binary.BinaryNatives.asBytes(_E_ValueSpecification.unwrap(argument));
     }
 
     private static java.nio.file.Path spill(byte[] archive)

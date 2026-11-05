@@ -14,6 +14,8 @@
 
 """The Java platform runtime: Pure translated to Java by the Java translator, run on the Truffle CLI."""
 
+load("//tools/bazel:target_genrule.bzl", "target_genrule")
+
 _TRUFFLE_CLI = "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle"
 
 # Every '//// FILE <path>' line starts a file below $$OUT_DIR, which the following lines fill; a file named twice in one
@@ -44,7 +46,7 @@ def java_translation_srcjar(name, steps):
         )
         for step_pdbs, function, args, keep in steps
     ])
-    native.genrule(
+    target_genrule(
         name = name,
         srcs = list(pdbs),
         outs = [name + ".srcjar", name + "-positions.jar"],
@@ -62,6 +64,7 @@ def java_translation_srcjar(name, steps):
             POS=$$(find . -name '*.pos' | sed 's|^\\./||' | sort)
             if [ -n "$$POS" ]; then $$ZIPPER c $$POSITIONS $$POS; else $$ZIPPER c $$POSITIONS; fi
         """ % (name, name, runs),
-        tools = [_TRUFFLE_CLI, "@bazel_tools//tools/zip:zipper"],
+        tools = [_TRUFFLE_CLI],
+        exec_tools = ["@bazel_tools//tools/zip:zipper"],
         visibility = ["//platforms/java:__subpackages__"],
     )

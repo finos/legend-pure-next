@@ -16,6 +16,7 @@
 # PDB reader, the translator, the functions, the tests), and the diagram and TDS extensions.
 
 load(":translation.bzl", "java_translation_srcjar")
+load("//tools/bazel:target_genrule.bzl", "target_genrule")
 
 _CORE = "//pure/specification:core.pdb"
 
@@ -104,8 +105,6 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-# Every suite of every owner on the Java platform (tools/bazel/hosts.bzl): '<owner>_<suite>_platform'.
-
 # The Java platform gallery, which publish-gallery deploys. The platform reads its PDBs below
 # --root at their repository paths: the action stages them so, in a root of its own.
 _JAVA_CLI = "//platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-interfaces/legend-pure-next-platform-java-cli:pure-java"
@@ -116,7 +115,7 @@ _GALLERY_DATA = [
     "//pure/modules/translation/java:build/java-translation-tests.pdb",
 ]
 
-genrule(
+target_genrule(
     name = "gallery",
     srcs = _GALLERY_DATA,
     outs = ["java-platform-gallery.html"],
@@ -126,7 +125,7 @@ genrule(
         EXEC=(%s)
         REPO=(%s)
         for i in "$${!EXEC[@]}"; do mkdir -p "$$ROOT/$$(dirname "$${REPO[$$i]}")"; cp "$${EXEC[$$i]}" "$$ROOT/$${REPO[$$i]}"; done
-        $(execpath %s) --root $$ROOT --pdb $$ROOT/shared/core-tests.pdb \\
+        $(execpath %s) execute --root $$ROOT --pdb $$ROOT/shared/core-tests.pdb \\
             --pdb $$ROOT/pure/modules/translation/java/build/java-translation-tests.pdb \\
             --function "platform::extensions::language::java::translation::gallery::renderGallery_String_1__String_1_" \\
             --args "platform::pure::functions" > $@ 2> /dev/null

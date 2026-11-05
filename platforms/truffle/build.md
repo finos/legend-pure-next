@@ -20,9 +20,9 @@ below is relative to `platforms/truffle/legend-pure-next-platform-truffle/`.
 | Tests | Tier |
 |---|---|
 | its JUnit tests (`…-pure:test_junit`), the usage example (`…-usage-example:test_usage_example`) | required, CI job `truffle` |
-| every owner's suites on the JIT (`//platforms/truffle:<owner>_<suite>_jit`) | required, CI jobs `truffle`, `truffle-specifications` and others (`tools/bazel/hosts.bzl`: `job_of`) |
-| the same on the native image (`…_native`) | required, CI job `truffle-native` |
-| compiler-pure compiled by Truffle, JIT and native, against the bootstrap compile (`modules/pdb-check`, and the corpus on them in `modules/test`: `…_selfhost`, `…_native_selfhost`) | `selfhost` (manual; CI job `truffle-native`) |
+| every owner's suites on the JIT (`//platforms/truffle/test/jit/<module directory below pure/>:test_<kind>`) | required, CI jobs `truffle`, `truffle-specifications` and others (`tools/bazel/hosts.bzl`: `job_of`) |
+| the same on the native image (`//platforms/truffle/test/native/…`) | required, CI job `truffle-native` |
+| every checked module compiled by Truffle, JIT and native, against the bootstrap compile, or the Truffle build where the Java compiler cannot compile the module (`…:test_pdb_check`, and the corpus on them: `…:test_compiler_selfhost`) | `selfhost` (manual; CI job `truffle-native`) |
 
 What a suite loads is derived from the module manifests (`module.json`), and a known gap is a `PENDING` entry in
 `tools/bazel/hosts.bzl`, whose test fails once the suite passes.

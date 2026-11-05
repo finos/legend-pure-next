@@ -15,50 +15,29 @@
 
 package org.finos.legend.pure.truffle.runtime.compilation;
 
+import org.eclipse.collections.impl.list.mutable.ListAdapter;
 import org.finos.legend.pure.truffle.execution.PureStackFormatter;
 import org.finos.legend.pure.truffle.compiler.module.ModuleRegistry;
-import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
-import org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.PurePdbArchiveWriter;
 import org.finos.legend.pure.truffle.compiler.module.pdbModule.PdbModule;
-import org.finos.legend.pure.truffle.compiler.module.ModuleManifest;
 import org.finos.legend.pure.truffle.compiler.module.TestElementFilter;
 import org.finos.legend.pure.truffle.runtime.PureRuntime;
-import org.finos.legend.pure.truffle.execution.types.PureSequence;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Truffle-side analog of {@code CompilerBinaryBuilder}: compile every
- * {@code .pure} file under each of {@code sourceDirs} via the truffle interpreter
- * (running compiler-pure), aggregate the resulting metamodel elements,
- * and write them to a {@code .pdb} archive via {@link PurePdbArchiveWriter}
- * (the self-hosted Pure writer).
- *
- * <p>Unlike the bootstrap builder which uses the Java compiler, this driver
- * runs the Pure-language compiler ({@code platform::pure::compiler::compile})
- * end-to-end through Truffle. Output is a structurally-equivalent PDB
- * consumable by any reader that understands {@code m3.fbs}.</p>
+ * {@code pure-truffle compile}: boots the Truffle runtime on the base PDBs and runs
+ * {@code platform::pure::compiler::pdb::archive::compileModule}, what every host's {@code compile} runs,
+ * so that a difference between their PDBs is a difference between the hosts.
  */
 public final class TruffleCompilerBinaryBuilder
 {
-    // Mirror bootstrap: hand the entire orchestration to compile-pure as a
-    // two-step chain — `parseDir` walks/reads/parses the directory and
-    // returns `PureFile[*]`, then `compile` runs the three passes over those
-    // pre-parsed files. Keeping the platforms structurally identical is what
-    // makes the output PDBs comparable — the only platform-specific code is
-    // the runtime hosting the same Pure entry points.
-    private static final String PARSE_DIRS_FN_PATH =
-            "platform::pure::compiler::parseDirs_String_MANY__PureFile_MANY_";
-    // The overload taking the languages' compiler passes, as PureRuntime.compile() uses: without them a
-    // `###Diagram` (or any extension) section in the module would not compile.
-    private static final String COMPILE_FN_PATH =
-            "platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__Boolean_1__CompilationResult_1_";
+    private static final String COMPILE_MODULE_FN_PATH =
+            "platform::pure::compiler::pdb::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
 
     private TruffleCompilerBinaryBuilder()
     {
@@ -66,14 +45,7 @@ public final class TruffleCompilerBinaryBuilder
 
     /**
      * Compile the {@code .pure} files under {@code sourceDirs} (in order) against the given base PDBs and write to
-     * {@code outputDir} (filename derived from the module manifest), with
-     * optional tests-companion via {@code mode}. Each base PDB is loaded
-     * read-only to provide cross-references; only freshly-compiled elements
-     * (not already present in any base PDB) end up in the output.
-     *
-     * <p>The writer enforces required-property validation: any {@code [1]}
-     * property that's null or any {@code [1..*]} that's empty aborts the
-     * write. Surfaces compiler-pure gaps as build failures.</p>
+     * {@code outputDir} (filename derived from the module manifest), with optional tests-companion via {@code mode}.
      *
      * <p>{@code languages} are the extensions the module's sections parse and compile with — {@code ###Pure}
      * is always added — and an argument rather than something a customizer may forget. {@code runtimeCustomizer} lets the
@@ -99,17 +71,6 @@ public final class TruffleCompilerBinaryBuilder
                 throw new IllegalArgumentException("source dir does not exist: " + sourceDir);
             }
         }
-        // The module's manifest sits at or above its first source dir (code/ and generated/ share one).
-        ModuleManifest manifest = ModuleManifest.locate(sourceDirs.get(0));
-        Path outputFile = outputDir.resolve(manifest.name() + ".pdb");
-
-        System.out.println("Compiling Pure model from " + sourceDirs
-                + " (base: " + basePdbs + ") via truffle interpreter...");
-        System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies()
-                + (manifest.testDependencies().isEmpty() ? "" : ", testDeps=" + manifest.testDependencies()));
-        System.out.println("  Output dir: " + outputDir);
-        System.out.println("  Tests mode: " + mode);
-
         // 1. Load base PDBs — each carries its identity (name + dependencies)
         // in its embedded manifest, so the registry can cascade-invalidate on
         // unregister without us having to fabricate dep chains here.
@@ -143,58 +104,26 @@ public final class TruffleCompilerBinaryBuilder
             loader.preloadAll();
         }
 
-        // Post-loader-flip the resolver may return a PureDynamicObject for
-        // these functions; runtime.execute accepts Object.
-        Object parseDirsFn = resolver.getElement(PARSE_DIRS_FN_PATH);
-        Object compileFn = resolver.getElement(COMPILE_FN_PATH);
-        if (parseDirsFn == null || compileFn == null
-                || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(parseDirsFn,
-                        "platform::pure::metamodel::function::FunctionDefinition", resolver)
-                || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(compileFn,
-                        "platform::pure::metamodel::function::FunctionDefinition", resolver))
+        Object compileModule = resolver.getElement(COMPILE_MODULE_FN_PATH);
+        if (compileModule == null)
         {
-            throw new RuntimeException("parseDir/compile FunctionDefinition not resolvable: "
-                    + "parseDir=" + (parseDirsFn == null ? "null" : parseDirsFn.getClass().getName())
-                    + ", compile=" + (compileFn == null ? "null" : compileFn.getClass().getName()));
+            throw new IllegalStateException("compileModule not loaded: compiler.pdb must be among the base PDBs");
         }
-
         try
         {
-            // 3. Chain compile-pure's `parseDir` + `compile` — same entry
-            // points the bootstrap orchestrator uses. Keeps the platforms
-            // structurally identical: every byte of orchestration logic lives
-            // in Pure, only the runtime changes. Returns a `CompilationResult`
-            // whose `elements` already includes the hierarchical Package set
-            // built by `buildPackages`.
-            Object result;
             try
             {
-                Object parsedFiles = runtime.execute(parseDirsFn,
-                        org.eclipse.collections.impl.list.mutable.ListAdapter.adapt(sourceDirs)
-                                .collect(dir -> dir.toAbsolutePath().toString()));
-                result = runtime.execute(compileFn, parsedFiles, runtime.compilerExtensions(),
-                        Boolean.getBoolean("legend.pure.compileDebug"), Boolean.FALSE);
+                runtime.execute(compileModule,
+                        ListAdapter.adapt(sourceDirs).collect(dir -> dir.toAbsolutePath().normalize().toString()),
+                        outputDir.toAbsolutePath().toString(),
+                        mode.name().toLowerCase(java.util.Locale.ROOT),
+                        runtime.compilerExtensions());
             }
             catch (Throwable t)
             {
-                // compile's 3-line progress display parks the cursor on
-                // line 1 (header) after each tickProgress3. When pass 1/2/3
-                // throws (e.g. unguarded ->toOne() in a resolver) the Pure
-                // side never reaches finishProgress3, so without intervention
-                // the JVM's uncaught-exception handler writes straight on top
-                // of the bar's last frame — looking like it ate the bar.
-                // Mirror finishProgress3's behaviour: do not clear the 3 lines
-                // (the user wants to see what was being processed at the
-                // moment of the throw), just move the cursor below the
-                // 3-line region so the exception text lands on a fresh line.
-                System.out.print("\u001B[3B\r\n");
-                System.out.flush();
-                // Print the Pure call stack — PureException carries Truffle
-                // Node locations and the polyglot stack records each Pure
-                // frame with file:line:col. Without this, the JVM's default
-                // uncaught-exception handler only renders Java frames, so
-                // "toOne expected exactly 1 element, got 0" tells the user
-                // nothing about *which* Pure call chain produced the error.
+                // Print the Pure call stack — PureException carries Truffle Node locations and the polyglot
+                // stack records each Pure frame with file:line:col. Without this, the JVM's default
+                // uncaught-exception handler only renders Java frames.
                 String pureStack = PureStackFormatter.format(t);
                 if (!pureStack.isEmpty())
                 {
@@ -202,64 +131,6 @@ public final class TruffleCompilerBinaryBuilder
                 }
                 throw t;
             }
-            if (result == null)
-            {
-                throw new RuntimeException("compile returned null");
-            }
-
-            List<String> allErrors = new ArrayList<>();
-            Object errorsObj = invokeAccessor(result, "_errors");
-            if (errorsObj instanceof PureSequence errSeq)
-            {
-                for (int i = 0; i < errSeq.size(); i++)
-                {
-                    allErrors.add(String.valueOf(errSeq.getBoxed(i)));
-                }
-            }
-            if (!allErrors.isEmpty())
-            {
-                System.err.println("Compilation errors:");
-                allErrors.forEach(e -> System.err.println("  " + e));
-                throw new RuntimeException("Pure compilation failed with " + allErrors.size() + " error(s)");
-            }
-
-            // Every Package is written: compile-pure's `buildPackages` builds this
-            // module's own package tree (`platform`, `platform::pure`, … holding only
-            // its elements), so a Package a base PDB also has is a shadow the registry
-            // folds into the base's — dropped, its children would be under no parent
-            // (a walk down `children`, the PCT runner's, would never reach them).
-            // Accepts both typed XPDBHelper (instanceof PackageableElement) and
-            // PureDynamicObject (_Any.pureTypeOf returns Pure path) since
-            // TrufflePdbWriter.write now accepts Iterable<?>.
-            LinkedHashMap<String, Object> elementsByPath = new LinkedHashMap<>();
-            Object elementsObj = invokeAccessor(result, "_elements");
-            if (elementsObj instanceof PureSequence elementsSeq)
-            {
-                for (int i = 0; i < elementsSeq.size(); i++)
-                {
-                    Object el = elementsSeq.getBoxed(i);
-                    if (el == null) continue;
-                    String pureType = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeOf(el);
-                    if (pureType == null) continue;
-                    String path = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(el, resolver);
-                    elementsByPath.put(path, el);
-                }
-            }
-
-            System.out.println("Compiled " + elementsByPath.size() + " elements");
-
-            // 4. Extract the reverse reference index from the Pure
-            //    {@code CompilationResult.context.referencedBy}. Mirrors
-            //    the bootstrap-CLI path so Truffle-compiled PDBs carry the
-            //    same reverse-index payload as the Java compiler does.
-            java.util.Map<String, java.util.Set<String>> referencedBy = extractReferencedBy(result);
-
-            // 5. Write the aggregated elements to one or two PDBs depending on mode.
-            if (outputFile.getParent() != null)
-            {
-                Files.createDirectories(outputFile.getParent());
-            }
-            writeFiltered(new ArrayList<>(elementsByPath.values()), manifest, outputFile, mode, referencedBy, runtime, resolver);
         }
         finally
         {
@@ -306,340 +177,5 @@ public final class TruffleCompilerBinaryBuilder
         sb.append("To diagnose, re-run with `-Dpolyglot.engine.CompilationFailureAction=Diagnose` ")
                 .append("and inspect the produced graal_dumps/ directory.");
         throw new RuntimeException(sb.toString());
-    }
-
-    /**
-     * Read a property via {@link
-     * org.finos.legend.pure.truffle.compiler.helper._Any#read} — works for
-     * both typed XPDBHelpers and {@code PureDynamicObject}s. The previous
-     * reflection-on-`_X()` path failed on PDO targets since the typed
-     * `<X>` interface (which declared the default getter) is no longer
-     * generated and {@code PureDynamicObject} only implements
-     * {@code PropertyAccessor}.
-     */
-    private static Object invokeAccessor(Object target, String accessor)
-    {
-        String propName = accessor.startsWith("_") ? accessor.substring(1) : accessor;
-        return org.finos.legend.pure.truffle.compiler.helper._Any.read(target, propName);
-    }
-
-    /**
-     * @return {@code true} when {@code element} (a PDO or typed helper) is
-     *         test-related: any stereotype on
-     *         {@link TestElementFilter#TEST_PROFILE_PATH}, or one of
-     *         {@link TestElementFilter#PCT_TEST_STEREOTYPES} on
-     *         {@link TestElementFilter#PCT_PROFILE_PATH}. Other PCT
-     *         stereotypes (e.g. {@code <<PCT.function>>}) stay in lean.
-     */
-    private static boolean isTestElement(Object element, MetadataAccess resolver)
-    {
-        Object stereotypes = org.finos.legend.pure.truffle.compiler.helper._Any.read(element, "stereotypes");
-        if (stereotypes == null)
-        {
-            return false;
-        }
-        Iterable<?> iter;
-        if (stereotypes instanceof PureSequence seq)
-        {
-            if (seq.size() == 0) return false;
-            List<Object> list = new ArrayList<>(seq.size());
-            for (int i = 0; i < seq.size(); i++)
-            {
-                list.add(seq.getBoxed(i));
-            }
-            iter = list;
-        }
-        else if (stereotypes instanceof Iterable<?> i)
-        {
-            iter = i;
-        }
-        else
-        {
-            return false;
-        }
-        for (Object s : iter)
-        {
-            if (s == null) continue;
-            Object profile = org.finos.legend.pure.truffle.compiler.helper._Any.read(s, "profile");
-            if (profile == null) continue;
-            String profilePath = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(profile, resolver);
-            if (TestElementFilter.TEST_PROFILE_PATH.equals(profilePath))
-            {
-                return true;
-            }
-            if (TestElementFilter.PCT_PROFILE_PATH.equals(profilePath))
-            {
-                Object value = org.finos.legend.pure.truffle.compiler.helper._Any.read(s, "value");
-                if (value instanceof String name && TestElementFilter.PCT_TEST_STEREOTYPES.contains(name))
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private static void writeFiltered(
-            List<Object> elements,
-            ModuleManifest manifest,
-            Path outputFile,
-            TestElementFilter.Mode mode,
-            java.util.Map<String, java.util.Set<String>> referencedBy,
-            PureRuntime runtime,
-            MetadataAccess resolver) throws IOException
-    {
-        switch (mode)
-        {
-            // Both halves in one archive: its test elements are present, so their
-            // testDependencies are ordinary dependencies of this archive.
-            case WITH -> writePdb("full", elements, manifest.withAllDependencies(), TestElementFilter.withTestsPath(outputFile), referencedBy, runtime, resolver);
-            case NONE ->
-            {
-                List<Object> lean = elements.stream()
-                        .filter(e -> !isTestElement(e, resolver))
-                        .toList();
-                java.util.Set<String> leanPaths = elementPaths(lean, resolver);
-                writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
-                        lean, manifest, outputFile,
-                        org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains),
-                        runtime, resolver);
-            }
-            case ONLY ->
-            {
-                List<Object> tests = elements.stream()
-                        .filter(e -> isTestElement(e, resolver))
-                        .toList();
-                java.util.Set<String> testPaths = elementPaths(tests, resolver);
-                writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
-                        tests, TestElementFilter.testsManifest(manifest),
-                        TestElementFilter.testsOnlyPath(outputFile),
-                        org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains),
-                        runtime, resolver);
-            }
-            case SPLIT ->
-            {
-                List<Object> lean = new ArrayList<>(elements.size());
-                List<Object> tests = new ArrayList<>();
-                for (Object e : elements)
-                {
-                    (isTestElement(e, resolver) ? tests : lean).add(e);
-                }
-                java.util.Set<String> leanPaths = elementPaths(lean, resolver);
-                java.util.Set<String> testPaths = elementPaths(tests, resolver);
-                // Rewrite Package PDOs in both partitions so their `children`
-                // slots only reference paths present in the SAME PDB. Without
-                // this, lean.pdb's Package for a path that mixes lean + test
-                // children would emit dangling pointers to test paths; a
-                // runtime that loads only lean would PTR-FAIL them. Tests-only
-                // gets shadow Package PDOs so the runtime registry can union
-                // children across modules (ModuleRegistry's
-                // foldChildrenInto) when both are loaded.
-                List<Object> leanFiltered = filterPackageChildren(lean, leanPaths, resolver);
-                List<Object> testsWithShadows = withShadowPackages(tests, lean, testPaths, resolver);
-                writePdb("lean (" + leanFiltered.size() + "/" + elements.size() + ")",
-                        leanFiltered, manifest, outputFile,
-                        org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains),
-                        runtime, resolver);
-                writePdb("tests-only (" + testsWithShadows.size() + "/" + elements.size() + ")",
-                        testsWithShadows, TestElementFilter.testsManifest(manifest),
-                        TestElementFilter.testsOnlyPath(outputFile),
-                        org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains),
-                        runtime, resolver);
-            }
-        }
-    }
-
-    private static java.util.Set<String> elementPaths(List<Object> elements, MetadataAccess resolver)
-    {
-        java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
-        for (Object e : elements)
-        {
-            String p = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(e, resolver);
-            if (p != null)
-            {
-                out.add(p);
-            }
-        }
-        return out;
-    }
-
-    private static boolean isPackagePdo(Object e)
-    {
-        return e instanceof org.finos.legend.pure.truffle.execution.PureDynamicObject
-                && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(e, "platform::pure::metamodel::Package");
-    }
-
-    /**
-     * Clone a Package PDO with a fresh children list. Slots other than
-     * {@code children} are copied from the original (forcing FB-lazy
-     * materialisation where present so the clone carries plain values).
-     */
-    private static org.finos.legend.pure.truffle.execution.PureDynamicObject clonePackageWithChildren(
-            org.finos.legend.pure.truffle.execution.PureDynamicObject original, List<Object> newChildren)
-    {
-        org.finos.legend.pure.truffle.execution.PureDynamicObject copy =
-                new org.finos.legend.pure.truffle.execution.PureDynamicObject(
-                        original.classInfo, null, original.resolver, original.parent);
-        for (int i = 0; i < copy.slots.length; i++)
-        {
-            copy.slots[i] = original.readSlot(i);
-        }
-        int childrenSlot = original.classInfo.slotIndex("children");
-        if (childrenSlot >= 0 && childrenSlot < copy.slots.length)
-        {
-            copy.slots[childrenSlot] = new org.finos.legend.pure.truffle.execution.types.ObjectSequence(newChildren.toArray());
-        }
-        return copy;
-    }
-
-    /**
-     * Rebuild every Package PDO in {@code partition} so its {@code children}
-     * slot only contains elements whose path is in {@code keepPaths}. Non-
-     * Package elements pass through unchanged.
-     */
-    private static List<Object> filterPackageChildren(
-            List<Object> partition, java.util.Set<String> keepPaths,
-            MetadataAccess resolver)
-    {
-        List<Object> out = new ArrayList<>(partition.size());
-        for (Object e : partition)
-        {
-            if (!isPackagePdo(e))
-            {
-                out.add(e);
-                continue;
-            }
-            org.finos.legend.pure.truffle.execution.PureDynamicObject pkg =
-                    (org.finos.legend.pure.truffle.execution.PureDynamicObject) e;
-            int childrenSlot = pkg.classInfo.slotIndex("children");
-            List<Object> filtered = new ArrayList<>();
-            if (childrenSlot >= 0)
-            {
-                Object kidsObj = pkg.readSlot(childrenSlot);
-                if (kidsObj instanceof PureSequence ps)
-                {
-                    for (int i = 0; i < ps.size(); i++)
-                    {
-                        Object child = ps.getBoxed(i);
-                        if (child == null) continue;
-                        String cp = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(child, resolver);
-                        if (cp != null && keepPaths.contains(cp)) filtered.add(child);
-                    }
-                }
-            }
-            out.add(clonePackageWithChildren(pkg, filtered));
-        }
-        return out;
-    }
-
-    /**
-     * Build the tests partition: start with the test-stereotyped elements,
-     * then add a <em>shadow</em> Package PDO for every parent-package path
-     * that has test children but whose canonical Package lives in the lean
-     * partition. The shadow's metadata is cloned from the canonical Package;
-     * its children list contains only the test children at that path.
-     * Runtime registry merging unions these shadows with the canonical
-     * Package via {@link
-     * org.finos.legend.pure.truffle.compiler.module.ModuleRegistry}'s
-     * {@code foldChildrenInto} when both PDBs are loaded.
-     */
-    private static List<Object> withShadowPackages(
-            List<Object> testElements, List<Object> allElements,
-            java.util.Set<String> testPaths,
-            MetadataAccess resolver)
-    {
-        List<Object> out = new ArrayList<>(testElements);
-        java.util.Map<String, java.util.List<Object>> testKidsByParent = new java.util.LinkedHashMap<>();
-        for (Object t : testElements)
-        {
-            Object parent = org.finos.legend.pure.truffle.compiler.helper._Any.read(t, "package");
-            if (parent == null) continue;
-            String parentPath = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(parent, resolver);
-            if (parentPath == null) continue;
-            testKidsByParent.computeIfAbsent(parentPath, k -> new ArrayList<>()).add(t);
-        }
-        java.util.Map<String, org.finos.legend.pure.truffle.execution.PureDynamicObject> packageByPath = new java.util.HashMap<>();
-        for (Object e : allElements)
-        {
-            if (!isPackagePdo(e)) continue;
-            String p = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(e, resolver);
-            if (p != null)
-            {
-                packageByPath.put(p, (org.finos.legend.pure.truffle.execution.PureDynamicObject) e);
-            }
-        }
-        for (java.util.Map.Entry<String, java.util.List<Object>> entry : testKidsByParent.entrySet())
-        {
-            String parentPath = entry.getKey();
-            if (testPaths.contains(parentPath))
-            {
-                // Parent Package itself is a test element — already in `out`
-                // with its full children list; no shadow needed.
-                continue;
-            }
-            org.finos.legend.pure.truffle.execution.PureDynamicObject canonical = packageByPath.get(parentPath);
-            if (canonical == null) continue;
-            out.add(clonePackageWithChildren(canonical, entry.getValue()));
-        }
-        return out;
-    }
-
-    private static void writePdb(String label, List<Object> elements, ModuleManifest manifest, Path target,
-                                 java.util.Map<String, java.util.Set<String>> referencedBy,
-                                 PureRuntime runtime,
-                                 MetadataAccess resolver) throws IOException
-    {
-        PurePdbArchiveWriter.write(runtime, resolver, elements, manifest, referencedBy, target, "Writing " + target.getFileName());
-        System.out.println("Written: " + target + " [" + label + ", " + Files.size(target) + " bytes, "
-                + (referencedBy == null ? 0 : referencedBy.size()) + " ref targets, pure-writer]");
-    }
-
-    /**
-     * Extract the reverse reference index from the Pure
-     * {@code CompilationResult.context.referencedBy}. The Pure value is a
-     * {@link org.finos.legend.pure.truffle.execution.types.MapImpl}
-     * whose values are {@code List<String>} PDOs with a {@code values: String[*]}
-     * field (a PureSequence). Returns an empty map on any shape mismatch.
-     */
-    private static java.util.Map<String, java.util.Set<String>> extractReferencedBy(Object compResult)
-    {
-        java.util.LinkedHashMap<String, java.util.Set<String>> out = new java.util.LinkedHashMap<>();
-        Object ctxObj = org.finos.legend.pure.truffle.compiler.helper._Any.read(compResult, "context");
-        if (ctxObj == null)
-        {
-            return out;
-        }
-        Object refObj = org.finos.legend.pure.truffle.compiler.helper._Any.read(ctxObj, "referencedBy");
-        if (!(refObj instanceof org.finos.legend.pure.truffle.execution.types.MapImpl mapImpl))
-        {
-            return out;
-        }
-        for (java.util.Map.Entry<Object, Object> entry : mapImpl.getMap().entrySet())
-        {
-            if (!(entry.getKey() instanceof String targetPath))
-            {
-                continue;
-            }
-            Object listPdo = entry.getValue();
-            Object valuesObj = listPdo == null ? null
-                    : org.finos.legend.pure.truffle.compiler.helper._Any.read(listPdo, "values");
-            java.util.LinkedHashSet<String> callers = new java.util.LinkedHashSet<>();
-            if (valuesObj instanceof PureSequence seq)
-            {
-                for (int i = 0; i < seq.size(); i++)
-                {
-                    if (seq.getBoxed(i) instanceof String s)
-                    {
-                        callers.add(s);
-                    }
-                }
-            }
-            else if (valuesObj instanceof String s)
-            {
-                callers.add(s);
-            }
-            out.put(targetPath, callers);
-        }
-        return out;
     }
 }

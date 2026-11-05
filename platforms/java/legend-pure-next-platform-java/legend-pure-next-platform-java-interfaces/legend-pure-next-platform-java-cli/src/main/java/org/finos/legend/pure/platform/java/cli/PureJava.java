@@ -33,7 +33,8 @@ import java.nio.file.Path;
  * execute}: installs the languages, opens the PDBs lazily, installs them as the metadata translated
  * code reads, and calls the function's class.
  *
- * <p>Usage: {@code PureJava [--root <dir>] [--pdb a.pdb ...] --function <path> [--args v ...]}. The
+ * <p>Usage: {@code PureJava execute [--root <dir>] [--pdb a.pdb ...] --function <path> [--args v ...]}, or
+ * {@code PureJava compile} with the flags of {@code pure-truffle compile} (see {@link #USAGE}). The
  * function path is the element path with its signature
  * ({@code platform::pure::functions::string::joinStrings_String_MANY__String_1__String_1_}); arguments are
  * passed as Strings and the result is printed. {@code --schema m3.fbs} overrides the schema the platform
@@ -60,14 +61,28 @@ public final class PureJava
     {
     }
 
+    private static final String COMPILE_MODULE =
+            "platform::pure::compiler::pdb::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
+
+    private static final String USAGE = "usage: PureJava execute [--root <dir>] [--pdb a.pdb ...] --function <path> [--args v ...] [--schema m3.fbs]\n"
+            + "       PureJava compile [--root <dir>] --base-pdb a.pdb ... --source <dir> ... --output-dir <dir> [--tests {none|split|with}]";
+
     public static void main(String[] args) throws Exception
     {
+        if (args.length == 0 || !(args[0].equals("execute") || args[0].equals("compile")))
+        {
+            System.err.println(USAGE);
+            System.exit(2);
+        }
         Path schema = null;
         Path root = Path.of("");
         MutableList<Path> archives = Lists.mutable.empty();
         String function = null;
         MutableList<String> functionArgs = Lists.mutable.empty();
-        for (int i = 0; i < args.length; i++)
+        MutableList<String> sources = Lists.mutable.empty();
+        String outputDir = null;
+        String tests = "none";
+        for (int i = 1; i < args.length; i++)
         {
             switch (args[i])
             {
@@ -78,6 +93,7 @@ public final class PureJava
                     root = Path.of(args[++i]);
                     break;
                 case "--pdb":
+                case "--base-pdb":
                     archives.add(Path.of(args[++i]));
                     break;
                 case "--function":
@@ -89,14 +105,23 @@ public final class PureJava
                         functionArgs.add(args[++i]);
                     }
                     break;
+                case "--source":
+                    sources.add(Path.of(args[++i]).toAbsolutePath().normalize().toString());
+                    break;
+                case "--output-dir":
+                    outputDir = args[++i];
+                    break;
+                case "--tests":
+                    tests = args[++i];
+                    break;
                 default:
                     throw new IllegalArgumentException("Unknown option: " + args[i]);
             }
         }
-        if (function == null)
+        boolean compile = args[0].equals("compile");
+        if (compile ? (sources.isEmpty() || outputDir == null) : function == null)
         {
-            System.err.println("usage: PureJava [--root <dir>] [--pdb a.pdb ...] --function <path> "
-                    + "[--args v ...] [--schema m3.fbs]");
+            System.err.println(USAGE);
             System.exit(2);
         }
 
@@ -119,7 +144,9 @@ public final class PureJava
         PureRuntime runtime = builder.build();
         try
         {
-            System.out.println(Execute.call(function, functionArgs.toArray()));
+            System.out.println(compile
+                    ? Execute.call(COMPILE_MODULE, sources, outputDir, tests, runtime.compilerExtensions())
+                    : Execute.call(function, functionArgs.toArray()));
         }
         catch (Throwable t)
         {

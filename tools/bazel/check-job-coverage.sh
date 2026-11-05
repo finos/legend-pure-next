@@ -20,6 +20,12 @@
 #   tools/bazel/check-job-coverage.sh
 
 set -euo pipefail
+# A module without the package of a platform (a checked-in one-line BUILD.bazel: hosts.bzl platform_module) would not run there.
+bazel query --noshow_progress 'deps(//tools/bazel:module_packages, 1)' >/dev/null 2>&1 || {
+    echo "a module has no package on a platform (add a BUILD.bazel calling platform_module()):" >&2
+    bazel query --noshow_progress --keep_going 'deps(//tools/bazel:module_packages, 1)' 2>&1 >/dev/null | grep 'no such package' >&2 || true
+    exit 1
+}
 required="tests(//...) except attr(tags, '\bmanual\b', //...)"
 untagged=$(bazel query --noshow_progress "$required except attr(tags, 'job:', //...)" 2>/dev/null)
 twice=$(bazel query --noshow_progress --output=build "$required" 2>/dev/null | awk '

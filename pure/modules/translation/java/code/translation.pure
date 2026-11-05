@@ -374,6 +374,7 @@ function platform::extensions::language::java::translation::conventionsFor(baseP
          pair('platform::pure::functions::string::reverseString_String_1__String_1_', reverseStringCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::io::directoryTree_String_1__String_MANY_', directoryTreeCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::io::writeFile_String_1__String_1__String_1_', writeFileCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('platform::pure::functions::io::writeFileBytes_String_1__Binary_1__String_1_', writeFileBytesCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::date::currentTimeMillis__Integer_1_', currentTimeMillisCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::io::withSilencedPrint_Function_1__T_m_', withSilencedPrintCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::extensions::language::java::compileAndExecute_String_1__String_1__String_1__Any_MANY__Any_MANY_', compileAndExecuteCoder_FunctionExpression_1__Conventions_1__Code_1_),
@@ -2577,6 +2578,13 @@ function <<access.private>> platform::extensions::language::java::translation::w
 {
    assert($fe.parametersValues->size() == 2, | 'writeFileCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
    $conv->runtimeCall('PureFiles', 'writeFile', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString())], javaString());
+}
+
+// `writeFileBytes(path, content)` — writeFile, for a Binary (the raw byte[]).
+function <<access.private>> platform::extensions::language::java::translation::writeFileBytesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'writeFileBytesCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   $conv->runtimeCall('PureFiles', 'writeFileBytes', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaArray(javaByte()))], javaString());
 }
 
 // `currentTimeMillis()` — milliseconds since the epoch.

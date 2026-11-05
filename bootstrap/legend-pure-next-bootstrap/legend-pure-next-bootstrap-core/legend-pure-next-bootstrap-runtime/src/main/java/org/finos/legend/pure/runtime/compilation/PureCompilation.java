@@ -59,7 +59,7 @@ public final class PureCompilation implements Compilation
     private static final String COMPILE_WITH_EXTENSIONS_FN = "platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
     // The languages of the runtime, as Truffle stages them (its language_resources): their manifests, on the class
     // path. A language whose compiler extension is not loaded (its module is not) contributes nothing.
-    private static final ImmutableList<String> LANGUAGES = Lists.immutable.of("languages/language_pure.json", "languages/language_test.json");
+    private static final ImmutableList<String> LANGUAGES = Lists.immutable.of("languages/language_pure.json", "languages/language_test.json", "languages/language_diagram.json", "languages/language_tds.json");
 
     private final MetadataAccess registry;
     private final FunctionExecutor executor;
@@ -113,7 +113,7 @@ public final class PureCompilation implements Compilation
     }
 
     /** The compiler extensions of the languages: each one's `pure.compilerExtension` function, called. */
-    private MutableList<Object> compilerExtensions()
+    public MutableList<Object> compilerExtensions()
     {
         return LANGUAGES.toList()
                 .collect(PureCompilation::compilerExtensionPath)

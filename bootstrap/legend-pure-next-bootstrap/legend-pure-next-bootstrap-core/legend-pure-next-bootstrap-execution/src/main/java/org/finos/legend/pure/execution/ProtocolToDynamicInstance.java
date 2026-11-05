@@ -71,7 +71,7 @@ public class ProtocolToDynamicInstance
 
     public Object convert(Object javaPOJO, int depth)
     {
-        if (depth > 100)
+        if (depth > 1000)
         {
             throw new RuntimeException("StackOverflow safe-guard tripped! Deeply nested or cyclic POJO: " + (javaPOJO != null ? javaPOJO.getClass().getName() : "null"));
         }

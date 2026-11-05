@@ -24,6 +24,7 @@ import org.finos.legend.pure.truffle.execution.types.PureSequence;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -55,6 +56,12 @@ import java.util.Set;
  *   <li>Non-pointer PDO whose canonical path matches a non-self entry in the
  *       input map → return the in-map winner's deep copy (mirrors the
  *       duplicate-PDO contract from PointerGraphResolver).</li>
+ *   <li>An input element whose path a dependency also owns (a module compiled
+ *       against its own PDB): references to it from elsewhere resolve to the
+ *       dependency's instance; the element itself is what was compiled, so it
+ *       is copied like any other, and comes back in its place in the list.
+ *       Processed last, so what it refers to is already copied and none of
+ *       those copies refers to it.</li>
  *   <li>Other non-pointer PDO → shallow-clone via
  *       {@link PureDynamicObject}'s ctor, register in {@code copies}, then
  *       recursively process every declared slot into the clone.</li>
@@ -85,9 +92,27 @@ public final class PointerGraphImmutableResolver
         List<Object> out = new ArrayList<>(byPath == null ? 0 : byPath.size());
         if (byPath == null || byPath.isEmpty()) return out;
         Context ctx = new Context(byPath, byPath.keySet(), resolver);
+        Map<String, Integer> shadowing = new LinkedHashMap<>();
         for (Map.Entry<String, Object> e : byPath.entrySet())
         {
-            out.add(process(e.getValue(), ctx));
+            if (shadowsDep(e.getValue(), e.getKey(), ctx))
+            {
+                shadowing.put(e.getKey(), out.size());
+                out.add(null);
+            }
+            else
+            {
+                out.add(process(e.getValue(), ctx));
+            }
+        }
+        for (Map.Entry<String, Integer> e : shadowing.entrySet())
+        {
+            Object element = byPath.get(e.getKey());
+            ctx.root = element;
+            out.set(e.getValue(), process(element, ctx));
+            ctx.root = null;
+            // What comes after refers to the dependency's instance, as what came before did.
+            ctx.copies.remove(element);
         }
         return out;
     }
@@ -107,6 +132,8 @@ public final class PointerGraphImmutableResolver
          *  guard then falls back to skipping. */
         final Object packageableElement;
         final IdentityHashMap<Object, Object> copies = new IdentityHashMap<>();
+        /** The input element being copied though a dependency owns its path; null otherwise. */
+        Object root;
 
         Context(Map<String, Object> byPath, Set<String> inputPaths, MetadataAccess resolver)
         {
@@ -149,6 +176,15 @@ public final class PointerGraphImmutableResolver
         Object canonical = ctx.resolver.getElement(pdoPath);
         if (canonical == null || canonical == pdo) return false;
         return !_Any.pureTypeIs(pdo, PACKAGE_PATH);
+    }
+
+    /** Is this input element at {@code path} one a dependency also owns? */
+    private static boolean shadowsDep(Object element, String path, Context ctx)
+    {
+        return ctx.resolver != null
+                && element instanceof PureDynamicObject pdo
+                && isPackageableElement(pdo, ctx)
+                && canonicalisableToDep(pdo, path, ctx);
     }
 
     private static Object process(Object value, Context ctx)
@@ -227,7 +263,7 @@ public final class PointerGraphImmutableResolver
                     // does that merge. Canonicalising a local Package to a dep
                     // Package would collapse the inmem's own contributed
                     // children into the dep instance and lose them.
-                    if (canonicalisableToDep(pdo, pdoPath, ctx))
+                    if (pdo != ctx.root && canonicalisableToDep(pdo, pdoPath, ctx))
                     {
                         return ctx.resolver.getElement(pdoPath);
                     }
@@ -296,7 +332,12 @@ public final class PointerGraphImmutableResolver
         if (elementObj instanceof String elementName && !elementName.isEmpty())
         {
             Object owner = ctx.byPath.get(path);
-            if (owner == null && ctx.resolver != null) owner = ctx.resolver.getElement(path);
+            // A member of an element a dependency also owns, from outside it: the dependency's, as the element is.
+            if (owner == null || (owner != ctx.root && shadowsDep(owner, path, ctx)))
+            {
+                Object dep = ctx.resolver != null ? ctx.resolver.getElement(path) : null;
+                owner = dep != null ? dep : owner;
+            }
             if (owner == null) return null;
             String pointerType = _Any.pureTypeOf(ptr);
             if (pointerType == null) return owner;

@@ -50,7 +50,7 @@ public class BinaryNatives
     {
         // binarySize(Binary[1]) : Integer[1] — O(1), the builder's write cursor.
         natives.put("platform::pure::functions::binary::binarySize_Binary_1__Integer_1_", (args, eval, genericType, multiplicity) ->
-                _E_ValueSpecification.wrap((long) bytes(args.get(0)).length, genericType, multiplicity, resolver));
+                _E_ValueSpecification.wrap((long) size(_E_ValueSpecification.unwrap(args.get(0))), genericType, multiplicity, resolver));
 
         // binaryAt(Binary[1], Integer[1]) : Byte[1] — O(1), the reader's inner
         // loop. Unsigned by construction, so no constraint evaluation.
@@ -100,6 +100,15 @@ public class BinaryNatives
         {
             Object raw = _E_ValueSpecification.unwrap(args.get(0));
             List<?> parts = raw instanceof List<?> l ? l : java.util.Collections.singletonList(raw);
+            // [newBytes, buffer]: fbb::prepend, once per scalar, offset, pad byte, vtable and string of an archive.
+            // That shape claims front reserve instead of copying the buffer (PrependByteSequence).
+            if (parts.size() == 2)
+            {
+                byte[] head = asBytes(parts.get(0));
+                return _E_ValueSpecification.wrap(
+                        parts.get(1) instanceof PrependByteSequence tail ? tail.prepend(head) : PrependByteSequence.seed(head, asBytes(parts.get(1))),
+                        genericType, multiplicity, resolver);
+            }
             int total = 0;
             for (Object p : parts)
             {
@@ -289,11 +298,21 @@ public class BinaryNatives
         return asBytes(_E_ValueSpecification.unwrap(vs));
     }
 
-    private static byte[] asBytes(Object v)
+    private static int size(Object v)
+    {
+        return v instanceof PrependByteSequence sequence ? sequence.size() : asBytes(v).length;
+    }
+
+    /** A Binary as bytes: every consumer but `binarySize` reaches them here, which materialises one under construction. */
+    public static byte[] asBytes(Object v)
     {
         if (v instanceof byte[] b)
         {
             return b;
+        }
+        if (v instanceof PrependByteSequence sequence)
+        {
+            return sequence.toByteArray();
         }
         throw new IllegalArgumentException(
                 "Expected a Binary (byte[]), got " + (v == null ? "null" : v.getClass().getName()));

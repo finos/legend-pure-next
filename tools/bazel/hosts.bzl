@@ -103,6 +103,19 @@ def _goldens(fixture_dir):
     """The directory of the PDB goldens of a fixture directory: '<x>/definition' to '<x>/pdb'."""
     return fixture_dir.removesuffix("definition") + "pdb"
 
+def _package(chain, module):
+    """The package of a module on a chain: its directory below 'pure/', below the chain."""
+    return "//%s/%s" % (chain, MODULES[module]["dir"].removeprefix("pure/"))
+
+def _self_compiled(chain):
+    """The PDBs of the compiler as a chain compiles it, for a self-host variant: {module: label}."""
+    return {
+        "compiler": _package(chain, "compiler") + ":compiler.pdb",
+        "compiler-tests": _package(chain, "compiler") + ":compiler-tests.pdb",
+        "core_metamodel_pdb_writer": _package(chain, "core_metamodel_pdb_writer") + ":core_metamodel_pdb_writer.pdb",
+        "island_pdb_writer": _package(chain, "island_pdb_writer") + ":island_pdb_writer-with-tests.pdb",
+    }
+
 def _normalize(path):
     """A path with its '.' and '..' segments resolved."""
     parts = []
@@ -156,8 +169,9 @@ _HOST_CLI = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-i
 
 _TRUFFLE_CLI = "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle"
 
-# The hosts (Section 2.3). Each variant: its report name, the command, the PDBs it always loads, and the suites it
-# runs (a capability: what it cannot run is derived here, with the reason, never listed per test).
+# The hosts (Section 2.3). Each variant: its report name, the command, the PDBs it always loads, the suites it runs (a
+# capability: what it cannot run is derived here, with the reason, never listed per test), and what its test names add
+# ('suffix'), beside the others of its chain.
 HOSTS = {
     "truffle": {
         "tool": _TRUFFLE_CLI,
@@ -183,14 +197,10 @@ HOSTS = {
             # The compiler corpus on compiler-pure as Truffle itself compiles it (self-host): on demand.
             "selfhost": {
                 "report": "pure@cli-truffle+selfhost",
+                "suffix": "_selfhost",
                 "command": ["execute"],
                 "prelude": ["core", "parser-mappings", "core-tests", "compiler"],
-                "pdbs": {
-                    "compiler": "//platforms/truffle/modules/compile:jit/compiler.pdb",
-                    "compiler-tests": "//platforms/truffle/modules/compile:jit/compiler-tests.pdb",
-                    "core_metamodel_pdb_writer": "//platforms/truffle/modules/compile:jit/core_metamodel_pdb_writer.pdb",
-                    "island_pdb_writer": "//platforms/truffle/modules/compile:jit/island_pdb_writer-with-tests.pdb",
-                },
+                "pdbs": _self_compiled("platforms/truffle/test/jit"),
                 "tags": ["manual", "selfhost"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
             },
@@ -198,20 +208,17 @@ HOSTS = {
             "native_selfhost": {
                 "tool": "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle-native",
                 "report": "pure@cli-truffle-native+selfhost",
+                "suffix": "_selfhost",
                 "command": ["execute"],
                 "prelude": ["core", "parser-mappings", "core-tests", "compiler"],
-                "pdbs": {
-                    "compiler": "//platforms/truffle/modules/compile:native/compiler.pdb",
-                    "compiler-tests": "//platforms/truffle/modules/compile:native/compiler-tests.pdb",
-                    "core_metamodel_pdb_writer": "//platforms/truffle/modules/compile:native/core_metamodel_pdb_writer.pdb",
-                    "island_pdb_writer": "//platforms/truffle/modules/compile:native/island_pdb_writer-with-tests.pdb",
-                },
+                "pdbs": _self_compiled("platforms/truffle/test/native"),
                 "tags": ["manual", "selfhost"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
             },
             # The owner compiled from its sources in memory, on top of core.pdb, in place of its PDBs.
             "in_memory": {
                 "report": "pure@cli-truffle+inMemory",
+                "suffix": "_in_memory",
                 "command": ["execute-from-memory"],
                 # The owner tests come from its sources, runners included: no test PDB.
                 "prelude": ["core", "parser-mappings", "compiler"],
@@ -241,14 +248,10 @@ HOSTS = {
             # The compiler corpus on compiler-pure as the compiler written in Pure, run by the bootstrap, compiles it.
             "selfhost": {
                 "report": "pure@cli-bootstrap+selfhost",
+                "suffix": "_selfhost",
                 "command": ["execute"],
                 "prelude": ["core", "core-tests", "compiler"],
-                "pdbs": {
-                    "compiler": "//bootstrap/modules/compile:pure/compiler.pdb",
-                    "compiler-tests": "//bootstrap/modules/compile:pure/compiler-tests.pdb",
-                    "core_metamodel_pdb_writer": "//bootstrap/modules/compile:pure/core_metamodel_pdb_writer.pdb",
-                    "island_pdb_writer": "//bootstrap/modules/compile:pure/island_pdb_writer-with-tests.pdb",
-                },
+                "pdbs": _self_compiled("bootstrap/test/pure"),
                 "tags": ["manual", "selfhost", "bootstrap"],
                 "runs": lambda owner, test: owner == "compiler" and test["runner"] == "compiler",
             },
@@ -276,6 +279,7 @@ HOSTS = {
             # The PCT through the JavaScript translator: each test translated and run as JavaScript.
             "translated": {
                 "report": "javascript-translation@cli-javascript",
+                "suffix": "_translated",
                 "command": ["execute"],
                 "prelude": ["core", "core-tests", "compiler"],
                 "extra_pdbs": [
@@ -299,7 +303,7 @@ HOSTS = {
         "variants": {
             "platform": {
                 "report": "java@platform",
-                "command": ["--root", "."],
+                "command": ["execute", "--root", "."],
                 "prelude": ["core-tests"],
                 # The PDBs it loads itself: the languages (language_*.json) and its own modules.
                 "supplies": ["core", "parser-mappings", "compiler", "core_metamodel_pdb_writer", "diagram", "tds", "java", "translation-shared", "java-translation"],
@@ -357,6 +361,25 @@ def job_of(host, variant, owner, suite):
         return "translations/java-modules"
     return "translations/" + host
 
+# What a runner tests, which names its test ('test_<kind>') and tags it ('kind:<kind>'), so that a kind runs on every host:
+# bazel test --test_tag_filters=kind:pct //...
+_KINDS = {
+    "tests": "pure",
+    "pct": "pct",
+    "grammar": "grammar",
+    "compiler": "compiler",
+    "pdbGolden": "pdb_golden",
+    "printerCompiled": "printer_compiled",
+    "printerProtocol": "printer_protocol",
+}
+
+# The suites of a kind a module has more than one of: what tells them apart.
+_QUALIFIERS = {"compiler-unit": "_compiler", "pdb-format": "_pdb_format"}
+
+def _test_name(test, variant):
+    """A test of a suite: its kind, what tells it from the others of that kind in its module, the suffix of the variant."""
+    return "test_%s%s%s" % (_KINDS[test["runner"]], _QUALIFIERS.get(test["suite"], ""), variant.get("suffix", ""))
+
 def _suite_test(host_name, host, variant_name, variant, owner, test):
     manifest = MODULES[owner]
     tool = variant.get("tool", host["tool"])
@@ -382,7 +405,7 @@ def _suite_test(host_name, host, variant_name, variant, owner, test):
     # In the environment: Bazel splits args as a shell would, and a reason has spaces and quotes.
     env = {"PURE_PENDING": reason} if reason else {}
     sh_test(
-        name = "test_%s_%s_%s" % (owner, test["suite"], variant_name),
+        name = _test_name(test, variant),
         srcs = ["//tools/bazel:run-suite.sh"],
         args = [report, "$(rootpath %s)" % tool] + command + loads +
                ["--function", function, "--args"] + args,
@@ -391,60 +414,112 @@ def _suite_test(host_name, host, variant_name, variant, owner, test):
         env = env,
         size = "large",
         timeout = variant.get("timeout"),
-        tags = ["host:" + host_name] + variant.get("tags", []) + (["pending"] if reason else []) +
+        tags = ["host:" + host_name, "kind:" + _KINDS[test["runner"]]] + variant.get("tags", []) + (["pending"] if reason else []) +
                ([] if "manual" in variant.get("tags", []) else ["job:" + job_of(host_name, variant_name, owner, test["suite"])]),
+        visibility = ["//visibility:public"],
     )
 
-def host_specs(host):
-    """One test per suite of every owner, on each variant of 'host' that runs it: '<owner>_<suite>_<variant>'; and,
-    for an owner that declares no suite, '<owner>_none_<variant>' on the default variant, whose report has no case:
-    the dashboard shows the module, 0/0, rather than nothing."""
-    description = HOSTS[host]
-    [_suite_test(host, description, variant_name, variant, owner, test)
-     for owner in sorted(MODULES.keys())
-     for test in MODULES[owner]["tests"]
-     for variant_name, variant in description["variants"].items()
-     if variant["runs"](owner, test)]
+def _suites(chain, owner):
+    """The suites of 'owner' a chain runs: [(variant name, suite)]."""
+    description = HOSTS[chain["host"]]
+    return [(variant_name, test)
+            for variant_name in chain["variants"]
+            for test in MODULES[owner]["tests"]
+            if description["variants"][variant_name]["runs"](owner, test)]
+
+def _reports_empty(chain, owner):
+    """Whether a chain reports 'owner' empty: it declares no suite, and the dashboard shows the module, 0/0, rather
+    than nothing."""
+    description = HOSTS[chain["host"]]
     default = description["default"]
-    variant = description["variants"][default]
-    [sh_test(
-        name = "test_%s_none_%s" % (owner, default),
-        srcs = ["//tools/bazel:empty-report.sh"],
-        # Where the module's unit suite would report (the dashboard reads modules there).
-        args = ["%s/unit/%s.json" % (MODULES[owner]["reportDir"], variant["report"])],
-        tags = ["host:" + host] + variant.get("tags", []) +
-               ([] if "manual" in variant.get("tags", []) else ["job:" + job_of(host, default, owner, "unit")]),
-    ) for owner in sorted(MODULES.keys())
-      if not MODULES[owner]["tests"] and owner not in _GENERATED_MODULES and variant["runs"](owner, {"suite": "unit", "runner": "tests", "target": ""})]
+    return default in chain["variants"] and not MODULES[owner]["tests"] and owner not in _GENERATED_MODULES and \
+        description["variants"][default]["runs"](owner, {"suite": "unit", "runner": "tests", "target": ""})
 
-def pdb_read_backs(host, owner, function, fixtures, fixture_dir = "tests/compiler/definition"):
-    """Host checks: each golden of 'owner' read back by the host decoder, which must find in it the element its
-    fixture defines: '<owner>_read_back_<fixture>', on the default variant of 'host'.
-
-    Args:
-      host: the host.
-      owner: the owner of the goldens.
-      function: the read-back function, (fixture source, element path).
-      fixtures: {fixture, as '<directory>/<name>' below 'fixture_dir': the element path it defines}.
-      fixture_dir: the fixture directory of the owner; its goldens are in '<x>/pdb' when it is '<x>/definition'.
-    """
+def _suite_tests(chain, owner):
+    """One test per suite of 'owner' the chain runs: 'test_<kind><suffix>'; or 'test_none', with a report of no case."""
+    host = chain["host"]
     description = HOSTS[host]
-    variant = description["variants"][description["default"]]
+    for variant_name, test in _suites(chain, owner):
+        _suite_test(host, description, variant_name, description["variants"][variant_name], owner, test)
+    if _reports_empty(chain, owner):
+        default = description["default"]
+        variant = description["variants"][default]
+        sh_test(
+            name = "test_none",
+            srcs = ["//tools/bazel:empty-report.sh"],
+            # Where the module's unit suite would report (the dashboard reads modules there).
+            args = ["%s/unit/%s.json" % (MODULES[owner]["reportDir"], variant["report"])],
+            tags = ["host:" + host, "kind:none"] + variant.get("tags", []) +
+                   ([] if "manual" in variant.get("tags", []) else ["job:" + job_of(host, default, owner, "unit")]),
+            visibility = ["//visibility:public"],
+        )
+
+# What the decoder of a host reads back of the goldens of an owner, which must hold the element its fixture defines:
+# {owner: (the read-back function, of a fixture source and an element path, {fixture, below 'tests/compiler/definition':
+# the element path})}.
+_READ_BACKS = {
+    "diagram": (
+        "platform::extensions::pure::diagram::tests::readBack_String_1__String_1__String_1_",
+        {
+            "diagram/" + name: "m::D"
+            for name in [
+                "propertyAndAssociation",
+                "complexGeometry",
+                "complexTypeProperties",
+            ]
+        },
+    ),
+    "tds": (
+        "platform::extensions::pure::tds::tests::readBack_String_1__String_1__String_1_",
+        {
+            "tds/" + name: "test::tds::%s__Any_MANY_" % name
+            for name in [
+                "typedHeader",
+                "inferredColumns",
+                "mixedInference",
+                "quotedNamesAndCells",
+                "enumeration",
+                "quotedValues",
+                "manyMultiplicity",
+                "primitiveExtension",
+            ]
+        },
+    ),
+}
+
+_READ_BACK_HOSTS = ["truffle", "java", "javascript"]
+
+_FIXTURE_DIR = "tests/compiler/definition"
+
+def _read_backs(chain, owner):
+    """The goldens of 'owner' read back by the decoder of the host: 'test_read_back_from_pdb', on the first variant of
+    the chain, in a process per fixture (read-back-from-pdb.sh)."""
+    host = chain["host"]
+    if owner not in _READ_BACKS or host not in _READ_BACK_HOSTS:
+        return
+    description = HOSTS[host]
+    function, fixtures = _READ_BACKS[owner]
+    variant_name = chain["variants"][0]
+    variant = description["variants"][variant_name]
+    tool = variant.get("tool", description["tool"])
     manifest = MODULES[owner]
     pdbs = _variant_loads(owner, variant)
-    command = [c for c in variant["command"] if c != "--strict-jit"]
-    [sh_test(
-        name = "test_%s_read_back_%s" % (owner, fixture.replace("/", "_")),
+    reason = PENDING.get((host, variant_name, owner, "read-back"))
+    sh_test(
+        name = "test_read_back_from_pdb",
         srcs = ["//tools/bazel:run-suite.sh"],
-        # Every read-back of the host shares one report, a case per fixture (run-suite.sh: PURE_CASE).
-        args = ["%s/read-back/%s.json" % (manifest["reportDir"], variant["report"]), "$(rootpath %s)" % description["tool"]] + command +
-               [a for pdb in pdbs for a in ["--pdb", "$(rootpath %s)" % pdb]] +
-               ["--pdb", "%s/%s/%s.pdb" % (manifest["dir"], _goldens(fixture_dir), fixture),
-                "--function", function, "--args", "%s/%s/%s.pure" % (manifest["dir"], fixture_dir, fixture), element],
-        data = [description["tool"], "//:shared"] + pdbs + manifest["data"] + variant.get("data", []),
-        env = {"PURE_CASE": fixture},
-        tags = ["host:" + host, "job:" + job_of(host, description["default"], owner, "read-back")],
-    ) for fixture, element in fixtures.items()]
+        args = ["%s/read-back/%s.json" % (manifest["reportDir"], variant["report"]),
+                "$(rootpath //tools/bazel:read-back-from-pdb.sh)", "{report}", function,
+                "%s/%s" % (manifest["dir"], _goldens(_FIXTURE_DIR)), "%s/%s" % (manifest["dir"], _FIXTURE_DIR)] +
+               ["%s=%s" % (fixture, element) for fixture, element in sorted(fixtures.items())] +
+               ["--", "$(rootpath %s)" % tool] + [c for c in variant["command"] if c != "--strict-jit"] +
+               [a for pdb in pdbs for a in ["--pdb", "$(rootpath %s)" % pdb]],
+        data = ["//tools/bazel:read-back-from-pdb.sh", tool, "//:shared"] + pdbs + manifest["data"] + variant.get("data", []),
+        env = {"PURE_PENDING": reason} if reason else {},
+        size = "large",
+        tags = ["host:" + host, "kind:read_back_from_pdb"] + (["pending"] if reason else []) +
+               ["job:" + job_of(host, variant_name, owner, "read-back")],
+    )
 
 # The modules the bootstrap builds, as Truffle is generated from them; every other is built by the Truffle CLI. 'core' has
 # no PDB to be compiled against, so it is not compiled by a host.
@@ -458,12 +533,13 @@ _BOOTSTRAP_BUILT = [
     "java-translation",
 ]
 
-# What the bootstrap cannot compile, so has no reference to compare with: {module: why}.
-_NO_REFERENCE = {
+# What the Java compiler cannot compile, so is compared with the PDB the build made, by Truffle: {module: why}. The hosts
+# then agree with each other; that the output is right rests on the goldens of the extension.
+_NOT_JAVA_COMPILED = {
     "relation": "its tests hold #TDS islands, and the Java compiler has no handler for an island",
 }
 
-_CHECKED = [module for module in sorted(MODULES.keys()) if module != "core" and module not in _NO_REFERENCE]
+_CHECKED = [module for module in sorted(MODULES.keys()) if module != "core"]
 
 _TRUFFLE_BUILT = [module for module in _CHECKED if module not in _BOOTSTRAP_BUILT]
 
@@ -476,25 +552,6 @@ def _pdb_files(module):
         return {module + ".pdb": _pdb(module)}
     return {module + ".pdb": _pdb(module), module + "-tests.pdb": _pdb(module + "-tests")}
 
-def _module_compile(module, name, directory, base_pdbs, tool, command, tags):
-    manifest = MODULES[module]
-    mode = manifest["testsMode"]
-    pure_compile(
-        name = name,
-        srcs = manifest["compileSrcs"] or ["//%s:compile_sources" % manifest["dir"]],
-        base_pdbs = base_pdbs,
-        outs = [directory + "/" + pdb for pdb in _pdb_files(module).keys()],
-        source_dir = manifest["dir"],
-        sources = manifest["sourceDirs"] or ["."],
-        generated = manifest["generated"],
-        split_tests = mode == "split",
-        with_tests = mode == "with",
-        tool = tool,
-        command = command,
-        tags = ["manual"] + tags,
-        visibility = ["//visibility:public"],
-    )
-
 def _dependency_pdbs(module):
     """What a module is compiled against, from its manifest: its dependencies, then its test dependencies."""
     manifest = MODULES[module]
@@ -502,48 +559,152 @@ def _dependency_pdbs(module):
     return [_pdb(m) for m in _closure(manifest["dependencies"] + [d for d in tests if not d.endswith("-tests")])] + \
            [_pdb(d) for d in tests if d.endswith("-tests")]
 
-def module_reference_compiles():
-    """Step 1 of the reference: what the Truffle CLI builds, compiled by the bootstrap too, into 'reference/'."""
-    for module in _TRUFFLE_BUILT:
-        _module_compile(module, module + "_compile", "reference", _dependency_pdbs(module), "bootstrap", "compile", [])
+def _module_compile(chain, module):
+    """Step 1: the module compiled again with the compiler of a chain, to compare with: 'recompile', and its PDBs. What
+    builds a module is the 'compile' below pure/, once."""
+    manifest = MODULES[module]
+    mode = manifest["testsMode"]
+    compiler = chain["compiler"]
+    if compiler.get("prelude", True):
+        prelude = [_pdb("core")] + ([_pdb("parser-mappings")] if compiler.get("parser_mappings", True) else []) + \
+                  [_pdb("core-tests"), _pdb("compiler"), _pdb("core_metamodel_pdb_writer")]
+    else:
+        prelude = []
+    # What the CLI loads itself is not given to it, and what it always needs is.
+    variant = HOSTS[chain["host"]]["variants"][chain["variants"][0]]
+    supplied = [_pdb(m) for m in variant.get("supplies", [])]
+    bases = prelude + [pdb for pdb in _dependency_pdbs(module) if pdb not in prelude]
+    pure_compile(
+        name = "recompile",
+        srcs = manifest["compileSrcs"] or ["//%s:compile_sources" % manifest["dir"]],
+        base_pdbs = [pdb for pdb in bases if pdb not in supplied] + [pdb for pdb in variant.get("extra_pdbs", []) if pdb not in bases],
+        outs = _pdb_files(module).keys(),
+        source_dir = manifest["dir"],
+        sources = manifest["sourceDirs"] or ["."],
+        generated = manifest["generated"],
+        split_tests = mode == "split",
+        with_tests = mode == "with",
+        tool = compiler["tool"],
+        command = compiler.get("command", "compile"),
+        root_data = compiler.get("root_data", []),
+        tags = ["manual"] + compiler.get("tags", []),
+        visibility = ["//visibility:public"],
+    )
 
-def module_compiles(chain, tool, command = "compile", modules = _BOOTSTRAP_BUILT, parser_mappings = True, tags = []):
-    """Step 1: the modules compiled with the compiler of a platform, into '<chain>/'.
+def _pdb_checks(prefix, chain, module):
+    """Step 2: every PDB of the module against its reference, element for element: 'test_pdb_check'."""
+    pairs = []
+    for pdb, built in _pdb_files(module).items():
+        reference = built if module in _BOOTSTRAP_BUILT or module in _NOT_JAVA_COMPILED else "%s:%s" % (_package(_REFERENCE, module), pdb)
+        # What this compiler made: its own recompile, or the build's PDB where the build used this compiler.
+        platform = "%s:%s" % (_package(prefix, module), pdb) if module in chain.get("compiles", []) else built
+        pairs += [reference, platform]
+    sh_test(
+        name = "test_pdb_check",
+        srcs = ["//tools/bazel:pdb-diff.sh"],
+        args = ["$(rootpath %s)" % _HOST_CLI, "$(rootpath %s)" % _pdb("core")] + ["$(rootpath %s)" % pdb for pdb in pairs],
+        data = [_HOST_CLI, _pdb("core")] + pairs,
+        tags = ["manual", "selfhost", "kind:pdb_check"] + chain["compiler"].get("tags", []),
+        visibility = ["//visibility:public"],
+    )
 
-    Args:
-      chain: the name of the compiler, in the names of the targets.
-      tool: the CLI, as for pure_compile.
-      command: the compile command, as for pure_compile.
-      modules: the modules it compiles.
-      parser_mappings: whether the CLI parses with parser-mappings.pdb.
-      tags: more tags, beside 'manual'.
-    """
-    prelude = [_pdb("core")] + ([_pdb("parser-mappings")] if parser_mappings else []) + \
-              [_pdb("core-tests"), _pdb("compiler"), _pdb("core_metamodel_pdb_writer")]
-    for module in modules:
-        base_pdbs = prelude + [pdb for pdb in _dependency_pdbs(module) if pdb not in prelude]
-        _module_compile(module, "%s_compile_%s" % (module, chain), chain, base_pdbs, tool, command, tags)
+_SELF_HOSTED = ["compiler", "core_metamodel_pdb_writer", "island_pdb_writer"]
 
-def module_pdb_checks(chain, compile_package, modules = _CHECKED, tags = []):
-    """Step 2: each PDB of the modules against the bootstrap's, element for element: 'test_<module>_<chain>', and
-    'test_<module>_tests_<chain>'.
+# The Java compiler of the bootstrap: what every other compiler is compared with, where it can compile the module.
+_REFERENCE = "bootstrap/test/java"
 
-    Args:
-      chain: the name of the compiler, as for module_compiles.
-      compile_package: the package of its compiles. A module it does not compile is the one the build holds.
-      modules: the modules checked.
-      tags: more tags, beside 'manual' and 'selfhost'.
-    """
-    for module in modules:
-        for pdb, built in _pdb_files(module).items():
-            bootstrap_built = module in _BOOTSTRAP_BUILT
-            reference = built if bootstrap_built else "//bootstrap/modules/compile:reference/" + pdb
-            # What this compiler made: its own compile where the build does not use it.
-            platform = "%s:%s/%s" % (compile_package, chain, pdb) if bootstrap_built else built
-            sh_test(
-                name = "test_%s_%s" % (module + ("_tests" if pdb.endswith("-tests.pdb") else ""), chain),
-                srcs = ["//tools/bazel:pdb-diff.sh"],
-                args = ["$(rootpath %s)" % _HOST_CLI, "$(rootpath %s)" % _pdb("core"), "$(rootpath %s)" % reference, "$(rootpath %s)" % platform],
-                data = [_HOST_CLI, _pdb("core"), reference, platform],
-                tags = ["manual", "selfhost"] + tags,
-            )
+# What runs the modules: {the directory of its packages: its host, the variants of the host it runs, and its compiler:
+# the CLI, what that compiles again ('compiles'); what it checks ('checks')}.
+_CHAINS = {
+    _REFERENCE: {
+        "host": "bootstrap",
+        "variants": ["cli"],
+        "compiler": {"tool": "bootstrap", "prelude": False},
+        "compiles": [module for module in _TRUFFLE_BUILT if module not in _NOT_JAVA_COMPILED],
+    },
+    # The compiler written in Pure, run by the bootstrap.
+    "bootstrap/test/pure": {
+        "host": "bootstrap",
+        "variants": ["selfhost"],
+        "compiler": {"tool": "bootstrap", "command": "compile-via-pure", "parser_mappings": False, "tags": ["bootstrap"]},
+        "compiles": _CHECKED,
+        "checks": _CHECKED,
+    },
+    "platforms/truffle/test/jit": {
+        "host": "truffle",
+        "variants": ["jit", "selfhost", "in_memory"],
+        "compiler": {"tool": "truffle"},
+        # The build compiles every other with the JIT. What is compared with that build is compiled again: the JIT against itself.
+        "compiles": _BOOTSTRAP_BUILT + sorted(_NOT_JAVA_COMPILED.keys()),
+        "checks": _CHECKED,
+    },
+    "platforms/truffle/test/native": {
+        "host": "truffle",
+        "variants": ["native", "native_selfhost"],
+        "compiler": {"tool": "truffle-native"},
+        "compiles": _CHECKED,
+        "checks": _CHECKED,
+    },
+    "platforms/java/test": {
+        "host": "java",
+        "variants": ["platform"],
+        "compiler": {"tool": "java", "root_data": ["//platforms/java:runtime_data"]},
+        "compiles": _CHECKED,
+        "checks": _CHECKED,
+    },
+    "platforms/javascript/test": {
+        "host": "javascript",
+        "variants": ["cli", "translated"],
+        "compiler": {"tool": "javascript"},
+        "compiles": _CHECKED,
+        "checks": _CHECKED,
+    },
+}
+
+_MODULE_OF_DIR = {manifest["dir"]: module for module, manifest in MODULES.items()}
+
+def platform_module():
+    """All that a chain does with a module, from the package it is called in: '<chain>/<the module directory below
+    pure/>': 'recompile', 'test_pdb_check', 'test_<kind>' and 'test_read_back_from_pdb'."""
+    package = native.package_name()
+    prefixes = [prefix for prefix in _CHAINS.keys() if package.startswith(prefix + "/")]
+    if not prefixes:
+        fail("%s: not below a chain: one of %s" % (package, sorted(_CHAINS.keys())))
+    prefix = prefixes[0]
+    chain = _CHAINS[prefix]
+    module = _MODULE_OF_DIR.get("pure/" + package.removeprefix(prefix + "/"))
+    if not module:
+        fail("%s: no module in the directory it names" % package)
+    if module in chain.get("compiles", []):
+        _module_compile(chain, module)
+    if module in chain.get("checks", []):
+        _pdb_checks(prefix, chain, module)
+    _suite_tests(chain, module)
+    _read_backs(chain, module)
+
+def _package_target(chain, module):
+    """A target of the package of a module on a chain; None when the chain does nothing with the module."""
+    if module in chain.get("compiles", []):
+        return "recompile"
+    if module in chain.get("checks", []):
+        return "test_pdb_check"
+    suites = _suites(chain, module)
+    if suites:
+        variant_name, test = suites[0]
+        return _test_name(test, HOSTS[chain["host"]]["variants"][variant_name])
+    return "test_none" if _reports_empty(chain, module) else None
+
+def module_packages(name):
+    """A target of every package platform_module should be called in: a package is a checked-in file, which no macro
+    can write, so tools/bazel/check-job-coverage.sh loads these, and a missing one fails it. Never built."""
+    native.filegroup(
+        name = name,
+        srcs = [
+            "%s:%s" % (_package(prefix, module), _package_target(chain, module))
+            for prefix, chain in _CHAINS.items()
+            for module in sorted(MODULES.keys())
+            if _package_target(chain, module)
+        ],
+        tags = ["manual"],
+        testonly = True,
+    )

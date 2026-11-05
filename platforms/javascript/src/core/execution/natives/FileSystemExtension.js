@@ -17,7 +17,7 @@
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { DIRECTORY_TREE, READ_FILE_BYTES, WRITE_FILE } from "./native-signatures.js";
+import { DIRECTORY_TREE, READ_FILE_BYTES, WRITE_FILE, WRITE_FILE_BYTES } from "./native-signatures.js";
 
 /** Host natives for platform::pure::functions::io that need a file system. */
 export const fileSystemExtension = {
@@ -25,6 +25,7 @@ export const fileSystemExtension = {
         natives.register(READ_FILE_BYTES, () => readFileBytes);
         natives.register(DIRECTORY_TREE, () => directoryTree);
         natives.register(WRITE_FILE, () => writeFile);
+        natives.register(WRITE_FILE_BYTES, () => writeFileBytes);
     },
 };
 
@@ -55,5 +56,12 @@ function directoryTree(root) {
 function writeFile(path, content) {
     mkdirSync(dirname(String(path)), { recursive: true });
     writeFileSync(String(path), String(content), "utf8");
+    return path;
+}
+
+// writeFileBytes(path, content): writeFile, for a Binary (a Uint8Array).
+function writeFileBytes(path, content) {
+    mkdirSync(dirname(String(path)), { recursive: true });
+    writeFileSync(String(path), content);
     return path;
 }

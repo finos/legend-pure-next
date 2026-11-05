@@ -64,7 +64,9 @@ public final class DirectoryTreeNode extends PureNode
         try (Stream<Path> stream = Files.walk(dir))
         {
             stream.filter(Files::isRegularFile)
-                    .forEach(p -> paths.add(p.toString()));
+                    .map(Path::toString)
+                    .sorted()
+                    .forEach(paths::add);
         }
         catch (IOException e)
         {

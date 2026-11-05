@@ -13,10 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Whether two PDBs hold the same elements, property by property (pure-bootstrap diff-pdb --deep): the check that a
-# module compiled by the Truffle CLI is the one the bootstrap compiles.
+# Whether each pair of PDBs holds the same elements, property by property (pure-bootstrap diff-pdb --deep): the check
+# that what a compiler made of a module is what the reference made of it. Every pair is compared, and the ones that
+# differ are named at the end.
 #
-#   pdb-diff.sh <pure-bootstrap> <core.pdb> <a.pdb> <b.pdb>
+#   pdb-diff.sh <pure-bootstrap> <core.pdb> <reference.pdb> <compared.pdb> [<reference.pdb> <compared.pdb>]...
 
-set -euo pipefail
-"$1" diff-pdb --deep --core "$2" "$3" "$4"
+set -uo pipefail
+cli="$1"
+core="$2"
+shift 2
+different=()
+while [[ $# -gt 0 ]]; do
+    echo "== $(basename "$2")"
+    "$cli" diff-pdb --deep --core "$core" "$1" "$2" || different+=("$(basename "$2")")
+    shift 2
+done
+if [[ ${#different[@]} -gt 0 ]]; then
+    echo "differ from the reference: ${different[*]}" >&2
+    exit 1
+fi

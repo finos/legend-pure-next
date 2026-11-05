@@ -15,6 +15,7 @@
 load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//tools/bazel:pure.bzl", "pure_bootstrap_compile")
+load("//tools/bazel:target_genrule.bzl", "target_genrule")
 
 # The M3 specification the generators read, and the field-ID registry they keep.
 
@@ -99,7 +100,7 @@ _CORE_BUILDER = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstr
 
 _GENERATORS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators"
 
-genrule(
+target_genrule(
     name = "core_compile",
     srcs = [
         "m3.ttl",
@@ -127,7 +128,7 @@ genrule(
 )
 
 # parser-mappings.pdb: the visitor mappings of the grammar, on core.
-genrule(
+target_genrule(
     name = "parser_mappings_compile",
     srcs = [
         _CORE_PDB,
@@ -210,7 +211,7 @@ pure_bootstrap_compile(
     visibility = ["//visibility:public"],
 )
 
-genrule(
+target_genrule(
     name = "core_metamodel_pdb_writer_generate",
     srcs = _COMPILER_INPUTS,
     outs = ["compiler/generated/generatedWriter.pure"],
@@ -226,7 +227,7 @@ genrule(
 
 # The test island values: their FlatBuffer fragment, and the registry of its field IDs it was generated with (the
 # tracked registry is an input: //tools/bazel:test_fbs_ids_up_to_date__island checks it is current).
-genrule(
+target_genrule(
     name = "island_fbs_generate",
     srcs = _COMPILER_INPUTS + ["compiler/code/compiler-pure/test/islands/islandTest-fbs-field-ids.txt"],
     outs = [
@@ -245,7 +246,7 @@ genrule(
     visibility = ["//visibility:public"],
 )
 
-genrule(
+target_genrule(
     name = "island_pdb_writer_generate",
     srcs = _COMPILER_INPUTS + ["compiler/generated/islandTest.fbs"],
     outs = ["compiler/generated/islandWriter.pure"],

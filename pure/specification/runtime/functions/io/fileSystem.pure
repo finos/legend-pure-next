@@ -39,3 +39,6 @@ native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnl
 
 // Writes content to a file, creating parent directories and replacing any existing file. Returns the path.
 native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> platform::pure::functions::io::writeFile(path:String[1], content:String[1]):String[1];
+
+// Writes raw bytes to a file, for binary files such as PDB archives: as writeFile, for a Binary.
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> platform::pure::functions::io::writeFileBytes(path:String[1], content:Binary[1]):String[1];

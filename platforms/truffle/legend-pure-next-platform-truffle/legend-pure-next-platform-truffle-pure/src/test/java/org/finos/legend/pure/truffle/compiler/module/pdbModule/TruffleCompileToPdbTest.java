@@ -19,7 +19,6 @@ import org.finos.legend.pure.truffle.execution.PureStackFormatter;
 
 import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
 import org.finos.legend.pure.truffle.compiler.module.ModuleRegistry;
-import org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.PurePdbArchiveWriter;
 import org.finos.legend.pure.truffle.compiler.module.pdbModule.PdbModule;
 import org.finos.legend.pure.truffle.runtime.PureRuntime;
 import org.finos.legend.pure.truffle.execution.types.PureSequence;
@@ -40,7 +39,7 @@ import java.util.stream.Stream;
 /**
  * Truffle-side analog of bootstrap's PdbRoundTripTest: parse Pure source,
  * compile it through the truffle interpreter, write the resulting metamodel
- * elements to a {@code .pdb} via {@link PurePdbArchiveWriter}, reload via
+ * elements to a {@code .pdb} via the Pure {@code writeArchive}, reload via
  * {@link PdbModule}, and assert every compiled path round-trips.
  *
  * <p>{@link #smokeTest} compiles a single hardcoded class as a sanity check.
@@ -346,9 +345,11 @@ public class TruffleCompileToPdbTest
                     }
                     try
                     {
-                        PurePdbArchiveWriter.write(runtime, resolver, elements,
-                                new org.finos.legend.pure.truffle.compiler.module.ModuleManifest("roundtrip", "*", java.util.List.of()),
-                                java.util.Map.of(), tmpPdb);
+                        Files.write(tmpPdb, org.finos.legend.pure.truffle.execution.types.PureBinary.asBytes(runtime.execute(
+                                resolver.getElement("platform::pure::compiler::pdb::archive::writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Binary_1_"),
+                                new org.finos.legend.pure.truffle.execution.types.ObjectSequence(elements.toArray()),
+                                runtime.compilerExtensions(), "roundtrip", "*",
+                                new org.finos.legend.pure.truffle.execution.types.ObjectSequence(new Object[0]))));
                         if (Files.size(tmpPdb) == 0) issues.add("Round-tripped PDB is empty");
                         PdbModule rt = new PdbModule(tmpPdb);
                         int matched = 0;

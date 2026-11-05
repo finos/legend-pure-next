@@ -1,3 +1,5 @@
+load("//tools/bazel:target_genrule.bzl", "target_genrule")
+
 # ©2026 JP Morgan Chase & Co. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Every suite of every owner on Truffle (tools/bazel/hosts.bzl): '<owner>_<suite>_<variant>'.
-
 
 # The Truffle translation gallery, which publish-gallery deploys: the HTML that
 # renderGallery prints, from its doctype on.
@@ -32,7 +31,7 @@ _GALLERY_PDBS = [
 
 _TRUFFLE_CLI = "//platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle"
 
-genrule(
+target_genrule(
     name = "gallery",
     srcs = _GALLERY_PDBS,
     outs = ["truffle-translation-gallery.html"],

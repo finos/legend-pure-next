@@ -15,8 +15,11 @@
 load("@rules_java//java:defs.bzl", "java_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load(":hosts.bzl", "module_packages")
 
 # Build helpers (junit5.bzl, srcjar.bzl), flatc, and the field-ID registry check.
+
+module_packages(name = "module_packages")
 
 # Each tracked field-ID registry: a test that it holds every ID its schema generation assigned, and the command that
 # writes them back: test_fbs_ids_up_to_date__<registry> and update_fbs_ids__<registry>. {registry: (tracked, generated)}.
@@ -173,6 +176,7 @@ exports_files(
         "empty-report.sh",
         "pdb-diff.sh",
         "pdb-lacks.sh",
+        "read-back-from-pdb.sh",
         "run-suite.sh",
         "runs.sh",
     ],

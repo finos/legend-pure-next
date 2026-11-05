@@ -22,15 +22,18 @@ load("//tools/bazel:junit5.bzl", "junit5_test")
 genrule(
     name = "language_resources",
     srcs = [
+        "//pure/extensions/diagram:language_diagram.json",
+        "//pure/extensions/pure/tds:language_tds.json",
         "//pure/specification:language_pure.json",
         "//pure/specification:language_test.json",
     ],
     outs = [
+        "languages/language_diagram.json",
+        "languages/language_tds.json",
         "languages/language_pure.json",
         "languages/language_test.json",
     ],
-    cmd = "cp $(execpath //pure/specification:language_pure.json) $(RULEDIR)/languages/language_pure.json; " +
-          "cp $(execpath //pure/specification:language_test.json) $(RULEDIR)/languages/language_test.json",
+    cmd = "cp $(SRCS) $(RULEDIR)/languages/",
 )
 
 java_library(

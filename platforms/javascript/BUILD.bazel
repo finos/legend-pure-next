@@ -15,11 +15,12 @@
 # The JavaScript platform: the runtime translated from Pure, its parsers and bundles, and its suites.
 
 load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
-load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_run_binary")
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@npm//platforms/javascript/node:esbuild/package_json.bzl", esbuild = "bin")
 load("//tools/bazel:pure.bzl", "pure_generate")
+load("//tools/bazel:target_genrule.bzl", "target_genrule")
 
 exports_files(["package.json"])
 
@@ -226,8 +227,6 @@ js_binary(
     visibility = ["//visibility:public"],
 )
 
-# Every suite of every owner on the JavaScript platform (tools/bazel/hosts.bzl): '<owner>_<suite>_cli'.
-
 # The platform's own tests, each a script run from the output tree, with its
 # report among the test outputs at javascript/<area>/<name>.json.
 _TEST_DATA = _RUNTIME_SOURCES + [
@@ -262,11 +261,11 @@ _NODE_TESTS = {
 ) for name, (script, _, _) in _NODE_TESTS.items()]
 
 [sh_test(
-    name = "test_" + name.replace("-", "_"),
+    name = "test_js_" + name.replace("-", "_"),
     srcs = ["//tools/bazel:run-suite.sh"],
     args = [report or "javascript/%s/none.json" % name, "$(rootpath :%s_script)" % name] + (["--report", "{report}"] if report else []),
     data = [":%s_script" % name],
-    tags = tags + ["job:translations/javascript"],
+    tags = tags + ["kind:js", "job:translations/javascript"],
 ) for name, (_, report, tags) in _NODE_TESTS.items()]
 
 # The Monaco editor the web IDE loads from build/vs: the min/vs directory of its package.
@@ -290,18 +289,18 @@ _GALLERY_PDBS = [
     "//pure/modules/translation/javascript:build/javascript-translation-tests.pdb",
 ]
 
-js_run_binary(
+# js_binary runs from the bin directory, where the PDBs are.
+target_genrule(
     name = "gallery",
     srcs = _GALLERY_PDBS,
-    args = ["execute"] + [a for pdb in _GALLERY_PDBS for a in ["--pdb", "$(rootpath %s)" % pdb]] + [
-        "--function",
-        "platform::extensions::language::javascript::translation::gallery::renderGallery_String_1__String_1_",
-        "--args",
-        "platform::pure::functions",
-    ],
-    stdout = "javascript-translation-gallery.html",
+    outs = ["javascript-translation-gallery.html"],
+    cmd = """
+        BAZEL_BINDIR=$(BINDIR) $(execpath :pure-js) execute %s \\
+            --function "platform::extensions::language::javascript::translation::gallery::renderGallery_String_1__String_1_" \\
+            --args platform::pure::functions > $@
+    """ % " ".join(["--pdb $(rootpath %s)" % pdb for pdb in _GALLERY_PDBS]),
     tags = ["job:translations"],
-    tool = ":pure-js",
+    tools = [":pure-js"],
     visibility = ["//visibility:public"],
 )
 

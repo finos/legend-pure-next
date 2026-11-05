@@ -15,7 +15,7 @@
 
 // The reports of a Bazel test run, where the test dashboard (tools/test-dashboard) reads them:
 //   - every Pure report a test wrote among its outputs, at test-results/<its path>: the reports several tests write
-//     at one path (each host's PDB read-backs, one test per fixture) are one report, with all their cases;
+//     at one path are one report, with all their cases;
 //   - every JUnit report, which the console launcher writes one per engine, split into one per class, in the surefire layout
 //     (<module>/target/surefire-reports/TEST-<class>.xml), the module being the package of the test;
 //   - for a test that ran without a report of its own (a PDB comparison, a registry check, a usage example), a

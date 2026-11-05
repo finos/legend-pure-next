@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # The report of a module that declares no suite: no case, so the dashboard shows the module, 0/0, rather than nothing
-# (tools/bazel/hosts.bzl host_specs).
+# (tools/bazel/hosts.bzl _suite_tests).
 #
 #   empty-report.sh <report path, relative to the test outputs>
 

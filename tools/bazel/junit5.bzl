@@ -17,7 +17,7 @@
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
-def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources = [], jvm_flags = [], plugins = [], visibility = None, **kwargs):
+def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources = [], jvm_flags = [], plugins = [], visibility = None, tags = [], **kwargs):
     """The test classes of a module: every class of its test jar that holds tests, whatever its name, run with the JUnit console
     launcher, from a jar of their own.
 
@@ -79,5 +79,6 @@ def junit5_test(name, srcs, deps = [], runtime_deps = [], data = [], resources =
             "--reports-dir={report}",
         ],
         data = data + [":%s_lib" % name, ":%s_runner" % name],
+        tags = tags + ["kind:junit"],
         **kwargs
     )
