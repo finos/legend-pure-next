@@ -25,7 +25,7 @@
 //   - compiler/ : the compiler. `loadCompiler()` (compiler/load-compiler.js) installs the
 //                 metadata globals over the wider PDB set and the generated
 //                 compiler JS, so compilation runs standalone too. Corpus
-//                 runner: compiler/tests/.
+//                 runner: compiler/tests/definition/.
 //
 // Still to come (the larger arc): a tree-walking interpreter so execution
 // (not just parsing + compilation) also runs standalone.

@@ -1,0 +1,241 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The Bazel build (docs/superpowers/specs/2026-11-01-bazel-migration-design.md).
+
+module(name = "legend_pure_next")
+
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "rules_shell", version = "0.8.0")
+bazel_dep(name = "rules_java", version = "9.9.0")
+bazel_dep(name = "rules_jvm_external", version = "7.2")
+bazel_dep(name = "rules_nodejs", version = "6.7.7")
+bazel_dep(name = "aspect_rules_js", version = "3.5.2")
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+
+# Dependencies converge on one version each: "pinned" keeps these versions over any a transitive dependency asks for.
+# A bump is a deliberate change: maven_install.json follows.
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    artifacts = [
+        "org.antlr:antlr4:4.13.2",
+        "org.antlr:antlr4-runtime:4.13.2",
+        "com.google.flatbuffers:flatbuffers-java:25.2.10",
+        # To converge Jena and its other users on one version.
+        "com.google.code.gson:gson:2.14.0",
+        # Gson brings the annotations, Jena the commons-logging bridge.
+        "com.google.errorprone:error_prone_annotations:2.48.0",
+        "org.slf4j:jcl-over-slf4j:2.0.17",
+        "commons-codec:commons-codec:1.20.0",
+        "commons-io:commons-io:2.21.0",
+        "org.apache.commons:commons-lang3:3.20.0",
+        "org.slf4j:slf4j-api:2.0.16",
+        "org.slf4j:slf4j-nop:2.0.16",
+        "org.apache.jena:jena-arq:6.0.0",
+        "org.apache.jena:jena-core:6.0.0",
+        "org.eclipse.collections:eclipse-collections:13.0.0",
+        "org.eclipse.collections:eclipse-collections-api:13.0.0",
+        "org.eclipse.lsp4j:org.eclipse.lsp4j:0.24.0",
+        # Truffle, as the native image's GraalVM (tools/bazel/graalvm.bzl) runs it.
+        "org.graalvm.polyglot:polyglot:25.0.3",
+        "org.graalvm.sdk:nativeimage:25.0.3",
+        "org.graalvm.tools:profiler-tool:25.0.3",
+        "org.graalvm.truffle:truffle-api:25.0.3",
+        "org.graalvm.truffle:truffle-dsl-processor:25.0.3",
+        "org.graalvm.truffle:truffle-runtime:25.0.3",
+        "org.openjdk.jmh:jmh-core:1.37",
+        "org.openjdk.jmh:jmh-generator-annprocess:1.37",
+        "org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.24.0",
+        "org.java-websocket:Java-WebSocket:1.6.0",
+        "org.junit.jupiter:junit-jupiter:5.14.2",
+        "tools.jackson.core:jackson-core:3.0.4",
+        "tools.jackson.core:jackson-databind:3.0.4",
+        "tools.jackson.datatype:jackson-datatype-eclipse-collections:3.0.4",
+        "org.junit.platform:junit-platform-console-standalone:1.14.2",
+    ],
+    fail_if_repin_required = True,
+    lock_file = "//:maven_install.json",
+    repositories = ["https://repo1.maven.org/maven2"],
+    version_conflict_policy = "pinned",
+)
+
+# legend-pure itself, to run legacy Pure (pure/legacy/tools/legacy-pure-runner), apart from the versions
+# above: it is fetched only when that runner is built. The version is legend_pure_version in tools/legacy.sh there.
+maven.install(
+    name = "legend_pure_runner",
+    artifacts = [
+        "org.finos.legend.pure:legend-pure-m3-core:5.110.0",
+        "org.finos.legend.pure:legend-pure-runtime-java-engine-interpreted:5.110.0",
+    ],
+    fail_if_repin_required = True,
+    lock_file = "//:legend_pure_runner_install.json",
+    repositories = ["https://repo1.maven.org/maven2"],
+)
+use_repo(maven, "legend_pure_runner", "maven")
+
+# flatc, the release binaries at the version the FlatBuffers Java runtime is pinned to, as CI installs it. The
+# registry module builds it from source but brings gRPC with it, which does not load on Bazel 9.
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+_FLATC_BUILD = """exports_files(["flatc"], visibility = ["//visibility:public"])"""
+
+http_archive(
+    name = "flatc_macos",
+    build_file_content = _FLATC_BUILD,
+    sha256 = "eabd8e8c4d8b9381b7ea4c6324c629f9200d8bb73f94b6b28ef406efc8c06c62",
+    urls = ["https://github.com/google/flatbuffers/releases/download/v25.2.10/Mac.flatc.binary.zip"],
+)
+
+http_archive(
+    name = "flatc_linux",
+    build_file_content = _FLATC_BUILD,
+    sha256 = "6f01258d7475806f375d6da66a61df47add8016edd73f1774673f37b80b9a711",
+    urls = ["https://github.com/google/flatbuffers/releases/download/v25.2.10/Linux.flatc.binary.g++-13.zip"],
+)
+
+# GraalVM Community for JDK 25, the runtime of Java binaries and tests (tools/bazel/graalvm.bzl).
+graalvm = use_extension("//tools/bazel:graalvm.bzl", "graalvm")
+use_repo(
+    graalvm,
+    "graalvm_25_linux_aarch64_toolchain_config_repo",
+    "graalvm_25_linux_x64_toolchain_config_repo",
+    "graalvm_25_macos_aarch64_toolchain_config_repo",
+)
+
+register_toolchains(
+    "@graalvm_25_linux_aarch64_toolchain_config_repo//:all",
+    "@graalvm_25_linux_x64_toolchain_config_repo//:all",
+    "@graalvm_25_macos_aarch64_toolchain_config_repo//:all",
+)
+
+# The modules whose owners declare suites in module.json, and the modules those suites load (tools/bazel/suites.bzl).
+pure_suites = use_extension("//tools/bazel:suites.bzl", "pure_suites")
+pure_suites.module(
+    data = ["//pure/specification:specification_files"],
+    manifest = "//pure/specification:module.json",
+    report_dir = "spec",
+    sources = [
+        "runtime/functions",
+        "runtime/featureTests",
+        "runtime/ui",
+        "runtime/test",
+        "runtime/printer",
+    ],
+)
+pure_suites.module(
+    data = ["//pure/specification:specification_files"],
+    manifest = "//pure/specification:compiler/code/compiler-pure/module.json",
+    compile_srcs = ["//pure/specification:compiler_sources"],
+    report_dir = "spec",
+)
+pure_suites.module(
+    manifest = "//pure/specification:compiler/code/compiler-core-metamodel-pdb-writer/module.json",
+    compile_srcs = ["//pure/specification:compiler/code/compiler-core-metamodel-pdb-writer/module.json"],
+    generated = {"//pure/specification:compiler/generated/generatedWriter.pure": "generated/writer.pure"},
+    tests_mode = "none",
+)
+pure_suites.module(
+    manifest = "//pure/specification:compiler/code/compiler-island-pdb-writer/module.json",
+    compile_srcs = ["//pure/specification:compiler/code/compiler-island-pdb-writer/module.json"],
+    generated = {"//pure/specification:compiler/generated/islandWriter.pure": "generated/writer.pure"},
+    tests_mode = "with",
+)
+pure_suites.module(
+    manifest = "//pure/specification:grammar/mapping/mappings-pure/module.json",
+    compile_srcs = ["//pure/specification:parser_mappings_sources"],
+    tests_mode = "none",
+)
+pure_suites.module(
+    manifest = "//pure/modules/protocol:module.json",
+    report_dir = "pure/protocol",
+)
+pure_suites.module(
+    manifest = "//pure/modules/analysis/diagram:module.json",
+    report_dir = "pure/analysis-diagram",
+)
+pure_suites.module(
+    manifest = "//pure/modules/language/java:module.json",
+    report_dir = "pure/language-java",
+)
+pure_suites.module(
+    manifest = "//pure/modules/language/javascript:module.json",
+    report_dir = "pure/language-javascript",
+)
+pure_suites.module(
+    manifest = "//pure/modules/translation/shared:module.json",
+    report_dir = "pure/translation-shared",
+)
+pure_suites.module(
+    manifest = "//pure/modules/translation/java:module.json",
+    report_dir = "pure/translation-java",
+)
+pure_suites.module(
+    manifest = "//pure/modules/translation/javascript:module.json",
+    source_dirs = ["code"],
+    report_dir = "pure/translation-javascript",
+)
+pure_suites.module(
+    manifest = "//pure/modules/translation/truffle:module.json",
+    report_dir = "pure/translation-truffle",
+)
+pure_suites.module(
+    data = ["//pure/extensions/diagram:test_data"],
+    manifest = "//pure/extensions/diagram:module.json",
+    source_dirs = ["code", "generated"],
+    generated = {
+        "//pure/extensions/diagram:generated/protocol.pure": "generated/protocol.pure",
+        "//pure/extensions/diagram:generated/writer.pure": "generated/writer.pure",
+    },
+    report_dir = "spec/diagram",
+)
+pure_suites.module(
+    data = ["//pure/extensions/pure/tds:test_data"],
+    manifest = "//pure/extensions/pure/tds:module.json",
+    source_dirs = ["code", "generated"],
+    generated = {
+        "//pure/extensions/pure/tds:generated/writer.pure": "generated/writer.pure",
+    },
+    report_dir = "spec/tds",
+)
+pure_suites.module(
+    manifest = "//pure/modules/functions/relation:module.json",
+    source_dirs = ["code"],
+    report_dir = "spec/relation",
+)
+pure_suites.module(
+    manifest = "//pure/legacy:module.json",
+    source_dirs = ["code"],
+    report_dir = "spec/legacy",
+)
+pure_suites.module(
+    manifest = "//pure/legacy/loader:module.json",
+    report_dir = "spec/legacy",
+)
+use_repo(pure_suites, "pure_suites")
+
+# Node, as CI installs it (build.yml NODE_VERSION: 22), and the JavaScript platform packages, from its pnpm lock.
+node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
+node.toolchain(node_version = "22.23.3")
+use_repo(node, "nodejs_toolchains")
+
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "npm",
+    # esbuild's postinstall swaps its JavaScript launcher for the native binary, which a js_binary cannot run:
+    # without it, the launcher runs the binary of the @esbuild/<platform> package itself.
+    lifecycle_hooks_exclude = ["esbuild"],
+    pnpm_lock = "//platforms/javascript/node:pnpm-lock.yaml",
+)
+use_repo(npm, "npm")

@@ -1,0 +1,26 @@
+{
+ "cases": [
+  {
+   "id": "diagram/simple",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/geometry",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/complexGeometry",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/complexTypeProperties",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/propertyAndAssociation",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "pdbGolden"
+}

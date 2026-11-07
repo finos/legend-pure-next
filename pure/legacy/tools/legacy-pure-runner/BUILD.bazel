@@ -1,0 +1,33 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# legend-pure itself, pinned (@legend_pure_runner in MODULE.bazel), to run legacy Pure and read its real answers:
+# bazel run //pure/legacy:test_legacy_pure_on_legend_pure.
+
+load("@rules_java//java:defs.bzl", "java_binary")
+
+java_binary(
+    name = "legacy-pure-runner",
+    srcs = ["src/RunLegacy.java"],
+    main_class = "RunLegacy",
+    tags = ["manual"],
+    visibility = ["//pure/legacy:__pkg__"],
+    deps = [
+        "@legend_pure_runner//:org_eclipse_collections_eclipse_collections",
+        "@legend_pure_runner//:org_eclipse_collections_eclipse_collections_api",
+        "@legend_pure_runner//:org_finos_legend_pure_legend_pure_m3_core",
+        "@legend_pure_runner//:org_finos_legend_pure_legend_pure_m4",
+        "@legend_pure_runner//:org_finos_legend_pure_legend_pure_runtime_java_engine_interpreted",
+    ],
+)

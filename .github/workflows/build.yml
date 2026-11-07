@@ -13,89 +13,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Pipeline shape:
+# Pipeline shape (Bazel: each job runs the tests tagged job:<job>, tools/bazel/check-job-coverage.sh):
 #
-#   guard                                  (no-op gate; skips release commits and the
-#       │                                   duplicate same-repo `pull_request` event so
-#       │                                   each commit runs once. New jobs depend on this
-#       │                                   either directly or transitively via bootstrap.)
-#       │
-#       └── bootstrap                       (Temurin 25 — `just bootstrap::test`: mvn install with surefire +
-#               │                            Pure compiler-graph spec tests, then runtime functions + PCT
-#               │                            on the bootstrap CLI; produces shared/*.pdb,
-#               │                            bootstrap CLI jar, and the bootstrap mvn artifacts)
-#               │
-#               ├── bootstrap-self-host     (Temurin 25 — `just bootstrap::spec-compiler-selfhost`: compile
-#               │                            compiler-pure via Pure-on-Java and PDB-diff against Java direct)
-#               ├── printer-compiled        (Temurin 25 — `just bootstrap::spec-printer-compiled`:
-#               │                            parse+compile+print each compiler/tests/ file, compare to source)
-#               ├── pdb-golden              (Temurin 25 — `just bootstrap::spec-pdb-golden`: compile and
-#               │                            PDB-write each compiler/tests/ file interpreted, compare to the Java golden)
-#               ├── printer-protocol        (Temurin 25 — `just bootstrap::spec-printer-protocol`:
-#               │                            parse+print each grammar/tests/ file, compare to source)
-#               ├── truffle-self-host       (GraalVM 25 — `just truffle::test` (mvn surefire + Truffle
-#               │      │                     compiler-graph spec) followed by `just truffle::spec-compiler-selfhost`
-#               │      │                     — compiles compiler-pure on Truffle JVM (JIT) and PDB-diffs.
-#               │      │                     Uploads platforms/truffle/build/ for downstream language jobs.)
-#               │      │
-#               │      ├── truffle-specifications (GraalVM 25 — every other Truffle JIT specification run
-#               │      │                     for the test dashboard: functions, PCT, grammar, PDB,
-#               │      │                     printers, in-memory sources; reuses the uploaded truffle jar)
-#               │      │
-#               │      ├── language-java     (GraalVM 25 — `just language::java::test-all`: runs
-#               │      │                     platform::extensions::language::java tests via pure-truffle.
-#               │      │                     The `compileAndExecute` native is only registered in the
-#               │      │                     truffle Java extension, so this can't run on bootstrap.)
-#               │      │
-#               │      └── language-javascript (GraalVM 25 — same shape for the JavaScript module.)
-#               │
-#               └── truffle-native-self-host (GraalVM 25 — matrix of two parallel entries, each building
-#                                            the native-image binary: `self-host` compiles compiler-pure
-#                                            via the AOT binary and PDB-diffs against Java direct;
-#                                            `specifications` runs every specification on it)
+#   guard
+#   └── bootstrap                       the bootstrap, its PDBs, the field-ID registry checks
+#       ├── bootstrap-self-host         the bootstrap tests, specification suites and self-host (tagged manual):
+#       │                               [pdb-golden | compiler | printer-compiled | self-host | rest], interpreted
+#       ├── printer-compiled            compiler-pure printed back, on Truffle
+#       ├── pdb-golden                  compiler-pure PDB goldens, on Truffle
+#       ├── printer-protocol            the protocol printer corpus, on Truffle
+#       ├── truffle-native              the native image: [specifications | self-host (Truffle JIT and native image)]
+#       └── truffle                     Truffle: its build, JUnit tests, the compiler corpus, the usage example
+#           ├── truffle-specifications  every other suite on Truffle
+#           └── translation-deps        the module suites on Truffle: [language-java | language-javascript | translation-shared]
+#               └── translations        the Java and JavaScript hosts, the Truffle translator:
+#                                       [java | javascript | truffle | java-modules (the module suites on Java)]
+#   publish-gallery → all-green
 #
-# bootstrap-self-host, printer-compiled, pdb-golden, printer-protocol, truffle-self-host,
-# and truffle-native-self-host all run in parallel after bootstrap finishes;
-# language-java, language-javascript and truffle-specifications run in parallel after
-# truffle-self-host (they need its uploaded truffle CLI jar + extension jars to invoke pure-truffle).
-# All consume upstream outputs via actions/upload-artifact + actions/download-artifact.
-#
-# Finally, `all-green` aggregates every real job. Branch protection on main
-# only needs to require this single check — adding a new parallel job means
-# listing it in `all-green.needs`, no branch-protection edit required.
-
+# Jobs hand their work on through the Bazel disk cache (.bazelrc config ci): bootstrap and truffle save
+# theirs, the jobs that need them restore it, main saves the one every run starts from, and all-green deletes the run's
+# own once it passes. The downloads are one repository cache, shared by every job and run (.github/actions/bazel). The manual tiers (tags
+# bootstrap, selfhost) are not in //..., so not in a local `bazel test //...`, but CI runs them on every run, in
+# parallel. The test dashboard reads each job's reports as before (tools/bazel/collect-reports.mjs).
 name: Build CI
 
-env:
-  CI_DEPLOY_USERNAME: ${{ secrets.CI_DEPLOY_USERNAME }}
-  CI_DEPLOY_PASSWORD: ${{ secrets.CI_DEPLOY_PASSWORD }}
-  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
+# Every tool version is pinned in the Bazel workspace (MODULE.bazel, tools/bazel/graalvm.bzl, .bazelversion).
 
-  # Tool versions — pinned for reproducibility. Bump as a deliberate change,
-  # not a side effect of an upstream release. Local equivalents:
-  #   JDK_VERSION       ↔ Temurin 25 patch the team builds on (mvn `java-version`)
-  #   GRAALVM_VERSION   ↔ latest graalvm-ce-builds tag for JDK 25
-  #                       (`gh release list --repo graalvm/graalvm-ce-builds`).
-  #                       NB: GraalVM Community lags Oracle GraalVM by one
-  #                       patch; local devs on Oracle GraalVM 25.0.3 won't
-  #                       match exactly, that's expected.
-  #   MAVEN_VERSION     ↔ system mvn locally; we install our own here so the
-  #                       runner image's preinstalled mvn can't drift the build
-  #   JUST_VERSION      ↔ `just --version` locally
-  JDK_VERSION: '25.0.1'
-  GRAALVM_VERSION: '25.0.2'
-  MAVEN_VERSION: '3.9.11'
-  JUST_VERSION: '1.58.0'
-  FLATC_VERSION: '25.2.10'
-  #   NODE_VERSION      ↔ node on PATH locally; the JS translation runtime needs
-  #                       node + pnpm to esbuild-bundle the antlr natives
-  #   PNPM_VERSION      ↔ `pnpm --version` locally; major must match
-  #                       platforms/javascript/pnpm-lock.yaml's lockfileVersion
-  NODE_VERSION: '22'
-  PNPM_VERSION: '9'
-
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  # A run on demand, of any branch.
+  workflow_dispatch:
 
 # deploy-pages needs `pages: write` + `id-token: write` (OIDC). `contents: read`
 # stays minimal — no other job writes back to the repo.
@@ -129,1049 +77,373 @@ jobs:
     name: Pipeline guard
     runs-on: ubuntu-24.04
     if: |
-      (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
-      && !contains(github.event.head_commit.message, '[maven-release-plugin]')
+      github.event_name == 'workflow_dispatch'
+      || ((github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
+          && !contains(github.event.head_commit.message, '[maven-release-plugin]'))
     steps:
       - run: echo "Pipeline authorized."
 
   bootstrap:
-    name: Bootstrap (build + tests)
+    name: Bootstrap (build + registry checks)
     needs: guard
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-mvn-deps
+      - name: Set up Bazel
+        id: bazel
+        uses: ./.github/actions/bazel
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          restore-from: bootstrap
 
-      - name: Set up JDK
-        uses: actions/setup-java@v5
+      # The downloads of every job, saved once per key: this job fetches those it does not need itself.
+      - name: Fetch every external dependency
+        if: steps.bazel.outputs.repository-cache-hit != 'true'
+        run: bazel fetch //...
+
+      - name: Save the Bazel repository cache
+        if: steps.bazel.outputs.repository-cache-hit != 'true'
+        uses: actions/cache/save@v4
         with:
-          distribution: 'temurin'
-          java-version: ${{ env.JDK_VERSION }}
-          java-package: jdk
-          server-id: central
-          server-username: CI_DEPLOY_USERNAME
-          server-password: CI_DEPLOY_PASSWORD
+          path: ~/.cache/bazel-repo
+          key: ${{ steps.bazel.outputs.repository-cache-key }}
 
-      - name: Install Maven
-        run: |
-          set -euo pipefail
-          curl -sSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
-            | tar -xz -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
+      - name: Check every required test belongs to one job
+        run: tools/bazel/check-job-coverage.sh
 
-      - name: Install flatc
-        run: |
-          set -euo pipefail
-          cd "$RUNNER_TEMP"
-          curl -sSL "https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip" -o flatc.zip
-          unzip -q flatc.zip
-          chmod +x flatc
-          sudo mv flatc /usr/local/bin/flatc
-          flatc --version
+      - name: Test the report tools
+        run: node --test tools/bazel/compare-reports.test.mjs tools/bazel/collect-reports.test.mjs
 
-      - name: Install just
-        uses: extractions/setup-just@v4
-        with:
-          just-version: ${{ env.JUST_VERSION }}
+      # What every later job builds on: the bootstrap, its PDBs, and the PDBs Truffle is built from.
+      - name: Build the bootstrap outputs
+        run: bazel build //bootstrap/... //pure/specification:compiler_compile //:shared //platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure:pdb_reader
 
-      - name: Configure git
-        run: |
-          git config --global committer.email "infra@finos.org"
-          git config --global committer.name "FINOS Admin"
-          git config --global author.email "${GITHUB_ACTOR}@users.noreply.github.com"
-          git config --global author.name "${GITHUB_ACTOR}"
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:bootstrap //...
 
-      # Builds bootstrap (mvn install + JUnit) and runs the Pure compiler-graph
-      # spec tests on Pure-on-Java. Outputs shared/core.pdb, shared/compiler.pdb,
-      # and the bootstrap CLI fat jar — consumed by both downstream self-host jobs.
-      - name: Bootstrap test
-        run: just bootstrap::test
-
-      # Runtime functions and PCT on the bootstrap CLI, for the test dashboard. A PCT failure
-      # fails the build (and is in the report). A few seconds on the CLI and PDBs just built.
-      - name: Bootstrap runtime functions and PCT
-        run: just bootstrap::spec-functions bootstrap::spec-pct
-
-      - name: Sonar (main only)
-        if: (github.repository == 'finos/legend-pure-next') && (github.ref == 'refs/heads/main')
-        run: |
-          set -e
-          cd bootstrap/legend-pure-next-bootstrap
-          mvn -B -e javadoc:javadoc -Psonar \
-            -Dorg.slf4j.simpleLogger.showDateTime=true \
-            -Dorg.slf4j.simpleLogger.dateTimeFormat="yyyy-MM-dd HH:mm:ss.SSSZ"
-
-      # Pack the artifacts the downstream jobs need:
-      #   shared/*.pdb        — Java-direct compiler.pdb baseline + core.pdb
-      #   bootstrap/build/    — pure-bootstrap CLI fat jar (used to run the diff)
-      #   ~/.m2 maven repo    — bootstrap modules installed by `mvn install`
-      #                          (truffle build + diff-pdb pull these from local m2)
-      # The downstream `bootstrap-self-host` job also needs the bootstrap mvn
-      # artifacts to run `compile-via-pure`.
-      # pdb/writer/generated/ carries generatedWriter.pure, produced by generate-writer
-      # during the build above. It is gitignored, so a fresh checkout does not
-      # have it — and the self-host jobs compile compiler-pure from source. Without
-      # it they silently compile 193 fewer elements (every gen::write*), which
-      # surfaces only as a self-host diff. Ship it with shared/ rather than making
-      # each job regenerate it.
-      # test/islands/generated/ is the same trap for the test island values: its
-      # writer.pure (islands::pdb::gen + the *_pdbValueBlob functions) is generated by
-      # generate-writer too, and without it the Truffle self-host compiles 11 fewer
-      # elements than shared/compiler.pdb.
-      - name: Tar bootstrap artifacts
-        run: |
-          tar -cf bootstrap-artifacts.tar shared/ bootstrap/build/ \
-            pure/specification/compiler/compiler-pure/pdb/writer/generated/ \
-            pure/specification/compiler/compiler-pure/test/islands/generated/
-          tar -cf bootstrap-mvn.tar -C ~/.m2/repository org/finos/legend/pure
-
-      - name: Upload bootstrap artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: bootstrap-artifacts
-          path: |
-            bootstrap-artifacts.tar
-            bootstrap-mvn.tar
-          retention-days: 1
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-results-bootstrap
-          path: |
-            ${{ github.workspace }}/bootstrap/**/target/surefire-reports/*.xml
-
-      - name: Upload CI Event
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: event-file
-          path: ${{ github.event_path }}
-
-      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
-      # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
-          if [[ -f test-results/builds.json ]]; then
-            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
-          fi
 
       - name: Upload dashboard reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: dashboard-reports-bootstrap
-          path: |
-            test-results/
-            !test-results/*.json
-            !test-results/*.html
+          path: test-results/
           if-no-files-found: ignore
-          retention-days: 1
 
-      - name: Upload build steps
+      - name: Save the Bazel disk cache for the jobs that need this one
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/cache/save@v4
         with:
-          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
-          path: build-steps/
-          if-no-files-found: ignore
-          retention-days: 1
+          path: ~/.cache/bazel-disk
+          key: bazel-disk-${{ runner.os }}-${{ github.run_id }}-bootstrap
 
   bootstrap-self-host:
-    name: Bootstrap self-host (compile-via-pure-on-Java vs Java direct)
+    name: "Bootstrap tier (${{ matrix.part }})"
     needs: bootstrap
     runs-on: ubuntu-24.04
+    # Its suites are interpreted: the heaviest each on a runner of its own, the rest together.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: pdb-golden
+            query: //bootstrap/test/java/specification/compiler/code/compiler-pure:test_pdb_golden
+          - part: compiler
+            query: //bootstrap/test/java/specification/compiler/code/compiler-pure:test_compiler
+          - part: printer-compiled
+            query: //bootstrap/test/java/specification/compiler/code/compiler-pure:test_printer_compiled
+          - part: self-host
+            query: //bootstrap/test/pure/specification/compiler/code/compiler-pure:test_compiler_selfhost + //bootstrap/test/pure/specification/compiler/code/compiler-pure:test_pdb_check + //bootstrap/test/pure/specification/compiler/code/compiler-core-metamodel-pdb-writer:test_pdb_check + //bootstrap/test/pure/specification/compiler/code/compiler-island-pdb-writer:test_pdb_check
+          - part: rest
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap/test/java/specification/compiler/code/compiler-pure:test_pdb_golden - //bootstrap/test/java/specification/compiler/code/compiler-pure:test_compiler - //bootstrap/test/java/specification/compiler/code/compiler-pure:test_printer_compiled - //bootstrap/test/pure/specification/compiler/code/compiler-pure:test_compiler_selfhost - (//bootstrap/test/pure/specification/compiler/code/compiler-pure:test_pdb_check + //bootstrap/test/pure/specification/compiler/code/compiler-core-metamodel-pdb-writer:test_pdb_check + //bootstrap/test/pure/specification/compiler/code/compiler-island-pdb-writer:test_pdb_check)
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-mvn-deps
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          restore-from: bootstrap
 
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.JDK_VERSION }}
-          java-package: jdk
+      - name: Test
+        run: bazel test $(bazel query --noshow_progress '${{ matrix.query }}')
 
-      - name: Install just
-        uses: extractions/setup-just@v4
-        with:
-          just-version: ${{ env.JUST_VERSION }}
-
-      - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: bootstrap-artifacts
-
-      - name: Restore bootstrap artifacts
-        run: |
-          tar -xf bootstrap-artifacts.tar
-          mkdir -p ~/.m2/repository
-          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
-
-      - name: Bootstrap self-host
-        run: just bootstrap::spec-compiler-selfhost
-
-      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
-      # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
-          if [[ -f test-results/builds.json ]]; then
-            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
-          fi
 
       - name: Upload dashboard reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: dashboard-reports-bootstrap-self-host
-          path: |
-            test-results/
-            !test-results/*.json
-            !test-results/*.html
+          name: dashboard-reports-bootstrap-self-host-${{ matrix.part }}
+          path: test-results/
           if-no-files-found: ignore
-          retention-days: 1
-
-      - name: Upload build steps
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
-          path: build-steps/
-          if-no-files-found: ignore
-          retention-days: 1
 
   printer-compiled:
-    name: Printer corpus — compiled
+    name: Compiled printer corpus (Truffle)
     needs: bootstrap
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-mvn-deps
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          restore-from: bootstrap
 
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.JDK_VERSION }}
-          java-package: jdk
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:printer-compiled //...
 
-      - name: Install just
-        uses: extractions/setup-just@v4
-        with:
-          just-version: ${{ env.JUST_VERSION }}
-
-      - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: bootstrap-artifacts
-
-      - name: Restore bootstrap artifacts
-        run: |
-          tar -xf bootstrap-artifacts.tar
-          mkdir -p ~/.m2/repository
-          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
-
-      # parse + compile + print(ManageImports) each file in
-      # pure/specification/compiler/tests/, compare normalised print to
-      # source. Single compile per file. Runs in parallel with
-      # printer-protocol since both only depend on the bootstrap CLI jar +
-      # shared PDBs and don't touch each other's artifacts.
-      - name: Compiled printer corpus
-        run: just bootstrap::spec-printer-compiled
-
-      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
-      # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
-          if [[ -f test-results/builds.json ]]; then
-            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
-          fi
 
       - name: Upload dashboard reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: dashboard-reports-printer-compiled
-          path: |
-            test-results/
-            !test-results/*.json
-            !test-results/*.html
+          path: test-results/
           if-no-files-found: ignore
-          retention-days: 1
-
-      - name: Upload build steps
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
-          path: build-steps/
-          if-no-files-found: ignore
-          retention-days: 1
 
   pdb-golden:
-    name: PDB goldens — interpreted
+    name: PDB goldens (Truffle)
     needs: bootstrap
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-mvn-deps
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          restore-from: bootstrap
 
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.JDK_VERSION }}
-          java-package: jdk
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:pdb-golden //...
 
-      - name: Install just
-        uses: extractions/setup-just@v4
-        with:
-          just-version: ${{ env.JUST_VERSION }}
-
-      - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: bootstrap-artifacts
-
-      - name: Restore bootstrap artifacts
-        run: |
-          tar -xf bootstrap-artifacts.tar
-          mkdir -p ~/.m2/repository
-          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
-
-      # compile each pure/specification/compiler/tests fixture with the Pure compiler on the
-      # bootstrap interpreter, write it with the Pure PDB writer and compare it with its Java golden
-      # (tests-pdb-serialization). ~100s, so a job of its own, in parallel with the other
-      # bootstrap-only jobs; truffle-specifications and translations run it on their hosts.
-      - name: PDB goldens (interpreted)
-        run: just bootstrap::spec-pdb-golden
-
-      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
-      # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
-          if [[ -f test-results/builds.json ]]; then
-            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
-          fi
 
       - name: Upload dashboard reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: dashboard-reports-pdb-golden
-          path: |
-            test-results/
-            !test-results/*.json
-            !test-results/*.html
+          path: test-results/
           if-no-files-found: ignore
-          retention-days: 1
-
-      - name: Upload build steps
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
-          path: build-steps/
-          if-no-files-found: ignore
-          retention-days: 1
 
   printer-protocol:
-    name: Printer corpus — protocol
+    name: Protocol printer corpus (Truffle)
     needs: bootstrap
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-mvn-deps
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          restore-from: bootstrap
 
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.JDK_VERSION }}
-          java-package: jdk
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:printer-protocol //...
 
-      - name: Install just
-        uses: extractions/setup-just@v4
-        with:
-          just-version: ${{ env.JUST_VERSION }}
-
-      - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: bootstrap-artifacts
-
-      - name: Restore bootstrap artifacts
-        run: |
-          tar -xf bootstrap-artifacts.tar
-          mkdir -p ~/.m2/repository
-          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
-
-      # parse + print each grammar.pure under pure/specification/grammar/tests/,
-      # compare normalised print to source (or its grammar_compare override).
-      # No compile step on this side — protocol printer works directly on
-      # parsed PureFile.
-      - name: Protocol printer corpus
-        run: just bootstrap::spec-printer-protocol
-
-      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
-      # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
-          if [[ -f test-results/builds.json ]]; then
-            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
-          fi
 
       - name: Upload dashboard reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: dashboard-reports-printer-protocol
-          path: |
-            test-results/
-            !test-results/*.json
-            !test-results/*.html
+          path: test-results/
           if-no-files-found: ignore
-          retention-days: 1
 
-      - name: Upload build steps
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
-          path: build-steps/
-          if-no-files-found: ignore
-          retention-days: 1
-
-  truffle-self-host:
-    name: Truffle build + self-host (compile-via-pure-on-Truffle vs Java direct)
+  truffle:
+    name: Truffle (build + JUnit + compiler corpus)
     needs: bootstrap
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-mvn-deps
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          restore-from: bootstrap
 
-      # GraalVM (not Temurin) is required: the Truffle interpreter needs
-      # GraalVM's optimizing runtime — plain OpenJDK falls back to
-      # DefaultTruffleRuntime (Interpreted), which doesn't register
-      # engine.TraceCompilation and breaks the test harness's compile-failure
-      # tripwire. The truffle Justfile's `_check-graalvm` enforces this.
-      # We use graalvm/setup-graalvm (not actions/setup-java) because
-      # setup-java's `graalvm` distribution is Oracle GraalVM only —
-      # `graalvm-community` is not a recognised value there.
-      - name: Set up GraalVM JDK
-        uses: graalvm/setup-graalvm@v1
+      - name: Build the Truffle CLI
+        run: bazel build //platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle
+
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:truffle //...
+
+      # The cache the next run on any branch starts from.
+      - name: Save the Bazel disk cache for later runs
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
         with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: 'graalvm-community'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ~/.cache/bazel-disk
+          key: bazel-disk-${{ runner.os }}-main-${{ github.run_id }}
 
-      - name: Install Maven
-        run: |
-          set -euo pipefail
-          curl -sSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
-            | tar -xz -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
-
-      - name: Install flatc
-        run: |
-          set -euo pipefail
-          cd "$RUNNER_TEMP"
-          curl -sSL "https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip" -o flatc.zip
-          unzip -q flatc.zip
-          chmod +x flatc
-          sudo mv flatc /usr/local/bin/flatc
-          flatc --version
-
-      - name: Install just
-        uses: extractions/setup-just@v4
-        with:
-          just-version: ${{ env.JUST_VERSION }}
-
-      - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: bootstrap-artifacts
-
-      - name: Restore bootstrap artifacts
-        run: |
-          tar -xf bootstrap-artifacts.tar
-          mkdir -p ~/.m2/repository
-          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
-
-      # generate-pdb-reader translates platform::pure::compiler::pdb::{reader,schema}
-      # into legend-pure-next-platform-truffle-pure/generated with the JAVA translator,
-      # running on the bootstrap CLI — so it needs those modules' PDBs. They are
-      # NOT in bootstrap-artifacts, and the jobs that publish them (translation-deps
-      # / translations) run after this one, so this job builds them itself. Takes
-      # ~9s with the bootstrap CLI it already restored. Without it the truffle
-      # reactor cannot compile at all: GenericFbDecoder imports the generated
-      # reader, and the failure reads as "package ...pdb.reader does not exist".
-      # The diagram extension too, for the same reason: Truffle's diagram jar stages its GENERATED
-      # pure/extensions/diagram/generated/diagram.fbs (gitignored), so packaging Truffle first ships a jar
-      # without it and every Truffle run fails with "languages/diagram.fbs is not on the class path".
-      # protocol before the extension (it derives its protocol form from protocol.pdb), as the root
-      # Justfile's `build` orders them; all of it runs on the bootstrap CLI restored above.
-      - name: Build the module PDBs the Truffle PDB reader and diagram jar are generated from
-        run: |
-          just modules::translation_java::build-all
-          just modules::translation_java::build-tests
-          just modules::protocol::build
-          just extensions::build-tests
-
-      # `truffle::test` runs the truffle reactor with surefire (Java unit
-      # tests) and then the Pure compiler-graph spec suite on Truffle.
-      # `truffle::spec-compiler-selfhost` then compiles compiler-pure on
-      # Truffle and diffs the output against shared/compiler.pdb (Java direct).
-      # `spec-compiler-selfhost` has no Maven dep — it reuses the fat jar
-      # produced by `truffle::test`'s `_mvn "with-tests"` invocation.
-      - name: Truffle test
-        run: just truffle::test
-
-      # Compiled and tested by the Truffle CLI just built: see the translations job.
-      - name: Relation extension (Truffle)
-        run: just extensions::pure::relation::test-all
-
-      - name: Truffle self-host
-        run: just truffle::spec-compiler-selfhost
-
-      # Pack the truffle CLI fat jar + the Java extension jar
-      # (JavaCompileNatives). Downstream language-java and language-javascript
-      # jobs need these to run pure-truffle.
-      - name: Tar truffle artifacts
-        run: tar -cf truffle-artifacts.tar platforms/truffle/build/
-
-      - name: Upload truffle artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: truffle-artifacts
-          path: truffle-artifacts.tar
-          retention-days: 1
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-results-truffle
-          path: |
-            ${{ github.workspace }}/platforms/truffle/**/target/surefire-reports/*.xml
-
-      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
-      # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
-          if [[ -f test-results/builds.json ]]; then
-            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
-          fi
 
       - name: Upload dashboard reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: dashboard-reports-truffle-self-host
-          path: |
-            test-results/
-            !test-results/*.json
-            !test-results/*.html
+          name: dashboard-reports-truffle
+          path: test-results/
           if-no-files-found: ignore
-          retention-days: 1
 
-      - name: Upload build steps
+      - name: Save the Bazel disk cache for the jobs that need this one
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/cache/save@v4
         with:
-          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
-          path: build-steps/
-          if-no-files-found: ignore
-          retention-days: 1
+          path: ~/.cache/bazel-disk
+          key: bazel-disk-${{ runner.os }}-${{ github.run_id }}-truffle
 
-  # Two parallel entries, each building the native image once:
-  #   - self-host      : compile-via-pure on the AOT binary vs Java direct (below).
-  #   - specifications : every specification run on the native image (compiler,
-  #                      functions, PCT, grammar, PDB, printers) for the test dashboard.
-  truffle-native-self-host:
-    name: Truffle native (${{ matrix.suite }})
+  truffle-native:
+    name: Truffle native image (${{ matrix.suite }})
     needs: bootstrap
     runs-on: ubuntu-24.04
     strategy:
-      fail-fast: false  # let the two entries report independently
+      fail-fast: false
       matrix:
         include:
-          - suite: self-host
-            command: just truffle::native::spec-compiler-selfhost
           - suite: specifications
-            command: just truffle::native::spec
+            command: bazel test --build_tests_only --test_tag_filters=job:truffle-native/specifications //...
+          # The self-host checks of Truffle (JIT and native image): tagged manual, so not in //..., but run here on
+          # every run, in parallel with the other jobs. The bootstrap's runs in bootstrap-self-host.
+          - suite: self-host
+            command: bazel test $(bazel query --noshow_progress 'attr(tags, "[\[ ]selfhost[,\]]", //...) - attr(tags, "[\[ ]bootstrap[,\]]", //...)')
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-mvn-deps
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          restore-from: bootstrap
 
-      # Same GraalVM 25 setup as truffle-self-host. `native-image` is bundled
-      # in GraalVM CE since JDK 17, so just installing the JDK is enough.
-      - name: Set up GraalVM JDK
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: 'graalvm-community'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install Maven
-        run: |
-          set -euo pipefail
-          curl -sSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
-            | tar -xz -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
-
-      - name: Install flatc
-        run: |
-          set -euo pipefail
-          cd "$RUNNER_TEMP"
-          curl -sSL "https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip" -o flatc.zip
-          unzip -q flatc.zip
-          chmod +x flatc
-          sudo mv flatc /usr/local/bin/flatc
-          flatc --version
-
-      - name: Install just
-        uses: extractions/setup-just@v4
-        with:
-          just-version: ${{ env.JUST_VERSION }}
-
-      - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: bootstrap-artifacts
-
-      - name: Restore bootstrap artifacts
-        run: |
-          tar -xf bootstrap-artifacts.tar
-          mkdir -p ~/.m2/repository
-          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
-
-      # generate-pdb-reader translates platform::pure::compiler::pdb::{reader,schema}
-      # into legend-pure-next-platform-truffle-pure/generated with the JAVA translator,
-      # running on the bootstrap CLI — so it needs those modules' PDBs. They are
-      # NOT in bootstrap-artifacts, and the jobs that publish them (translation-deps
-      # / translations) run after this one, so this job builds them itself. Takes
-      # ~9s with the bootstrap CLI it already restored. Without it the truffle
-      # reactor cannot compile at all: GenericFbDecoder imports the generated
-      # reader, and the failure reads as "package ...pdb.reader does not exist".
-      # The diagram extension too, for the same reason: Truffle's diagram jar stages its GENERATED
-      # pure/extensions/diagram/generated/diagram.fbs (gitignored), so packaging Truffle first ships a jar
-      # without it and every Truffle run fails with "languages/diagram.fbs is not on the class path".
-      # protocol before the extension (it derives its protocol form from protocol.pdb), as the root
-      # Justfile's `build` orders them; all of it runs on the bootstrap CLI restored above.
-      - name: Build the module PDBs the Truffle PDB reader and diagram jar are generated from
-        run: |
-          just modules::translation_java::build-all
-          just modules::translation_java::build-tests
-          just modules::protocol::build
-          just extensions::build-tests
-
-      # `truffle::native::spec-compiler-selfhost` first builds the native-image
-      # binary (~5–10 min, dominated by AOT analysis + compile), then uses it
-      # to compile compiler-pure into compiler_truffle_native.pdb and PDB-diffs
-      # against shared/compiler.pdb (Java direct). The Graal tripwire reports
-      # `0/0` here since AOT does no runtime JIT — the value is in catching
-      # AOT-specific divergence (eliminated paths, native-image substitutions)
-      # that the JIT path can't surface.
-      - name: Truffle native ${{ matrix.suite }}
+      - name: Test
         run: ${{ matrix.command }}
 
-      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
-      # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
-          if [[ -f test-results/builds.json ]]; then
-            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
-          fi
 
       - name: Upload dashboard reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: dashboard-reports-truffle-native-${{ matrix.suite }}
-          path: |
-            test-results/
-            !test-results/*.json
-            !test-results/*.html
+          path: test-results/
           if-no-files-found: ignore
-          retention-days: 1
 
-      - name: Upload build steps
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
-          path: build-steps/
-          if-no-files-found: ignore
-          retention-days: 1
-
-  # Every Truffle JIT specification run not already done by truffle-self-host (which runs the
-  # compiler corpus and the self-hosted compiler): runtime functions, PCT, grammar, PDB format,
-  # the PDB golden archives, both printers, and functions + PCT from in-memory sources. They
-  # only need pure-truffle (the uploaded truffle jar) and the shared PDBs — no Maven — and run
-  # in parallel with translation-deps. Their reports feed the test dashboard.
   truffle-specifications:
-    name: Truffle specifications (JIT)
-    needs: truffle-self-host
+    name: Truffle specifications
+    needs: truffle
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      # GraalVM (not Temurin): pure-truffle requires JVMCI for real Graal JIT.
-      - name: Set up GraalVM JDK
-        uses: graalvm/setup-graalvm@v1
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
         with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: 'graalvm-community'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          restore-from: truffle
 
-      - name: Install just
-        uses: extractions/setup-just@v4
-        with:
-          just-version: ${{ env.JUST_VERSION }}
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:truffle-specifications //...
 
-      - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: bootstrap-artifacts
-
-      - name: Download truffle artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: truffle-artifacts
-
-      - name: Restore artifacts
-        run: |
-          tar -xf bootstrap-artifacts.tar
-          tar -xf truffle-artifacts.tar
-
-      - name: Truffle specifications
-        run: >-
-          just truffle::spec-functions truffle::spec-pct truffle::spec-grammar
-          truffle::spec-pdb truffle::spec-pdb-golden
-          truffle::spec-printer-compiled truffle::spec-printer-protocol
-          truffle::spec-functions-inmemory truffle::spec-pct-inmemory
-
-      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
-      # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
-          if [[ -f test-results/builds.json ]]; then
-            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
-          fi
 
       - name: Upload dashboard reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: dashboard-reports-truffle-specifications
-          path: |
-            test-results/
-            !test-results/*.json
-            !test-results/*.html
+          path: test-results/
           if-no-files-found: ignore
-          retention-days: 1
 
-      - name: Upload build steps
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
-          path: build-steps/
-          if-no-files-found: ignore
-          retention-days: 1
-
-  # Prereqs that the `translations` matrix consumes — built in parallel as one
-  # matrix box so the visualizer doesn't draw long arrows around standalone
-  # nodes. Three targets:
-  #   - language-java       : pure-bootstrap builds pure/modules/language/java/build/java.pdb, then
-  #                            pure-truffle runs `runTests platform::extensions::language::java`
-  #                            (the Java extension's JavaCompileNatives registers
-  #                            `compileAndExecute`, which bootstrap doesn't have).
-  #   - language-javascript : the 133 serialization tests; these need no host
-  #                            natives (the JS execution natives moved to the
-  #                            standalone JS platform), so this one could run on
-  #                            bootstrap — it uses pure-truffle only for speed.
-  #   - translation-shared  : Pure-AST -> Pure-AST canonicalisation shared by
-  #                            the two translators; `just test-all` both builds
-  #                            translation-shared{,-tests}.pdb and runs the
-  #                            canonical-tests suite via pure-truffle.
-  # Per-entry: `build_cmd` is the optional pre-test-all build step (only the
-  # language modules need a separate `just build`); `pdb_files` is the
-  # space-separated tar input (shared has two files, languages have one).
   translation-deps:
-    name: Translation deps (${{ matrix.target }})
-    needs: truffle-self-host
+    name: Module suites on Truffle (${{ matrix.target }})
+    needs: truffle
     runs-on: ubuntu-24.04
     strategy:
-      fail-fast: false  # let entries report independently
+      fail-fast: false
       matrix:
         include:
           - target: language-java
-            working_dir: pure/modules/language/java
-            build_cmd: just build
-            pdb_files: pure/modules/language/java/build/java.pdb
-            artifact: language-java-pdb
           - target: language-javascript
-            working_dir: pure/modules/language/javascript
-            build_cmd: just build
-            # -tests too: test-all's split build leaves a LEAN javascript.pdb whose
-            # refs point into javascript-tests.pdb, and the JS platform's emit
-            # loads both.
-            pdb_files: pure/modules/language/javascript/build/javascript.pdb pure/modules/language/javascript/build/javascript-tests.pdb
-            artifact: language-javascript-pdb
           - target: translation-shared
-            working_dir: pure/modules/translation/shared
-            build_cmd: ''
-            pdb_files: pure/modules/translation/shared/build/translation-shared.pdb pure/modules/translation/shared/build/translation-shared-tests.pdb
-            artifact: translation-shared-pdb
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-mvn-deps
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          restore-from: truffle
 
-      # GraalVM (not Temurin): pure-truffle requires JVMCI for real Graal JIT.
-      - name: Set up GraalVM JDK
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: 'graalvm-community'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:translation-deps/${{ matrix.target }} //...
 
-      - name: Install just
-        uses: extractions/setup-just@v4
-        with:
-          just-version: ${{ env.JUST_VERSION }}
-
-      - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: bootstrap-artifacts
-
-      - name: Download truffle artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: truffle-artifacts
-
-      - name: Restore artifacts
-        run: |
-          tar -xf bootstrap-artifacts.tar
-          mkdir -p ~/.m2/repository
-          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
-          tar -xf truffle-artifacts.tar
-
-      # Skip when build_cmd is empty (translation-shared's test-all already builds).
-      - name: Build
-        if: matrix.build_cmd != ''
-        working-directory: ${{ matrix.working_dir }}
-        run: ${{ matrix.build_cmd }}
-
-      - name: Test-all
-        working-directory: ${{ matrix.working_dir }}
-        run: just test-all
-
-      # Unquoted pdb_files lets bash word-split for the multi-file shared entry.
-      - name: Tar pdb
-        run: tar -cf ${{ matrix.artifact }}.tar ${{ matrix.pdb_files }}
-
-      - name: Upload pdb
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}.tar
-          retention-days: 1
-
-      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
-      # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
-          if [[ -f test-results/builds.json ]]; then
-            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
-          fi
 
       - name: Upload dashboard reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: dashboard-reports-translation-deps-${{ matrix.target }}
-          path: |
-            test-results/
-            !test-results/*.json
-            !test-results/*.html
+          path: test-results/
           if-no-files-found: ignore
-          retention-days: 1
 
-      - name: Upload build steps
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
-          path: build-steps/
-          if-no-files-found: ignore
-          retention-days: 1
-
-  # Pure -> <target> translation modules. Matrix entries:
-  #   - java              : translator — `just build-tests` (the PDBs only), then
-  #                          `just java::test-all java::gallery` as the platform suite.
-  #                          The module's own test-all/gallery are NOT used here: each
-  #                          shells out to a fresh `just java::…`, and java::compile
-  #                          regenerates and recompiles the whole platform (~2 min), so
-  #                          they cost two extra compiles and a second test-translation.
-  #                          One `just` invocation, not an `&&` chain: just runs a
-  #                          shared dependency (compile, build-tests) once per
-  #                          invocation, so a chain would rebuild it per recipe.
-  #   - javascript        : translator — the same recipes, executed by the Node
-  #                          host (platforms/javascript/bin/pure-js); `antlr-all`
-  #                          first, because that host loads the parser bundles.
-  #                          Also runs the Node platform suites (`platform_suite`:
-  #                          grammar, compiler conformance, in-process PCT) —
-  #                          that platform's code is generated by this module's
-  #                          translator, so it is tested alongside it. Needs
-  #                          Node + pnpm (the steps guarded on this target).
-  #   - truffle           : backend introspection — `just gallery` only (gallery
-  #                          recipe is self-building; no test-all suite exists).
-  #                          No language pdb to download.
-  # `language_pdb_artifact` keys the optional per-target language-pdb download;
-  # empty for entries (like truffle) that don't have one. `gallery_cmd` is the
-  # entry's full just-recipe sequence — different per target so the truffle box
-  # doesn't pay for nonexistent test-all. Both wait for the full
-  # `translation-deps` matrix to finish — coarser than per-entry edges but
-  # simpler to read.
   translations:
-    name: Translation ${{ matrix.target }}
+    name: Translations (${{ matrix.target }})
     needs: translation-deps
     runs-on: ubuntu-24.04
     strategy:
@@ -1179,216 +451,50 @@ jobs:
       matrix:
         include:
           - target: java
-            gallery_file: platforms/java/build/java-platform-gallery.html
-            language_pdb_artifact: language-java-pdb
-            gallery_cmd: just build-tests
-            # The Java platform's own suites, so the dashboard's java@platform
-            # column is populated from CI rather than only from a local run. Everything
-            # they need is already in this job: pure-truffle.jar (the runtime that
-            # generates this platform's Java) from truffle-artifacts, the five shared
-            # PDBs from bootstrap-artifacts, java.pdb, translation-shared.pdb, and the
-            # two java-translation PDBs built by the step above. test-all already
-            # includes test-translation (the translator's self-tests), and gallery
-            # rides the same invocation so the platform compiles once.
-            platform_suite: just java::test-all java::gallery
+            gallery: //platforms/java:gallery
+            gallery_file: java-platform-gallery.html
           - target: javascript
-            gallery_file: platforms/javascript/build/javascript-translation-gallery.html
-            language_pdb_artifact: language-javascript-pdb
-            # build-TESTS, not build: the platform's antlr-all runs `_emit` over
-            # platform::pure::parser::mappings, and a split-built lean pdb carries refs into its -tests
-            # companion, so javascript-translation-tests.pdb has to exist. `modules::build` uses
-            # build-tests for this module for the same reason.
-            gallery_cmd: just build-tests && just --justfile ../../../../Justfile javascript::antlr-all && just test-all gallery
-            platform_suite: just javascript::test-all
+            gallery: //platforms/javascript:gallery
+            gallery_file: javascript-translation-gallery.html
           - target: truffle
-            gallery_file: platforms/truffle/build/truffle-translation-gallery.html
-            language_pdb_artifact: ''
-            gallery_cmd: just gallery
-            platform_suite: ''
+            gallery: //platforms/truffle:gallery
+            gallery_file: truffle-translation-gallery.html
+          # The module suites on the Java platform, which compile and run Java as they go.
+          - target: java-modules
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-mvn-deps
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          restore-from: truffle
 
-      - name: Set up GraalVM JDK
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: 'graalvm-community'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:translations/${{ matrix.target }} //...
 
-      - name: Install just
-        uses: extractions/setup-just@v4
-        with:
-          just-version: ${{ env.JUST_VERSION }}
-
-      # The javascript entry runs its suites and gallery on the Node host.
-      - name: Set up Node
-        if: matrix.target == 'javascript'
-        uses: actions/setup-node@v4.3.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Set up pnpm
-        if: matrix.target == 'javascript'
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: bootstrap-artifacts
-
-      - name: Download truffle artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: truffle-artifacts
-
-      - name: Download translation-shared pdb
-        uses: actions/download-artifact@v8
-        with:
-          name: translation-shared-pdb
-
-      - name: Download language pdb
-        if: matrix.language_pdb_artifact != ''
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ matrix.language_pdb_artifact }}
-
-      - name: Restore artifacts
+      - name: Build the gallery
+        if: matrix.gallery
         run: |
-          tar -xf bootstrap-artifacts.tar
-          mkdir -p ~/.m2/repository
-          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
-          tar -xf truffle-artifacts.tar
-          tar -xf translation-shared-pdb.tar
-          if [[ -n "${{ matrix.language_pdb_artifact }}" ]]; then
-            tar -xf ${{ matrix.language_pdb_artifact }}.tar
-          fi
+          set -euo pipefail
+          bazel build ${{ matrix.gallery }}
+          mkdir -p gallery
+          cp "$(bazel info bazel-bin)/platforms/${{ matrix.target }}/${{ matrix.gallery_file }}" gallery/
 
-      # The language extensions under pure/extensions — today the `###Diagram` one. BOTH platforms
-      # need it: javascript::generate-all translates it into generated/extensions/ for the browser
-      # IDE's diagram editor, and the Java platform's -extensions-diagram module generates its parser
-      # and AOT-translates platform::extensions::pure::diagram from this PDB (java::spec-diagram runs its tests).
-      # Built here rather than shipped as a translation-deps artifact: it depends only on core.pdb and
-      # compiler.pdb (both restored above with bootstrap-artifacts) and compiles in well under a
-      # second, so an artifact round trip would cost more than the build.
-      - name: Build the language extensions
-        if: matrix.target == 'javascript' || matrix.target == 'java'
-        # modules/protocol first: the diagram extension DERIVES its protocol form from a compiled
-        # metamodel (see its generate-protocol), so protocol.pdb has to exist before it builds. The root
-        # Justfile orders these the same way; this job restores artifacts rather than running that, so it
-        # has to say so itself. It needs only core.pdb, already restored above.
-        run: |
-          just modules::protocol::build
-          just extensions::build-tests
-
-      # The relation functions are compiled by a real platform's CLI — Truffle's, restored above with
-      # truffle-artifacts: their tests are written on `#TDS…#` literals, which only a platform's compiler
-      # (it runs with the language extensions) compiles. Every host loads relation.pdb with the extensions.
-      - name: Build the relation extension (Truffle)
-        if: matrix.target == 'javascript' || matrix.target == 'java'
-        run: just extensions::pure::relation::build-tests
-
-      - name: Translation ${{ matrix.target }}
-        working-directory: pure/modules/translation/${{ matrix.target }}
-        run: ${{ matrix.gallery_cmd }}
-
-      - name: Platform suites (${{ matrix.target }})
-        if: matrix.platform_suite != ''
-        run: ${{ matrix.platform_suite }}
-
-      - name: Upload translation gallery
+      - name: Upload the gallery
+        if: matrix.gallery
         uses: actions/upload-artifact@v7
         with:
           name: gallery-${{ matrix.target }}
-          path: ${{ matrix.gallery_file }}
-          retention-days: 1
+          path: gallery/${{ matrix.gallery_file }}
 
-      # The browser IDE (platforms/javascript/src/interfaces/web): a Pure compiler that runs
-      # with no JVM, so what it needs is exactly what this job has just built — the .pdb
-      # archives, the generated compiler/translator JS and the parser bundles — plus Monaco,
-      # vendored by web-deps. Everything is copied at its REPOSITORY path because the page
-      # resolves its assets relative to the repo root (which is why `just serve` serves from
-      # there); publishing the same shape means the served page is the page developers run.
-      #
-      # ~44MB staged, ~20MB over the wire: Pages gzips the JS to about a tenth, while the
-      # .pdb archives are already deflated and compress by ~6%.
-      - name: Stage the browser IDE
+      # The browser IDE, at its repository layout (publish-gallery copies the tree as it is).
+      - name: Build the browser IDE
         if: matrix.target == 'javascript'
         run: |
           set -euo pipefail
-          just javascript::web-deps
-          mkdir -p ide-site
-          for path in \
-            platforms/javascript/src/interfaces/web \
-            platforms/javascript/src/core \
-            platforms/javascript/generated \
-            platforms/javascript/build/vs \
-            pure/modules/translation/javascript/js/runtime-lib.js \
-            platforms/javascript/build/antlr-bundle.js \
-            platforms/javascript/build/parser-mappings-bundle.js \
-            pure/modules/language/javascript/build/javascript.pdb \
-            pure/modules/translation/javascript/build/javascript-translation.pdb \
-            pure/modules/translation/shared/build/translation-shared.pdb \
-            pure/specification/grammar/antlr/m3/M3Lexer.g4 \
-            shared/specification/m3.fbs
-          do
-            mkdir -p "ide-site/$(dirname "$path")"
-            cp -R "$path" "ide-site/$path"
-          done
-          # THE MODULES THE LANGUAGES DECLARE, read from their own manifests rather than named here.
-          # The page fetches exactly this list — the same manifests reach it through
-          # generated/languages.js — so the two cannot drift. Naming them here is what served a 404 for
-          # shared/parser-mappings.pdb the day language_pure.json started declaring it.
-          while IFS= read -r path
-          do
-            mkdir -p "ide-site/$(dirname "$path")"
-            cp "$path" "ide-site/$path"
-          done < <(node -e '
-            const fs = require("node:fs");
-            const out = [];
-            const add = (f) => (JSON.parse(fs.readFileSync(f, "utf8")).pdbs ?? []).forEach((p) => out.push(p));
-            fs.readdirSync("pure/specification").filter((n) => /^language_.*\.json$/.test(n))
-              .forEach((n) => add("pure/specification/" + n));
-            // An extension is any directory <…>/<name> under pure/extensions holding language_<name>.json,
-            // at any depth — extensions may be grouped (pure/extensions/pure/tds). The same rule as
-            // platforms/javascript/bin/generate-languages.mjs, which is what tells the page to fetch them:
-            // a one-level scan here left tds.pdb out of the site while the page asked for it.
-            const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory() && e.name !== "build")
-              .forEach((e) => {
-                const sub = dir + "/" + e.name;
-                const f = sub + "/language_" + e.name + ".json";
-                if (fs.existsSync(f)) add(f);
-                walk(sub);
-              });
-            walk("pure/extensions");
-            console.log([...new Set(out)].join("\n"));
-          ')
-          # Every language extension's pdb, found by glob rather than named, for an extension that
-          # declares no `pdbs` of its own — grouped ones (pure/extensions/pure/tds) included. The -tests
-          # companions are left behind — the page runs no tests.
-          for path in $(find pure/extensions -path '*/build/*.pdb' -not -path '*/node_modules/*')
-          do
-            case "$path" in *-tests.pdb) continue ;; esac
-            mkdir -p "ide-site/$(dirname "$path")"
-            cp "$path" "ide-site/$path"
-          done
-          # Locales and the other languages' grammars are never loaded by this page.
-          rm -rf ide-site/platforms/javascript/build/vs/basic-languages
-          rm -f  ide-site/platforms/javascript/build/vs/nls.messages.*.js
+          bazel build //platforms/javascript:ide_site
+          cp -RL "$(bazel info bazel-bin)/platforms/javascript/ide-site" ide-site
           du -sh ide-site
 
       - name: Upload the browser IDE
@@ -1397,49 +503,22 @@ jobs:
         with:
           name: ide-site
           path: ide-site
-          retention-days: 1
 
-      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
-      # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
         if: always()
         run: |
-          mkdir -p test-results build-steps
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
           node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
-          if [[ -f test-results/builds.json ]]; then
-            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
-          fi
 
       - name: Upload dashboard reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: dashboard-reports-translations-${{ matrix.target }}
-          path: |
-            test-results/
-            !test-results/*.json
-            !test-results/*.html
+          path: test-results/
           if-no-files-found: ignore
-          retention-days: 1
 
-      - name: Upload build steps
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
-          path: build-steps/
-          if-no-files-found: ignore
-          retention-days: 1
-
-  # Publishes the galleries and the test dashboard to GitHub Pages. The gallery HTMLs come
-  # from the `translations` matrix (gallery-<target> artifacts); the dashboard is rendered
-  # here from every test job's dashboard-reports-* artifact (tools/test-dashboard). All
-  # files are self-contained (inline CSS/JS/data), so the deploy is "drop into _site/".
-  # Runs only on push to main on the canonical repo so PRs and forks don't try to publish.
-  # `!cancelled()`: it also runs when a suite failed, so the dashboard shows the failures;
-  # a gallery whose job failed is left out of the site (with a warning).
-  # One-time setup: repo Settings → Pages → Source = "GitHub Actions".
   publish-gallery:
     name: Publish galleries and test dashboard to GitHub Pages
     needs:
@@ -1448,8 +527,8 @@ jobs:
       - printer-compiled
       - pdb-golden
       - printer-protocol
-      - truffle-self-host
-      - truffle-native-self-host
+      - truffle
+      - truffle-native
       - truffle-specifications
       - translation-deps
       - translations
@@ -1504,14 +583,6 @@ jobs:
           path: test-results
           merge-multiple: true
 
-      - name: Download build steps
-        continue-on-error: true
-        uses: actions/download-artifact@v8
-        with:
-          pattern: dashboard-builds-*
-          path: build-steps
-          merge-multiple: true
-
       # The published site's address, where the previous history.json and builds.json live.
       - name: Configure Pages
         id: pages
@@ -1525,11 +596,11 @@ jobs:
           shopt -s nullglob
           mkdir -p _site test-results
           # History carries over from the published site: build.mjs appends this run's snapshot to
-          # history.json, and each job's build steps are merged into builds.json. A 404 (first deploy)
-          # starts them fresh.
+          # history.json, and builds.json (the build step times just recorded, before Bazel) is kept as
+          # published. A 404 (first deploy) starts them fresh.
           curl -fsSL "$PAGES_BASE_URL/history.json" -o test-results/history.json || rm -f test-results/history.json
           curl -fsSL "$PAGES_BASE_URL/builds.json" -o "$RUNNER_TEMP/published-builds.json" || rm -f "$RUNNER_TEMP/published-builds.json"
-          node tools/test-dashboard/merge-builds.mjs test-results/builds.json "$RUNNER_TEMP/published-builds.json" build-steps/*.json
+          node tools/test-dashboard/merge-builds.mjs test-results/builds.json "$RUNNER_TEMP/published-builds.json"
           links='    <li><a href="dashboard.html">Pure conformance dashboard</a></li>'
           publish() {
             if [[ -f "$1" ]]; then
@@ -1591,14 +662,17 @@ jobs:
       - printer-compiled
       - pdb-golden
       - printer-protocol
-      - truffle-self-host
-      - truffle-native-self-host
+      - truffle
+      - truffle-native
       - truffle-specifications
       - translation-deps
       - translations
       - publish-gallery
     if: always()
     runs-on: ubuntu-24.04
+    # Deleting this run's caches (the token of a pull request from a fork cannot: it keeps them, to age out).
+    permissions:
+      actions: write
     steps:
       - name: Verify all dependencies succeeded
         env:
@@ -1609,3 +683,25 @@ jobs:
             exit 1
           fi
           echo "All required checks passed."
+
+      # A passed run needs its job-to-job disk caches no more (a failed one keeps them, for a re-run of its failed
+      # jobs); on main, only this run's 'main' cache is kept, the one the next runs start from.
+      - name: Delete the disk caches no later run needs
+        if: github.event.pull_request.head.repo.fork != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OS: ${{ runner.os }}
+          RUN: ${{ github.run_id }}
+          ON_MAIN: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          stale() {
+            gh cache list --limit 100 --key "bazel-disk-$OS-$RUN-" --json key --jq '.[].key'
+            if [[ "$ON_MAIN" == "true" ]]; then
+              gh cache list --limit 100 --key "bazel-disk-$OS-main-" --json key --jq ".[].key | select(. != \"bazel-disk-$OS-main-$RUN\")"
+            fi
+          }
+          stale | while read -r key; do
+            echo "deleting the cache '$key'"
+            gh cache delete "$key"
+          done

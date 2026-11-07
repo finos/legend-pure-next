@@ -37,7 +37,7 @@ import java.util.stream.Stream;
  *
  * <p>Run it from anywhere in the checkout:
  * {@code java -cp <parser classes>:<test classes>:<deps> org.finos.legend.pure.next.parser.RegenerateProtocolJson},
- * then review the diff and run {@code just bootstrap::test}.</p>
+ * then review the diff and run {@code bazel test //bootstrap/...}.</p>
  *
  * <p>Locates the corpus by WALKING UP from the working directory, exactly as
  * {@link PureToJsonRoundtripTest} does. It previously resolved {@code pure/specification/grammar/tests/}

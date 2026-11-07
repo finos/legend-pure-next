@@ -29,22 +29,23 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * Tripwire that walks every {@code src/test/java} tree across the repo and
  * fails if any class with JUnit annotations would be silently skipped by
- * surefire's include pattern.
+ * the include pattern the JUnit launcher runs with ({@code tools/bazel/junit5.bzl}).
  *
  * <p>Why this exists: surefire's defaults ({@code Test*}, {@code *Test},
  * {@code *Tests}, {@code *TestCase}) drop classes named e.g.
  * {@code FooTestRunner} or {@code FooSuite}. We had a 674-test class hidden
- * for months because of this. The parent POMs widen the include pattern to
- * {@code **}<!---->{@code /*Test*.java}; this test enforces that any future
+ * for months because of this. The include pattern was widened to
+ * {@code **}<!---->{@code /*Test*.java}, and the launcher keeps it
+ * ({@code --include-classname=.*Test.*}); this test enforces that any future
  * test class also matches that pattern.</p>
  *
- * <p>Lives in the bootstrap reactor but walks the entire repo, so a misnamed
- * test in the truffle reactor still fails this build (assuming you run
+ * <p>Lives in the bootstrap but walks the entire repo, so a misnamed
+ * test in Truffle still fails this build (assuming you run
  * bootstrap before truffle, which the dependency order requires anyway).</p>
  */
 class SurefireDiscoveryTest
 {
-    /** Surefire <include> pattern from each parent POM, as a Java regex. */
+    /** The include pattern of the JUnit launcher (tools/bazel/junit5.bzl), as a Java regex. */
     private static final Pattern SUREFIRE_INCLUDE = Pattern.compile(".*Test.*\\.java");
 
     /** Test annotations whose presence means a class participates in test execution. */
@@ -84,8 +85,9 @@ class SurefireDiscoveryTest
         {
             fail("Found " + mismatches.size() + " test class(es) with JUnit annotations whose file name "
                     + "does NOT match the surefire <include> pattern '" + SUREFIRE_INCLUDE.pattern() + "'. "
-                    + "These would be silently skipped by `mvn test`. Either rename the file to contain 'Test' "
-                    + "in its name, or update <includes> in the relevant pom.xml:\n  "
+                    + "These would be silently skipped by the JUnit launcher (tools/bazel/junit5.bzl: "
+                    + "--include-classname). Either rename the file to contain 'Test' in its name, or widen "
+                    + "that pattern:\n  "
                     + String.join("\n  ", mismatches));
         }
     }

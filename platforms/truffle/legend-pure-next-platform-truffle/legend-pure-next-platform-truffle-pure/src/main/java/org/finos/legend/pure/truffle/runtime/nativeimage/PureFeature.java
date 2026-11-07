@@ -53,8 +53,8 @@ import java.util.stream.Stream;
  * and handles newly-generated metamodel classes without extra configuration.</p>
  *
  * <p>To activate, pass {@code --features=org.finos.legend.pure.truffle.runtime.nativeimage.PureFeature}
- * to {@code native-image}. Configured in the {@code native} Maven profile of
- * {@code platforms/truffle/pom.xml}.</p>
+ * to {@code native-image}, as the {@code pure-truffle-native} genrule does (the Truffle CLI's
+ * {@code BUILD.bazel}).</p>
  */
 public final class PureFeature implements Feature
 {

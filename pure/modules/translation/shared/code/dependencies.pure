@@ -28,7 +28,7 @@ import platform::extensions::pure::translation::dependencies::*;
 //
 // NOTE — future optimization: the bootstrap compiler already computes a
 // function-call dependency graph (see
-//   pure/specification/compiler/compiler-pure/compiler/functionRefExtractor.pure
+//   pure/specification/compiler/code/compiler-pure/compiler/functionRefExtractor.pure
 // — the `referencedBy` map on CompilerContext). That graph could be serialized
 // into the .pdb alongside the elements, and exposed at runtime through a new
 // protocol entry point so translators can look up dependencies in O(1) per

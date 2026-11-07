@@ -104,8 +104,8 @@ public class BootstrapModule implements Module
 
     /**
      * Load parser-mappings.pdb from the classpath. Produced by the
-     * bootstrap-grammar-validation module's exec-maven-plugin execution into
-     * its own target/classes — any test module that depends on
+     * bootstrap-grammar-validation module's build into
+     * its own classes — any test module that depends on
      * bootstrap-grammar-validation gets it on the classpath.
      */
     public static Path locateParserMappingsPdb()

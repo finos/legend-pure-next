@@ -1,0 +1,29 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:53:36.395Z",
+ "source": "platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure/target/surefire-reports/TEST-org.finos.legend.pure.truffle.compiler.module.pdbModule.GenericFbDecoderLanguagesTest.xml",
+ "cases": [
+  {
+   "id": "theAlwaysActiveSchemaComesFirst",
+   "status": "passed"
+  },
+  {
+   "id": "noAlwaysActiveLanguageIsAnErrorNamingWithLanguages",
+   "status": "passed"
+  },
+  {
+   "id": "aLanguageRegisteredOnceStaysRegistered",
+   "status": "passed"
+  },
+  {
+   "id": "anExtensionRegisteredFirstStillFollowsM3",
+   "status": "passed"
+  },
+  {
+   "id": "registeringALanguageTwiceAddsItOnce",
+   "status": "passed"
+  }
+ ]
+}

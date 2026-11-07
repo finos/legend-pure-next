@@ -1,183 +1,28 @@
-# Truffle build pipeline
+# Truffle build
 
-This is a map of the recipes in [`platforms/truffle/Justfile`](Justfile) and
-how they chain together. All recipes are addressable as
-`just truffle::<recipe>` from the repo root, or as `just <recipe>` from
-`platforms/truffle/`.
+Truffle is built and tested by Bazel, from what the bootstrap builds (`bootstrap/build.md`). Every package
+below is relative to `platforms/truffle/legend-pure-next-platform-truffle/`.
 
-Truffle reads `core.pdb` and `compiler.pdb` out of `<repo>/shared/`, which the
-bootstrap pipeline produces. Every recipe that needs them depends on
-`_check-pdbs`, which fails with a pointer to `just bootstrap::build-compiler-pdb` if
-they're missing.
+## What it builds
 
-## Two Maven paths
+| Target | What it is |
+|---|---|
+| `…-pure:pdb_reader` | the PDB reader, translated from compiler-pure's |
+| `…-pure:truffle-pure` | the Truffle language: the interpreter, PDB loading, the natives |
+| `…-extensions/…-extensions-{diagram,tds,relation}:extension` | the extensions' grammars and natives |
+| `…-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle` | the CLI, on the JVM: `compile`, `execute`; Bazel builds every module and extension PDB with it |
+| `…-interfaces/legend-pure-next-platform-truffle-cli:pure-truffle-native` | the same CLI as a native image (GraalVM `native-image`) |
+| `…-interfaces/legend-pure-next-platform-truffle-ide:pure-ide-truffle` | the IDE server on Truffle |
+| `//platforms/truffle:gallery` | the PCT gallery |
 
-Every public recipe routes through one of two private Maven invocations.
-Each is a single `mvn install` against the truffle parent pom — Maven walks
-the reactor (parent → codegen → runtime) in one launch, and the codegen
-module's generated MapImpl coexists peacefully with the runtime's hand-written
-one (different packages, no FQN conflict).
+## Its tests
 
-| Path | Recipe | Invokes | Used by |
-|---|---|---|---|
-| Skip tests (fast) | `_mvn-skip-tests` | `mvn clean install -DskipTests` on the truffle parent | `build`, `spec-functions`, `spec-pct`, `spec-compiler-selfhost`, `bench` |
-| With tests | `_mvn-with-tests` | `mvn clean install` on the truffle parent (surefire runs inline) | `test`, `test-java` |
+| Tests | Tier |
+|---|---|
+| its JUnit tests (`…-pure:test_junit`), the usage example (`…-usage-example:test_usage_example`) | required, CI job `truffle` |
+| every owner's suites on the JIT (`//platforms/truffle/test/jit/<module directory below pure/>:test_<kind>`) | required, CI jobs `truffle`, `truffle-specifications` and others (`tools/bazel/hosts.bzl`: `job_of`) |
+| the same on the native image (`//platforms/truffle/test/native/…`) | required, CI job `truffle-native` |
+| every checked module compiled by Truffle, JIT and native, against the bootstrap compile, or the Truffle build where the Java compiler cannot compile the module (`…:test_pdb_check`, and the corpus on them: `…:test_compiler_selfhost`) | `selfhost` (manual; CI job `truffle-native`) |
 
-Both copy `interfaces/cli/target/pure-truffle-*-fat.jar` into `truffle/build/pure-truffle.jar` after the install completes.
-
-The native-image build (`build-native`) is a separate Maven invocation
-(`mvn -Pnative package -DskipTests`) keyed off the CLI module's `native`
-profile (`interfaces/cli`). The core module keeps only the `native-lib` profile,
-which builds the embeddable shared library.
-
-## Public recipes — fully expanded
-
-Each tree below shows every step that runs, end to end, when the recipe at
-the root is invoked. Steps repeated across recipes are inlined so each tree
-stands alone.
-
-```
-build
-└── _mvn-skip-tests
-    ├── _check-pdbs                                                verify shared/{core,compiler}.pdb exist
-    ├── cd truffle && mvn clean install -DskipTests                walks parent → codegen → runtime
-    └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
-```
-
-```
-build-native
-├── _check-pdbs                                                    verify shared/{core,compiler}.pdb exist
-└── body
-    ├── command -v native-image                                    fail with brew install hint if missing
-    ├── cd truffle && mvn -Pnative package -DskipTests             GraalVM native-image build
-    └── cp runtime/target/pure-truffle-native → truffle/build/pure-truffle-native
-```
-
-```
-test
-├── _mvn-with-tests
-│   ├── _check-pdbs
-│   ├── cd truffle && mvn clean install                            parent + codegen + runtime + 804 unit tests via surefire
-│   └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
-└── body
-    └── pure-truffle execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
-```
-
-```
-test-java
-└── _mvn-with-tests
-    ├── _check-pdbs
-    ├── cd truffle && mvn clean install                            (804 unit tests run here via surefire)
-    └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
-```
-
-```
-spec-functions
-├── _mvn-skip-tests
-│   ├── _check-pdbs
-│   ├── cd truffle && mvn clean install -DskipTests
-│   └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
-└── body
-    └── pure-truffle execute platform::pure::test::runTests              platform::pure::functions
-```
-
-```
-spec-pct
-├── _mvn-skip-tests
-│   ├── _check-pdbs
-│   ├── cd truffle && mvn clean install -DskipTests
-│   └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
-└── body
-    └── pure-truffle execute platform::pure::test::runPCTTests           platform::pure::functions
-```
-
-```
-native::spec-compiler
-├── build-native
-│   ├── _check-pdbs
-│   └── body
-│       ├── command -v native-image
-│       ├── cd truffle && mvn -Pnative package -DskipTests
-│       └── cp runtime/target/pure-truffle-native → truffle/build/pure-truffle-native
-└── body
-    └── pure-truffle-native execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
-```
-
-```
-native::spec-functions
-├── build-native              (mvn -Pnative + cp binary; see native::spec-compiler for full chain)
-└── body
-    └── pure-truffle-native execute platform::pure::test::runTests              platform::pure::functions
-```
-
-```
-native::spec-pct
-├── build-native
-└── body
-    └── pure-truffle-native execute platform::pure::test::runPCTTests           platform::pure::functions
-```
-
-```
-spec-compiler-selfhost
-├── _mvn-skip-tests
-│   ├── _check-pdbs
-│   ├── cd truffle && mvn clean install -DskipTests
-│   └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
-└── body
-    ├── pure-truffle compile compiler-pure → truffle/build/compiler_truffle.pdb
-    └── pure-truffle execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
-                              (using compiler_truffle.pdb instead of shared/compiler.pdb)
-```
-
-```
-bench
-├── _mvn-skip-tests
-│   ├── _check-pdbs
-│   ├── cd truffle && mvn clean install -DskipTests
-│   └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
-└── body
-    └── cd truffle && mvn -Pbench test -Dtest=PureEvaluatorBenchmark
-```
-
-```
-clean
-└── body
-    ├── rm -rf platforms/truffle/build
-    └── cd legend-pure-next-platform-truffle && mvn clean
-```
-
-## Why two paths
-
-Pre-refactor, the chain was: parent `mvn install -N -DskipTests` + codegen
-`mvn install -DskipTests` + an inter-module `rm MapImpl` + runtime
-`mvn install -DskipTests` + `mvn test` on codegen + `mvn test` on runtime.
-Five Maven launches per `truffle::test`, plus a defensive `rm` aimed at a
-file that didn't exist in `runtime/target/`.
-
-The codegen pom already removes its generated `MapImpl` during its own
-`compile` phase, and the hand-written `ast.natives.collection.MapImpl` lives
-in a different package than codegen's `pdb.platform.pure.functions.collection`,
-so there was never an FQN conflict to begin with. (Eventually the codegen
-pom's removal can also go away — nothing references the generated FQN.)
-
-Now `truffle::test` is one Maven launch, with surefire running as part of
-the install lifecycle. The non-`test` Pure-level recipes (`spec-functions`,
-`spec-pct`, `spec-compiler-selfhost`, `bench`) keep the fast skip-tests path because they
-don't gate on Java unit tests.
-
-## Outputs
-
-| Path | Produced by | Consumed by |
-|---|---|---|
-| `platforms/truffle/build/pure-truffle.jar` | `_mvn-skip-tests` / `_mvn-with-tests` | `pure-truffle` wrapper, JVM-mode test recipes, `spec-compiler-selfhost` |
-| `platforms/truffle/build/pure-truffle-native` | `build-native` | native test recipes |
-| `platforms/truffle/build/compiler_truffle.pdb` | `spec-compiler-selfhost` | `spec-compiler-selfhost`'s own `execute` step |
-
-## Inputs (from bootstrap)
-
-| Path | Produced by | Required for |
-|---|---|---|
-| `<repo>/shared/core.pdb` | `bootstrap::build-compiler-pdb` (via `_stage`) | every truffle recipe (codegen reads it during the parent install; runtime tests need it on the PDB classpath) |
-| `<repo>/shared/compiler.pdb` | `bootstrap::build-compiler-pdb` | same |
-
-If either is missing, `_check-pdbs` aborts with `Run 'just bootstrap::build-compiler-pdb' first (or 'just build' from the repo root).`
+What a suite loads is derived from the module manifests (`module.json`), and a known gap is a `PENDING` entry in
+`tools/bazel/hosts.bzl`, whose test fails once the suite passes.

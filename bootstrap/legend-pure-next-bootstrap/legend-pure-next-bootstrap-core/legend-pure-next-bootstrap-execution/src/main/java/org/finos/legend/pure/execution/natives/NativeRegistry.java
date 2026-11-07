@@ -510,9 +510,9 @@ public class NativeRegistry
         // equality on a primitive is by VALUE, so compare contents — otherwise
         // two Binaries holding the same bytes compare unequal, which is a trap
         // for every caller including assertEquals.
-        if (a instanceof byte[] bytesA && b instanceof byte[] bytesB)
+        if ((a instanceof byte[] || a instanceof org.finos.legend.pure.execution.natives.binary.PrependByteSequence) && (b instanceof byte[] || b instanceof org.finos.legend.pure.execution.natives.binary.PrependByteSequence))
         {
-            return java.util.Arrays.equals(bytesA, bytesB);
+            return java.util.Arrays.equals(org.finos.legend.pure.execution.natives.binary.BinaryNatives.asBytes(a), org.finos.legend.pure.execution.natives.binary.BinaryNatives.asBytes(b));
         }
         if (a == null && b instanceof List<?> listB && listB.isEmpty())
         {

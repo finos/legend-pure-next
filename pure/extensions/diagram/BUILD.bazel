@@ -1,0 +1,73 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The diagram extension: its FlatBuffer fragment and grammar, which the Truffle extension
+# packages, and the compiler PDB goldens the bootstrap compiler tests read.
+
+load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
+load("//tools/bazel:pure.bzl", "pure_extension_generated", "pure_module")
+
+pure_extension_generated(
+    name = "diagram",
+    ids = "diagram-fbs-field-ids.txt",
+    metamodel = "code/compiler/metamodel.pure",
+    metamodel_package = "platform::extensions::pure::diagram::metamodel",
+    protocol_package = "platform::extensions::pure::diagram::protocol",
+    writer_package = "platform::extensions::pure::diagram::pdb::gen",
+)
+
+exports_files(
+    [
+        "diagram-fbs-field-ids.txt",
+        "language_diagram.json",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "grammar_antlr",
+    srcs = glob(["code/grammar/antlr/*.g4"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "compiler_pdb_goldens",
+    srcs = glob(["tests/compiler/pdb/**"]),
+    visibility = ["//visibility:public"],
+)
+
+pure_module(
+    name = "diagram",
+    srcs = glob(["code/**/*.pure", "module.json"]),
+    base_pdbs = ["//pure/specification:core-tests.pdb", "//pure/specification:compiler-tests.pdb"],
+    generated = {
+        ":generated/protocol.pure": "generated/protocol.pure",
+        ":generated/writer.pure": "generated/writer.pure",
+    },
+    sources = ["code", "generated"],
+)
+
+# The fixtures its suites read.
+filegroup(
+    name = "test_data",
+    srcs = glob(["tests/**"]),
+    visibility = ["//visibility:public"],
+)
+
+# The fixtures, in the output tree: the JavaScript platform tests read them by their path relative to their own.
+copy_to_bin(
+    name = "test_data_in_bin",
+    srcs = [":test_data"],
+    visibility = ["//visibility:public"],
+)

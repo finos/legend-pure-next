@@ -35,7 +35,7 @@ public final class DiagramLanguage
 {
     private static final String MANIFEST = "languages/language_diagram.json";
 
-    /** The package this module's pom generates {@code DiagramLexer} and {@code DiagramParser} into. */
+    /** The package this module's BUILD.bazel generates {@code DiagramLexer} and {@code DiagramParser} into. */
     private static final String GRAMMAR_PACKAGE = "org.finos.legend.pure.platform.java.extensions.diagram";
 
     private DiagramLanguage()
@@ -44,7 +44,7 @@ public final class DiagramLanguage
 
     /**
      * The language, for {@code Languages.install} — with the PDB table -> implementation factory
-     * generated from its metamodel ({@code just java::generate-diagram}), so a PDB holding diagrams
+     * generated from its metamodel (//platforms/java:engine_generated), so a PDB holding diagrams
      * decodes to DiagramImpl &amp; co.
      */
     public static ImmutableList<Language> all()

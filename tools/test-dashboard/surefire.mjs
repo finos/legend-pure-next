@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// tools/test-dashboard/surefire.mjs - turns the JUnit results Maven's surefire plugin leaves in
+// tools/test-dashboard/surefire.mjs - turns the JUnit results collect-reports.mjs leaves in
 // <module>/target/surefire-reports/TEST-*.xml into dashboard reports (see README.md):
-//   test-results/java/<maven-module>/<class>.json   one per test class
+//   test-results/java/<module>/<class>.json   one per test class
 //   test-results/spec/<spec>/<run>.json             for the classes that run a specification corpus
 //
 // Every report written here carries "producer": "surefire". Each import first deletes the previous
-// import's reports, so a module Maven cleaned leaves nothing stale, and never overwrites a report
+// import's reports, so a module cleaned leaves nothing stale, and never overwrites a report
 // another producer (a Pure runner) wrote.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -33,13 +33,14 @@ const SKIP_DIRS = new Set([".git", "node_modules", "src", "generated"]);
 // Pure runners report, so these runs line up with the others in the specification matrix.
 const SPEC_RUNS = [
   { spec: "grammar", run: "java", classes: ["org.finos.legend.pure.next.parser.PureToJsonRoundtripTest"] },
-  // The Pure grammar parser, run on bootstrap, checked against the Java parser; its grammar-corpus cases are "grammar:<fixture>".
-  { spec: "grammar", run: "pure@cli-bootstrap", classes: ["org.finos.legend.pure.next.parser.mappings.PureParserMatchesJavaParserTest"], idPrefix: "grammar:" },
+  // The Pure grammar parser, run on bootstrap through JUnit, checked against the Java parser; its grammar-corpus cases are
+  // "grammar:<fixture>". "junit", as the PCT run through JUnit below: pure@cli-bootstrap is the bootstrap CLI's own run.
+  { spec: "grammar", run: "pure@junit-bootstrap", classes: ["org.finos.legend.pure.next.parser.mappings.PureParserMatchesJavaParserTest"], idPrefix: "grammar:" },
   { spec: "compiler", run: "java", classes: ["org.finos.legend.pure.m3.specification.CompilerCompiledGraphTest", "org.finos.legend.pure.m3.specification.CompilerErrorTest"] },
   { spec: "pdb", run: "java", classes: ["org.finos.legend.pure.m3.specification.CompilerCompiledGraphPdbRoundTripTest"] },
-  // The PCT corpus as the MAVEN BUILD runs it: in-process, through JUnit, rather than through the
+  // The PCT corpus as the bootstrap JUnit tests run it: in-process, rather than through the
   // bootstrap CLI. 831 of its 833 ids are the `pure@cli-bootstrap` set, so the column is mostly a
-  // second view of that host — but it is the view that gates `mvn test`, and it carries two rawType
+  // second view of that host — but it is the view the required tier runs, and it carries two rawType
   // tests the corpus the other columns share does not. Its skipped ids arrive as
   // "<path> [skipped: <reason>]" and are normalised in caseOf, so rows line up with every other run.
   { spec: "pct", run: "pure@junit-bootstrap", classes: ["org.finos.legend.pure.runtime.TestPCT"] },
@@ -86,7 +87,7 @@ function textOf(s = "") {
 }
 
 // Surefire names a parameterized or dynamic test "<method>(<parameter types>) <display name>" when
-// usePhrasedTestCaseMethodName is on (both parent poms), "<method>(<parameter types>)[<n>]" otherwise; a plain
+// usePhrasedTestCaseMethodName is on, "<method>(<parameter types>)[<n>]" otherwise; a plain
 // @Test method is just "<method>". Only generated tests are corpus tests.
 const PHRASED = /^[\w$]+\([^)]*\) (?=\S)/;
 const isGenerated = name => PHRASED.test(name) || /^[\w$]+\([^)]*\)\[\d+\]$/.test(name);

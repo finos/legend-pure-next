@@ -173,6 +173,12 @@ public class PureRuntime
         return this.compilation.compile(module);
     }
 
+    /** The compiler extensions of this runtime's languages, under the compiler written in Pure. */
+    public List<?> compilerExtensions()
+    {
+        return this.compilation instanceof PureCompilation pure ? pure.compilerExtensions() : List.of();
+    }
+
     /** Add or replace source {@code sourceId} in the registered in-memory module {@code moduleName}. */
     public void setSource(String moduleName, String sourceId, String content)
     {

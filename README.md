@@ -97,8 +97,8 @@ pure/specification/
 
 **Compiler** ([`compiler/`](pure/specification/compiler/)) — lowering from AST to resolved metamodel:
 - [`compiler.md`](pure/specification/compiler/compiler.md) — the normative three-pass model (skeleton → structural resolution → expression resolution + validation) and reverse-reference-index semantics.
-- [`tests/`](pure/specification/compiler/tests/) — parameterized `###CompiledGraph` and `###Error` fixtures, mirrored per construct.
-- [`compiler-pure/`](pure/specification/compiler/compiler-pure/) — **the slice of the compiler written in Pure itself**. Its own `compiler/`, `printer/`, `test/` trees; this is what makes Legend Pure Next self-describing.
+- [`tests/`](pure/specification/compiler/tests/definition/) — parameterized `###CompiledGraph` and `###Error` fixtures, mirrored per construct.
+- [`compiler-pure/`](pure/specification/compiler/code/compiler-pure/) — **the slice of the compiler written in Pure itself**. Its own `compiler/`, `printer/`, `test/` trees; this is what makes Legend Pure Next self-describing.
 
 **Runtime** ([`runtime/`](pure/specification/runtime/)) — the executable surface area:
 - [`functions/`](pure/specification/runtime/functions/) — the `platform::pure::functions::*` standard library, grouped by domain: [`collection/`](pure/specification/runtime/functions/collection/), [`string/`](pure/specification/runtime/functions/string/), [`relation/`](pure/specification/runtime/functions/relation/), [`date/`](pure/specification/runtime/functions/date/), [`math/`](pure/specification/runtime/functions/math/), [`boolean/`](pure/specification/runtime/functions/boolean/), [`lang/`](pure/specification/runtime/functions/lang/), [`meta/`](pure/specification/runtime/functions/meta/), [`io/`](pure/specification/runtime/functions/io/), [`asserts/`](pure/specification/runtime/functions/asserts/).
@@ -139,8 +139,7 @@ The Java-direct backend. This is where new language features land first; the Tru
 
 ```
 bootstrap/
-├── bin/                            →  CLI entry scripts (just ide, …)
-└── legend-pure-next-bootstrap/     →  Maven multi-module project
+└── legend-pure-next-bootstrap/     →  Java modules, each a Bazel package
     ├── …-bootstrap-core/             Library core, four siblings:
     │   ├── …-parser/                   ANTLR4 → AST
     │   ├── …-compiler/                 .pure → .pdb (the 3-pass model)
@@ -148,7 +147,7 @@ bootstrap/
     │   └── …-generators/               Codegen: RDF → Java + FlatBuffers
     ├── …-bootstrap-cli/              Command-line driver
     └── …-bootstrap-ide/              Web IDE: Monaco editor + LSP
-                                      (ports 9090/9091, `just ide`)
+                                      (ports 9090/9091)
 ```
 
 ---
@@ -177,37 +176,43 @@ platforms/
 
 ### Prerequisites
 
-- Java 21 (GraalVM recommended if you want the Truffle backend)
-- [flatc 25.2.10](https://github.com/google/flatbuffers/releases/tag/v25.2.10) on your `PATH`
-- [`just`](https://github.com/casey/just) as the top-level build runner
-- Node.js + [pnpm](https://pnpm.io/) for the JavaScript platform
+- [Bazelisk](https://github.com/bazelbuild/bazelisk), installed as `bazel` (`brew install bazelisk`): it runs the
+  Bazel version `.bazelversion` pins. Bazel downloads everything else, pinned: GraalVM 25 (the JDK and
+  `native-image`), Node and the npm packages, flatc, and the Maven artefacts.
+- For the native image, a C toolchain (the Xcode Command Line Tools on macOS).
 
 ### Build & test
 
 ```sh
-just              # build + run the default test suite (alias for `just test`)
-just build        # build, no tests
-just test         # run each subproject's core test suite (mvn surefire + spec)
-just test-all     # everything in `test` plus self-host parity + runtime suites
-just dashboard    # render test-results/ into test-results/dashboard.html
-just ide          # launch the Web IDE
-just clean        # delete build artifacts
+bazel build //...          # build everything
+bazel test //...           # the required tier: every test a pull request runs
+bazel test $(bazel query 'attr(tags, "[\[ ]bootstrap[,\]]", //...)')   # the bootstrap tier (interpreted, slow)
+bazel test $(bazel query 'attr(tags, "[\[ ]selfhost[,\]]", //...)')    # the self-host checks
+bazel run //platforms/javascript:serve       # the browser IDE, on http://localhost:8000
+bazel run //:update_fbs_ids__m3              # write back a field-ID registry (also __island, __diagram, __tds)
+bazel run //:update_pdb_goldens__compiler    # write back PDB goldens (also __island, __diagram, __tds)
 ```
 
-Every suite writes a JSON report under `test-results/`, and `just dashboard` renders them all into one self-contained page you can open from disk. CI publishes the same page for `main`: [Test dashboard ↗](https://finos.github.io/legend-pure-next/dashboard.html), alongside the [translation galleries](https://finos.github.io/legend-pure-next/).
+The two manual tiers are left out of `//...`; CI runs all three on every run. Each suite writes a JSON report
+among its test outputs; `bazel run //:dashboard` gathers the last run's under `test-results/` and renders them into
+one self-contained page you can open from disk, `test-results/dashboard.html` (a test with no case of its own, such
+as a PDB comparison, is a check of one case; a module with no suite is 0/0). CI publishes the same page for `main`: [Test dashboard ↗](https://finos.github.io/legend-pure-next/dashboard.html), alongside the [translation galleries](https://finos.github.io/legend-pure-next/).
 
-Per-platform recipes are addressable as `just bootstrap::<recipe>`, `just truffle::<recipe>`, `just javascript::<recipe>`. Run `just --list bootstrap` (etc.) to see what each offers.
+What the legacy layer needs the upstream legend-pure and legend-engine sources for is not part of `//...`: run
+`bazel run //pure/legacy:<command>`, the commands being `legend_sources_fetch`, `bridge_generate`, `legend_modules_load`,
+`test_legend_modules`, `test_legacy_pure_on_next`, `legacy_pure_expected_update` and `test_legacy_pure_on_legend_pure`
+([tools/legacy.sh](pure/legacy/tools/legacy.sh)). The loader has `bazel run //pure/legacy/loader:rewrite_generate`.
 
 ## Usage example
 
 Every platform carries the same embedding example. Each is a program rather than a test — it is read as
-often as it is run — and `test-all` runs it, so an example that stops working cannot go unnoticed.
+often as it is run — and `bazel test //...` runs it, so an example that stops working cannot go unnoticed.
 
 | Platform | Example | Run it |
 | --- | --- | --- |
-| JavaScript | [`usage-example.js`](platforms/javascript/src/interfaces/usage-example/usage-example.js) | `just javascript::usage-example` |
-| Java | [`UsageExample.java`](platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-interfaces/legend-pure-next-platform-java-usage-example/src/main/java/org/finos/legend/pure/platform/java/example/UsageExample.java) | `just java::usage-example` |
-| Truffle | [`UsageExample.java`](platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-usage-example/src/main/java/org/finos/legend/pure/truffle/example/UsageExample.java) | `just truffle::usage-example` |
+| JavaScript | [`usage-example.js`](platforms/javascript/src/interfaces/usage-example/usage-example.js) | `bazel run //platforms/javascript:usage-example_script` |
+| Java | [`UsageExample.java`](platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-interfaces/legend-pure-next-platform-java-usage-example/src/main/java/org/finos/legend/pure/platform/java/example/UsageExample.java) | `bazel run //platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-interfaces/legend-pure-next-platform-java-usage-example:usage-example` |
+| Truffle | [`UsageExample.java`](platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-usage-example/src/main/java/org/finos/legend/pure/truffle/example/UsageExample.java) | `bazel run //platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-usage-example:usage-example` |
 
 All three do the same four things: name the languages the host wants, put Pure source held in a string
 into a module of their own, compile it, and call a function it defines. The source is one file in two

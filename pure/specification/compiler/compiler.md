@@ -157,5 +157,5 @@ which runs on both compilers.
   the lookup wrapper that builds the reverse index in Java.
 - `org.finos.legend.pure.m3.module.LeanReferencesValidator` —
   the post-compile validator.
-- `pure/specification/compiler/compiler-pure/compiler/leanReferencesValidator.pure` —
+- `pure/specification/compiler/code/compiler-pure/compiler/leanReferencesValidator.pure` —
   the Pure mirror of the validator, wired into `compile` at the end of pass 3.

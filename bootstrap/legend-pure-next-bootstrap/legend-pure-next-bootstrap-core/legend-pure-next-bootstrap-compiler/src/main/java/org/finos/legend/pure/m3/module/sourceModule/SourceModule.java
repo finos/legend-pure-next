@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -418,7 +419,8 @@ public class SourceModule implements Module
             try (Stream<Path> walk = Files.walk(sourceFolder))
             {
                 walk.filter(p -> p.toString().endsWith(".pure"))
-                        .forEach(p ->
+                        .sorted(Comparator.comparing(Path::toString))
+                        .forEachOrdered(p ->
                         {
                             try
                             {

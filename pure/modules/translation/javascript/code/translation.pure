@@ -331,6 +331,7 @@ function platform::extensions::language::javascript::translation::mapDateAndOthe
       pair('platform::pure::compiler::pdb::archive::entryBytes_Binary_1__String_1__Binary_1_', entryBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('platform::pure::functions::io::directoryTree_String_1__String_MANY_', directoryTreeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('platform::pure::functions::io::writeFile_String_1__String_1__String_1_', writeFileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::io::writeFileBytes_String_1__Binary_1__String_1_', writeFileBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('platform::pure::functions::binary::intToLeBytes_Integer_1__Integer_1__Binary_1_', intToLeBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('platform::pure::functions::binary::floatToLeBytes_Float_1__Binary_1_', floatToLeBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('platform::pure::functions::binary::stringToUtf8Bytes_String_1__Binary_1_', stringToUtf8BytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -663,7 +664,7 @@ function platform::extensions::language::javascript::translation::derefFuncToUdf
 // which is globally unique. Derived from the resolved element, so the
 // definition and every call site agree; hand-written callers (antlr-entry.js)
 // reference the same full name.
-function platform::extensions::language::javascript::translation::jsUdfName(udf: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]): String[1]
+function platform::extensions::language::javascript::translation::jsUdfName(udf: platform::pure::metamodel::function::PackageableFunction<platform::pure::metamodel::type::Any>[1]): String[1]
 {
    safeJsName($udf->elementToPath()->split('::')->joinStrings('$'));
 }
@@ -3283,6 +3284,12 @@ function platform::extensions::language::javascript::translation::leBytesToFloat
 function platform::extensions::language::javascript::translation::writeFileCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    jsCall(jsId('__writeFile'), $args->map(a | $a->translateExpression($conv)));
+}
+
+// writeFileBytes(path, content) -> path: writeFile, for a Binary.
+function platform::extensions::language::javascript::translation::writeFileBytesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__writeFileBytes'), $args->map(a | $a->translateExpression($conv)));
 }
 
 // directoryTree(root) -> every file under root, sorted. A host capability: emits `__directoryTree(root)`;

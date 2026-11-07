@@ -1,0 +1,9 @@
+{
+  "name": "legacy_loader",
+  "packagePattern": "(meta::pure::bridge::loader)(::.*)?",
+  "dependencies": ["core"],
+  "testDependencies": ["core-tests"],
+  "tests": [
+    {"suite": "loader", "runner": "tests", "target": "meta::pure::bridge::loader::tests"}
+  ]
+}

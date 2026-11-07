@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "suite": "section-hint",
+ "cases": [
+  {
+   "id": "recognises the unknown-section failure and pulls the name out",
+   "status": "passed"
+  },
+  {
+   "id": "catches a transposition — the typo that prompted this",
+   "status": "passed"
+  },
+  {
+   "id": "catches a miscapitalisation",
+   "status": "passed"
+  },
+  {
+   "id": "catches a missing or doubled letter",
+   "status": "passed"
+  },
+  {
+   "id": "suggests nothing for a name that is not a typo of anything",
+   "status": "passed"
+  },
+  {
+   "id": "does not let a short name match everything",
+   "status": "passed"
+  },
+  {
+   "id": "the hint names the likely intent and what is available",
+   "status": "passed"
+  },
+  {
+   "id": "with no near match the hint still lists what is available",
+   "status": "passed"
+  },
+  {
+   "id": "says so plainly when nothing is registered",
+   "status": "passed"
+  },
+  {
+   "id": "no hint at all for an unrelated failure",
+   "status": "passed"
+  },
+  {
+   "id": "finds the line the bad header is on, so it can be marked",
+   "status": "passed"
+  }
+ ]
+}

@@ -108,13 +108,13 @@ class TestPCT
             {
                 // <<PCT.requiresCompiler>> tests dynamically compile source
                 // (compileSource) and need the compiler module — which this
-                // harness cannot load (compiler.pdb is built AFTER the maven
-                // reactor by the bootstrap CLI). Skip them VISIBLY.
+                // harness cannot load (compiler.pdb is built AFTER these
+                // tests, by the bootstrap CLI). Skip them VISIBLY.
                 if (requiresCompiler(element))
                 {
                     tests.add(DynamicTest.dynamicTest(path + " [skipped: requires compiler module]", () ->
                             org.junit.jupiter.api.Assumptions.assumeTrue(false,
-                                    "requires the compiler module (compiler.pdb is built after the maven reactor)")));
+                                    "requires the compiler module (compiler.pdb is built after these tests)")));
                     continue;
                 }
                 tests.add(DynamicTest.dynamicTest(path, () ->

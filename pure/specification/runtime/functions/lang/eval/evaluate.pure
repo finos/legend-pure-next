@@ -126,16 +126,13 @@ function <<PCT.test>> platform::pure::functions::lang::tests::evaluate::testEval
 
 function <<PCT.test>> platform::pure::functions::math::tests::evaluate::minus::testReflectiveExecution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-
-//   assertEquals(1, platform::pure::functions::math::minus_Integer_MANY__Integer_1_->eval([3,2]));
-//   assertEquals(2, platform::pure::functions::math::minus_Integer_MANY__Integer_1_->evaluate(^List<Integer>(values=[5,3]))->cast(@Integer)->toOne());
-
-//   assertEquals(1.0, platform::pure::functions::math::minus_Float_MANY__Float_1_->eval([3.0,2.0]));
-//   assertEquals(2.0, platform::pure::functions::math::minus_Float_MANY__Float_1_->evaluate(^List<Float>(values=[5.0,3.0]))->cast(@Float)->toOne());
-
-//   assertEquals(100, platform::pure::functions::math::minus_Number_MANY__Number_1_->eval([300,200]));
-//  assertEquals(22, platform::pure::functions::math::minus_Number_MANY__Number_1_->evaluate(^List<Number>(values=[55,33]))->cast(@Number)->toOne());
-assertEquals(true, $f->eval(|true));
+    // A native function called reflectively: by eval with its arguments, and by evaluate with one list per argument.
+    assertEquals(1, $f->eval(|platform::pure::functions::math::minus_Integer_1__Integer_1__Integer_1_->eval(3, 2)));
+    assertEquals(2, $f->eval(|platform::pure::functions::math::minus_Integer_1__Integer_1__Integer_1_->evaluate([^List<Integer>(values=5), ^List<Integer>(values=3)])->cast(@Integer)->toOne()));
+    assertEquals(1.0, $f->eval(|platform::pure::functions::math::minus_Float_1__Float_1__Float_1_->eval(3.0, 2.0)));
+    assertEquals(2.0, $f->eval(|platform::pure::functions::math::minus_Float_1__Float_1__Float_1_->evaluate([^List<Float>(values=5.0), ^List<Float>(values=3.0)])->cast(@Float)->toOne()));
+    assertEquals(100, $f->eval(|platform::pure::functions::math::minus_Number_1__Number_1__Number_1_->eval(300, 200)));
+    assertEquals(22, $f->eval(|platform::pure::functions::math::minus_Number_1__Number_1__Number_1_->evaluate([^List<Number>(values=55), ^List<Number>(values=33)])->cast(@Number)->toOne()));
 }
 
 function <<PCT.test>> platform::pure::functions::math::tests::evaluate::divide::testNumberDivide<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
@@ -152,5 +149,15 @@ function <<PCT.test>> platform::pure::functions::string::tests::evaluate::plus::
         let hoboken = ^LA_Location(place='Hoboken, NJ', type=LA_GeographicEntityType.CITY);
         let jc = ^LA_Location(place='Jersey City, NJ', type=LA_GeographicEntityType.CITY);
         {x, y | $x.place + '; ' + $y.place}->eval($hoboken, $jc);
+    ));
+}
+
+// A native function as a value, evaluated: what a partial evaluator does with the function of a call it folds,
+// which it reads from the expression at run time (here the plus of a lambda's body), not from the source.
+function <<PCT.test>> platform::pure::functions::lang::tests::evaluate::testEvaluateANativeFunction<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(3, $f->eval(|
+        let plus = {|1 + 2}.expressionSequence->at(0)->cast(@platform::pure::metamodel::valuespecification::FunctionExpression).func->toOne()->cast(@Function<Any>);
+        $plus->evaluate([^List<Integer>(values=1), ^List<Integer>(values=2)])->cast(@Integer)->toOne();
     ));
 }

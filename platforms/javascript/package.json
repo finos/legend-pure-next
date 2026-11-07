@@ -16,15 +16,7 @@
     "test:section-hint": "node src/interfaces/web/tests/section-hint-tests.js",
     "test:source-store": "node src/interfaces/web/tests/source-store-tests.js",
     "test:ide": "node src/interfaces/web/tests/ide-tests.js",
-    "web:deps": "pnpm install && rm -rf build/vs && mkdir -p build && cp -R node_modules/monaco-editor/min/vs build/vs"
+    "web:deps": "pnpm --dir node install && rm -rf build/vs && mkdir -p build && cp -R node/node_modules/monaco-editor/min/vs build/vs"
   },
-  "license": "Apache-2.0",
-  "devDependencies": {
-    "antlr4ng-cli": "^2.0.0",
-    "esbuild": "^0.24.0",
-    "monaco-editor": "0.52.2"
-  },
-  "dependencies": {
-    "antlr4": "^4.13.2"
-  }
+  "license": "Apache-2.0"
 }

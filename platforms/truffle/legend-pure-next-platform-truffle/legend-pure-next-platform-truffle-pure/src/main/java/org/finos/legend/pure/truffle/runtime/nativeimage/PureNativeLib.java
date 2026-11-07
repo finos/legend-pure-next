@@ -33,8 +33,8 @@ import java.util.List;
 
 /**
  * Native-library entry points for embedding Pure in a host process (JVM,
- * Python, native CLI, etc.). Built as a shared library via the
- * {@code native-lib} Maven profile — produces {@code libpure-truffle.dylib}
+ * Python, native CLI, etc.). Built as a shared library (no Bazel
+ * target builds it yet) — produces {@code libpure-truffle.dylib}
  * / {@code .so} / {@code .dll} alongside the standalone executable.
  *
  * <p>Two embedded PDBs ship with the library: {@code core.pdb} and

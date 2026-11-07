@@ -1,0 +1,74 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The M3 and top-level parsers: ANTLR over pure/specification/grammar/antlr, and the protocol classes generated from
+# m3_protocol.ttl.
+
+load("@rules_java//java:defs.bzl", "java_library")
+load("//tools/bazel:antlr.bzl", "antlr_srcjar")
+load("//tools/bazel:junit5.bzl", "junit5_test")
+load("//tools/bazel:srcjar.bzl", "generated_srcjar")
+
+_GENERATORS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators"
+
+antlr_srcjar(
+    name = "antlr_sources",
+    srcs = ["//pure/specification:grammar_sources"],
+    grammar_dir = "pure/specification/grammar/antlr",
+    grammars = [
+        ("", ["TopLexer.g4", "TopParser.g4"]),
+        ("m3", ["M3Lexer.g4", "M3Parser.g4"]),
+    ],
+    package = "org.finos.legend.pure.next.parser",
+)
+
+generated_srcjar(
+    name = "protocol_sources",
+    srcs = [_GENERATORS + ":m3_protocol_ttl"],
+    cmd = "$(execpath %s:RdfJavaGenerator) $(execpath %s:m3_protocol_ttl) $$OUT_DIR org.finos.legend.pure.m3.generated.protocol" % (_GENERATORS, _GENERATORS),
+    tools = [_GENERATORS + ":RdfJavaGenerator"],
+)
+
+java_library(
+    name = "grammar-parser",
+    srcs = glob(["src/main/java/**/*.java"]) + [
+        ":antlr_sources",
+        ":protocol_sources",
+    ],
+    visibility = ["//visibility:public"],
+    exports = ["@maven//:org_antlr_antlr4_runtime"],
+    deps = [
+        _GENERATORS + ":generators",
+        "@maven//:org_antlr_antlr4_runtime",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+    ],
+)
+
+junit5_test(
+    name = "junit",
+    # On every pull request, in the bootstrap job: the bootstrap builds every PDB the hosts load.
+    tags = ["bootstrap", "job:bootstrap"],
+    srcs = glob(["src/test/java/**/*.java"]),
+    data = ["//pure/specification:grammar_test_data"],
+    deps = [
+        ":grammar-parser",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+        "@maven//:tools_jackson_core_jackson_core",
+        "@maven//:tools_jackson_core_jackson_databind",
+        "@maven//:tools_jackson_datatype_jackson_datatype_eclipse_collections",
+    ],
+)

@@ -1,0 +1,87 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The Java platform engine: the handwritten host and the translated runtime (//platforms/java:engine_generated),
+# compiled as one unit, with the Pure grammar and the schemas and language manifests it loads.
+
+load("@rules_java//java:defs.bzl", "java_import", "java_library")
+load("//tools/bazel:antlr.bzl", "antlr_srcjar")
+load("//tools/bazel:junit5.bzl", "junit5_test")
+
+antlr_srcjar(
+    name = "antlr_sources",
+    srcs = ["//pure/specification:grammar_sources"],
+    grammar_dir = "pure/specification/grammar/antlr",
+    grammars = [
+        ("", ["TopLexer.g4", "TopParser.g4"]),
+        ("m3", ["M3Lexer.g4", "M3Parser.g4"]),
+    ],
+    package = "org.finos.legend.pure.platform.java.grammar",
+)
+
+# The source position tables of the translated runtime, which it reads from the class path for its stack traces.
+java_import(
+    name = "positions",
+    jars = ["//platforms/java:engine_generated-positions.jar"],
+)
+
+_LANGUAGE_RESOURCES = {
+    "m3.fbs": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:generated-specification/m3.fbs",
+    "islandTest.fbs": "//pure/specification:compiler/generated/islandTest.fbs",
+    "language_pure.json": "//pure/specification:language_pure.json",
+    "language_test.json": "//pure/specification:language_test.json",
+}
+
+genrule(
+    name = "language_resources",
+    srcs = _LANGUAGE_RESOURCES.values(),
+    outs = ["languages/" + name for name in _LANGUAGE_RESOURCES.keys()],
+    cmd = " ".join(["cp $(execpath %s) $(RULEDIR)/languages/%s;" % (label, name) for name, label in _LANGUAGE_RESOURCES.items()]),
+)
+
+java_library(
+    name = "engine",
+    srcs = glob(["src/main/java/**/*.java"]) + [
+        ":antlr_sources",
+        "//platforms/java:engine_generated.srcjar",
+    ],
+    resource_strip_prefix = package_name(),
+    resources = [":language_resources"],
+    visibility = ["//visibility:public"],
+    exports = ["@maven//:org_antlr_antlr4_runtime"],
+    runtime_deps = [":positions"],
+    deps = [
+        "@maven//:org_antlr_antlr4_runtime",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+    ],
+)
+
+# The tests run from the repository root: the root of their runfiles.
+junit5_test(
+    name = "junit",
+    tags = ["job:translations/java"],
+    srcs = glob(["src/test/java/**/*.java"]),
+    data = [
+        "//platforms/java:runtime_data",
+        "//pure/extensions/diagram:compiler_pdb_goldens",
+        "//pure/extensions/pure/tds:test_data",
+        "//pure/specification:specification_files",
+    ],
+    deps = [
+        ":engine",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+    ],
+)

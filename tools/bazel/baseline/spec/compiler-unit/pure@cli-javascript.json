@@ -1,0 +1,74 @@
+{
+ "cases": [
+  {
+   "id": "platform::pure::compiler::test::testExtensionCompilesAnUnknownSection__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::testWithoutExtensionTheSectionIsIgnored__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::testGraphPrintersComeBeforeTheBuiltInArms__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::testWithoutHandlersAnIslandIsAnError__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::testAnIslandIsOfferedToEveryExtension__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::testAnIslandValueEvaluatesToAnInstanceOfItsClass__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::testAnIslandValueInALambdaEvaluates__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::testAnIslandValuePointsIntoTheGraph__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::printer::tests::testPrintTypeParameter__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::printer::tests::testPrintTypeParameterWithOwner__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::printer::tests::testPrintConcreteType__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::printer::tests::testPrintGenericTypeWithArgs__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::islands::testIslandValuesHaveBlobWriters__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::metamodel::validation::testOptionalDefaultIsRejected__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::metamodel::validation::testManyDefaultIsRejected__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::metamodel::validation::testRequiredDefaultIsValid__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::pure::compiler::test::metamodel::validation::testTheMetamodelsAreValid__Boolean_1_",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "testFunctions"
+}

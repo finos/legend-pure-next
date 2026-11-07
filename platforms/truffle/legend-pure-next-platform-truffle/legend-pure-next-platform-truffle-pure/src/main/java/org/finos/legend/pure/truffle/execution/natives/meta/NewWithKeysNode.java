@@ -687,7 +687,7 @@ public final class NewWithKeysNode extends PureNode
      * <p>Delegates the index to the resolver — see
      * {@link ModuleRegistry#reverseAssociationCandidates}.
      * Pre-existing static cache on this class was invalid as soon as a JVM
-     * saw more than one resolver (e.g. a surefire fork where one test
+     * saw more than one resolver (e.g. a test JVM where one test
      * class loaded core+core-tests and another loaded only core), so the
      * cache moved onto the registry and is invalidated on register/unregister.</p>
      */

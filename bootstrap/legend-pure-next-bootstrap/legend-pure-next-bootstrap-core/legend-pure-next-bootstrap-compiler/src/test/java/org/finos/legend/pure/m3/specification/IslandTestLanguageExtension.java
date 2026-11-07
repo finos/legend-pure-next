@@ -40,7 +40,7 @@ import java.util.List;
  * and compiles it to the String between the braces; {@code echoTwice} claims {@code #ECHO{{…}}#}, which
  * {@code echo} claims too, so ambiguity can be tested; {@code ref} claims {@code #REF{m::Person}#} and
  * compiles it to the element at that path — an island pointing into the graph. With them, this compiler and the Pure one agree
- * on pure/specification/compiler/tests/valueSpecification/island. It carries no section of its own.
+ * on pure/specification/compiler/tests/definition/valueSpecification/island. It carries no section of its own.
  */
 public final class IslandTestLanguageExtension implements LanguageExtension
 {

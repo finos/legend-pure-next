@@ -314,6 +314,7 @@ check("registerExtension pairs an extension with its module, and validate() enfo
     const paired = new ModuleRegistry().useLanguages(WITH_DIAGRAM);
     paired.register(PdbModule.open(join(SHARED, "core.pdb")));
     paired.register(PdbModule.open(join(SHARED, "compiler.pdb")));
+    paired.register(PdbModule.open(join(SHARED, "core_metamodel_pdb_writer.pdb")));
     paired.registerExtension(diagram, PdbModule.open(join(REPO, diagram.pdbs.find((p) => p.endsWith(`/${diagram.module}.pdb`)))));
     paired.validate().validate();
     assert.equal(paired.extensions.length, 1);
@@ -436,10 +437,10 @@ check("a ###Diagram section compiles to a Diagram element with its types resolve
     host.module("runtime").removeSource("diagram.pure");
 });
 
-// A golden beside the diagram's compiler fixtures (pure/extensions/diagram/tests/compiler-pdb-serialization,
-// regenerated with `just extensions::diagram::regen-pdb-goldens`): every view kind, with an association-
+// A golden beside the diagram's compiler fixtures (pure/extensions/diagram/tests/compiler/pdb,
+// regenerated with `bazel run //:update_pdb_goldens__diagram`): every view kind, with an association-
 // owned property pointer, read back with THIS host's decoder.
-const DIAGRAM_GOLDEN = join(REPO, "pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/propertyAndAssociation.pdb");
+const DIAGRAM_GOLDEN = join(REPO, "pure/extensions/diagram/tests/compiler/pdb/diagram/propertyAndAssociation.pdb");
 
 check("a PDB holding ###Diagram elements reads back once the diagram language is registered", () => {
     // The host registered the diagram extension, and with it the schema fragment generated from its
@@ -464,7 +465,7 @@ check("a PDB holding ###Diagram elements reads back once the diagram language is
     }
 });
 
-const DIAGRAM_GOLDENS = join(REPO, "pure/extensions/diagram/tests/compiler-pdb-serialization/diagram");
+const DIAGRAM_GOLDENS = join(REPO, "pure/extensions/diagram/tests/compiler/pdb/diagram");
 
 check("a ###Diagram golden reads back every edge styling field and multi-point path", () => {
     host.register(PdbModule.open(join(DIAGRAM_GOLDENS, "complexGeometry.pdb")));
@@ -511,12 +512,12 @@ check("a ###Diagram golden reads back pointers to class-typed, generic and inher
 // ExtensionValueDef) reads back as an object of its own class, its pointers resolved like any other. The
 // archive is the specification's island golden for `#REF{m::Person}#`; the schema fragment comes with the
 // test language (language_test.json).
-const ISLAND_GOLDEN = join(REPO, "pure/specification/compiler/tests-pdb-serialization/valueSpecification/island/ref.pdb");
+const ISLAND_GOLDEN = join(REPO, "pure/specification/compiler/tests/pdb/valueSpecification/island/ref.pdb");
 
 check("an island value reads back as an object of its own class", () => {
     host.register(PdbModule.open(ISLAND_GOLDEN));
     try {
-        const value = asArray(host.getElement("test::island::ref__Any_MANY_").expressionSequence)[0];
+        const value = asArray(host.getElement("island::ref__Any_MANY_").expressionSequence)[0];
         assert.equal(one(one(value.target).name), "Person", "the RefLiteral points at the class m::Person");
     } finally {
         host.unregister("test");
@@ -527,7 +528,7 @@ check("an island value fails loudly without the language that declares it", () =
     const registry = new ModuleRegistry().useLanguages([languageNamed("Pure").descriptor]);
     registry.register(PdbModule.open(join(SHARED, "core.pdb")));
     registry.register(PdbModule.open(ISLAND_GOLDEN));
-    assert.throws(() => metadataHost(registry).metadataRead("test::island::ref__Any_MANY_", "expressionSequence"), /no schema for RefLiteralDef/);
+    assert.throws(() => metadataHost(registry).metadataRead("island::ref__Any_MANY_", "expressionSequence"), /no schema for RefLiteralDef/);
 });
 
 // The Pure language's own island extensions live one level down (pure/extensions/pure/<name>), and are
@@ -540,10 +541,10 @@ check("the TDS extension is found under pure/extensions/pure", () => {
     assert.deepEqual(tds.pdbs, ["pure/extensions/pure/tds/build/tds.pdb"]);
 });
 
-// A TDS golden (pure/extensions/pure/tds/tests/compiler-pdb-serialization, regenerated with
-// `just extensions::pure::tds::regen-pdb-goldens`): the `#TDS{…}#` in its fixture's function, decoded by THIS
+// A TDS golden (pure/extensions/pure/tds/tests/compiler/pdb, regenerated with
+// `bazel run //:update_pdb_goldens__tds`): the `#TDS{…}#` in its fixture's function, decoded by THIS
 // host with the schema fragment the tds language declares.
-const TDS_GOLDEN = join(REPO, "pure/extensions/pure/tds/tests/compiler-pdb-serialization/tds/typedHeader.pdb");
+const TDS_GOLDEN = join(REPO, "pure/extensions/pure/tds/tests/compiler/pdb/tds/typedHeader.pdb");
 
 check("a TDS value reads back as the relation it compiled to", () => {
     host.register(PdbModule.open(TDS_GOLDEN));

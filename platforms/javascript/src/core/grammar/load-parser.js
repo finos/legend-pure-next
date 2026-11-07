@@ -36,7 +36,7 @@
 // The PDB decoding itself is done by the TRANSLATED SELF-HOSTED PURE READER
 // (pdb/reader/reader.pure). The compiler host gets it as part of generated/pure/compiler/compiler.js;
 // this parser-only host loads the small generated/pure/compiler/pdb.js instead
-// (`just javascript::generate-pdb-reader`), so it still doesn't depend on the
+// (`bazel build //platforms/javascript:generated`), so it still doesn't depend on the
 // whole generated compiler.
 
 import { readFileSync } from "node:fs";
@@ -73,7 +73,7 @@ const METAMODEL = join(HERE, "../../../generated/pure/compiler/metamodel.js");
 const PROTOCOL = join(HERE, "../../../generated/pure/grammar/protocol.js");
 const FUNCTIONS = join(HERE, "../../../generated/pure/runtime/functions.js");
 
-function readBundleFile(path, buildHint = "just javascript::antlr-all") {
+function readBundleFile(path, buildHint = "bazel build //platforms/javascript:antlr_bundle") {
     try {
         return readFileSync(path, "utf8");
     } catch (e) {
@@ -109,7 +109,7 @@ export function loadBundle() {
         [FUNCTIONS, "pure/runtime/functions.js", "platform$pure$functions$collection$Pair"],
     ]) {
         if (typeof globalThis[sentinel] === "function") continue;
-        vm.runInThisContext(readBundleFile(path, "just javascript::generate-all").replace(/^export /gm, ""),
+        vm.runInThisContext(readBundleFile(path, "bazel build //platforms/javascript:generated").replace(/^export /gm, ""),
                             { filename });
     }
     vm.runInThisContext(readBundleFile(ANTLR_BUNDLE), { filename: "antlr-bundle.js" });
@@ -136,7 +136,7 @@ let pdbReaderLoaded = false;
 export function loadPdbReader() {
     if (pdbReaderLoaded || typeof globalThis.platform$pure$compiler$pdb$schema$parseFbs_String_1__FbsSchema_1_ === "function") return;
     vm.runInThisContext(
-        readBundleFile(PDB_READER, "just javascript::generate-pdb-reader").replace(/^export /gm, ""),
+        readBundleFile(PDB_READER, "bazel build //platforms/javascript:generated").replace(/^export /gm, ""),
         { filename: "pure/compiler/pdb.js" },
     );
     pdbReaderLoaded = true;

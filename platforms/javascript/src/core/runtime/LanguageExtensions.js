@@ -114,7 +114,7 @@ export function languageSchema(descriptors) {
     const missing = always.find((l) => !l.fbsText);
     if (missing) {
         throw new Error(`the ${missing.name} language's schema (${missing.fbs}) was not there when `
-            + "generate-languages ran — build bootstrap, then run `just javascript::generate`");
+            + "generate-languages ran — run `bazel build //platforms/javascript:languages`");
     }
     return [...always, ...descriptors.filter((l) => l.module && l.fbsText)].map((l) => l.fbsText).join("\n");
 }

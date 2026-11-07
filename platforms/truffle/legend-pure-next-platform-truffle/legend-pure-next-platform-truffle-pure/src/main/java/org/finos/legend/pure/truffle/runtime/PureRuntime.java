@@ -453,7 +453,7 @@ public final class PureRuntime
             // decode. From the class path, so it does not depend on withModuleRoot.
             languages.forEach(org.finos.legend.pure.truffle.compiler.module.pdbModule.GenericFbDecoder::registerLanguage);
             registerDeclaredModules();
-            // System-property default: surefire's argLine sets this so every
+            // System-property default: the test JVM flags set this so every
             // test that drives PureRuntime gets aggressive JIT
             // automatically. Explicit withCompileImmediately(...) calls win.
             if (!polyglotOptions.containsKey("engine.CompileImmediately"))

@@ -73,6 +73,15 @@ function <<PCT.test>> platform::pure::functions::string::tests::toString::testFl
     assertEquals('0.000000013421', $f->eval(|0.000000013421->toString()));
 }
 
+function <<PCT.test>> platform::pure::functions::string::tests::toString::testFloatToStringWithSmallNegativeExponent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    // Below the range where Java prints a plain decimal (1.0E-12): the digits of the value, with no trailing zero.
+    assertEquals('0.000000000001', $f->eval(|1.0e-12->toString()));
+    assertEquals('0.000000000001', $f->eval(|0.000000000001->toString()));
+    assertEquals('0.000000000001', $f->eval(|0.0000000000010->toString()));
+    assertEquals('0.000000000000001', $f->eval(|1.0e-15->toString()));
+}
+
 function <<PCT.test>> platform::pure::functions::string::tests::toString::testBooleanToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('true', $f->eval(|true->toString()));

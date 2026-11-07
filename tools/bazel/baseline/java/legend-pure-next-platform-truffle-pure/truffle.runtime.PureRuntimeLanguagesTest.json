@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:53:33.179Z",
+ "source": "platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure/target/surefire-reports/TEST-org.finos.legend.pure.truffle.runtime.PureRuntimeLanguagesTest.xml",
+ "cases": [
+  {
+   "id": "aMissingRegistryIsNamed",
+   "status": "passed"
+  },
+  {
+   "id": "withoutARootTheHostsModulesAreAllThereIs",
+   "status": "passed"
+  },
+  {
+   "id": "declaredModulesRegisteredByTheHostNeedNoRoot",
+   "status": "passed"
+  },
+  {
+   "id": "namingThePureLanguageDoesNotAddItTwice",
+   "status": "passed"
+  },
+  {
+   "id": "missingNativesAreNamed",
+   "status": "passed"
+  },
+  {
+   "id": "thePureLanguageIsAddedByDefault",
+   "status": "passed"
+  }
+ ]
+}

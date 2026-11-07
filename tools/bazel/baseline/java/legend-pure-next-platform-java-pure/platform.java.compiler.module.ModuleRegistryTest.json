@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T22:01:00.684Z",
+ "source": "platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-pure/target/surefire-reports/TEST-org.finos.legend.pure.platform.java.compiler.module.ModuleRegistryTest.xml",
+ "cases": [
+  {
+   "id": "registerAllKeepsTheOrderGivenAndReturnsTheRegistry",
+   "status": "passed"
+  },
+  {
+   "id": "registerReturnsTheRegistry",
+   "status": "passed"
+  },
+  {
+   "id": "validateReturnsTheRegistry",
+   "status": "passed"
+  },
+  {
+   "id": "unregisterReturnsTheRemovedModuleOrNull",
+   "status": "passed"
+  }
+ ]
+}

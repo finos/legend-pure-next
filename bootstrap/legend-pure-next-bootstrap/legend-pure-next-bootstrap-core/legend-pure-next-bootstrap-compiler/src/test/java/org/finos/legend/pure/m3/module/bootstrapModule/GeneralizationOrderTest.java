@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * <p>Turtle's comma form ({@code :generalizations [ … ], [ … ]}) is an unordered set of blank
  * nodes, and Jena hands them back in an order that changes on every load. That order reached the
  * generated Java PDB writer (Class's fields were written in a different order on every
- * {@code mvn generate-sources}, so regenerating the goldens rewrote all of them) and the
+ * generation, so regenerating the goldens rewrote all of them) and the
  * bootstrap metamodel. The fix is at the source: generalizations are an RDF collection
  * {@code ( [ … ] [ … ] )}, which has an order, and the readers walk it.</p>
  */

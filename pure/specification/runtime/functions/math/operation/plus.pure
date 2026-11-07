@@ -100,3 +100,15 @@ function <<PCT.test>> platform::pure::functions::math::tests::plus::testDecimalP
 {
     assertEquals(0.3d, $f->eval(|0.1d + 0.2d));
 }
+// Operands typed Number hold what they hold: two Integers give an Integer, a Float a Float (a function
+// of Number parameters, as a native called by reference is typed by its signature).
+function <<test.TestDependency>> platform::pure::functions::math::tests::plus::plusNumbers(a:Number[1], b:Number[1]):Number[1]
+{
+    $a + $b
+}
+
+function <<PCT.test>> platform::pure::functions::math::tests::plus::testPlusOfNumbers<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(88, $f->eval(|platform::pure::functions::math::tests::plus::plusNumbers(55, 33)));
+    assertEquals(3.5, $f->eval(|platform::pure::functions::math::tests::plus::plusNumbers(2.5, 1.0)));
+}

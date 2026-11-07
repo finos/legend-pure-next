@@ -1,0 +1,314 @@
+{
+ "cases": [
+  {
+   "id": "platform::extensions::language::java::tests::testCompileAndExecuteIntegerAdd__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::tests::testCompileAndExecuteDoubleDivide__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::tests::testCompileAndExecuteBooleanReturn__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::tests::testCompileAndExecuteStringReturn__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::tests::testCompileAndExecuteZeroArgs__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::tests::testCompileAndExecuteCompileErrorThrows__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::tests::testCompileAndExecuteSeesOnlyTheJdk__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::null__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::arrayAccessAndPrefix__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::cast__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::constructorCalls__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::lambda__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::methodReference__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::anonymousClass__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::anonymousClassAsArgument__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::packageClassCausesLangToBeQualified__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::forEach__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::forLoop__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::conditionalAndInstanceOf__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::while__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::doWhile__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::tryCatch__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::throw__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::switchStatement__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::preformattedText__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::folding__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::foldMethodCallsInConditional__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::longString__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::emptyString__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::classToStringWithInferredImports__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::classToStringWithRandomImports__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::classToStringWithNoImports__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::interfaceToString__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::simpleEnumToString__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::complexEnumToString__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::testImportsForClass__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::serialization::tests::interface__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::inferredImports__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::inferredImportsOnEnum__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::inferredImportsEnum__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::listOfAtomic__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::listOfAtomicCasted__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::listOfList__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::listOfListRequiringCasted__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::listOfEmptyList__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::streamOfList__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::mapToAtoms__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::mapToLists__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::streamOfAtomic__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::resolveStreamToList__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::resolveStreamToAtomic__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::streamOfResolvedStreamToListIsOptimized__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::streamOfResolvedStreamToAtomicIsOptimized__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::castEmptyListIsNull__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::castToExistingTypeIsANoOp__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::castToDifferentType__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::BigDecimalOperations__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::castUnboxedToBoxed__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::castBoxedToUnboxedUsesValueMethods__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::doubleCastingRecastsTheOriginal__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::primitiveCastsPreseveredByBoxingIfDoubleCast__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::sameLiteral__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::equalityOfSameTypes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::inequalityOfSameTypes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::equalityOfCompatibleTypes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::inequalityOfCompatibleTypes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::equalityOfIncompatibleTypes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::inequalityOfIncompatibleTypes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::j_conditional__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::notInstanceOf__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::classEqualityIsStructuralAtDepth__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::infixRightNestedSameLevelKeepsParens__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::infixLeftNestedSameLevelDropsParens__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::infixHigherPrecedenceChildDropsParens__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::infixLowerPrecedenceChildKeepsParens__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::ternaryInTestPositionKeepsParens__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::java::factory::tests::ternaryInThenOrElseDropsParens__Boolean_1_",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "testFunctions"
+}

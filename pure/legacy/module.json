@@ -1,0 +1,9 @@
+{
+  "name": "legacy",
+  "packagePattern": "(meta)(::.*)?",
+  "dependencies": ["core"],
+  "testDependencies": ["core-tests"],
+  "tests": [
+    {"suite": "unit", "runner": "tests", "target": "meta::pure::bridge::tests"}
+  ]
+}

@@ -51,6 +51,9 @@ public final class IONodeFactories
         registry.register("platform::pure::functions::io::writeFile_String_1__String_1__String_1_",
                 (args, gt, mul, fe) -> new WriteFileNode(args[0], args[1]));
 
+        registry.register("platform::pure::functions::io::writeFileBytes_String_1__Binary_1__String_1_",
+                (args, gt, mul, fe) -> new WriteFileBytesNode(args[0], args[1]));
+
         registry.register("platform::pure::compiler::pdb::archive::entryNames_Binary_1__String_MANY_",
                 (args, gt, mul, fe) -> new EntryNamesNode(args[0]));
 

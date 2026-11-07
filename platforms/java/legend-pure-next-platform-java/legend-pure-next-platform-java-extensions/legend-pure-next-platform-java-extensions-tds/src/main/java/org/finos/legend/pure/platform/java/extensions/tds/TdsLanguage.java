@@ -37,7 +37,7 @@ public final class TdsLanguage
 
     /**
      * The language — with the PDB table -> implementation factory generated from its metamodel
-     * ({@code just java::generate-tds}), so a PDB holding a TDS value decodes to its generated class.
+     * (//platforms/java:engine_generated), so a PDB holding a TDS value decodes to its generated class.
      */
     public static ImmutableList<Language> all()
     {

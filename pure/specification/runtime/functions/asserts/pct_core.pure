@@ -19,8 +19,8 @@ Profile platform::pure::test::pct::PCT
 {
     // `requiresCompiler` marks tests that dynamically compile source
     // (compileSource): they need the compiler module loaded, which some
-    // harnesses cannot provide (e.g. the bootstrap surefire PCT runner —
-    // compiler.pdb is built AFTER the maven reactor). Harnesses without a
+    // harnesses cannot provide (e.g. the bootstrap JUnit PCT runner —
+    // compiler.pdb is built AFTER its tests). Harnesses without a
     // compiler module SKIP these tests visibly rather than erroring.
     stereotypes : [test, adapter, function, platformOnly, testQualifierProfile, requiresCompiler];
     tags: [grammarDoc, grammarCharacters, adapterName];

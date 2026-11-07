@@ -1,0 +1,26 @@
+{
+ "cases": [
+  {
+   "id": "platform::extensions::pure::tds::tests::testTheTdsHasABlobWriter__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::tds::tests::testATdsEvaluatesToTheRelationItIs__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::tds::tests::testATdsCarriesItsColumnTypes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::tds::tests::testATdsWithCrlfLineEndingsReadsAsLf__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::tds::tests::testTheTdsTestsAreReachableFromTheRoot__Boolean_1_",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "testFunctions"
+}

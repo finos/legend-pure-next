@@ -66,11 +66,8 @@ public class RdfJavaGenerator
      * preamble — properties inherited from a non-pointer parent on a pointer
      * class shouldn't be read until the pointer is dereferenced.
      *
-     * <p>The guard preamble is always emitted; the throw itself is gated by
-     * the runtime static-final {@code PointerAccessGuard.STRICT} flag,
-     * which defaults false. Production CLI / IDE leaves the flag off and
-     * the JIT folds the check away to nothing; surefire sets it true so
-     * {@code mvn test} catches pointer misuse.</p>
+     * <p>The guard preamble is always emitted, and it always throws on a
+     * misuse: {@code PointerAccessGuard} is unconditional.</p>
      */
     private final java.util.Set<String> pointerClassNames;
 

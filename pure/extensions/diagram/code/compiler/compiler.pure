@@ -301,7 +301,7 @@ function platform::extensions::pure::diagram::compiler::diagramExtension(): Comp
       pass2   = {e: platform::pure::protocol::grammar::PackageableElement[1],
                  acc: CompilerListResult<platform::pure::metamodel::PackageableElement>[1] |
                    platform::extensions::pure::diagram::compiler::pass2($e, $acc)},
-      // How a compiled Diagram is written to a PDB — generated from metamodel.pure by `generate`
-      // (pure/extensions/diagram/Justfile) into generated/writer.pure.
+      // How a compiled Diagram is written to a PDB — generated from metamodel.pure into generated/writer.pure
+      // (pure_extension_generated in pure/extensions/diagram/BUILD.bazel).
       pdb     = platform::extensions::pure::diagram::pdb::gen::serialization());
 }

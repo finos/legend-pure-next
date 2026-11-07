@@ -27,6 +27,7 @@ export const ENTRY_NAMES = "platform::pure::compiler::pdb::archive::entryNames_B
 export const ENTRY_BYTES = "platform::pure::compiler::pdb::archive::entryBytes_Binary_1__String_1__Binary_1_";
 export const DIRECTORY_TREE = "platform::pure::functions::io::directoryTree_String_1__String_MANY_";
 export const WRITE_FILE = "platform::pure::functions::io::writeFile_String_1__String_1__String_1_";
+export const WRITE_FILE_BYTES = "platform::pure::functions::io::writeFileBytes_String_1__Binary_1__String_1_";
 
 // platform::pure::functions::meta::antlr natives: [name, id]. The translator emits `__<name>(...)`.
 export const ANTLR_NATIVES = [

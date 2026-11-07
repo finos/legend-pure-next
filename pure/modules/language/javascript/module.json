@@ -1,5 +1,8 @@
 {
   "name": "javascript",
   "packagePattern": "platform::extensions::language::javascript(::.*)?",
-  "dependencies": ["core"]
+  "dependencies": ["core"],
+  "tests": [
+    {"suite": "unit", "runner": "tests", "target": "platform::extensions::language::javascript"}
+  ]
 }

@@ -74,6 +74,10 @@ record MemoKey(String function, List<Object> arguments)
 
     private static Object element(Object value)
     {
+        if (value instanceof org.finos.legend.pure.execution.natives.binary.PrependByteSequence sequence)
+        {
+            return new Primitive(sequence.toByteArray());
+        }
         return isPrimitive(value) ? new Primitive(value) : new Identity(value);
     }
 

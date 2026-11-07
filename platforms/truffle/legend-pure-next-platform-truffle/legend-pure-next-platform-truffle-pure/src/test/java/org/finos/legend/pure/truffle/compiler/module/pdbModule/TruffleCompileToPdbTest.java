@@ -19,7 +19,6 @@ import org.finos.legend.pure.truffle.execution.PureStackFormatter;
 
 import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
 import org.finos.legend.pure.truffle.compiler.module.ModuleRegistry;
-import org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.PurePdbArchiveWriter;
 import org.finos.legend.pure.truffle.compiler.module.pdbModule.PdbModule;
 import org.finos.legend.pure.truffle.runtime.PureRuntime;
 import org.finos.legend.pure.truffle.execution.types.PureSequence;
@@ -40,7 +39,7 @@ import java.util.stream.Stream;
 /**
  * Truffle-side analog of bootstrap's PdbRoundTripTest: parse Pure source,
  * compile it through the truffle interpreter, write the resulting metamodel
- * elements to a {@code .pdb} via {@link PurePdbArchiveWriter}, reload via
+ * elements to a {@code .pdb} via the Pure {@code writeArchive}, reload via
  * {@link PdbModule}, and assert every compiled path round-trips.
  *
  * <p>{@link #smokeTest} compiles a single hardcoded class as a sanity check.
@@ -79,11 +78,11 @@ public class TruffleCompileToPdbTest
         Path current = Path.of("").toAbsolutePath();
         while (current != null)
         {
-            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests");
+            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests").resolve("definition");
             if (Files.isDirectory(candidate)) return candidate;
             current = current.getParent();
         }
-        throw new RuntimeException("Cannot locate pure/specification/compiler/tests");
+        throw new RuntimeException("Cannot locate pure/specification/compiler/tests/definition");
     }
 
     @BeforeAll
@@ -95,15 +94,22 @@ public class TruffleCompileToPdbTest
         // compiler-tests.pdb: the specification's island handlers (islandTestExtension) every runner compiles with.
         PdbModule compilerTestsLoader = new PdbModule(buildDir.resolve("compiler-tests.pdb"));
         PdbModule parserMappingsLoader = new PdbModule(buildDir.resolve("parser-mappings.pdb"));
+        // What is generated from those two: the m3 writer and the writer of the test island values.
+        PdbModule pdbWriterLoader = new PdbModule(buildDir.resolve("core_metamodel_pdb_writer.pdb"));
+        PdbModule islandWriterLoader = new PdbModule(buildDir.resolve("island_pdb_writer-with-tests.pdb"));
         ModuleRegistry registry = new ModuleRegistry();
         registry.register(coreLoader);
         registry.register(compilerLoader);
+        registry.register(pdbWriterLoader);
         registry.register(compilerTestsLoader);
+        registry.register(islandWriterLoader);
         registry.register(parserMappingsLoader);
         resolver = registry;
         coreLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
+        pdbWriterLoader.setResolver(resolver);
         compilerTestsLoader.setResolver(resolver);
+        islandWriterLoader.setResolver(resolver);
         parserMappingsLoader.setResolver(resolver);
 
         // Section parsers (CompiledGraph / CompilerStats / TestFile /
@@ -122,8 +128,8 @@ public class TruffleCompileToPdbTest
         parserMappingsLoader.preloadAll();
 
         // Silent variant — tests pull errors/stats structurally off the result; the live progress bar +
-        // stats summary would flood surefire output. With the specification's island handlers, as every
-        // runner of pure/specification/compiler/tests compiles (valueSpecification/island needs them).
+        // stats summary would flood the test output. With the specification's island handlers, as every
+        // runner of pure/specification/compiler/tests/definition compiles (valueSpecification/island needs them).
         compileFn = resolver.getElement("platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__Boolean_1__CompilationResult_1_");
         if (compileFn == null
                 || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(compileFn,
@@ -339,9 +345,11 @@ public class TruffleCompileToPdbTest
                     }
                     try
                     {
-                        PurePdbArchiveWriter.write(runtime, resolver, elements,
-                                new org.finos.legend.pure.truffle.compiler.module.ModuleManifest("roundtrip", "*", java.util.List.of()),
-                                java.util.Map.of(), tmpPdb);
+                        Files.write(tmpPdb, org.finos.legend.pure.truffle.execution.types.PureBinary.asBytes(runtime.execute(
+                                resolver.getElement("platform::pure::compiler::pdb::archive::writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Binary_1_"),
+                                new org.finos.legend.pure.truffle.execution.types.ObjectSequence(elements.toArray()),
+                                runtime.compilerExtensions(), "roundtrip", "*",
+                                new org.finos.legend.pure.truffle.execution.types.ObjectSequence(new Object[0]))));
                         if (Files.size(tmpPdb) == 0) issues.add("Round-tripped PDB is empty");
                         PdbModule rt = new PdbModule(tmpPdb);
                         int matched = 0;

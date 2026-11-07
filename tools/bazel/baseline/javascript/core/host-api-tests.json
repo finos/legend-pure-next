@@ -1,0 +1,226 @@
+{
+ "schema": 1,
+ "suite": "host-api",
+ "cases": [
+  {
+   "id": "PdbModule.open reads identity from the manifest",
+   "status": "passed"
+  },
+  {
+   "id": "new PdbModule(archive) reads the same identity",
+   "status": "passed"
+  },
+  {
+   "id": "PdbModule is MetadataAccess over its elements",
+   "status": "passed"
+  },
+  {
+   "id": "PdbModule rejects an archive without a manifest",
+   "status": "passed"
+  },
+  {
+   "id": "InMemoryModule identity and elements",
+   "status": "passed"
+  },
+  {
+   "id": "ModuleRegistry registers modules in order",
+   "status": "passed"
+  },
+  {
+   "id": "ModuleRegistry.validate accepts satisfied dependencies",
+   "status": "passed"
+  },
+  {
+   "id": "ModuleRegistry.validate names a missing dependency",
+   "status": "passed"
+  },
+  {
+   "id": "ModuleRegistry is MetadataAccess over every module",
+   "status": "passed"
+  },
+  {
+   "id": "ModuleRegistry.unregister removes a module by name",
+   "status": "passed"
+  },
+  {
+   "id": "NativeRegistry.createDefault registers the host natives",
+   "status": "passed"
+  },
+  {
+   "id": "NativeRegistry rejects a signature with no runtime-lib hook",
+   "status": "passed"
+  },
+  {
+   "id": "every host native is a native declared in the loaded PDBs, by its full id",
+   "status": "passed"
+  },
+  {
+   "id": "PureRuntime installs each native on its host object",
+   "status": "passed"
+  },
+  {
+   "id": "host services live on one global: no __host*, __metadata* or ANTLR globals are installed",
+   "status": "passed"
+  },
+  {
+   "id": "PureRuntime has the languages its host named, in order",
+   "status": "passed"
+  },
+  {
+   "id": "PureRuntime.parse parses a ###Pure section, and runtime-lib's __pureParseTop reaches it",
+   "status": "passed"
+  },
+  {
+   "id": "compiler test sections are contributed only when compiler-tests is registered",
+   "status": "passed"
+  },
+  {
+   "id": "the extension descriptors come from the extensions' own manifests",
+   "status": "passed"
+  },
+  {
+   "id": "the Pure language declares its grammar like any other, and Top is not a language",
+   "status": "passed"
+  },
+  {
+   "id": "both halves of the diagram language are contributed only when its module is registered",
+   "status": "passed"
+  },
+  {
+   "id": "registerExtension pairs an extension with its module, and validate() enforces it",
+   "status": "passed"
+  },
+  {
+   "id": "every language manifest names its sections as a list and none says bundled",
+   "status": "passed"
+  },
+  {
+   "id": "the Pure language's schema comes from its manifest",
+   "status": "passed"
+  },
+  {
+   "id": "a Pure language without its generated schema fails naming the file",
+   "status": "passed"
+  },
+  {
+   "id": "extension descriptors carry their manifest's pdbs, not a derived pdbPath",
+   "status": "passed"
+  },
+  {
+   "id": "the module paired with an extension is the one its manifest names, wherever it is in pdbs",
+   "status": "passed"
+  },
+  {
+   "id": "a runtime naming only an extension gets ###Pure first",
+   "status": "passed"
+  },
+  {
+   "id": "a language extension need not have a compiler half",
+   "status": "passed"
+  },
+  {
+   "id": "PureRuntime.parse parses a ###Diagram section into diagram elements",
+   "status": "passed"
+  },
+  {
+   "id": "a ###Diagram section compiles to a Diagram element with its types resolved",
+   "status": "passed"
+  },
+  {
+   "id": "a PDB holding ###Diagram elements reads back once the diagram language is registered",
+   "status": "passed"
+  },
+  {
+   "id": "a ###Diagram golden reads back every edge styling field and multi-point path",
+   "status": "passed"
+  },
+  {
+   "id": "a ###Diagram golden reads back pointers to class-typed, generic and inherited properties",
+   "status": "passed"
+  },
+  {
+   "id": "an island value reads back as an object of its own class",
+   "status": "passed"
+  },
+  {
+   "id": "an island value fails loudly without the language that declares it",
+   "status": "passed"
+  },
+  {
+   "id": "the TDS extension is found under pure/extensions/pure",
+   "status": "passed"
+  },
+  {
+   "id": "a TDS value reads back as the relation it compiled to",
+   "status": "passed"
+  },
+  {
+   "id": "a TDS value fails loudly without the tds language",
+   "status": "passed"
+  },
+  {
+   "id": "a PDB holding ###Diagram elements fails loudly without the diagram language",
+   "status": "passed"
+  },
+  {
+   "id": "PureRuntime.execute runs a function element",
+   "status": "passed"
+  },
+  {
+   "id": "PureRuntime.execute rejects a value that is not a function element",
+   "status": "passed"
+  },
+  {
+   "id": "every class declares its properties as accessors",
+   "status": "passed"
+  },
+  {
+   "id": "PureRuntime.close uninstalls its host object",
+   "status": "passed"
+  },
+  {
+   "id": "every class in the graph has a translated JavaScript class",
+   "status": "passed"
+  },
+  {
+   "id": "an accessor reads and writes the slot it names",
+   "status": "passed"
+  },
+  {
+   "id": "a runtime without withLanguages has ###Pure, once",
+   "status": "passed"
+  },
+  {
+   "id": "a runtime without withNatives fails naming it",
+   "status": "passed"
+  },
+  {
+   "id": "a registry takes no schema",
+   "status": "passed"
+  },
+  {
+   "id": "a registry read before it has languages fails naming withLanguages",
+   "status": "passed"
+  },
+  {
+   "id": "the schema is the named languages': ###Pure's first, then the extensions'",
+   "status": "passed"
+  },
+  {
+   "id": "buildAsync registers only the named languages' modules",
+   "status": "passed"
+  },
+  {
+   "id": "the registry API: register/registerAll/validate return the registry, unregister the module",
+   "status": "passed"
+  },
+  {
+   "id": "a translated instance without a classifier is matched by its own class, not by the first arm",
+   "status": "passed"
+  },
+  {
+   "id": "a classifier-less instance of a class the registry does not know stays permissively matched",
+   "status": "passed"
+  }
+ ]
+}

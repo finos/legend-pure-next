@@ -270,3 +270,15 @@ function <<test.Test>> platform::extensions::language::java::serialization::test
         newStringifier($project)
    );
 }
+
+// A string literal that reads like a position marker ('/*@1:2*/', as the JavaScript language writes its own) is
+// code, not a marker: stripping the markers from the source leaves it whole.
+function <<test.Test>> platform::extensions::language::java::serialization::tests::stringLiteralShapedLikeAPositionMarker():Boolean[1]
+{
+   let class = javaClass('org.finos.test.Test')
+                  ->addMethod(javaMethod('public', javaString(), 'test', [],
+                       j_return(j_string('/*' + '@1:2*/'))
+                    ));
+   let source = $class->classToString();
+   assert($source->contains('1:2*/";'), | 'the literal lost its text: ' + $source);
+}

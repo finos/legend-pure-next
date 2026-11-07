@@ -1,0 +1,54 @@
+{
+ "cases": [
+  {
+   "id": "diagram/complexGeometry",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/complexTypeProperties",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/complexTypeProperties_E_nestedPath",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/geometry",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/multipleErrors_E_",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/propertyAndAssociation",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/simple",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/simple_E_duplicateViewId",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/simple_E_unknownEdgeEnd",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/simple_E_unresolvedAssociation",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/simple_E_unresolvedProperty",
+   "status": "passed"
+  },
+  {
+   "id": "diagram/simple_E_unresolvedType",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "compiledGraph"
+}

@@ -1,0 +1,22 @@
+{
+ "schema": 1,
+ "suite": "ide",
+ "cases": [
+  {
+   "id": "the IDE loads and reaches Ready",
+   "status": "passed"
+  },
+  {
+   "id": "it compiles a source containing a ###Diagram section",
+   "status": "passed"
+  },
+  {
+   "id": "the compiled diagram element is browsable in the concept tree",
+   "status": "passed"
+  },
+  {
+   "id": "the modules panel lists modules foundation first",
+   "status": "passed"
+  }
+ ]
+}

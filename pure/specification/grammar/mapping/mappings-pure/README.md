@@ -50,16 +50,17 @@ mappings-pure/
 ## Build
 
 ```
-just bootstrap::build-parser-mappings-pdb
+bazel build //pure/specification:parser_mappings_compile
 ```
 
-Compiles to `shared/parser-mappings.pdb` (~120 elements, ~400 KB).
+Compiles to `parser-mappings.pdb` (~120 elements, ~400 KB), which `//:shared` publishes as
+`shared/parser-mappings.pdb`.
 
 ## Validation
 
 The downstream `legend-pure-next-bootstrap-grammar-validation` module's
 `PureParserMatchesJavaParserTest` parses every `.pure` fixture of `pure/specification/grammar/tests`
-and `pure/specification/compiler/tests` as a whole document (sections, imports,
+and `pure/specification/compiler/tests/definition` as a whole document (sections, imports,
 elements) with the Java reference parser (`TopLevelParser` + `PureLanguageParser`)
 AND with the Pure parser from `shared/parser-mappings.pdb` interpreted on the
 bootstrap runtime, and asserts the `PureFile` protocols match via `ProtocolPrinter`
@@ -68,9 +69,7 @@ bootstrap runtime, and asserts the `PureFile` protocols match via `ProtocolPrint
 Run the validator:
 
 ```
-mvn -pl bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation \
-    test -Dtest=PureParserMatchesJavaParserTest \
-    -Dsurefire.failIfNoSpecifiedTests=false
+bazel test //bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation:tests
 ```
 
 **316 of 316 fixtures green** (58 grammar + 258 compiler).
@@ -90,14 +89,11 @@ mvn -pl bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/leg
 ## Editing workflow
 
 1. Edit any `mapping_*.pure` file.
-2. Run `just bootstrap::build-parser-mappings-pdb` to recompile
-   `shared/parser-mappings.pdb`.
-3. Run the validator (above).
-4. If a fixture diverges, the printer's deep diff highlights the slot
+2. Run the validator (above): Bazel recompiles `parser-mappings.pdb` first.
+3. If a fixture diverges, the printer's deep diff highlights the slot
    that mismatches — usually a missing dispatch, a slot name typo, or a
    source-info offset.
-5. Commit both `mappings-pure/**.pure` source AND the regenerated
-   `shared/parser-mappings.pdb`.
+4. Commit the `mappings-pure/**.pure` sources: the PDB is a build output.
 
 ## Native bridge
 

@@ -1,0 +1,402 @@
+{
+ "schema": 1,
+ "suite": "diagram",
+ "cases": [
+  {
+   "id": "parses every view kind out of the fixture",
+   "status": "passed"
+  },
+  {
+   "id": "reads a type view's geometry and styling",
+   "status": "passed"
+  },
+  {
+   "id": "reads the qualified names edges point at",
+   "status": "passed"
+  },
+  {
+   "id": "a value containing commas is not split on them",
+   "status": "passed"
+  },
+  {
+   "id": "adopts points as offsets from the box centres",
+   "status": "passed"
+  },
+  {
+   "id": "an edge with no waypoints has an empty path",
+   "status": "passed"
+  },
+  {
+   "id": "round-trips: parse -> serialize -> parse gives the same model",
+   "status": "passed"
+  },
+  {
+   "id": "round-trips a second time — serializing is idempotent",
+   "status": "passed"
+  },
+  {
+   "id": "splicing an edit leaves the rest of the file byte for byte",
+   "status": "passed"
+  },
+  {
+   "id": "a second splice lands correctly — offsets move on after an edit",
+   "status": "passed"
+  },
+  {
+   "id": "moving a box carries its edges with it",
+   "status": "passed"
+  },
+  {
+   "id": "an anchor left outside its box falls back to the centre",
+   "status": "passed"
+  },
+  {
+   "id": "pointInsideBox includes the border",
+   "status": "passed"
+  },
+  {
+   "id": "an edge whose box is missing survives instead of breaking the file",
+   "status": "passed"
+  },
+  {
+   "id": "a source with no diagram yields no diagrams",
+   "status": "passed"
+  },
+  {
+   "id": "styling defaults are written only when they differ",
+   "status": "passed"
+  },
+  {
+   "id": "keeps the diagram's declared dimension",
+   "status": "passed"
+  },
+  {
+   "id": "a diagram declared without a dimension does not gain one",
+   "status": "passed"
+  },
+  {
+   "id": "clips a line to the box border it points into",
+   "status": "passed"
+  },
+  {
+   "id": "a zero-length line clips to itself rather than dividing by zero",
+   "status": "passed"
+  },
+  {
+   "id": "drops waypoints that a box has swallowed",
+   "status": "passed"
+  },
+  {
+   "id": "an edge to a missing box has nothing to draw",
+   "status": "passed"
+  },
+  {
+   "id": "a view colour tints the theme rather than replacing it",
+   "status": "passed"
+  },
+  {
+   "id": "adds a class to an existing diagram",
+   "status": "passed"
+  },
+  {
+   "id": "a class can be added more than once, each view with its own id",
+   "status": "passed"
+  },
+  {
+   "id": "a second view of a class does not disturb the first",
+   "status": "passed"
+  },
+  {
+   "id": "a unique view id is derived, not collided",
+   "status": "passed"
+  },
+  {
+   "id": "creates the ###Diagram section when the source has none",
+   "status": "passed"
+  },
+  {
+   "id": "a section created from scratch accepts a second class",
+   "status": "passed"
+  },
+  {
+   "id": "new boxes are laid out without overlapping",
+   "status": "passed"
+  },
+  {
+   "id": "a type view id survives the grammar's identifier rules",
+   "status": "passed"
+  },
+  {
+   "id": "formats multiplicities the way Pure writes them",
+   "status": "passed"
+  },
+  {
+   "id": "builds a qualified name from a package chain, and trusts a pointer's own path",
+   "status": "passed"
+  },
+  {
+   "id": "a name that cannot be read yields nothing rather than throwing",
+   "status": "passed"
+  },
+  {
+   "id": "connects a property whose type is also on the diagram",
+   "status": "passed"
+  },
+  {
+   "id": "leaves primitives and absent classes unconnected",
+   "status": "passed"
+  },
+  {
+   "id": "connects a generalization between two shown classes",
+   "status": "passed"
+  },
+  {
+   "id": "connecting twice adds nothing the second time",
+   "status": "passed"
+  },
+  {
+   "id": "a generated edge serializes and parses back",
+   "status": "passed"
+  },
+  {
+   "id": "adding a class does not disturb the diagram's existing edges",
+   "status": "passed"
+  },
+  {
+   "id": "removes views whose class is gone, and the edges that hung off them",
+   "status": "passed"
+  },
+  {
+   "id": "clean-up removes nothing when every class is still there",
+   "status": "passed"
+  },
+  {
+   "id": "a cleaned diagram still round-trips",
+   "status": "passed"
+  },
+  {
+   "id": "the resize grip sits in the box's bottom-right corner",
+   "status": "passed"
+  },
+  {
+   "id": "a hand-written but empty diagram is not reported as missing",
+   "status": "passed"
+  },
+  {
+   "id": "a source with no diagram section says exactly that",
+   "status": "passed"
+  },
+  {
+   "id": "a diagram with boxes has nothing to say",
+   "status": "passed"
+  },
+  {
+   "id": "an empty hand-written diagram keeps its name when a class is added",
+   "status": "passed"
+  },
+  {
+   "id": "an empty diagram round-trips without gaining anything",
+   "status": "passed"
+  },
+  {
+   "id": "finds every diagram in a section, in order",
+   "status": "passed"
+  },
+  {
+   "id": "editing the second diagram leaves the first untouched",
+   "status": "passed"
+  },
+  {
+   "id": "editing the first diagram leaves the second untouched",
+   "status": "passed"
+  },
+  {
+   "id": "a dropped class is centred on where it was dropped",
+   "status": "passed"
+  },
+  {
+   "id": "without a drop point a class still goes in the next free slot",
+   "status": "passed"
+  },
+  {
+   "id": "a drop writes the position through to the source",
+   "status": "passed"
+  },
+  {
+   "id": "dropping a class already shown adds a second view where it was dropped",
+   "status": "passed"
+  },
+  {
+   "id": "a drop onto a source with no diagram creates the section at that point",
+   "status": "passed"
+  },
+  {
+   "id": "a box cannot be shrunk below its own class name",
+   "status": "passed"
+  },
+  {
+   "id": "a box cannot be shrunk below its property rows",
+   "status": "passed"
+  },
+  {
+   "id": "more properties means a taller minimum",
+   "status": "passed"
+  },
+  {
+   "id": "a property shown as an edge does not force the box wider",
+   "status": "passed"
+  },
+  {
+   "id": "a class with no readable definition still has a usable floor",
+   "status": "passed"
+  },
+  {
+   "id": "draws an association between two shown classes",
+   "status": "passed"
+  },
+  {
+   "id": "draws ONE edge for an association, not one per end",
+   "status": "passed"
+  },
+  {
+   "id": "leaves an association alone when the other end is not shown",
+   "status": "passed"
+  },
+  {
+   "id": "does not duplicate an association already written in the source",
+   "status": "passed"
+  },
+  {
+   "id": "a generated association survives a round trip",
+   "status": "passed"
+  },
+  {
+   "id": "deleting a class takes its edges with it",
+   "status": "passed"
+  },
+  {
+   "id": "deleting an edge leaves the classes alone",
+   "status": "passed"
+  },
+  {
+   "id": "deleting something that is not there removes nothing",
+   "status": "passed"
+  },
+  {
+   "id": "deleting one view of a duplicated class keeps the other",
+   "status": "passed"
+  },
+  {
+   "id": "a diagram survives a round trip after a delete",
+   "status": "passed"
+  },
+  {
+   "id": "each view of a duplicated class gets its own edges",
+   "status": "passed"
+  },
+  {
+   "id": "an association end is labelled with the role you reach there",
+   "status": "passed"
+  },
+  {
+   "id": "the name and multiplicity are kept apart, to be drawn either side of the line",
+   "status": "passed"
+  },
+  {
+   "id": "an end with nothing readable is simply unlabelled",
+   "status": "passed"
+  },
+  {
+   "id": "no aggregation means no diamond",
+   "status": "passed"
+  },
+  {
+   "id": "the diamond goes at the end of the class that declares it",
+   "status": "passed"
+  },
+  {
+   "id": "shared and composite are distinguished",
+   "status": "passed"
+  },
+  {
+   "id": "a generalization never carries an aggregation marker",
+   "status": "passed"
+  },
+  {
+   "id": "three aligned points drop the middle one",
+   "status": "passed"
+  },
+  {
+   "id": "a real bend is kept",
+   "status": "passed"
+  },
+  {
+   "id": "a bend just off the line survives, one on it does not",
+   "status": "passed"
+  },
+  {
+   "id": "a run of aligned points collapses completely",
+   "status": "passed"
+  },
+  {
+   "id": "only the flat one goes, its neighbours stay",
+   "status": "passed"
+  },
+  {
+   "id": "a corner is judged against its own neighbours, not the endpoints",
+   "status": "passed"
+  },
+  {
+   "id": "an edge with no bends is left alone",
+   "status": "passed"
+  },
+  {
+   "id": "every label is painted after every box",
+   "status": "passed"
+  },
+  {
+   "id": "all label backings are painted before any label text",
+   "status": "passed"
+  },
+  {
+   "id": "both the role and its multiplicity are drawn",
+   "status": "passed"
+  },
+  {
+   "id": "placements are measured, not drawn",
+   "status": "passed"
+  },
+  {
+   "id": "the role and its multiplicity never swap sides as the line moves",
+   "status": "passed"
+  },
+  {
+   "id": "the same holds for a line entering the top edge",
+   "status": "passed"
+  },
+  {
+   "id": "a line that misses the box yields no placement",
+   "status": "passed"
+  },
+  {
+   "id": "a marquee is built from any two corners, dragged in any direction",
+   "status": "passed"
+  },
+  {
+   "id": "a marquee selects every box it touches, not only those it swallows",
+   "status": "passed"
+  },
+  {
+   "id": "boxes that merely touch edges do not count as overlapping",
+   "status": "passed"
+  },
+  {
+   "id": "a zero-size marquee selects nothing",
+   "status": "passed"
+  },
+  {
+   "id": "deleting a multi-selection takes every box and its edges",
+   "status": "passed"
+  }
+ ]
+}

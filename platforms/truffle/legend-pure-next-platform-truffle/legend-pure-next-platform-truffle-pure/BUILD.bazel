@@ -1,0 +1,177 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The Truffle interpreter: its PDB reader, translated from Pure, the ANTLR
+# parsers, and the interpreter itself.
+
+load("@rules_java//java:defs.bzl", "java_library", "java_plugin")
+load("//tools/bazel:antlr.bzl", "antlr_srcjar")
+load("//tools/bazel:junit5.bzl", "junit5_test")
+load("//tools/bazel:srcjar.bzl", "generated_srcjar")
+
+_CLI = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap"
+
+_CORE = "//pure/specification"
+
+# What the reader is translated with: the reader and schema packages (compiler.pdb), and the Java translator.
+_READER_PDBS = [
+    _CORE + ":core.pdb",
+    _CORE + ":core-tests.pdb",
+    "//pure/specification:compiler.pdb",
+    "//pure/specification:parser-mappings.pdb",
+    "//pure/modules/language/java:build/java.pdb",
+    "//pure/modules/translation/shared:build/translation-shared.pdb",
+    "//pure/modules/translation/java:build/java-translation.pdb",
+    "//pure/modules/translation/java:build/java-translation-tests.pdb",
+]
+
+# The PDB reader (platform::pure::compiler::pdb::reader and ::schema), translated to Java on the bootstrap: the
+# reader Truffle loads every PDB with cannot be translated by Truffle itself. Each translation prints its files one
+# after the other, each after a '//// FILE <path>' line.
+generated_srcjar(
+    name = "pdb_reader",
+    srcs = _READER_PDBS,
+    cmd = """
+        PDBS="%s"
+        emit() {
+            $(execpath %s) execute $$PDBS --function "$$1" \
+                --args "platform::pure::compiler::pdb::reader,platform::pure::compiler::pdb::schema" "$$2" \
+                "org.finos.legend.pure.truffle" "org.finos.legend.pure.truffle.compiler.module.pdbModule.hooks" \
+              | awk -v root="$$OUT_DIR" '/^\\/\\/\\/\\/ FILE /{ if (f != "") close(f); f = root "/" $$3; d = f; sub(/\\/[^\\/]*$$/, "", d); system("mkdir -p \\"" d "\\""); next } f != "" { if (f in seen) print >> f; else { print > f; seen[f] = 1 } }'
+        }
+        emit "platform::extensions::language::java::translation::platform::generatePlatformTypesFor_String_1__String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
+        emit "platform::extensions::language::java::translation::translatePackagesToJavaFor_String_1__String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
+    """ % (" ".join(["--pdb $(execpath %s)" % pdb for pdb in _READER_PDBS]), _CLI),
+    tools = [_CLI],
+)
+
+antlr_srcjar(
+    name = "antlr_sources",
+    srcs = ["//pure/specification:grammar_sources"],
+    grammar_dir = "pure/specification/grammar/antlr",
+    grammars = [
+        ("", ["TopLexer.g4", "TopParser.g4"]),
+        ("m3", ["M3Lexer.g4", "M3Parser.g4"]),
+    ],
+    package = "org.finos.legend.pure.truffle.grammar",
+)
+
+# The Truffle DSL annotation processors (the nodes, the language registration, the options), as javac finds them in
+# the processor jar: every processor it lists, each its own plugin. Exported to the extensions, which declare
+# languages and nodes too.
+_TRUFFLE_PROCESSORS = [
+    "InstrumentRegistrationProcessor",
+    "InstrumentableProcessor",
+    "LanguageRegistrationProcessor",
+    "OptionProcessor",
+    "OptionalResourceRegistrationProcessor",
+    "TruffleProcessor",
+    "verify.VerifyCompilationFinalProcessor",
+    "verify.VerifyTruffleProcessor",
+]
+
+[java_plugin(
+    name = "truffle_dsl_" + processor.replace(".", "_"),
+    processor_class = "com.oracle.truffle.dsl.processor." + processor,
+    deps = ["@maven//:org_graalvm_truffle_truffle_dsl_processor"],
+) for processor in _TRUFFLE_PROCESSORS]
+
+java_library(
+    name = "truffle_dsl",
+    exported_plugins = [":truffle_dsl_" + processor.replace(".", "_") for processor in _TRUFFLE_PROCESSORS],
+    visibility = ["//visibility:public"],
+)
+
+java_plugin(
+    name = "jmh",
+    processor_class = "org.openjdk.jmh.generators.BenchmarkProcessor",
+    deps = ["@maven//:org_openjdk_jmh_jmh_generator_annprocess"],
+)
+
+# The schemas and language manifests the runtime loads from the classpath, under languages/.
+_LANGUAGE_RESOURCES = {
+    "m3.fbs": "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:generated-specification/m3.fbs",
+    "islandTest.fbs": "//pure/specification:compiler/generated/islandTest.fbs",
+    "language_pure.json": "//pure/specification:language_pure.json",
+    "language_test.json": "//pure/specification:language_test.json",
+}
+
+genrule(
+    name = "language_resources",
+    srcs = _LANGUAGE_RESOURCES.values(),
+    outs = ["languages/" + name for name in _LANGUAGE_RESOURCES.keys()],
+    cmd = " ".join(["cp $(execpath %s) $(RULEDIR)/languages/%s;" % (label, name) for name, label in _LANGUAGE_RESOURCES.items()]),
+)
+
+java_library(
+    name = "truffle-pure",
+    srcs = glob(["src/main/java/**/*.java"]) + [
+        ":antlr_sources",
+        ":pdb_reader",
+    ],
+    plugins = [":truffle_dsl_" + processor.replace(".", "_") for processor in _TRUFFLE_PROCESSORS],
+    resource_strip_prefix = package_name(),
+    resources = [":language_resources"],
+    visibility = ["//visibility:public"],
+    exports = [
+        "@maven//:org_graalvm_polyglot_polyglot",
+        "@maven//:org_graalvm_truffle_truffle_api",
+    ],
+    runtime_deps = [
+        "@maven//:org_graalvm_tools_profiler_tool",
+        "@maven//:org_graalvm_truffle_truffle_runtime",
+    ],
+    deps = [
+        "@maven//:org_antlr_antlr4_runtime",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+        "@maven//:org_graalvm_polyglot_polyglot",
+        "@maven//:org_graalvm_sdk_nativeimage",
+        "@maven//:org_graalvm_truffle_truffle_api",
+    ],
+)
+
+# The test JVM flags: the Graal JIT (the tests fail on a compilation that bails out), and immediate compilation.
+_TRUFFLE_TEST_JVM_FLAGS = [
+    "--add-opens=java.base/sun.misc=ALL-UNNAMED",
+    "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
+    "-XX:+UnlockExperimentalVMOptions",
+    "-XX:+EnableJVMCI",
+    "-XX:+UseJVMCICompiler",
+    "-Dpure.truffle.compileImmediately=true",
+]
+
+junit5_test(
+    name = "junit",
+    tags = ["job:truffle"],
+    srcs = glob(["src/test/java/**/*.java"]),
+    data = [
+        "//:shared",
+        "//pure/extensions/diagram:compiler_pdb_goldens",
+        "//pure/specification:specification_files",
+    ],
+    jvm_flags = _TRUFFLE_TEST_JVM_FLAGS,
+    plugins = [":jmh"],
+    deps = [
+        ":truffle-pure",
+        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:compiler",
+        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-execution:execution",
+        "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:cli",
+        "@maven//:org_eclipse_collections_eclipse_collections",
+        "@maven//:org_eclipse_collections_eclipse_collections_api",
+        "@maven//:org_graalvm_polyglot_polyglot",
+        "@maven//:org_graalvm_truffle_truffle_api",
+        "@maven//:org_openjdk_jmh_jmh_core",
+    ],
+)

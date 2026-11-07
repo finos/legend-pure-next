@@ -158,7 +158,7 @@ function <<test.TestDependency>> platform::pure::test::runTestsWithReport(rootPa
     );
     // Throw on any failure so the CLI's exit code reflects test status —
     // returning the summary string lets the bootstrap CLI swallow failures
-    // (it just prints the result), so callers like `just <host>::spec-functions`
+    // (it just prints the result), so callers like the hosts functions suites
     // never see a non-zero exit.
     $reportPath->map(path | platform::pure::test::report::writeTestResults($path, 'testFunctions', $elapsedMs, $results));
     assert($failed == 0, $summary);

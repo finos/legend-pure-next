@@ -1,0 +1,67 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+import a::*;
+
+Class a::G<T>
+{
+  p: T[1];
+}
+
+function test(): GenericType[1]
+{
+  let g = G;
+  let prop = $g.properties->filter(x|$x.name == 'p')->toOne();
+  $prop.genericType;
+}
+
+###CompiledGraph
+class a::G extends Any  ~Class<a::G<T~a::G>>  @17:1-20:1
+  property p :T~a::G[1]  ~Property<a::G<T~a::G>, T~a::G|1>
+
+function test__GenericType_1_():@GenericType@[1]  ~UserDefinedFunction<{->@GenericType@[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Class<#a::G<?>#>##[1]#  ~@FunctionInvocation@  @24:3-24:11
+    typeParam T -> #Class<#a::G<?>#>#
+    mulParam m -> [1]
+    AtomicValue  'g' :@String@[1]  ~@AtomicValue@  @24:7-24:7
+    AtomicValue  a::G :#Class<#a::G<?>#>#[1]  ~@AtomicValue@  @24:11-24:11
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Property<#a::G#, #Any#>##[1]#  ~@FunctionInvocation@  @25:3-25:61
+    typeParam T -> #Property<#a::G#, #Any#>#
+    mulParam m -> #[1]#
+    AtomicValue  'prop' :@String@[1]  ~@AtomicValue@  @25:7-25:10
+    ArrowInvocation toOne_T_MANY__T_1_ :#Property<#a::G#, #Any#>##[1]#  ~@ArrowInvocation@  @25:27-25:61
+      typeParam T -> #Property<#a::G#, #Any#>#
+      ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Property<#a::G#, #Any#>##[*]#  ~@ArrowInvocation@  @25:27-25:61
+        typeParam T -> #Property<#a::G#, #Any#>#
+        DotApplication platform::pure::metamodel::type::Class.properties :#Property<#a::G<?>#, @Any@|*>##[*]#  ~@DotApplication@  @25:16-25:26
+          Variable g :#Class<#a::G<?>#>##[1]#  ~@VariableExpression@  @25:14-25:15
+        Lambda(x:#Property<#a::G<?>#, @Any@|*>##[1]#) :#LambdaFunction<#{#Property<#a::G<?>#, @Any@|*>##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @25:36-25:51
+          FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @25:40-25:51
+            DotApplication platform::pure::metamodel::NamedElement.name :#String##[1]#  ~@DotApplication@  @25:40-25:44
+              Variable x :#Property<#a::G<?>#, @Any@|*>##[1]#  ~@VariableExpression@  @25:38-25:39
+            AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @25:49-25:51
+  DotApplication platform::pure::metamodel::function::property::AbstractProperty.genericType :#GenericType##[1]#  ~@DotApplication@  @26:8-26:19
+    Variable prop :#Property<#a::G#, #Any#>##[1]#  ~@VariableExpression@  @26:3-26:7
+
+###ReverseIndex
+a::G:
+  test__GenericType_1_
+platform::pure::functions::boolean::equal_Any_MANY__Any_MANY__Boolean_1_:
+  test__GenericType_1_
+platform::pure::functions::collection::filter_T_MANY__Function_1__T_MANY_:
+  test__GenericType_1_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test__GenericType_1_
+platform::pure::functions::lang::toOne_T_MANY__T_1_:
+  test__GenericType_1_

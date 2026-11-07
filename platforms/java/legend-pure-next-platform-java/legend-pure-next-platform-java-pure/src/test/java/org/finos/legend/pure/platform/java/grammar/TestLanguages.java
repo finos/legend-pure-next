@@ -49,7 +49,7 @@ class TestLanguages
     private static java.nio.file.Path repoRoot()
     {
         java.nio.file.Path p = java.nio.file.Path.of("").toAbsolutePath();
-        while (p != null && !java.nio.file.Files.isDirectory(p.resolve("pure/extensions/diagram/tests/compiler-pdb-serialization")))
+        while (p != null && !java.nio.file.Files.isDirectory(p.resolve("pure/extensions/diagram/tests/compiler/pdb")))
         {
             p = p.getParent();
         }
@@ -129,6 +129,6 @@ class TestLanguages
         IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> Language.fromResources(Lists.immutable.of("languages/language_nope.json"), GRAMMAR_PACKAGE));
         assertTrue(e.getMessage().contains("languages/language_nope.json"), e.getMessage());
-        assertTrue(e.getMessage().contains("stage"), "it points at the pom: " + e.getMessage());
+        assertTrue(e.getMessage().contains("stage"), "it points at the build: " + e.getMessage());
     }
 }

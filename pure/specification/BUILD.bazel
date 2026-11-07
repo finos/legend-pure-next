@@ -1,0 +1,352 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//tools/bazel:pure.bzl", "pure_bootstrap_compile")
+load("//tools/bazel:target_genrule.bzl", "target_genrule")
+
+# The M3 specification the generators read, and the field-ID registry they keep.
+
+exports_files(
+    [
+        "m3.ttl",
+        "m3-fbs-field-ids.txt",
+        "m3_fbs_addition.fbs",
+        "m3_protocol_addition.ttl",
+        "module.json",
+        "grammar/mapping/mappings-pure/module.json",
+        "compiler/code/compiler-pure/module.json",
+        "compiler/code/compiler-core-metamodel-pdb-writer/module.json",
+        "compiler/code/compiler-island-pdb-writer/module.json",
+        "compiler/code/compiler-pure/test/islands/islandTest-fbs-field-ids.txt",
+        "language_pure.json",
+        "language_test.json",
+        "grammar/antlr/m3/M3Lexer.g4",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# The ANTLR grammars, laid out by package: m3/ is the package below the top-level one.
+filegroup(
+    name = "grammar_sources",
+    srcs = glob(["grammar/antlr/**/*.g4"]),
+    visibility = ["//visibility:public"],
+)
+
+# The parser round-trip fixtures: a .pure source and its protocol .json per case.
+filegroup(
+    name = "grammar_test_data",
+    srcs = glob(["grammar/tests/**"]),
+    visibility = ["//visibility:public"],
+)
+
+# The Pure sources of core.pdb and core-tests.pdb.
+filegroup(
+    name = "core_sources",
+    srcs = glob(["runtime/**"]),
+    visibility = ["//visibility:public"],
+)
+
+# Every file of the specification: what the bootstrap tests read, by walking up to pure/specification.
+filegroup(
+    name = "specification_files",
+    srcs = glob(
+        ["**"],
+        exclude = ["BUILD.bazel"],
+    ),
+    visibility = ["//visibility:public"],
+)
+
+# The Pure sources of parser-mappings.pdb: the visitor mappings of the grammar.
+filegroup(
+    name = "parser_mappings_sources",
+    srcs = glob(["grammar/mapping/mappings-pure/**"]),
+    visibility = ["//visibility:public"],
+)
+
+# ---------------------------------------------------------------------------------------------------------------------
+# compiler.pdb and compiler-tests.pdb, compiled once, and what is generated from them.
+#
+# compiler-pure reaches its generated writer by name at run time (writerHelper::genFn), so it compiles without it. The
+# generators then run on the compiled PDBs, and what they generate is compiled on top: core_metamodel_pdb_writer.pdb, the writer of
+# m3, and island_pdb_writer-with-tests.pdb, the writer of the test island values, test as they are. Everything that writes a PDB
+# through the compiler written in Pure loads core_metamodel_pdb_writer.pdb with compiler.pdb. The generated sources are outputs here,
+# never written to the source tree.
+
+_CLI = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap"
+
+_CORE_PDB = ":core.pdb"
+
+_CORE_TESTS_PDB = ":core-tests.pdb"
+
+_M3_FBS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators:generated-specification/m3.fbs"
+
+# ---------------------------------------------------------------------------------------------------------------------
+# core.pdb and core-tests.pdb: the runtime sources and the generated protocol model, split by <<test.*>> stereotypes.
+
+_CORE_BUILDER = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler:SpecificationBinaryBuilder"
+
+_GENERATORS = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-generators"
+
+target_genrule(
+    name = "core_compile",
+    srcs = [
+        "m3.ttl",
+        # Found by walking up from the first source directory.
+        "module.json",
+        ":core_sources",
+        _GENERATORS + ":generated-specification/protocol/m3_protocol.pure",
+    ],
+    outs = [
+        "core.pdb",
+        "core-tests.pdb",
+    ],
+    cmd = """
+        set -e
+        T=$$(mktemp -d)
+        PROTOCOL=$$(dirname $(execpath %s:generated-specification/protocol/m3_protocol.pure))
+        $(execpath %s) --m3-ttl $(execpath m3.ttl) --output-dir $$T --tests split \\
+            pure/specification/runtime/functions pure/specification/runtime/featureTests pure/specification/runtime/ui \\
+            pure/specification/runtime/test pure/specification/runtime/printer $$PROTOCOL > /dev/null
+        cp $$T/core.pdb $(RULEDIR)/core.pdb
+        cp $$T/core-tests.pdb $(RULEDIR)/core-tests.pdb
+    """ % (_GENERATORS, _CORE_BUILDER),
+    tools = [_CORE_BUILDER],
+    visibility = ["//visibility:public"],
+)
+
+# parser-mappings.pdb: the visitor mappings of the grammar, on core.
+target_genrule(
+    name = "parser_mappings_compile",
+    srcs = [
+        _CORE_PDB,
+        ":parser_mappings_sources",
+    ],
+    outs = ["parser-mappings.pdb"],
+    cmd = """
+        set -e
+        T=$$(mktemp -d)
+        $(execpath %s) compile --base-pdb $(execpath %s) --source pure/specification/grammar/mapping/mappings-pure \\
+            --output-dir $$T > /dev/null
+        cp $$T/parser-mappings.pdb $@
+    """ % (_CLI, _CORE_PDB),
+    tools = [_CLI],
+    visibility = ["//visibility:public"],
+)
+
+# The licence header of a generated source: the generators emit only their AUTO-GENERATED banner.
+_LICENSE_HEADER = " ".join(["printf '%s\\n'"] + ["'%s'" % line for line in [
+    "// ©2026 JP Morgan Chase & Co. All rights reserved.",
+    "//",
+    "// Licensed under the Apache License, Version 2.0 (the \"License\");",
+    "// you may not use this file except in compliance with the License.",
+    "// You may obtain a copy of the License at",
+    "//",
+    "//      http://www.apache.org/licenses/LICENSE-2.0",
+    "//",
+    "// Unless required by applicable law or agreed to in writing, software",
+    "// distributed under the License is distributed on an \"AS IS\" BASIS,",
+    "// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.",
+    "// See the License for the specific language governing permissions and",
+    "// limitations under the License.",
+]])
+
+# Runs 'pure-bootstrap execute' over core and the compiler, from a directory holding shared/specification/m3.fbs: the
+# generator reads it there, relative to its working directory. Its standard output goes to $$OUT.
+_EXECUTE_ON_COMPILER = """
+    set -e
+    R=$$PWD
+    W=$$(mktemp -d)
+    mkdir -p $$W/shared/specification
+    cp $(execpath {m3_fbs}) $$W/shared/specification/m3.fbs
+    M3_FBS=$$W/shared/specification/m3.fbs
+    OUT=$$W/stdout
+    run() {{
+        (cd $$W && $$R/$(execpath {cli}) execute \\
+            --pdb $$R/$(execpath {core}) --pdb $$R/$(execpath {core_tests}) \\
+            --pdb $$R/$(execpath :compiler.pdb) --pdb $$R/$(execpath :compiler-tests.pdb) "$$@") > $$OUT 2> $$W/stderr \\
+            || {{ cat $$W/stderr >&2; exit 1; }}
+    }}
+""".format(m3_fbs = _M3_FBS, cli = _CLI, core = _CORE_PDB, core_tests = _CORE_TESTS_PDB)
+
+_COMPILER_INPUTS = [
+    _CORE_PDB,
+    _CORE_TESTS_PDB,
+    _M3_FBS,
+    ":compiler.pdb",
+    ":compiler-tests.pdb",
+]
+
+filegroup(
+    name = "compiler_sources",
+    srcs = glob([
+        "compiler/code/compiler-pure/**/*.pure",
+        "compiler/code/compiler-pure/module.json",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
+pure_bootstrap_compile(
+    name = "compiler_compile",
+    srcs = [":compiler_sources"],
+    base_pdbs = [_CORE_PDB],
+    outs = [
+        "compiler.pdb",
+        "compiler-tests.pdb",
+    ],
+    source_dir = "pure/specification/compiler/code/compiler-pure",
+    split_tests = True,
+    visibility = ["//visibility:public"],
+)
+
+target_genrule(
+    name = "core_metamodel_pdb_writer_generate",
+    srcs = _COMPILER_INPUTS,
+    outs = ["compiler/generated/generatedWriter.pure"],
+    cmd = _EXECUTE_ON_COMPILER + """
+        run --function "platform::pure::compiler::pdb::generator::printGeneratedWriter__Boolean_1_"
+        awk '/===GENWRITER-BEGIN===/{f=1;next} /===GENWRITER-END===/{f=0} f' $$OUT > $$W/body
+        test -s $$W/body || { echo "printGeneratedWriter produced no output between its markers" >&2; exit 1; }
+        { %s; cat $$W/body; } > $@
+    """ % _LICENSE_HEADER,
+    tools = [_CLI],
+    visibility = ["//visibility:public"],
+)
+
+# The test island values: their FlatBuffer fragment, and the registry of its field IDs it was generated with (the
+# tracked registry is an input: //tools/bazel:test_fbs_ids_up_to_date__island checks it is current).
+target_genrule(
+    name = "island_fbs_generate",
+    srcs = _COMPILER_INPUTS + ["compiler/code/compiler-pure/test/islands/islandTest-fbs-field-ids.txt"],
+    outs = [
+        "compiler/generated/islandTest.fbs",
+        "compiler/generated/islandTest-fbs-field-ids.txt",
+    ],
+    cmd = _EXECUTE_ON_COMPILER + """
+        run --function "platform::pure::compiler::pdb::fbsgen::printFbs_String_1__String_1__String_1__Boolean_1_" \\
+            --args "platform::pure::compiler::test::islands::metamodel" $$M3_FBS \\
+            $$R/$(execpath compiler/code/compiler-pure/test/islands/islandTest-fbs-field-ids.txt)
+        awk '/^===FBS-BEGIN===$$/{f=1;next} /^===FBS-END===$$/{f=0} f' $$OUT > $(execpath compiler/generated/islandTest.fbs)
+        awk '/^===IDS-BEGIN===$$/{f=1;next} /^===IDS-END===$$/{f=0} f' $$OUT > $(execpath compiler/generated/islandTest-fbs-field-ids.txt)
+        test -s $(execpath compiler/generated/islandTest.fbs) || { echo "printFbs produced nothing for the test island values" >&2; exit 1; }
+    """,
+    tools = [_CLI],
+    visibility = ["//visibility:public"],
+)
+
+target_genrule(
+    name = "island_pdb_writer_generate",
+    srcs = _COMPILER_INPUTS + ["compiler/generated/islandTest.fbs"],
+    outs = ["compiler/generated/islandWriter.pure"],
+    cmd = _EXECUTE_ON_COMPILER + """
+        run --function "platform::pure::compiler::pdb::generator::printExtensionWriter_String_1__String_1__String_1__String_1__Boolean_1_" \\
+            --args $$M3_FBS $$R/$(execpath compiler/generated/islandTest.fbs) \\
+            "platform::pure::compiler::test::islands::metamodel" "platform::pure::compiler::test::islands::pdb::gen"
+        { %s; awk '/^===GENWRITER-BEGIN===$$/{f=1;next} /^===GENWRITER-END===$$/{f=0} f' $$OUT; } > $@
+        grep -q '_pdbValueBlob' $@ || { echo "printExtensionWriter produced no value writers for the test island values" >&2; exit 1; }
+    """ % _LICENSE_HEADER,
+    tools = [_CLI],
+    visibility = ["//visibility:public"],
+)
+
+pure_bootstrap_compile(
+    name = "core_metamodel_pdb_writer_compile",
+    srcs = ["compiler/code/compiler-core-metamodel-pdb-writer/module.json"],
+    base_pdbs = [_CORE_PDB, ":compiler.pdb"],
+    generated = {":compiler/generated/generatedWriter.pure": "generated/writer.pure"},
+    outs = ["core_metamodel_pdb_writer.pdb"],
+    source_dir = "pure/specification/compiler/code/compiler-core-metamodel-pdb-writer",
+    visibility = ["//visibility:public"],
+)
+
+pure_bootstrap_compile(
+    name = "island_pdb_writer_compile",
+    srcs = ["compiler/code/compiler-island-pdb-writer/module.json"],
+    base_pdbs = [_CORE_PDB, _CORE_TESTS_PDB, ":compiler.pdb", ":compiler-tests.pdb", ":core_metamodel_pdb_writer.pdb"],
+    generated = {":compiler/generated/islandWriter.pure": "generated/writer.pure"},
+    outs = ["island_pdb_writer-with-tests.pdb"],
+    source_dir = "pure/specification/compiler/code/compiler-island-pdb-writer",
+    with_tests = True,
+    visibility = ["//visibility:public"],
+)
+
+# compiler.pdb holds neither the writers nor the test island values.
+sh_test(
+    name = "test_compiler_pdb_holds_no_writer_or_island",
+    srcs = ["//tools/bazel:pdb-lacks.sh"],
+    args = [
+        "$(rootpath :compiler.pdb)",
+        "elements/platform/pure/compiler/pdb/gen/write",
+        "elements/platform/pure/compiler/test/islands/metamodel/",
+        "elements/platform/pure/compiler/test/islands/pdb/",
+    ],
+    data = [":compiler.pdb"],
+    tags = ["job:bootstrap"],
+)
+
+# The specification in the output tree, where the JavaScript platform tests read it, by its path relative to their own.
+copy_to_bin(
+    name = "specification_files_in_bin",
+    srcs = [":specification_files"],
+    visibility = ["//visibility:public"],
+)
+
+# The bootstrap host checks (Section 2.2), on demand: the M3 schema the compiler written in Pure generates against the
+# one the bootstrap generates, and the metamodel validation.
+[sh_test(
+    name = name,
+    srcs = ["//tools/bazel:runs.sh"],
+    args = [
+        "$(rootpath %s)" % _CLI,
+        "execute",
+        "--pdb",
+        "$(rootpath %s)" % _CORE_PDB,
+    ] + extra_pdbs + [
+        "--pdb",
+        "$(rootpath :compiler.pdb)",
+    ] + tests_pdbs + [
+        "--function",
+        function,
+        "--args",
+    ] + args,
+    data = [
+        _CLI,
+        _CORE_PDB,
+        _CORE_TESTS_PDB,
+        ":compiler.pdb",
+        ":compiler-tests.pdb",
+        ":m3-fbs-field-ids.txt",
+        "//:shared/specification/m3.fbs",
+    ],
+    tags = [
+        "bootstrap",
+        "manual",
+    ],
+) for name, extra_pdbs, tests_pdbs, function, args in [
+    (
+        "test_m3_fbs_written_in_pure_matches_bootstrap",
+        [],
+        [],
+        "platform::pure::compiler::pdb::fbsgen::printFbsParity_String_1__String_1__Boolean_1_",
+        ["$(rootpath //:shared/specification/m3.fbs)", "$(rootpath :m3-fbs-field-ids.txt)"],
+    ),
+    (
+        "test_metamodel_is_valid",
+        ["--pdb", "$(rootpath %s)" % _CORE_TESTS_PDB],
+        ["--pdb", "$(rootpath :compiler-tests.pdb)"],
+        "platform::pure::compiler::metamodel::validation::printMetamodelValidation_String_1__Boolean_1_",
+        ["platform::pure::metamodel,platform::pure::compiler::test::islands::metamodel"],
+    ),
+]]

@@ -1,0 +1,17 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T22:01:03.590Z",
+ "source": "platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-extensions/legend-pure-next-platform-java-extensions-tds/target/surefire-reports/TEST-org.finos.legend.pure.platform.java.compiler.module.pdbModule.TdsReadTest.xml",
+ "cases": [
+  {
+   "id": "aTdsReadsBackAsTheRelationItCompiledTo",
+   "status": "passed"
+  },
+  {
+   "id": "aTdsWithoutItsLanguageFailsNamingTheTable",
+   "status": "passed"
+  }
+ ]
+}

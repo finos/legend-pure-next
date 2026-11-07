@@ -1,0 +1,10 @@
+{
+ "cases": [
+  {
+   "id": "platform::pure::functions::relation::tests::testTheRelationTestsAreReachableFromTheRoot__Boolean_1_",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "testFunctions"
+}

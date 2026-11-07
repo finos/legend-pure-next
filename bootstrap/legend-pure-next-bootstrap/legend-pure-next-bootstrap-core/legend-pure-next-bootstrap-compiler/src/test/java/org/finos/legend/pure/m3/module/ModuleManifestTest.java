@@ -118,4 +118,46 @@ public class ModuleManifestTest
         assertThrows(IllegalArgumentException.class, () -> ModuleManifest.parse(
                 "{\"name\": \"m\", \"packagePattern\": \"*\", \"dependencies\": [], \"nope\": []}"));
     }
+
+    /**
+     * The suites an owner declares (docs/superpowers/specs/2026-11-01-bazel-migration-design.md, 2.1): read by the
+     * build tool, only checked here, and never written to the archive section.
+     */
+    private static final String JSON_WITH_TESTS = """
+            {
+              "name": "relation",
+              "packagePattern": "(platform::pure::functions::relation)(::.*)?",
+              "dependencies": ["core"],
+              "testDependencies": ["core-tests", "tds"],
+              "tests": [
+                {"suite": "pct", "runner": "pct", "target": "platform::pure::functions::relation"},
+                {"suite": "unit", "runner": "tests", "target": "platform::pure::functions::relation::tests"}
+              ]
+            }
+            """;
+
+    @Test
+    public void acceptsTheDeclaredTestSuites()
+    {
+        ModuleManifest m = ModuleManifest.parse(JSON_WITH_TESTS);
+        assertEquals("relation", m.name());
+        assertEquals(List.of("core-tests", "tds"), m.testDependencies());
+        assertFalse(m.toJson().contains("tests\""), m.toJson());
+    }
+
+    @Test
+    public void rejectsATestSuiteWithoutARunner()
+    {
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> ModuleManifest.parse(
+                "{\"name\": \"m\", \"packagePattern\": \"*\", \"dependencies\": [], \"tests\": [{\"suite\": \"unit\", \"target\": \"m\"}]}"));
+        assertTrue(e.getMessage().contains("'runner'"), e.getMessage());
+    }
+
+    @Test
+    public void rejectsAnUnknownTestSuiteKey()
+    {
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> ModuleManifest.parse(
+                "{\"name\": \"m\", \"packagePattern\": \"*\", \"dependencies\": [], \"tests\": [{\"suite\": \"unit\", \"runner\": \"tests\", \"target\": \"m\", \"host\": \"x\"}]}"));
+        assertTrue(e.getMessage().contains("'host'"), e.getMessage());
+    }
 }

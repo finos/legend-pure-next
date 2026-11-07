@@ -36,7 +36,7 @@ import java.util.function.Function;
  */
 public class TdsReadTest
 {
-    private static final String GOLDEN = "pure/extensions/pure/tds/tests/compiler-pdb-serialization/tds/typedHeader.pdb";
+    private static final String GOLDEN = "pure/extensions/pure/tds/tests/compiler/pdb/tds/typedHeader.pdb";
     private static final String FUNCTION = "test::tds::typedHeader__Any_MANY_";
 
     @Test

@@ -1,0 +1,17 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:53:36.392Z",
+ "source": "platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure/target/surefire-reports/TEST-org.finos.legend.pure.truffle.compiler.module.pdbModule.GenericFbDecoderUnknownTableTest.xml",
+ "cases": [
+  {
+   "id": "unknownTableFailsNamingIt",
+   "status": "passed"
+  },
+  {
+   "id": "tableMissingFromTheSchemaFailsNamingIt",
+   "status": "passed"
+  }
+ ]
+}

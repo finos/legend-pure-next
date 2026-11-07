@@ -41,7 +41,7 @@ const REPO = join(HERE, "../../../../..");                 // -> repo root
 const GEN = join(HERE, "../../../generated");              // -> platforms/javascript/generated
 
 // The Pure language and nothing else — the same set the browser IDE loads. This entry point also
-// TRANSLATES at run time (bin/pure-js execute, the PCT and spec harnesses go through
+// TRANSLATES at run time (pure-js (//platforms/javascript:pure-js) execute, the PCT and spec harnesses go through
 // `translatePackage`), which used to mean loading the translator's -tests pdb for its entry point
 // and, transitively, core-tests: 5.35 MB of PCT corpus for five lines of package walking. The entry
 // point now lives in the lean pdb where it belongs, so neither is needed.
@@ -52,7 +52,7 @@ const GEN_MODULES = [
     "pure/compiler/metamodel.js", "pure/grammar/protocol.js", "pure/runtime/functions.js", "ui.js",
     "test.js", "pure/runtime/translator/shared.js", "pure/runtime/translator/javascript.js", "pure/runtime/translator/translation.js",
     "pure/compiler/compiler.js", // dynamic compilation (__hostCompileSource) runs the translated compiler
-    // The TEST halves. This host runs test functions — every `spec-*` recipe goes through the CLI,
+    // The TEST halves. This host runs test functions — every suite goes through the CLI,
     // and the in-process PCT translates and evaluates the corpus — so it needs the elements the
     // library halves leave out. The browser IDE's list (interfaces/web/main.js) deliberately has
     // none of these: they were 1.2 MB of PCT corpus inside functions.js.
@@ -84,7 +84,7 @@ let loaded = null;
 /**
  * Load the runtime into the current context (idempotent) and return
  * `{ registry, runtime, execution, translatePackage, evalJs, call, resolveFn }`.
- * `pdbs` replaces the default PDB set (bin/pure-js passes its `--pdb` arguments through).
+ * `pdbs` replaces the default PDB set (pure-js (//platforms/javascript:pure-js) passes its `--pdb` arguments through).
  *
  * `extraPdbs` ADDS to it, repo-relative, for a caller that needs Pure code the language itself does
  * not: the PCT harness runs the corpus in core-tests, which is test content to execute and not part

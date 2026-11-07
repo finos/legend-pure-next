@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T22:01:00.277Z",
+ "source": "platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-pure/target/surefire-reports/TEST-org.finos.legend.pure.platform.java.grammar.TestLanguages.xml",
+ "cases": [
+  {
+   "id": "theTestSectionsAddNoSyntaxAndAreGuardedOnTheirModule",
+   "status": "passed"
+  },
+  {
+   "id": "theEnginesOwnManifestsAreReadInRegistrationOrder",
+   "status": "passed"
+  },
+  {
+   "id": "aGrammarClassThatIsNotOnTheClassPathNamesItself",
+   "status": "passed"
+  },
+  {
+   "id": "everyManifestNamesItsSectionsAsAListAndNoneSaysBundled",
+   "status": "passed"
+  },
+  {
+   "id": "thePureLanguageDeclaresM3AndIsBundled",
+   "status": "passed"
+  },
+  {
+   "id": "aMissingManifestSaysWhichResourceAndWhy",
+   "status": "passed"
+  },
+  {
+   "id": "topIsRegisteredButBelongsToNoLanguage",
+   "status": "passed"
+  }
+ ]
+}

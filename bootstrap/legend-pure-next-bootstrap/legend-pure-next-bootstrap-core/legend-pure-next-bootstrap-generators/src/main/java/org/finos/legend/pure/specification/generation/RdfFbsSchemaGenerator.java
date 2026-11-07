@@ -77,6 +77,15 @@ public class RdfFbsSchemaGenerator
      */
     public void generate(Path outputDir, List<String> additionalFbsPaths, Path idRegistryPath) throws IOException
     {
+        generate(outputDir, additionalFbsPaths, idRegistryPath, null);
+    }
+
+    /**
+     * As {@link #generate(Path, List, Path)}, with the updated registry written to {@code idsOut} instead of back to
+     * {@code idRegistryPath}, which is then left untouched (null: updated in place).
+     */
+    public void generate(Path outputDir, List<String> additionalFbsPaths, Path idRegistryPath, Path idsOut) throws IOException
+    {
         Files.createDirectories(outputDir);
 
         FbsFieldIdRegistry registry = idRegistryPath == null
@@ -323,7 +332,11 @@ public class RdfFbsSchemaGenerator
         Files.write(schemaPath, sb.toString().getBytes(StandardCharsets.UTF_8));
         System.out.println("  Generated: m3.fbs (" + m3Model.classInfoMap().size() + " tables)");
 
-        if (registry != null)
+        if (registry != null && idsOut != null)
+        {
+            registry.saveTo(idsOut);
+        }
+        else if (registry != null)
         {
             registry.saveIfDirty();
         }
@@ -386,7 +399,7 @@ public class RdfFbsSchemaGenerator
         if (registry == null)
         {
             // No registry — fall back to declaration order. This mode exists
-            // only for the back-compat overload; the maven pipeline always
+            // only for the back-compat overload; the build always
             // passes a registry path.
             currentFields.forEach((field, type) ->
                     sb.append("    ").append(field).append(": ").append(type).append(";\n"));
@@ -480,7 +493,7 @@ public class RdfFbsSchemaGenerator
 
     /**
      * Usage: {@code RdfFbsSchemaGenerator <input.ttl> <fbsOutputDir>
-     *        [--ids <idRegistry>] [<additional.fbs> ...]}
+     *        [--ids <idRegistry>] [--ids-out <updatedRegistry>] [<additional.fbs> ...]}
      *
      * <p>{@code --ids <path>} is the persistent field-ID registry — required
      * for wire-format stability across builds. Without it, fields get
@@ -493,7 +506,7 @@ public class RdfFbsSchemaGenerator
         {
             if (args.length < 2)
             {
-                System.out.println("Usage: RdfFbsSchemaGenerator <input.ttl> <fbsOutputDir> [--ids <registry>] [<additional.fbs>...]");
+                System.out.println("Usage: RdfFbsSchemaGenerator <input.ttl> <fbsOutputDir> [--ids <registry>] [--ids-out <updatedRegistry>] [<additional.fbs>...]");
                 System.exit(1);
             }
 
@@ -502,12 +515,17 @@ public class RdfFbsSchemaGenerator
             System.out.println("====================================");
 
             Path idRegistry = null;
+            Path idsOut = null;
             List<String> additionalFbs = new java.util.ArrayList<>();
             for (int i = 2; i < args.length; i++)
             {
                 if ("--ids".equals(args[i]) && i + 1 < args.length)
                 {
                     idRegistry = Paths.get(args[++i]);
+                }
+                else if ("--ids-out".equals(args[i]) && i + 1 < args.length)
+                {
+                    idsOut = Paths.get(args[++i]);
                 }
                 else
                 {
@@ -526,7 +544,7 @@ public class RdfFbsSchemaGenerator
                 System.out.println("  Merge:    " + add);
             }
 
-            new RdfFbsSchemaGenerator(args[0]).generate(Paths.get(args[1]), additionalFbs, idRegistry);
+            new RdfFbsSchemaGenerator(args[0]).generate(Paths.get(args[1]), additionalFbs, idRegistry, idsOut);
             System.out.println("    FBS schema generation complete.");
         }
         catch (Exception e)

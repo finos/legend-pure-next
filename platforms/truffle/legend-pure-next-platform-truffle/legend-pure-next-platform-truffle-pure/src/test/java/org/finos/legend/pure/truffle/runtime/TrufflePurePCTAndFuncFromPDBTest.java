@@ -51,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code <<PCT.test>>} function becomes an individual dynamic test
  * with independent pass/fail — no fail-fast.
  *
- * <p>Run with: {@code mvn test -Dtest=TrufflePureTestRunner}</p>
+ * <p>Run with: {@code bazel test //platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure:tests}</p>
  */
 class TrufflePurePCTAndFuncFromPDBTest
 {
@@ -93,6 +93,9 @@ class TrufflePurePCTAndFuncFromPDBTest
         coreTestsLoader = new PdbModule(coreTestsPdb);
         compilerLoader = new PdbModule(compilerPdb);
         compilerTestsLoader = new PdbModule(compilerTestsPdb);
+        // What is generated from those two: the m3 writer and the writer of the test island values.
+        PdbModule pdbWriterLoader = new PdbModule(sharedDir.resolve("core_metamodel_pdb_writer.pdb"));
+        PdbModule islandWriterLoader = new PdbModule(sharedDir.resolve("island_pdb_writer-with-tests.pdb"));
         // parser-mappings.pdb is required for the `parse` Pure native to resolve
         // `platform::pure::parser::mappings::interpreter::parseDocument` — TrufflePureParser
         // dispatches every section through the Pure-side registry, no host fallback.
@@ -107,20 +110,24 @@ class TrufflePurePCTAndFuncFromPDBTest
 
         // Module registry replaces the previous anonymous-class composite resolver.
         // Registration order is dependency-first: core, parser-mappings, core-tests,
-        // compiler, compiler-tests (each tests pdb depends on its lean pair).
+        // compiler, its writer, compiler-tests and its island writer (each tests pdb depends on its lean pair).
         resolver = new ModuleRegistry();
         resolver.register(coreLoader);
         resolver.register(parserMappingsLoader);
         resolver.register(coreTestsLoader);
         resolver.register(compilerLoader);
+        resolver.register(pdbWriterLoader);
         resolver.register(compilerTestsLoader);
+        resolver.register(islandWriterLoader);
 
         // Wire composite resolver into each loader for cross-module FBW resolution
         coreLoader.setResolver(resolver);
         parserMappingsLoader.setResolver(resolver);
         coreTestsLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
+        pdbWriterLoader.setResolver(resolver);
         compilerTestsLoader.setResolver(resolver);
+        islandWriterLoader.setResolver(resolver);
 
         PureLanguage.configure(resolver, NativeRegistry.createDefault(),
                 java.util.Map.of(
@@ -138,7 +145,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         // reaches — without it, Truffle's threshold (~10 invocations)
         // means single-call test paths never JIT and any recursive-inlining
         // bailout in those paths slips by silently. Trades a slower
-        // surefire run for full coverage of the Pure stdlib's compile
+        // test run for full coverage of the Pure stdlib's compile
         // surface.
         engine = org.graalvm.polyglot.Engine.newBuilder()
                 .allowExperimentalOptions(true)
@@ -323,7 +330,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         return DynamicTest.dynamicTest(path, () ->
         {
             // Suppress the stdout side effect of `print`/`println` for the
-            // test body so individual tests don't pollute Surefire's event
+            // test body so individual tests don't pollute the test runner's event
             // channel. The returned string is unaffected, so assertions
             // still work. The flag is restored in finally to keep
             // surrounding setup/teardown output visible.

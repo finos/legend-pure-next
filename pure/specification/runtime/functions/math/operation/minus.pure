@@ -103,3 +103,16 @@ function <<PCT.test>> platform::pure::functions::math::tests::minus::testSingleE
     assertEquals(-1, $f->eval(|-$val));
     assertEquals(-1, $f->eval(|-(3 - 2)));
 }
+
+// Operands typed Number hold what they hold: two Integers give an Integer, a Float a Float (a function
+// of Number parameters, as a native called by reference is typed by its signature).
+function <<test.TestDependency>> platform::pure::functions::math::tests::minus::minusNumbers(a:Number[1], b:Number[1]):Number[1]
+{
+    $a - $b
+}
+
+function <<PCT.test>> platform::pure::functions::math::tests::minus::testMinusOfNumbers<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(22, $f->eval(|platform::pure::functions::math::tests::minus::minusNumbers(55, 33)));
+    assertEquals(1.5, $f->eval(|platform::pure::functions::math::tests::minus::minusNumbers(2.5, 1.0)));
+}

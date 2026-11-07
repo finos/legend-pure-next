@@ -1,0 +1,82 @@
+{
+ "cases": [
+  {
+   "id": "tds/enumeration",
+   "status": "passed"
+  },
+  {
+   "id": "tds/inferredColumns",
+   "status": "passed"
+  },
+  {
+   "id": "tds/manyMultiplicity",
+   "status": "passed"
+  },
+  {
+   "id": "tds/mixedInference",
+   "status": "passed"
+  },
+  {
+   "id": "tds/primitiveExtension",
+   "status": "passed"
+  },
+  {
+   "id": "tds/quotedNamesAndCells",
+   "status": "passed"
+  },
+  {
+   "id": "tds/quotedValues",
+   "status": "passed"
+  },
+  {
+   "id": "tds/tds_E_badHeader",
+   "status": "passed"
+  },
+  {
+   "id": "tds/tds_E_cellType",
+   "status": "passed"
+  },
+  {
+   "id": "tds/tds_E_enumValue",
+   "status": "passed"
+  },
+  {
+   "id": "tds/tds_E_lambdaColumn",
+   "status": "passed"
+  },
+  {
+   "id": "tds/tds_E_primitiveCell",
+   "status": "passed"
+  },
+  {
+   "id": "tds/tds_E_requiredMissing",
+   "status": "passed"
+  },
+  {
+   "id": "tds/tds_E_rowWidth",
+   "status": "passed"
+  },
+  {
+   "id": "tds/tds_E_unknownType",
+   "status": "passed"
+  },
+  {
+   "id": "tds/tds_E_unsupportedType",
+   "status": "passed"
+  },
+  {
+   "id": "tds/typedHeader",
+   "status": "passed"
+  },
+  {
+   "id": "tds/variant",
+   "status": "passed"
+  },
+  {
+   "id": "tds/withoutBraces_noRoundtrip",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "compiledGraph"
+}

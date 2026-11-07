@@ -1,0 +1,21 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:53:36.184Z",
+ "source": "platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure/target/surefire-reports/TEST-org.finos.legend.pure.truffle.compiler.module.ModuleManifestTestSuitesTest.xml",
+ "cases": [
+  {
+   "id": "rejectsAnUnknownTestSuiteKey",
+   "status": "passed"
+  },
+  {
+   "id": "rejectsATestSuiteWithoutARunner",
+   "status": "passed"
+  },
+  {
+   "id": "acceptsTheDeclaredTestSuites",
+   "status": "passed"
+  }
+ ]
+}

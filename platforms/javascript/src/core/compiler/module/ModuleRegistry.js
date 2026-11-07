@@ -374,7 +374,7 @@ export class ModuleRegistry {
         }
         if (!module) {
             throw new Error(`Language extension '${descriptor.name}' needs its module '${descriptor.module}' `
-                          + `(build it with \`just extensions::build-tests\` and load ${(descriptor.pdbs ?? []).join(", ")})`);
+                          + `(build it with \`bazel build //pure/extensions/...\` and load ${(descriptor.pdbs ?? []).join(", ")})`);
         }
         if (module.name !== descriptor.module) {
             throw new Error(`Language extension '${descriptor.name}' declares module '${descriptor.module}' `
@@ -383,8 +383,8 @@ export class ModuleRegistry {
         // Its elements' PDB form: without the fragment, a PDB holding them cannot be decoded.
         if (descriptor.fbs && !descriptor.fbsText) {
             throw new Error(`Language extension '${descriptor.name}' declares fbs ${descriptor.fbs} but its descriptor `
-                          + "has no fragment text: build the extension (`just extensions::build`), then regenerate "
-                          + "the descriptors (`just javascript::generate-extensions`)");
+                          + "has no fragment text: build the extension (`bazel build //pure/extensions/...`), then regenerate "
+                          + "the descriptors (`bazel build //platforms/javascript:languages`)");
         }
         this.#extensions.push(descriptor);
         return this.register(module);   // this registry

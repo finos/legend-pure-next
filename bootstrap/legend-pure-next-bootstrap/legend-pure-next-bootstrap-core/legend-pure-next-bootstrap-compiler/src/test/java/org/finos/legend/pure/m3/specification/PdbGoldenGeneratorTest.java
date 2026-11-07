@@ -38,11 +38,11 @@ import java.util.List;
  * element set, exactly as {@link CompilerCompiledGraphPdbRoundTripTest} serializes)
  * under the directory named by {@code -Dpdb.goldens.dir=...}; skipped otherwise, so
  * it never runs in a normal build. The goldens live in the SPECIFICATION area
- * ({@code pure/specification/compiler/tests-pdb-serialization}) — they are reference
+ * ({@code pure/specification/compiler/tests/pdb}) — they are reference
  * artifacts that validate every port, not a JS-platform fixture.
  *
- * <p>Regenerate: {@code mvn -pl ...bootstrap-compiler test -Dtest=PdbGoldenGeneratorTest
- * -Dpdb.goldens.dir=$PWD/pure/specification/compiler/tests-pdb-serialization}</p>
+ * <p>Regenerate: {@code bazel run //:update_pdb_goldens__compiler}, which runs this class with
+ * {@code -Dpdb.goldens.dir} set to {@code pure/specification/compiler/tests/pdb}.</p>
  */
 public class PdbGoldenGeneratorTest
 {

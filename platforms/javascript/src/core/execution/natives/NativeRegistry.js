@@ -25,7 +25,7 @@ import { archiveExtension } from "./ArchiveExtension.js";
 import { compileSourceExtension } from "./CompileSourceExtension.js";
 import { javascriptLanguageExtension } from "./JavaScriptLanguageExtension.js";
 import {
-    ANTLR_NATIVES, COMPILE_SOURCE, DIRECTORY_TREE, EVALUATE, JS_COMPILE_MODULE, JS_DRAIN_COMPILED_SOURCES, JS_EXECUTE, READ_FILE_BYTES, WRITE_FILE, ENTRY_NAMES, ENTRY_BYTES} from "./native-signatures.js";
+    ANTLR_NATIVES, COMPILE_SOURCE, DIRECTORY_TREE, EVALUATE, JS_COMPILE_MODULE, JS_DRAIN_COMPILED_SOURCES, JS_EXECUTE, READ_FILE_BYTES, WRITE_FILE, WRITE_FILE_BYTES, ENTRY_NAMES, ENTRY_BYTES} from "./native-signatures.js";
 
 // The key each host native is installed under on the runtime's host object (globalThis.__pureHost).
 const HOST_HOOKS = new Map([
@@ -37,6 +37,7 @@ const HOST_HOOKS = new Map([
     [READ_FILE_BYTES, "hostReadFileBytes"],
     [DIRECTORY_TREE, "hostDirectoryTree"],
     [WRITE_FILE, "hostWriteFile"],
+    [WRITE_FILE_BYTES, "hostWriteFileBytes"],
     [ENTRY_NAMES, "hostEntryNames"],
     [ENTRY_BYTES, "hostEntryBytes"],
     ...ANTLR_NATIVES.map(([name, signature]) => [signature, name]),

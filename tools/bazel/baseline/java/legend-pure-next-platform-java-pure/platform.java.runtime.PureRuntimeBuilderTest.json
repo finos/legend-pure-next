@@ -1,0 +1,29 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T22:01:00.666Z",
+ "source": "platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-pure/target/surefire-reports/TEST-org.finos.legend.pure.platform.java.runtime.PureRuntimeBuilderTest.xml",
+ "cases": [
+  {
+   "id": "declaredModulesOpenBeforeTheHostsOwn",
+   "status": "passed"
+  },
+  {
+   "id": "aMissingRegistryIsNamed",
+   "status": "passed"
+  },
+  {
+   "id": "currentIsTheLastBuiltRuntime",
+   "status": "passed"
+  },
+  {
+   "id": "anEmptyLanguageListStillGetsPureOnce",
+   "status": "passed"
+  },
+  {
+   "id": "thePureLanguageIsAddedByDefault",
+   "status": "passed"
+  }
+ ]
+}

@@ -31,7 +31,7 @@
 //
 // Pass --golden to check the PDB WRITER against Java: every passing ###CompiledGraph
 // test is serialized to .pdb and structurally diffed (src/core/compiler/module/tests/struct-diff) against
-// the Java-produced golden in pure/specification/compiler/tests-pdb-serialization (regenerate with the Java
+// the Java-produced golden in pure/specification/compiler/tests/pdb (regenerate with the Java
 // PdbGoldenGeneratorTest). This is the authoritative "writes exactly what Java writes"
 // check; --roundtrip only proves JS reader/writer self-consistency.
 //
@@ -51,12 +51,12 @@ import { TestReport } from "../../tests/test-report.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url)); // .../src/core/compiler/tests
 const REPO = join(HERE, "../../../../../.."); // -> repo root
-const TESTS = join(REPO, "pure/specification/compiler/tests");
+const TESTS = join(REPO, "pure/specification/compiler/tests/definition");
 // Every runner of the specification's fixtures compiles with the test package's island handlers
 // (valueSpecification/island needs them): compile(files, extensions, silent), and the extension itself.
 const COMPILE_WITH = "platform$pure$compiler$compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
 const ISLAND_TEST_EXTENSION = "platform$pure$compiler$test$islandTestExtension__CompilerExtension_1_";
-const GOLDENS = process.env.PDB_GOLDENS_DIR || join(HERE, "../../../../../../pure/specification/compiler/tests-pdb-serialization");
+const GOLDENS = process.env.PDB_GOLDENS_DIR || join(HERE, "../../../../../../pure/specification/compiler/tests/pdb");
 
 const clean = (s) => (s || "").replace(/\r/g, "").split("\n").map((l) => l.trim()).filter((l) => l).join("\n").trim();
 const section = (c, n) => { const m = c.match(new RegExp("###" + n + "\\n([\\s\\S]*?)(?=\\n###|$)")); return m ? m[1] : null; };

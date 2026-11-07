@@ -1,0 +1,17 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T22:01:00.757Z",
+ "source": "platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-pure/target/surefire-reports/TEST-org.finos.legend.pure.platform.java.compiler.module.pdbModule.IslandValueReadTest.xml",
+ "cases": [
+  {
+   "id": "anIslandValueReadsBackAsAnObjectOfItsClass",
+   "status": "passed"
+  },
+  {
+   "id": "anIslandValueWithoutItsLanguageFailsNamingTheTable",
+   "status": "passed"
+  }
+ ]
+}

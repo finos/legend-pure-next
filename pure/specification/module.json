@@ -1,5 +1,11 @@
 {
   "name": "core",
   "packagePattern": "(platform::pure)(::.*)?",
-  "dependencies": []
+  "dependencies": [],
+  "tests": [
+    {"suite": "functions", "runner": "tests", "target": "platform::pure::functions"},
+    {"suite": "pct", "runner": "pct", "target": "platform::pure::functions"},
+    {"suite": "grammar", "runner": "grammar", "target": "grammar/tests"},
+    {"suite": "printer-protocol", "runner": "printerProtocol", "target": "grammar/tests"}
+  ]
 }

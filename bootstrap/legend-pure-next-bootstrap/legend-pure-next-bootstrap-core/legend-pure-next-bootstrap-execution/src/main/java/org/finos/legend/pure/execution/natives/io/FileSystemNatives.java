@@ -115,5 +115,26 @@ public class FileSystemNatives
                 throw new RuntimeException("Failed to write file: " + path, e);
             }
         });
+
+        // writeFileBytes(String[1], Binary[1]) : String[1] — writeFile, for raw bytes.
+        natives.put("platform::pure::functions::io::writeFileBytes_String_1__Binary_1__String_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String path = (String) _E_ValueSpecification.unwrap(args.get(0));
+            byte[] content = org.finos.legend.pure.execution.natives.binary.BinaryNatives.asBytes(_E_ValueSpecification.unwrap(args.get(1)));
+            try
+            {
+                Path parent = Path.of(path).toAbsolutePath().getParent();
+                if (parent != null)
+                {
+                    Files.createDirectories(parent);
+                }
+                Files.write(Path.of(path), content);
+                return _E_ValueSpecification.wrap(path, genericType, multiplicity, resolver);
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException("Failed to write file: " + path, e);
+            }
+        });
     }
 }

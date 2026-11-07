@@ -1,0 +1,10 @@
+{
+  "name": "relation",
+  "packagePattern": "(platform::pure::functions::relation)(::.*)?",
+  "dependencies": ["core"],
+  "testDependencies": ["core-tests", "tds"],
+  "tests": [
+    {"suite": "pct", "runner": "pct", "target": "platform::pure::functions::relation"},
+    {"suite": "unit", "runner": "tests", "target": "platform::pure::functions::relation::tests"}
+  ]
+}

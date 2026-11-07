@@ -359,7 +359,7 @@ public final class PureCompileMain
      * additionally compiles every Pure source under each {@code --source-dir}
      * via Pure-on-Truffle and registers the filtered result as an in-memory
      * module before resolving {@code --function}. Used by the
-     * {@code test-pure-runtime-inMemory-*} just recipes to drive
+     * {@code inMemory} variants of the suites to drive
      * {@code runTests} / {@code runPCTTests} over freshly-compiled tests
      * instead of {@code core-tests.pdb} — exercising the from-source code
      * path end-to-end without staging a PDB on disk.
@@ -496,7 +496,7 @@ public final class PureCompileMain
      * Both read the same manifests; only the mechanics differ.</p>
      *
      * <p>Without {@code --root} there is nothing to resolve the repo-relative paths against, so the
-     * caller's list stands alone — which is what every recipe did before manifests carried `pdbs`.</p>
+     * caller's list stands alone — which is what every caller did before manifests carried `pdbs`.</p>
      */
     private static List<String> modulesToOpen(Path moduleRoot, List<String> named)
     {

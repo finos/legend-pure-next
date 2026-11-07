@@ -374,6 +374,7 @@ function platform::extensions::language::java::translation::conventionsFor(baseP
          pair('platform::pure::functions::string::reverseString_String_1__String_1_', reverseStringCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::io::directoryTree_String_1__String_MANY_', directoryTreeCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::io::writeFile_String_1__String_1__String_1_', writeFileCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('platform::pure::functions::io::writeFileBytes_String_1__Binary_1__String_1_', writeFileBytesCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::date::currentTimeMillis__Integer_1_', currentTimeMillisCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::io::withSilencedPrint_Function_1__T_m_', withSilencedPrintCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::extensions::language::java::compileAndExecute_String_1__String_1__String_1__Any_MANY__Any_MANY_', compileAndExecuteCoder_FunctionExpression_1__Conventions_1__Code_1_),
@@ -518,7 +519,13 @@ function <<access.private>> platform::extensions::language::java::translation::p
    // are typed by its signature): compare or compute on their values.
    let compares  = ($resultTypeOpt->isNotEmpty() && $resultTypeOpt->toOne() == Boolean)
                    || ($left.type == javaNumber() && $right.type == javaNumber());
-   $factory->eval($leftCast->numericOperand($compares), $rightCast->numericOperand($compares));
+   // Arithmetic on two Numbers computes on what they hold (PureValues): two Integers give an Integer, where
+   // doubleValue() would give a Float. Operands of a concrete type keep Java's own operator.
+   let numbers   = $left.type == javaNumber() && $right.type == javaNumber()
+                   && ['plus', 'minus', 'times']->contains($fe.functionName->toOne());
+   if ($numbers,
+      | $conv->runtimeCall('PureValues', $fe.functionName->toOne(), [$left, $right], javaNumber()),
+      | $factory->eval($leftCast->numericOperand($compares), $rightCast->numericOperand($compares)));
 }
 
 // An Object-typed operand fitted to the operation: by the expression's own Pure
@@ -2573,6 +2580,13 @@ function <<access.private>> platform::extensions::language::java::translation::w
    $conv->runtimeCall('PureFiles', 'writeFile', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString())], javaString());
 }
 
+// `writeFileBytes(path, content)` — writeFile, for a Binary (the raw byte[]).
+function <<access.private>> platform::extensions::language::java::translation::writeFileBytesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'writeFileBytesCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   $conv->runtimeCall('PureFiles', 'writeFileBytes', [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaArray(javaByte()))], javaString());
+}
+
 // `currentTimeMillis()` — milliseconds since the epoch.
 function <<access.private>> platform::extensions::language::java::translation::currentTimeMillisCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
@@ -3249,8 +3263,10 @@ function <<access.private>> platform::extensions::language::java::translation::f
    // BiFunction<Object,Object,Object>), so init must agree or Java fails
    // type inference ("inference variable U has incompatible bounds").
    let init      = $conv->translateExpression($fe.parametersValues->at(2))->toObjectCode();
-   // The reducer (Object, Object) → Object around the translated lambda.
-   let reducer = $conv->buildFoldReducer($lambdaArg);
+   // The reducer (Object, Object) → Object around the translated lambda. A fold of many (its accumulator V[*]) keeps
+   // its accumulator a list: a step may give ONE value (V[*] admits it), which the next reads back as many.
+   let many    = $fe.func->toOne()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath() == 'platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_';
+   let reducer = $conv->buildFoldReducer($lambdaArg, $many);
    // Prefixed names: a lambda parameter may not shadow one of the enclosing
    // method's, and a Pure function is free to call its own parameters a and b.
    let combiner = j_lambda(
@@ -3277,7 +3293,7 @@ function <<access.private>> platform::extensions::language::java::translation::f
 // types. The reducer's own parameters are prefixed so they can't collide with
 // a local of the enclosing method, and suffixed with the Pure lambda's
 // parameter names so a fold nested in the lambda doesn't redeclare them.
-function <<access.private>> platform::extensions::language::java::translation::buildFoldReducer(conv: Conventions[1], lambdaArg: ValueSpecification[1]): Code[1]
+function <<access.private>> platform::extensions::language::java::translation::buildFoldReducer(conv: Conventions[1], lambdaArg: ValueSpecification[1], many: Boolean[1]): Code[1]
 {
    let f      = $conv->translateExpression($lambdaArg);
    let bif    = $f->j_castWithoutChecks(javaBiFunction(javaObject(), javaObject(), javaObject()));
@@ -3286,9 +3302,10 @@ function <<access.private>> platform::extensions::language::java::translation::b
                    other: ValueSpecification[1] | []->cast(@String)
                 ]);
    let suffix = $names->map(n | '_' + $n)->joinStrings('');
+   let step   = $bif->j_invoke('apply', [j_variable(javaObject(), 'pureFoldElt' + $suffix), j_variable(javaObject(), 'pureFoldAcc' + $suffix)], javaObject());
    j_lambda(
       [j_parameter(javaObject(), 'pureFoldAcc' + $suffix), j_parameter(javaObject(), 'pureFoldElt' + $suffix)],
-      $bif->j_invoke('apply', [j_variable(javaObject(), 'pureFoldElt' + $suffix), j_variable(javaObject(), 'pureFoldAcc' + $suffix)], javaObject())
+      if ($many, | $conv->runtimeCall('PureValues', 'list', [$step], javaList())->toObjectCode(), | $step)
    );
 }
 
@@ -3908,7 +3925,7 @@ function <<access.private>> platform::extensions::language::java::translation::u
 // across overloads) in the platform package mirroring its Pure package, the
 // same scheme as the platform types. The call site and the definition both go
 // through here, so they always agree.
-function <<access.private>> platform::extensions::language::java::translation::udfClassName(conv: Conventions[1], udf: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]): String[1]
+function <<access.private>> platform::extensions::language::java::translation::udfClassName(conv: Conventions[1], udf: platform::pure::metamodel::function::PackageableFunction<platform::pure::metamodel::type::Any>[1]): String[1]
 {
    let root = platform::extensions::language::java::translation::platform::platformRoot();
    $udf->platform::extensions::language::java::translation::platform::platformPackage($root) + '.' + $udf.name->toOne('udfClassName: UDF missing name')->replace('~', '_');
@@ -5309,6 +5326,35 @@ function <<access.private>> platform::extensions::language::java::translation::t
    udf: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]
 ): platform::extensions::language::java::metamodel::Class[1]
 {
+   assert($udf.expressionSequence->size() >= 1, | 'translateUdf: empty expressionSequence for ' + $udf.functionName->toOne());
+   $convIn->platform::extensions::language::java::translation::translateFunctionClass($udf, $udf.expressionSequence->toOneMany());
+}
+
+// A native as a class of its own, the shape a UDF gets: `execute` takes the native's parameters, and its body is
+// the native's coder for a call passing them on. Its call sites never need it (the coder is inlined there); it is
+// what a native held as a VALUE runs as (`evaluate($native, ...)`), found by its path as a UDF is.
+function <<access.private>> platform::extensions::language::java::translation::translateNative(
+   convIn: Conventions[1],
+   native: platform::pure::metamodel::function::NativeFunction<platform::pure::metamodel::type::Any>[1]
+): platform::extensions::language::java::metamodel::Class[1]
+{
+   let call = ^platform::pure::metamodel::valuespecification::FunctionInvocation(
+      functionName     = $native.functionName->toOne('translateNative: native missing functionName'),
+      parametersValues = $native.parameters,
+      func             = $native,
+      multiplicity     = $native.returnMultiplicity,
+      genericType      = $native.returnGenericType
+   );
+   $convIn->platform::extensions::language::java::translation::translateFunctionClass($native, [$call]);
+}
+
+// A packageable function as a Java class with one `public static execute(...)`: its parameters, and `body`.
+function <<access.private>> platform::extensions::language::java::translation::translateFunctionClass(
+   convIn: Conventions[1],
+   udf: platform::pure::metamodel::function::PackageableFunction<platform::pure::metamodel::type::Any>[1],
+   expressions: ValueSpecification[1..*]
+): platform::extensions::language::java::metamodel::Class[1]
+{
    let conv        = ^$convIn(owner = if ($convIn.metadataElements, | $udf->elementToPath(), | []),
                               scope = $udf.parameters->map(p | $p.name),
                               typeVarWitness = $udf.parameters->witnessesOfTypeParameters());
@@ -5317,11 +5363,10 @@ function <<access.private>> platform::extensions::language::java::translation::t
    let jParams     = $udf.parameters->map(p |
       j_parameter($conv->pureTypeToJavaType($p.genericType, $p.multiplicity), $p.name->platform::extensions::language::java::translation::safeJavaName())
    );
-   assert($udf.expressionSequence->size() >= 1, | 'translateUdf: empty expressionSequence for ' + $udf.functionName->toOne());
    // A return multiplicity that is a PARAMETER (`T[m]`) is neither one value nor
    // many until the call site says so: what the body produced passes through,
    // where fitting it would take the first value of a list.
-   let raw         = $conv->buildJavaBodyReturning($udf.expressionSequence->toOneMany(), $udf.returnMultiplicity->holdsManyValues());
+   let raw         = $conv->buildJavaBodyReturning($expressions, $udf.returnMultiplicity->holdsManyValues());
    let body        = if ($udf.returnMultiplicity->instanceOf(platform::pure::metamodel::multiplicity::ConcreteMultiplicity),
                         | $raw->returningType($returnType, $conv),
                         | $raw->returningNormalized($conv));

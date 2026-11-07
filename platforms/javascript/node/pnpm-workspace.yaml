@@ -1,0 +1,34 @@
+# pnpm 10+ skips dependency build scripts unless they are allowed here, and recent pnpm fails the
+# install instead (ERR_PNPM_IGNORED_BUILDS). esbuild's postinstall sets up its platform binary.
+# `allowBuilds` is read by pnpm 11+, `onlyBuiltDependencies` by pnpm 10; pnpm 9 (CI) needs neither,
+# but refuses a workspace file without `packages`, hence the single-package workspace.
+packages:
+  - "."
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild
+# Only the platforms the build runs on (the GraalVM toolchains of MODULE.bazel): each locked package is a target here.
+ignoredOptionalDependencies:
+  - "@esbuild/aix-ppc64"
+  - "@esbuild/android-arm"
+  - "@esbuild/android-arm64"
+  - "@esbuild/android-x64"
+  - "@esbuild/darwin-x64"
+  - "@esbuild/freebsd-arm64"
+  - "@esbuild/freebsd-x64"
+  - "@esbuild/linux-arm"
+  - "@esbuild/linux-ia32"
+  - "@esbuild/linux-loong64"
+  - "@esbuild/linux-mips64el"
+  - "@esbuild/linux-ppc64"
+  - "@esbuild/linux-riscv64"
+  - "@esbuild/linux-s390x"
+  - "@esbuild/netbsd-arm64"
+  - "@esbuild/netbsd-x64"
+  - "@esbuild/openbsd-arm64"
+  - "@esbuild/openbsd-x64"
+  - "@esbuild/sunos-x64"
+  - "@esbuild/win32-arm64"
+  - "@esbuild/win32-ia32"
+  - "@esbuild/win32-x64"

@@ -68,3 +68,16 @@ function <<PCT.test>> platform::pure::functions::math::tests::times::testDecimal
 {
     assertEquals(0.02d, $f->eval(|0.1d * 0.2d));
 }
+
+// Operands typed Number hold what they hold: two Integers give an Integer, a Float a Float (a function
+// of Number parameters, as a native called by reference is typed by its signature).
+function <<test.TestDependency>> platform::pure::functions::math::tests::times::timesNumbers(a:Number[1], b:Number[1]):Number[1]
+{
+    $a * $b
+}
+
+function <<PCT.test>> platform::pure::functions::math::tests::times::testTimesOfNumbers<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(15, $f->eval(|platform::pure::functions::math::tests::times::timesNumbers(5, 3)));
+    assertEquals(5.0, $f->eval(|platform::pure::functions::math::tests::times::timesNumbers(2.5, 2.0)));
+}

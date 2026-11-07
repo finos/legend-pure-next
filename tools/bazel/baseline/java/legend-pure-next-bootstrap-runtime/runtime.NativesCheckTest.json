@@ -1,0 +1,17 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:52:45.218Z",
+ "source": "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-runtime/target/surefire-reports/TEST-org.finos.legend.pure.runtime.NativesCheckTest.xml",
+ "cases": [
+  {
+   "id": "everyNativeTheLoadedModulesDeclareIsImplemented",
+   "status": "passed"
+  },
+  {
+   "id": "anEntryForAFunctionWrittenInPureFailsTheBuild",
+   "status": "passed"
+  }
+ ]
+}

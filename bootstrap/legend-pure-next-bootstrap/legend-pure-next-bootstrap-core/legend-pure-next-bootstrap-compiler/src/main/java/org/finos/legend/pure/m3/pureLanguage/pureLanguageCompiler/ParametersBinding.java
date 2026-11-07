@@ -19,12 +19,13 @@ import platform.pure.metamodel.multiplicity.Multiplicity;
 import platform.pure.metamodel.multiplicity.MultiplicityParameter;
 import platform.pure.metamodel.type.generics.GenericType;
 import platform.pure.metamodel.type.generics.TypeParameter;
-import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.map.mutable.MapAdapter;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -43,8 +44,9 @@ import java.util.Map;
  */
 public abstract class ParametersBinding
 {
-    protected final MutableMap<String, MutableList<GenericType>> typeBindings = Maps.mutable.empty();
-    protected final MutableMap<String, MutableList<Multiplicity>> multiplicityBindings = Maps.mutable.empty();
+    // In binding order, as the Pure compiler's: it is the order of the resolved parameters a PDB holds.
+    protected final MutableMap<String, MutableList<GenericType>> typeBindings = MapAdapter.adapt(new LinkedHashMap<>());
+    protected final MutableMap<String, MutableList<Multiplicity>> multiplicityBindings = MapAdapter.adapt(new LinkedHashMap<>());
 
     public MutableMap<String, MutableList<GenericType>> typeBindings()
     {

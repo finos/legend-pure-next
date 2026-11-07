@@ -1275,6 +1275,10 @@ function __writeFile(path, content) {
   if (typeof globalThis.__pureHost?.hostWriteFile === "function") return globalThis.__pureHost?.hostWriteFile(path, content);
   throw new Error("writeFile: no file system in this environment");
 }
+function __writeFileBytes(path, content) {
+  if (typeof globalThis.__pureHost?.hostWriteFileBytes === "function") return globalThis.__pureHost?.hostWriteFileBytes(path, content);
+  throw new Error("writeFileBytes: no file system in this environment");
+}
 // platform::extensions::language::javascript::{compile,execute,drainCompiledSources}
 // — evaluating JavaScript is a HOST capability, so runtime-lib only routes. The
 // standalone JS platform installs these from src/execution/js-natives.js; an

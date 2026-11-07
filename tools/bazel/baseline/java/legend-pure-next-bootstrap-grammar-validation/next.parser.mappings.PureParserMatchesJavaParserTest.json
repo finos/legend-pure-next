@@ -1,0 +1,1473 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:52:50.382Z",
+ "source": "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation/target/surefire-reports/TEST-org.finos.legend.pure.next.parser.mappings.PureParserMatchesJavaParserTest.xml",
+ "cases": [
+  {
+   "id": "grammar:association/all",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:association/profile",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:association/properties/aggregationKind",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:association/properties/defaultValues",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:association/properties/profile",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:association/properties/qualifiedProperties",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:association/properties/space",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/all",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/constraints",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/inheritance",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/light",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/lightProperty",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/profile",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/properties/aggregationKind",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/properties/defaultValues",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/properties/profile",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/properties/qualifiedProperties",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/properties/space",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/typeAndMulParam",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:class/typeVariables",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:enumeration/profile",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:enumeration/simple",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:function/definition/concrete",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:function/definition/constraint",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:function/definition/native",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:function/definition/typeAndMulParam",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:function/definition/undefinedMultiplicityArgument",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:function/functionType",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:function/lambda/default",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:primitive/binary",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:primitive/profile",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:primitive/simple",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:primitive/typeVariable",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:profile",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:relation/inference",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:relation/simple",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:relation/space",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:relation/wildcardAndQuotedColumns",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:section",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/all",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/cast",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/collection",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/copy",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/copy_append",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/copy_expression",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/dsl",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/dslMultiline",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/enumeration",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/functionApplication/arrow",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/functionApplication/dot",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/functionApplication/precedence",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/functionApplication/simple",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/lambda/arrowReceiver",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/lambda/let",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/lambda/multiStatement",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/let",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/new/function",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/new/parentReference",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/new/simple",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/primitives/allPrimitives",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/primitives/blockCommentCharsInString",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/primitives/hashSectionInString",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/primitives/stringEscapes",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/primitives/tripeString/iIndented",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/primitives/tripeString/indentedTab",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/primitives/tripeString/simple",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/primitives/tripeString/withDocComment",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/range",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/range_expression",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/relation",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/relation/quotedColSpec",
+   "status": "passed"
+  },
+  {
+   "id": "grammar:valueSpecification/relation/quotedProperty",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/profile/profile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/profile/profile_E_unknownProfile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/profile/profile_E_unknownStereotype.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/profile/profile_E_unknownTag.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/property/aggregationKind.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/property/inheritedAssociationProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/property/inheritedAssociationPropertyDeep.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/property/profile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/property/simple.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/property/simple_E_ambiguousType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/property/simple_E_multipleUnknownTypes.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/property/simple_E_unknownTypeInProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/property/typeArguments.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/property/typeArguments_E_Unknown.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:association/qualifiedProperty/qualifiedProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/constraints/advanced.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/constraints/constraintReferencingLaterFunction.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/constraints/simple.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/constraints/simple_E_UnkownProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/constraints/typeParameterCast.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/inheritance/simple.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/inheritance/simple_E_multipleUnknownTypes.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/inheritance/simple_E_unknownTypeInGeneralization.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/inheritance/typeArguments.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/inheritance/typeArguments_E_Unknown.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/profile/profile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/profile/profile_E_unknownProfile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/profile/profile_E_unknownStereotype.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/profile/profile_E_unknownTag.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/aggregationKind.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/aggregationKind_noRoundtrip.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/defaultValue.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/defaultValue_E_WrongType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/defaultValue_E_wrongMultiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/defaultValue_optional.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/defaultValue_subtype.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/defaultValue_typeParameter.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/profile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/profile_E_unknownProfile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/profile_E_unknownStereotype.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/profile_E_unknownTag.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/property_E_overrideAnyProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/property_E_overrideVarianceMismatch.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/property_override.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/relationProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/sameShortNameInUnimportedPackage.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/simple.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/simple_E_multipleUnknownTypes.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/simple_E_unknownTypeInProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/typeArguments.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/property/typeArguments_E_Unknown.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/profile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty_E_ambiguousDifferentParamTypes.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty_E_ambiguousSameParamsNonCovariant.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty_E_overrideReturnMultiplicityMismatch.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty_E_overrideReturnTypeMismatch.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty_E_returnMultiplicityMismatch.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty_E_returnTypeMismatch.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty_E_unknownParameterType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty_E_unknownReturnType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty_overrideCovariantReturn.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/qualifiedProperty/qualifiedProperty_typeParameterCast.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/typeAndMulParam/typeAndMulParam.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:class/typeVariables/typeVariables.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:enumeration/profile/profile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:enumeration/profile/profile_E_unknownProfile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:enumeration/profile/profile_E_unknownStereotype.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:enumeration/profile/profile_E_unknownTag.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:enumeration/simple.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:enumeration/simple_E_duplicateValue.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/lambda/canonicalAnchor.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/lambda/lambda_E_NoInference.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/lambda/lambda_E_VarConflicts.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/lambda/lambda_E_dupParamName.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/lambda/openVariables.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/lambda/openVariables_foldMatch.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/native/simple.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/native/simple_E_dupParamName.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/native/simple_E_unknownParameterType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/native/simple_E_unknownReturnType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/native/simple_E_unknownTypeParam.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/classAsParamAndReturn.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/constraints/constraints.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/constraints/constraints_E_unknownVariable.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/constraints/constraints_E_wrongReturnType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/profile/profile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/profile/profile_E_unknownProfile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/profile/profile_E_unknownStereotype.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/profile/profile_E_unknownTag.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/simple.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/simple_E_dupParamName.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/simple_E_unknownVariable.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:function/userDefined/typeParameterCast.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:leanReferencesTest_E_nonTestReferencesTestElement.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:multiPassErrorManagement.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:primitive/constraints/constraints.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:primitive/constraints/constraints_E_wrongVariable.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:primitive/profile/profile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:primitive/profile/profile_E_unknownProfile.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:primitive/profile/profile_E_unknownStereotype.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:primitive/profile/profile_E_unknownTag.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:primitive/simple.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:primitive/simple_E_wrongSuperType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:primitive/typeVariables/typeVariable.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/element/classWithTypeParameter.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/element/classWithTypeParameterThroughLambdaCall.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/element/graphElement.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/element/graphElement_E_wrongElements.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/element/packageRoot.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/element/packageSimple.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/element/packageableMultiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/primitive/binary.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/primitive/boolean.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/primitive/date_noRoundtrip.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/primitive/decimal.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/primitive/float.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/primitive/integer.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/primitive/shadowedByOwnClass.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/primitive/string.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/2aggColSpec.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/2aggColSpecArray.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/2colFunc.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/2colFuncArray.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/2colFunc_E_NoInference.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/aggColSpec.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/aggColSpecArray.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/colFunc.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/colFuncAnyMatch.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/colFuncArray.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/colFunc_E_NoInference.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/simpleColArrayWithType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/simpleColArrayWithTypeAndMul.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/simpleColWithType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/atomicValue/relation/simpleColWithTypeAndMul_noRoundtrip.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/collection/collection.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/collection/collectionLambda.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/arithmeticPrecedence.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/automap.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/automapAfterEval.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/automapInheritedQualifiedProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/automapPropertyChained.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/automapWithSourceResolvedTransitively.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/chainedAutomap.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/enumeraiton_E_unknownValue.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/enumeration.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/enumeration_valueNamedAsAnEnumProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/inheritedQualifiedProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/inheritedQualifiedPropertyDeep.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/inheritedQualifiedPropertyNoArgs.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/inheritedQualifiedPropertyWithThisAccess.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/metaclassProperties.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/property.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/propertyGenericTypeBinding.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/propertyGenericTypeChained.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/propertyGenericTypeMulParam.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/propertyGenericTypeMultiParam.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/propertyGenericTypeViaFunctionCall.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/propertyInheritance.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/propertyOnOneToMany.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/property_E_unknownProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/property_E_unknownPropertyOnAnyInLambda.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/property_E_wrongType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/qualifiedProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/qualifiedPropertyLambdaArgument.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/qualifiedPropertyOverrideCovariant.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/dot/qualifiedPropertyOverrideCovariantReturnUsed.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/anyAsFunctionType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/cast.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/classTypeParam.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/classTypeParam_E_wrongType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/fold.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/foldEmptyStart.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/foldSubtypeInit_E_varianceMismatch.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/foldWidenMul.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/functionReferenceAsAddressableFunction.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/if.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/ifMul.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/if_E_multipleMatch.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/if_E_notFound.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/if_E_wrongMul.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/if_E_wrongOperation.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/inferImportsLikeChain.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/lambda.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters_E_noMatch.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/lambdaReturnfunctionTypeInference.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/lambdaReturnfunctionTypeInference_E_error.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/lambdaWithParamTypeAndMul.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/lambdaWithParamTypeAndMul_E_wrongVarType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/lambda_E_errorInBody.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/mapWithPropertyAsVariable.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/multipass.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/multipassMultiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/multiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/multiplicityParameter_givenTwiceToAnOverload.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/multiplicity_E_paramValueTooBig.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/nestedTypeArgumentBinding.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/pushDown.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/pushDownComplex.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/pushDownDeep.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/pushDownMultiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/pushDownMultiplicity_E_errorInBody.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/pushDown_E_errorInBody.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/distinct.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/distinct_E_columnIsNotSubset.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/dot_escapedColumnName.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/eval_colSpecSubset.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/extend.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/extend_E_unknownColumn.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/extend_overWindowAggregate.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/extend_overloadedWindow.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/groupBy.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/groupBy_callerNamesCollide.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/groupBy_reduceOverAGenericClass.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/project.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/rename.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/select.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/select_escapedColumnName.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/relation/sort_colSpecArgument.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/tiebreakMultiplicityParameter.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/tiebreakTypeParameter.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/tiebreakTypeParameterInheritance.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/type.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/typeParamNameCollision.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/typeParamResolvedTransitively.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/typeParamResolvedTransitively_callerNamesCollide.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/type_E_paramValueWrongType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/generics/withPackage.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_ambiguousFunction.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_packageVisibility.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_unknownFunction.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_wrongParameterCount.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/firstPass/noArguments_E_ambiguous.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/multiplicity/multiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/multiplicity/multiplicity_E_wrongParameterMultiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/multiplicity/overload_multiplicityParameter.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/type/overload.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/type/overload_sameSimpleName_noRoundtrip.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/type/overload_sameSimpleName_sameReturn_noRoundtrip.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/type/type.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/type/type_e_wrongParameterType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/simple/type/type_subtypeArgument.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_E_unknownProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_expression_oneToOne.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_expression_zeroMany.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_expression_zeroToOne.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_parentReference.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_parentReference_E_outOfBounds.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_parentReference_E_unknownProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_parentReference_selfMap.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/copy/copy_pointerStereotype.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/let/let.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/let/let_E_conflict.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/let/let_E_duplicateVariable.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/let/let_E_duplicateVariableNoShadow.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_E_abstractClassInstantiation.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_E_missingProperties.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyExactMultiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyNonStandardMultiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongMultiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongType_VS.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_parentReference.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_circular.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_midChainTilde.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_outOfBounds.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_unknownProperty.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_tildeInLambda.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_pointerStereotype.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_subtypePropertyValue.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/functionExpression/functionApplication/special/new/new_subtypePropertyValueInheritance.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/genericTypeAndMultiplicityHolder/primitive/withTypeValue.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/genericTypeAndMultiplicityHolder/relation/simpleColumn.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/genericTypeAndMultiplicityHolder/relation/simpleColumn_E_unknownType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/genericTypeAndMultiplicityHolder/relation/simpleColumn_E_wrongMultiplicity.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/genericTypeAndMultiplicityHolder/relation/simpleColumn_E_wrongType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/genericTypeAndMultiplicityHolder/relation/typeHolderCollection.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/genericTypeAndMultiplicityHolder/typeAndMulParam.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/genericTypeAndMultiplicityHolder/undefined/undefinedGenericType.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/genericTypeAndMultiplicityHolder/undefined/undefinedMul.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/island/echo.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/island/inLambda.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/island/island_E_ambiguous.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/island/island_E_errorInside.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/island/island_E_unclaimed.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/island/ref.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/island/refTarget.pure",
+   "status": "passed"
+  },
+  {
+   "id": "compiler:valueSpecification/island/ref_E_unknown.pure",
+   "status": "passed"
+  }
+ ]
+}

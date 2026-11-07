@@ -1,0 +1,538 @@
+{
+ "cases": [
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::optionalAccessSimple__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::optionalAccessChained__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::optionalAccessTwice__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::optionalCallNoArgs__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::optionalCallWithArgs__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::optionalMethodCall__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::nullishCoalesceSimple__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::nullishCoalesceWithAccess__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::nullishCoalesceInConst__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::awaitSimple__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::awaitMemberAccess__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::asyncFunctionDeclaration__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::asyncMethod__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::asyncArrowExpression__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::asyncArrowBlock__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::awaitInsideResolvesImports__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::identifierExpr__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::thisExpr__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::stringLitExpr__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::numericLitExpr__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::booleanLitTrue__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::booleanLitFalse__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::nullLitExpr__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::propertyAccess__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::nestedPropertyAccess__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::callNoArgs__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::callOneArg__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::callMultipleArgs__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::binaryPlus__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::binaryEquality__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::binaryLogicalAnd__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::ternarySimple__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::ternaryNested__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::ifStmtSingleBranch__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::ifStmtWithElse__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::ifElseIfChain__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::letWithInit__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::letStringInit__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::letNoInit__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::constWithInit__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::constInferred__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::notExpr__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::negExpr__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::typeofExpr__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::guardClause__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveCallTarget__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveNewTarget__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveCallArgument__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveMethodBody__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveTwoNamesSameSource__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveExternalCall__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveBinaryOperand__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveArrowBody__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::aliasedExternalImport__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::aliasedIdentifierImport__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::aliasReusedDedupes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::pathAliasReplacesRelative__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::pathAliasFirstMatchWins__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::pathAliasFallbackToRelative__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::pathAliasExternalsUnaffected__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::pathSameDir__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::pathSameDirNested__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::pathDownToSubdir__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::pathUpFromSubdir__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::pathSiblingDir__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::pathDeepSibling__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveSingleLocalImport__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveDedupesNames__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveExternalImport__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveMixedImports__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveMergesSameSource__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::resolveSkipsSelfImport__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::classWithGetter__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::classWithSetter__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::classWithGetterAndSetter__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::shorthandSingle__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::shorthandMixed__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::templatePlain__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::templateEmpty__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::templateMultiline__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::templateOneSpan__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::templateMultipleSpans__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::templateWithExpression__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::emptyObject__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::objectOneEntry__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::objectMultipleEntries__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::objectShorthand__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::nestedObject__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::objectInsideArrayLit__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::objectInConstDeclaration__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::objectAsCallArg__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::objectFromMapPipeline__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::returnVoidStmt__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::returnWithValue__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::expressionStmt__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::emptyBlock__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::blockWithReturn__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::blockTwoStatements__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::constObjectDestructureSimple__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::constObjectDestructureRename__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::constObjectDestructureDefault__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::constObjectDestructureRest__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::constObjectDestructureNested__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::constArrayDestructureSimple__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::constArrayDestructureRest__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::letArrayDestructureDefault__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::paramObjectDestructure__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::paramArrayDestructure__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::constMixedDestructure__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::mapIdentity__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::mapProjectProperty__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::filterByEquality__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::someExists__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::everyForAll__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::findFirst__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::flatMapFlatten__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::forEachSideEffect__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::reduceSum__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::includesValue__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::joinWithSeparator__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::sliceRange__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::lengthProperty__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::reverseNoArgs__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::sortByComparator__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::arrayLitFromExpressions__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::chainedPipeline__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::emptyClass__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::exportedEmptyClass__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::classWithOneProperty__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::classWithOneMethod__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::simpleImport__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::multipleNamedImports__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::language::javascript::serialization::tests::greeterEndToEnd__Boolean_1_",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "testFunctions"
+}

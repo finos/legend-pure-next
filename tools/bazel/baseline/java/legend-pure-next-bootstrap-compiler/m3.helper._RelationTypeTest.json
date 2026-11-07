@@ -1,0 +1,29 @@
+{
+ "schema": 1,
+ "producer": "surefire",
+ "suite": "junit",
+ "recordedAt": "2026-11-01T21:52:42.297Z",
+ "source": "bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-compiler/target/surefire-reports/TEST-org.finos.legend.pure.m3.helper._RelationTypeTest.xml",
+ "cases": [
+  {
+   "id": "testIsConcreteRelationType",
+   "status": "passed"
+  },
+  {
+   "id": "testFindCommonRelationType",
+   "status": "passed"
+  },
+  {
+   "id": "testPrintRelationType",
+   "status": "passed"
+  },
+  {
+   "id": "testIsCompatibleRelationType",
+   "status": "passed"
+  },
+  {
+   "id": "testCollectReferencedTypeParameterNames",
+   "status": "passed"
+  }
+ ]
+}

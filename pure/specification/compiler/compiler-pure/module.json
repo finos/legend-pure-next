@@ -1,5 +1,0 @@
-{
-  "name": "compiler",
-  "packagePattern": "(platform::pure::compiler)(::.*)?",
-  "dependencies": ["core"]
-}

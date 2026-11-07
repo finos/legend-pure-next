@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command-line entry for the execution host (bin/pure-js) — the Node
+// Command-line entry for the execution host (pure-js (//platforms/javascript:pure-js)) — the Node
 // counterpart of `pure-truffle execute` (platforms/truffle PureCompileMain), so
-// module recipes invoke both hosts with the same arguments:
+// module suites invoke both hosts with the same arguments:
 //
 //   pure-js execute [--pdb <file>...] --function <path> [--args <arg>...]
+//   pure-js compile --base-pdb <file>... --source <dir>... --output-dir <dir> [--tests {none|split|with}]
 //
 // `--function` takes the mangled path pure-truffle takes
 // (`platform::pure::test::runTests_String_1__String_1_`). A non-empty result is
@@ -24,9 +25,13 @@
 // test fails — goes to stderr with exit code 1. `--pdb` replaces the host's
 // default PDB set.
 
+import { resolve } from "node:path";
 import { loadRuntime } from "../../core/runtime/load-runtime.js";
 
-const USAGE = "Usage: pure-js execute [--pdb <file>...] --function <path> [--args <arg>...]";
+const COMPILE_MODULE = "platform::pure::compiler::pdb::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
+
+const USAGE = `Usage: pure-js execute [--pdb <file>...] --function <path> [--args <arg>...]
+       pure-js compile --base-pdb <file>... --source <dir>... --output-dir <dir> [--tests {none|split|with}]`;
 
 function fail(message) {
     console.error(message);
@@ -34,29 +39,39 @@ function fail(message) {
 }
 
 const [command, ...rest] = process.argv.slice(2);
-if (command !== "execute") fail(USAGE);
+if (command !== "execute" && command !== "compile") fail(USAGE);
 
 const pdbs = [];
 const fnArgs = [];
+const sources = [];
 let fnPath = null;
+let outputDir = null;
+let tests = "none";
 for (let i = 0; i < rest.length; i++) {
     switch (rest[i]) {
-        case "--pdb": pdbs.push(rest[++i]); break;
+        case "--pdb":
+        case "--base-pdb": pdbs.push(rest[++i]); break;
         case "--function": fnPath = rest[++i]; break;
         case "--args":
             while (i + 1 < rest.length && !rest[i + 1].startsWith("--")) fnArgs.push(rest[++i]);
             break;
+        case "--source": sources.push(resolve(rest[++i])); break;
+        case "--output-dir": outputDir = rest[++i]; break;
+        case "--tests": tests = rest[++i]; break;
         default: fail(`Unknown option: ${rest[i]}\n${USAGE}`);
     }
 }
-if (!fnPath) fail(USAGE);
+const compile = command === "compile";
+if (compile ? !sources.length || !outputDir : !fnPath) fail(USAGE);
 
 const { registry, runtime } = await loadRuntime(pdbs.length ? { pdbs } : {});
 
-const fn = registry.getElement(fnPath);
-if (!fn) fail(`Function not found: ${fnPath}`);
+const fn = registry.getElement(compile ? COMPILE_MODULE : fnPath);
+if (!fn) fail(`Function not found: ${compile ? COMPILE_MODULE : fnPath}`);
 try {
-    const result = runtime.execute(fn, ...fnArgs);
+    const result = compile
+        ? runtime.execute(fn, sources, outputDir, tests, runtime.compilerExtensions())
+        : runtime.execute(fn, ...fnArgs);
     const values = result === undefined || result === null ? [] : Array.isArray(result) ? result : [result];
     if (values.length) process.stdout.write(values.map(String).join("\n") + "\n");
 } catch (e) {

@@ -797,7 +797,8 @@ public final class CompiledGraphPrinter
         }
         if (_GenericType.type(gt) instanceof platform.pure.metamodel.type.generics.TypeParameter tp)
         {
-            String name = tp._name();
+            // A contravariant one as it is declared, '-U'.
+            String name = (Boolean.TRUE.equals(tp._contravariant()) ? "-" : "") + tp._name();
             if (tp._owner() != null && tp._owner() instanceof PackageableElement ownerElem)
             {
                 name += "~" + shortPath(ownerElem);

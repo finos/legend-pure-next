@@ -1,0 +1,260 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::compiler::structural::sourceInformationCompiler::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::functions::lang::*;
+import platform::pure::compiler::structural::genericTypeCompiler::*;
+import platform::pure::compiler::structural::propertyCompiler::*;
+import platform::pure::compiler::structural::valueSpecificationCompiler::*;
+import platform::pure::compiler::structural::lambdaCompiler::*;
+import platform::pure::compiler::structural::annotationCompiler::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::compiler::helper::function::*;
+import platform::pure::compiler::helper::relationType::*;
+import platform::pure::compiler::helper::column::*;
+import platform::pure::compiler::helper::type::*;
+import platform::pure::compiler::helper::multiplicity::*;
+import platform::pure::compiler::helper::lambda::*;
+import platform::pure::compiler::helper::functionExpression::*;
+import platform::pure::compiler::helper::variableExpression::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::functionType::*;
+import platform::pure::compiler::helper::property::*;
+import platform::pure::compiler::helper::parametersBinding::*;
+import platform::pure::compiler::helper::class::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::compiler::*;
+
+function platform::pure::compiler::structural::propertyCompiler::compileProperty(protocolProperty:platform::pure::protocol::grammar::function::property::Property[1], context:CompilerContext[1], packagePath:String[1], owner:Class<Any>[1]):CompilerResult<Property<Nil, Any|*>>[1]
+{
+    let protocolType = $protocolProperty.genericType->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue);
+    let gtResult = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@TypeParameter), 'property \'' + $protocolProperty.name + '\'', 'class \'' + $packagePath + '::' + $owner.name->toOne() + '\'');
+    let mGenType = $gtResult.value->toOne();
+    let updatedContext = $gtResult.context;
+
+    if($updatedContext.errors->size() > $context.errors->size(),
+        | ^CompilerResult<Property<Nil, Any|*>>(context = $updatedContext),
+        | let mMult = $protocolProperty.multiplicity->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+
+          let propClassifierGT = ^UserDefinedGenericType(
+              type = Property,
+              typeArguments = [
+                  $owner.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0),
+                  $mGenType
+              ],
+              multiplicityArguments = [$mMult]
+          );
+          let prop = new($propClassifierGT)->cast(@Property<Nil, Any|*>);
+          let classCtx = 'class \'' + $packagePath + '::' + $owner.name->toOne() + '\'';
+          let stereoResult = compilePropertyStereotypes($protocolProperty, $updatedContext, $classCtx);
+          let tvResult = compilePropertyTaggedValues($protocolProperty, $stereoResult.context, $classCtx);
+          let annotCtx = $tvResult.context;
+
+          let builtProp = ^$prop(
+              name = $protocolProperty.name,
+              aggregation = compileAggregationKind($protocolProperty),
+              genericType = $mGenType,
+              multiplicity = $mMult,
+              stereotypes = $stereoResult.values,
+              taggedValues = $tvResult.values,
+              sourceInformation = compileSourceInformation($protocolProperty.p_sourceInformation, $context)
+          );
+          let defaultCompiled = if($protocolProperty.defaultValue->isEmpty(),
+              | pair($builtProp, $annotCtx),
+              | let defaultLambda = $protocolProperty.defaultValue->toOne()->cast(@platform::pure::protocol::grammar::function::LambdaFunction);
+                // The class's type and multiplicity parameters are in scope in its defaults, as in pass 3 for its
+                // qualified properties (class/property/defaultValue_typeParameter, defaultValue_multiplicityParameter).
+                let defaultResult = $defaultLambda->compileLambda(^$annotCtx(ownerTypeParams = $owner.typeParameters->cast(@TypeParameter), ownerMulParams = $owner.multiplicityParameters->cast(@platform::pure::metamodel::multiplicity::MultiplicityParameter)), [], [], []);
+                // What it refers to is in the reverse index ('cast(@pack::Box<V|m>)': pass 3 records the
+                // functions it calls, never the types it names), and nothing else of the lambda context is kept.
+                let withReferences = ^$annotCtx(referencedBy = $defaultResult.context->toOne().referencedBy);
+                if($defaultResult.values->isEmpty(),
+                    | pair($builtProp, $withReferences),
+                    | pair(^$builtProp(defaultValue = $defaultResult.values->at(0)->cast(@AtomicValue).value->toOne()->cast(@LambdaFunction<Any>)), $withReferences)
+                );
+          );
+          ^CompilerResult<Property<Nil, Any|*>>(
+              value = $defaultCompiled.first,
+              context = $defaultCompiled.second
+          );
+    );
+}
+
+function platform::pure::compiler::structural::propertyCompiler::compileAggregationKind(p:platform::pure::protocol::grammar::function::property::Property[1]):AggregationKind[1]
+{
+    if($p.aggregation->isEmpty(),
+        | AggregationKind.None,
+        | let enumPointer = $p.aggregation->toOne();
+          let valueName = $enumPointer.extraPointerValues->at(0).value;
+          if([pair(| $valueName == 'Composite', | AggregationKind.Composite),
+              pair(| $valueName == 'Shared', | AggregationKind.Shared)],
+             | AggregationKind.None
+          );
+    );
+}
+
+function platform::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues(properties:Property<Nil, Any|*>[*], context:CompilerContext[1]):CompilerListResult<Property<Nil, Any|*>>[1]
+{
+    $properties->fold({prop, acc |
+        let accCtx = $acc.context;
+        if($prop.defaultValue->isEmpty(),
+            | ^$acc(values += $prop),
+            | let siCtx = if($prop.sourceInformation->isEmpty(), | '', | platform::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($prop.sourceInformation, $accCtx));
+              // Any multiplicity can have a default: a property not given a value reads its default, and one
+              // given a value, empty included, reads that value (testNewOptionalDefaultSetToEmptyIsEmpty).
+              let ctx1 = $accCtx;
+              // Resolve the default value lambda
+              let lambda = $prop.defaultValue->toOne()->cast(@LambdaFunction<Any>);
+              if($lambda.expressionSequence->isEmpty() || $ctx1.errors->size() > $accCtx.errors->size(),
+                  | ^$acc(values += $prop, context = $ctx1),
+                  | // Build a 'this' variable of the owning class type and push it into scope
+                    let ownerGenericType = if($prop.owner->isEmpty(), | ^CompilerNotSetGenericType(),
+                        | let ownerCls = $prop.owner->toOne()->cast(@Class<Any>);
+                          if($ownerCls.classifierGenericType->isEmpty(), | buildUserDefinedGenericType($ownerCls),
+                              | $ownerCls.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0)
+                          );
+                    );
+                    let thisVar = ^VariableExpression(name = 'this', genericType = $ownerGenericType, multiplicity = PureOne);
+                    let scope = $lambda.parameters->cast(@VariableExpression)->concatenate($thisVar);
+                    // Push the property sub-element so references inside the
+                    // default value (e.g. a `^Other()` literal's type) attribute
+                    // to {@code Class.propName}, not the enclosing class.
+                    let savedDvPath = $ctx1.currentElementPath;
+                    let dvPushed = if($savedDvPath->isEmpty() || $prop.name->isEmpty(), | $ctx1, | ^$ctx1(currentElementPath = $savedDvPath->toOne() + '.' + $prop.name->toOne()));
+                    let resolveResult = platform::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                        $lambda.expressionSequence,
+                        $scope,
+                        $dvPushed
+                    );
+                    let dvResolvedCtx = $resolveResult.context;
+                    let ctx2 = ^$dvResolvedCtx(currentElementPath = $savedDvPath);
+                    // A default is a function of the object it is read on: `this` is its parameter, so its
+                    // type is {Owner[1]->V[1]} (Property.defaultValue in m3) and a host calls it with the object.
+                    let resolvedLambda = platform::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(parameters = $thisVar, expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification)));
+                    let resolvedProp = ^$prop(defaultValue = $resolvedLambda);
+                    // Validate type and multiplicity of the resolved default value
+                    let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
+                    // For Collections, compute the actual element type (resolver can't propagate it back)
+                    let exprGT = $lastExpr->match(
+                        [
+                            coll : Collection[1] |
+                                if($coll.values->isNotEmpty(),
+                                    | let elemTypes = $coll.values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(UndefinedGenericType))->map(gt | $gt->toOne());
+                                      if($elemTypes->isNotEmpty(), | platform::pure::compiler::helper::genericType::findCommonGenericType($elemTypes, $ctx2), | $lastExpr.genericType);,
+                                    | $lastExpr.genericType
+                                ),
+                            a : Any[1] | $lastExpr.genericType
+                        ]
+                    );
+                    let ctx3 = if([pair(| $exprGT->isEmpty() || $prop.genericType->isEmpty() || $exprGT->toOne()->instanceOf(UndefinedGenericType),
+                                       | $ctx2),
+                                  pair(| platform::pure::compiler::helper::genericType::isCompatibleGenericType($prop.genericType->toOne(), $exprGT->toOne(), $ctx2),
+                                       | $ctx2)],
+                                 | ^$ctx2(errors += 'Default value type mismatch: expected ' + platform::pure::compiler::helper::genericType::printGenericType($prop.genericType->toOne()) + ' but got ' + platform::pure::compiler::helper::genericType::printGenericType($exprGT->toOne()) + $siCtx)
+                    );
+                    let ctx4 = if([pair(| $lastExpr.multiplicity->isEmpty() || $prop.multiplicity->isEmpty(),
+                            | $ctx3),
+                        pair(| platform::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($prop.multiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
+                             | $ctx3)],
+                       | ^$ctx3(errors += 'Default value multiplicity mismatch: expected ' + platform::pure::compiler::helper::multiplicity::printMultiplicity($prop.multiplicity->toOne()) + ' but got ' + platform::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
+                    );
+                    ^$acc(values += $resolvedProp, context = $ctx4);
+              );
+        );
+    }, ^CompilerListResult<Property<Nil, Any|*>>(context = $context));
+}
+
+function platform::pure::compiler::structural::propertyCompiler::compilePropertyDefaultValues(properties:Property<Nil, Any|*>[*], context:CompilerContext[1]):CompilerContext[1]
+{
+    resolvePropertyDefaultValues($properties, $context).context;
+}
+
+function platform::pure::compiler::structural::propertyCompiler::compileEnumProperty(p:platform::pure::protocol::grammar::function::property::Property[1], skeleton:Enumeration<Any>[1], selfGenType:GenericType[1], context:CompilerContext[1], ownerCtx:String[1]):Property<Nil, Any|*>[1]
+{
+    let pureOne = PureOne;
+
+    let propClassifierGT = ^UserDefinedGenericType(
+        type = Property,
+        typeArguments = [
+            $skeleton.classifierGenericType->toOne(),
+            $selfGenType
+        ],
+        multiplicityArguments = [$pureOne]
+    );
+    let prop = new($propClassifierGT)->cast(@Property<Nil, Any|*>);
+
+    let lambdaReturn = ^FunctionType(
+        returnType = $selfGenType,
+        returnMultiplicity = $pureOne
+    );
+    let defaultLambdaGT = ^InferredGenericType(type = LambdaFunction, typeArguments = [^InferredGenericType(type = $lambdaReturn)]);
+    let emptyLambda = new($defaultLambdaGT)->cast(@LambdaFunction<Any>);
+
+    // Compile stereotypes and tagged values on the enum value
+    let stereoResult = compilePropertyStereotypes($p, $context, $ownerCtx);
+    let tvResult = compilePropertyTaggedValues($p, $context, $ownerCtx);
+
+    ^$prop(
+        name = $p.name,
+        aggregation = AggregationKind.None,
+        genericType = $selfGenType,
+        multiplicity = $pureOne,
+        owner = $skeleton,
+        stereotypes = $stereoResult.values,
+        taggedValues = $tvResult.values,
+        defaultValue = ^$emptyLambda(
+            expressionSequence = [
+                ^AtomicValue(
+                    genericType = $selfGenType,
+                    multiplicity = $pureOne,
+                    value = ^$skeleton(name = $p.name)
+                )
+            ]
+        ),
+        sourceInformation = compileSourceInformation($p.p_sourceInformation, $context)
+    );
+}
+
+function platform::pure::compiler::structural::propertyCompiler::validatePropertyOverrides(cls:Class<Any>[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    $cls.properties->fold({prop, pCtx |
+        let superProp = $cls.generalizations
+            ->map(g | $g.general->rawType())
+            ->map(superType | $superType->platform::pure::compiler::helper::type::derefTypeIfPointer($context))
+            ->filter(t | $t->isNotEmpty())
+            ->map(t | $t->toOne())
+            ->map(superType | platform::pure::compiler::helper::class::findProperty($superType, $prop.name->toOne(), $context))
+            ->filter(p | $p->isNotEmpty())
+            ->head();
+        if($superProp->isEmpty(),
+            | $pCtx,
+            | let subType = platform::pure::compiler::helper::genericType::printGenericType($prop.genericType->toOne());
+              let subMul = platform::pure::compiler::helper::multiplicity::printMultiplicity($prop.multiplicity->toOne());
+              let superType = platform::pure::compiler::helper::genericType::printGenericType($superProp->toOne().genericType->toOne());
+              let superMul = platform::pure::compiler::helper::multiplicity::printMultiplicity($superProp->toOne().multiplicity->toOne());
+              if($subType != $superType || $subMul != $superMul,
+                  | let siCtx = platform::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($prop.sourceInformation, $pCtx);
+                    ^$pCtx(errors += 'Property override variance mismatch for \'' + $prop.name->toOne() + '\'. Overridden property has type \'' + $superType + $superMul + '\', but overriding property has type \'' + $subType + $subMul + '\'. Simple property overrides must be strictly invariant in type and multiplicity.' + $siCtx);,
+                  | $pCtx
+              );
+        );
+    }, $context);
+}

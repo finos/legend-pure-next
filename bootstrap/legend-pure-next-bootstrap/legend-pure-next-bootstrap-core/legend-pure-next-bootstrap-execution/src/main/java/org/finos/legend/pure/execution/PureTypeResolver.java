@@ -169,6 +169,7 @@ public final class PureTypeResolver
             case java.time.ZonedDateTime zdt  -> "DateTime";
             case java.time.LocalTime lt       -> "StrictTime";
             case byte[] bs                    -> "Binary";
+            case org.finos.legend.pure.execution.natives.binary.PrependByteSequence bs -> "Binary";
             case Byte b                       -> "Byte";
             case Number n                     -> "Number";
             default                           -> null;

@@ -1,0 +1,170 @@
+{
+ "cases": [
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_scalarIntegerCapture__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_stringCapture__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_multipleCaptures__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_noCaptures__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_inlineOnly_keepsLiteralArithmetic__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_inlineThenPartial_reducesToLiteral__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_partialOnly_cantFoldAcrossCaptures__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_emptyModes_isNoOp__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_localize_scalarCapture__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_localize_stringCapture__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_partial_evalsComparison__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_partial_evalsStringPredicate__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_partial_foldsNestedArithmetic__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_partialThenPrune_collapsesIfWithComparedCond__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_partial_evalsOnCollectionArg__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_partial_skipsSideEffectFunction__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_nestedIf_twoLevels_flattensToMultiIf__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_nestedIf_threeLevels_flattensFully__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_ifPrune_literalTrue_takesThen__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_ifPrune_literalFalse_takesElse__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_ifPrune_multiIf_firstTrue_wins__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_ifPrune_multiIf_allFalse_takesDefault__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_nestedThenPrune_literalTrue_collapses__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_deadLet_singleDead__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_deadLet_cascade__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_deadLet_keepsReferenced__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_singleUseLetInline_basic__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_singleUseLetInline_chain__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_singleUseLetInline_multiUse_keeps__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_singleUseLetInline_thenPartialFolds__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_singleUseLetInline_unblocksFilterFusion__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_pair__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_chain3__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_renamesOuterParam__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_singleFilter_noChange__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_strictOrder_inlineRunsBeforeFusion__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_letBody_filterFusionOnly_skips__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_letAtOuter_withInline_fuses__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_letInFilterBody_compilerInfersMul_canonicalLeavesSentinel__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testCanonical_strictOrder_dedupesModes__Boolean_1_",
+   "status": "passed"
+  },
+  {
+   "id": "platform::extensions::pure::translation::canonical::tests::testDecompileStillFailsOnAnM3HolderWithoutAnArm__Boolean_1_",
+   "status": "passed"
+  }
+ ],
+ "schema": 1,
+ "suite": "testFunctions"
+}

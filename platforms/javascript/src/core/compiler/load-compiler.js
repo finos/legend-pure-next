@@ -19,7 +19,7 @@
 // compiler PDBs) so the translated runtime's execution-time reflection
 // (`__metadataRead`, `__metadataSubtypeOf`, …) is answered from the committed
 // .pdb graph. It then imports the generated core + compiler JS
-// (platforms/javascript/generated, produced by `just generate-all`) and exposes
+// (platforms/javascript/generated, produced by `bazel build //platforms/javascript:generated`) and exposes
 // `{ parse, compile, printGraph }`.
 //
 // Same shape as grammar/load-parser.js's loadParser — one idempotent loader, no JVM;
@@ -45,7 +45,7 @@ const PRINT_GRAPH =
     "platform$pure$compiler$test$printer$printCompiledGraph_PackageableElement_MANY__CompilerContext_1__String_1_";
 
 // PDBs that back the metadata globals (the type/function graph the compiler reads).
-const PDBS = ["core.pdb", "core-tests.pdb", "compiler.pdb", "compiler-tests.pdb"];
+const PDBS = ["core.pdb", "core-tests.pdb", "compiler.pdb", "core_metamodel_pdb_writer.pdb", "compiler-tests.pdb", "island_pdb_writer-with-tests.pdb"];
 // Generated JS the compiler depends on, loaded into the shared global scope.
 const GEN_MODULES = ["pure/compiler/metamodel.js", "pure/grammar/protocol.js", "pure/runtime/functions.js", "ui.js", "pure/compiler/compiler.js"];
 // The TEST halves of those packages, which a caller asks for explicitly. `loadCompiler()` is the

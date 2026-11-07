@@ -47,6 +47,15 @@ public interface Compilation
      *
      * @throws CompilationUnavailableException when this strategy cannot compile modules in place
      */
+    /**
+     * {@link #compileParsed} with the languages of the runtime, their compiler extensions: what compileSource
+     * compiles a source with on every host, so that its sections and islands compile as a build compiles them.
+     */
+    default CompilationResult compileParsedWithLanguages(List<?> pureFiles)
+    {
+        return compileParsed(pureFiles);
+    }
+
     default CompilationResult compileSourceModules()
     {
         throw new CompilationUnavailableException(getClass().getSimpleName() + " cannot compile registered source modules in place");

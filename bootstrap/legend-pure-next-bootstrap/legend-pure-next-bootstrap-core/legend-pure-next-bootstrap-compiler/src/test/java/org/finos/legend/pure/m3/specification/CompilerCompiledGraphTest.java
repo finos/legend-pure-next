@@ -55,7 +55,7 @@ import java.util.stream.Stream;
 /**
  * Parameterized compiled graph tests.
  *
- * <p>Discovers all {@code .pure} files under {@code tests/compiler/}
+ * <p>Discovers all {@code .pure} files under {@code tests/compiler/definition/}
  * that contain a {@code ###CompiledGraph} section. For each file it:
  * <ol>
  *   <li>Parses the file through {@link PureParser} with
@@ -105,14 +105,14 @@ public class CompilerCompiledGraphTest
         Path current = Path.of("").toAbsolutePath();
         while (current != null)
         {
-            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests");
+            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests").resolve("definition");
             if (Files.isDirectory(candidate))
             {
                 return candidate;
             }
             current = current.getParent();
         }
-        throw new RuntimeException("Cannot locate pure/specification/compiler/tests by walking up from " + Path.of("").toAbsolutePath());
+        throw new RuntimeException("Cannot locate pure/specification/compiler/tests/definition by walking up from " + Path.of("").toAbsolutePath());
     }
 
     /**
@@ -354,7 +354,7 @@ public class CompilerCompiledGraphTest
         if (moduleRoot == null)
         {
             System.err.println("WARNING: Cannot locate legend-pure-next root from: " + cwd);
-            // Fallback: try pom.xml detection from parent chain
+            // No root, so no source to compare with
             return;
         }
 

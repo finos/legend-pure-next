@@ -31,7 +31,7 @@ import java.nio.file.Path;
  * An island value — a language extension's value specification, which m3's unions hold as an
  * ExtensionValueDef — reads back with this host's decoder as an instance of its own class, its pointers
  * resolved like any other. The archive is the specification's island golden for
- * {@code #REF{m::Person}#} (pure/specification/compiler/tests-pdb-serialization/valueSpecification/island);
+ * {@code #REF{m::Person}#} (pure/specification/compiler/tests/pdb/valueSpecification/island);
  * its schema fragment comes with the test language (language_test.json).
  */
 public class IslandValueReadTest
@@ -50,7 +50,7 @@ public class IslandValueReadTest
         PdbModule core = new PdbModule(shared.resolve("core.pdb"));
         PdbModule compiler = new PdbModule(shared.resolve("compiler.pdb"));
         PdbModule compilerTests = new PdbModule(shared.resolve("compiler-tests.pdb"));
-        PdbModule golden = new PdbModule(root.resolve("pure/specification/compiler/tests-pdb-serialization/valueSpecification/island/ref.pdb"));
+        PdbModule golden = new PdbModule(root.resolve("pure/specification/compiler/tests/pdb/valueSpecification/island/ref.pdb"));
         registry = new ModuleRegistry();
         registry.register(core);
         registry.register(compiler);
@@ -66,7 +66,7 @@ public class IslandValueReadTest
     @Test
     public void anIslandValueReadsBackAsAnInstanceOfItsClass()
     {
-        Object function = registry.getElement("test::island::ref__Any_MANY_");
+        Object function = registry.getElement("island::ref__Any_MANY_");
         Object body = _Any.read(function, "expressionSequence");
         Object first = body instanceof org.finos.legend.pure.truffle.execution.types.PureSequence ? ((org.finos.legend.pure.truffle.execution.types.PureSequence) body).getBoxed(0) : body;
         Assertions.assertTrue(_Any.isType(first, "platform::pure::compiler::test::islands::metamodel::RefLiteral", registry),

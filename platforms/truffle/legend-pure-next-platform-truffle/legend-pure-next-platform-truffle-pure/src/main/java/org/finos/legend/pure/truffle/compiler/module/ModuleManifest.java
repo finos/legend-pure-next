@@ -186,6 +186,7 @@ public record ModuleManifest(String name, String packagePattern, List<String> de
                 case "packagePattern" -> packagePattern = c.readString();
                 case "dependencies" -> dependencies = c.readStringArray();
                 case "testDependencies" -> testDependencies = c.readStringArray();
+                case "tests" -> readTestSuites(c);
                 default -> throw new IllegalArgumentException("Unknown manifest key: '" + key + "'");
             }
         }
@@ -198,6 +199,80 @@ public record ModuleManifest(String name, String packagePattern, List<String> de
         if (packagePattern == null) throw new IllegalArgumentException("manifest is missing required 'packagePattern' field");
         if (dependencies == null) throw new IllegalArgumentException("manifest is missing required 'dependencies' field");
         return new ModuleManifest(name, packagePattern, dependencies, testDependencies);
+    }
+
+    /** The keys of a declared test suite, every one required. */
+    private static final org.eclipse.collections.api.set.ImmutableSet<String> TEST_SUITE_KEYS =
+            org.eclipse.collections.impl.factory.Sets.immutable.with("suite", "runner", "target");
+
+    /**
+     * The suites the owner declares ({@code "tests": [{"suite", "runner", "target"}, …]}): the build tool reads them,
+     * the compiler only checks their shape, and the archive section never carries them.
+     */
+    private static void readTestSuites(Cursor c)
+    {
+        c.expect('[');
+        c.skipWs();
+        if (c.peek() == ']')
+        {
+            c.next();
+            return;
+        }
+        readTestSuitesFrom(c);
+    }
+
+    private static void readTestSuitesFrom(Cursor c)
+    {
+        readTestSuite(c);
+        c.skipWs();
+        char ch = c.next();
+        if (ch == ',')
+        {
+            c.skipWs();
+            readTestSuitesFrom(c);
+        }
+        else if (ch != ']')
+        {
+            throw new IllegalArgumentException("Expected ',' or ']' after a test suite at offset " + (c.pos - 1));
+        }
+    }
+
+    private static void readTestSuite(Cursor c)
+    {
+        c.expect('{');
+        org.eclipse.collections.api.set.MutableSet<String> seen = org.eclipse.collections.impl.factory.Sets.mutable.empty();
+        readTestSuiteFields(c, seen);
+        org.eclipse.collections.api.set.SetIterable<String> missing = TEST_SUITE_KEYS.toSet().withoutAll(seen);
+        if (missing.notEmpty())
+        {
+            throw new IllegalArgumentException("A test suite is missing " + missing.toSortedList().collect(k -> "'" + k + "'").makeString(", ") + " at offset " + c.pos);
+        }
+    }
+
+    private static void readTestSuiteFields(Cursor c, org.eclipse.collections.api.set.MutableSet<String> seen)
+    {
+        c.skipWs();
+        if (c.peek() == '}')
+        {
+            c.next();
+            return;
+        }
+        if (seen.notEmpty())
+        {
+            c.expect(',');
+            c.skipWs();
+        }
+        String key = c.readString();
+        if (!TEST_SUITE_KEYS.contains(key))
+        {
+            throw new IllegalArgumentException("Unknown test suite key: '" + key + "'");
+        }
+        c.skipWs();
+        c.expect(':');
+        c.skipWs();
+        c.readString();
+        seen.add(key);
+        readTestSuiteFields(c, seen);
     }
 
     private static String quote(String s)
