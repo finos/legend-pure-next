@@ -163,6 +163,22 @@ alias(
     visibility = ["//visibility:public"],
 )
 
+# Chrome for Testing's headless shell (MODULE.bazel) for the machine a test runs on.
+[config_setting(
+    name = "%s_%s" % (os, cpu),
+    constraint_values = ["@platforms//os:" + os, "@platforms//cpu:" + cpu],
+) for os, cpu in [("macos", "aarch64"), ("linux", "x86_64"), ("linux", "aarch64")]]
+
+alias(
+    name = "chrome",
+    actual = select({
+        ":macos_aarch64": "@chrome_mac_arm64//:chrome",
+        ":linux_x86_64": "@chrome_linux_x64//:chrome",
+        ":linux_aarch64": "@chrome_linux_arm64//:chrome",
+    }),
+    visibility = ["//visibility:public"],
+)
+
 # The ANTLR tool (antlr.bzl).
 java_binary(
     name = "antlr",
