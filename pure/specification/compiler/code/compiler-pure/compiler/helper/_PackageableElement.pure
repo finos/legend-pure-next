@@ -35,7 +35,14 @@ import platform::pure::metamodel::pointer::*;
 
 // PackageableElement path helpers
 
+// The path of `element`, once per element object for the execution: an element is immutable, so, like
+// memoizedPackagePath, memoizing by identity cannot go stale.
 function platform::pure::compiler::helper::packageableElement::fullPath(element:PackageableElement[1]):String[1]
+{
+    memoize(platform::pure::compiler::helper::packageableElement::computeFullPath_PackageableElement_1__String_1_, $element)
+}
+
+function platform::pure::compiler::helper::packageableElement::computeFullPath(element:PackageableElement[1]):String[1]
 {
     $element->match([
         // TempCompilerPointer carries its canonical path directly; package/name are unset.
@@ -55,7 +62,7 @@ function platform::pure::compiler::helper::packageableElement::fullPath(element:
                   let p = $pkg->toOne();
                   let pkgPath = if($p->instanceOf(TempCompilerPointer),
                       | $p->cast(@TempCompilerPointer).path,
-                      | $p->packagePath()
+                      | $p->memoizedPackagePath()
                   );
                   if($pkgPath == '',
                       | $name,
@@ -65,13 +72,21 @@ function platform::pure::compiler::helper::packageableElement::fullPath(element:
     ])
 }
 
+// packagePath, once per package object for the execution. A package is immutable, so its path is a function of the
+// object alone: memoizing by identity cannot go stale, however the compiler context changes around it. The walk up the
+// package chain, once per call, was 12% of the self-host compile.
+function platform::pure::compiler::helper::packageableElement::memoizedPackagePath(pkg:Package[1]):String[1]
+{
+    memoize(platform::pure::compiler::helper::packageableElement::packagePath_Package_1__String_1_, $pkg)
+}
+
 function platform::pure::compiler::helper::packageableElement::packagePath(pkg:Package[1]):String[1]
 {
     if($pkg->instanceOf(TempCompilerPointer),
         | $pkg->cast(@TempCompilerPointer).path,
         | if($pkg.package->isEmpty() || $pkg.name->isEmpty(),
               | '',
-              | let parentPath = $pkg.package->toOne()->packagePath();
+              | let parentPath = $pkg.package->toOne()->memoizedPackagePath();
                 if($parentPath == '',
                     | $pkg.name->toOne(),
                     | $parentPath + '::' + $pkg.name->toOne()

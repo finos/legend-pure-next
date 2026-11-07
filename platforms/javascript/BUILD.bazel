@@ -244,6 +244,7 @@ _NODE_TESTS = {
     "compiler": ("src/core/compiler/tests/compiler-tests.js", "javascript/core/compiler-tests.json", []),
     "execution": ("src/core/execution/tests/pct-tests.js", "javascript/core/pct-tests.json", []),
     "host-api": ("src/core/tests/host-api-tests.js", "javascript/core/host-api-tests.json", []),
+    "persistent-map": ("src/core/tests/persistent-map-tests.js", "javascript/core/persistent-map-tests.json", []),
     "usage-example": ("src/interfaces/usage-example/usage-example.js", "", []),
     "diagram": ("src/interfaces/web/diagram/tests/diagram-tests.js", "javascript/core/diagram-tests.json", []),
     "section-hint": ("src/interfaces/web/tests/section-hint-tests.js", "javascript/core/section-hint-tests.json", []),

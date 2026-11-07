@@ -51,8 +51,9 @@ Class platform::pure::compiler::pdb::fbb::Builder
    vtable      : Integer[*];
    objectStart : Integer[1];
    // Shared-string pool (the reference uses builder.createSharedString throughout,
-   // so byte-identity requires the same exact-match dedup).
-   strings     : platform::pure::compiler::pdb::fbb::SharedString[*];
+   // so byte-identity requires the same exact-match dedup): string -> its offset.
+   // A map: the lookup is one hash probe, where scanning a list called a lambda per pooled string.
+   strings     : Map<String, Integer>[1];
    // Every distinct vtable written so far, WITH its bytes — the reference
    // FlatBufferBuilder DEDUPES identical vtables across the whole buffer
    // (endTable searches these and reuses via a negative soffset), so byte-identity
@@ -70,12 +71,6 @@ Class platform::pure::compiler::pdb::fbb::PooledVtable
    bytes : Binary[1];
 }
 
-Class platform::pure::compiler::pdb::fbb::SharedString
-{
-   s   : String[1];
-   off : Integer[1];
-}
-
 // A builder step that also yields an offset (table/vector/string position).
 Class platform::pure::compiler::pdb::fbb::BuilderAndOffset
 {
@@ -85,13 +80,7 @@ Class platform::pure::compiler::pdb::fbb::BuilderAndOffset
 
 function platform::pure::compiler::pdb::fbb::newBuilder():platform::pure::compiler::pdb::fbb::Builder[1]
 {
-   ^platform::pure::compiler::pdb::fbb::Builder(bytes = 0x, written = 0, minalign = 1, vtable = [], objectStart = 0, strings = [], vtables = []);
-}
-
-// Bytes written so far == the reference's `offset()`.
-function platform::pure::compiler::pdb::fbb::offset(b:platform::pure::compiler::pdb::fbb::Builder[1]):Integer[1]
-{
-   $b.written;
+   ^platform::pure::compiler::pdb::fbb::Builder(bytes = 0x, written = 0, minalign = 1, vtable = [], objectStart = 0, strings = newMap([]->cast(@Pair<String, Integer>)), vtables = []);
 }
 
 // Prepend raw bytes to the FRONT (== the mutable builder's decreasing `space`).
@@ -111,25 +100,52 @@ function platform::pure::compiler::pdb::fbb::pad(b:platform::pure::compiler::pdb
 function platform::pure::compiler::pdb::fbb::prep(b:platform::pure::compiler::pdb::fbb::Builder[1], size:Integer[1], additionalBytes:Integer[1]):platform::pure::compiler::pdb::fbb::Builder[1]
 {
    let b2 = if($size > $b.minalign, |^$b(minalign = $size), |$b);
-   let used = $b2->platform::pure::compiler::pdb::fbb::offset() + $additionalBytes;
+   let used = $b2.written + $additionalBytes;
    // alignSize = (-used) & (size-1)  ==  (size - (used mod size)) mod size
    let alignSize = mod($size - mod($used, $size), $size);
    $b2->platform::pure::compiler::pdb::fbb::pad($alignSize);
 }
 
+// prep(size, 0) then prepend(bytes), as ONE prepend: the value's bytes and its padding go in front together, so
+// the builder is copied and the buffer extended once per value instead of twice. Same bytes, same positions.
+function platform::pure::compiler::pdb::fbb::prependAligned(b:platform::pure::compiler::pdb::fbb::Builder[1], size:Integer[1], bytes:Binary[1]):platform::pure::compiler::pdb::fbb::Builder[1]
+{
+   let padded = $b->platform::pure::compiler::pdb::fbb::alignedBytes($size, $bytes);
+   ^$b(bytes = [$padded, $b.bytes]->binaryConcat(),
+       written = $b.written + $padded->binarySize(),
+       minalign = if($size > $b.minalign, |$size, |$b.minalign));
+}
+
+// prependAligned and the vtable entry recording the new position as the field's slot, as ONE builder copy. Copying the builder is most of the cost of a write, and fields are most of the writes.
+function platform::pure::compiler::pdb::fbb::prependField(b:platform::pure::compiler::pdb::fbb::Builder[1], voff:Integer[1], size:Integer[1], bytes:Binary[1]):platform::pure::compiler::pdb::fbb::Builder[1]
+{
+   let padded = $b->platform::pure::compiler::pdb::fbb::alignedBytes($size, $bytes);
+   let written = $b.written + $padded->binarySize();
+   ^$b(bytes = [$padded, $b.bytes]->binaryConcat(),
+       written = $written,
+       minalign = if($size > $b.minalign, |$size, |$b.minalign),
+       vtable = platform::pure::compiler::pdb::fbb::setAt($b.vtable, $voff, $written));
+}
+
+// `bytes` followed by the padding that puts a `size`-aligned value on a `size` boundary once prepended.
+function platform::pure::compiler::pdb::fbb::alignedBytes(b:platform::pure::compiler::pdb::fbb::Builder[1], size:Integer[1], bytes:Binary[1]):Binary[1]
+{
+   let alignSize = mod($size - mod($b.written, $size), $size);
+   if($alignSize <= 0, |$bytes, |[$bytes, $alignSize->binaryZeros()]->binaryConcat());
+}
+
 // Scalar (little-endian): align to its own width, then prepend its bytes.
 function platform::pure::compiler::pdb::fbb::addScalar(b:platform::pure::compiler::pdb::fbb::Builder[1], value:Integer[1], width:Integer[1]):platform::pure::compiler::pdb::fbb::Builder[1]
 {
-   $b->platform::pure::compiler::pdb::fbb::prep($width, 0)
-     ->platform::pure::compiler::pdb::fbb::prepend(platform::pure::functions::binary::intToLeBytes($value, $width));
+   $b->platform::pure::compiler::pdb::fbb::prependAligned($width, platform::pure::functions::binary::intToLeBytes($value, $width));
 }
 
 // A forward uoffset to a previously-written object at offset `off`
 // (reference addOffset: value = offset() - off + 4, after prepping 4).
 function platform::pure::compiler::pdb::fbb::addOffset(b:platform::pure::compiler::pdb::fbb::Builder[1], off:Integer[1]):platform::pure::compiler::pdb::fbb::Builder[1]
 {
-   let b2 = $b->platform::pure::compiler::pdb::fbb::prep(4, 0);
-   $b2->platform::pure::compiler::pdb::fbb::prepend(platform::pure::functions::binary::intToLeBytes($b2->platform::pure::compiler::pdb::fbb::offset() - $off + 4, 4));
+   let afterPadding = $b.written + mod(4 - mod($b.written, 4), 4);
+   $b->platform::pure::compiler::pdb::fbb::prependAligned(4, platform::pure::functions::binary::intToLeBytes($afterPadding - $off + 4, 4));
 }
 
 // --- strings & vectors -------------------------------------------------------
@@ -150,12 +166,12 @@ function platform::pure::compiler::pdb::fbb::createString(b:platform::pure::comp
 // Shared string: exact-match dedup, as the reference's builder.createSharedString.
 function platform::pure::compiler::pdb::fbb::createSharedString(b:platform::pure::compiler::pdb::fbb::Builder[1], s:String[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
-   let hit = $b.strings->filter(e | $e.s == $s)->head();
+   let hit = $b.strings->get($s);
    if($hit->isNotEmpty(),
-      | ^platform::pure::compiler::pdb::fbb::BuilderAndOffset(builder = $b, offset = $hit.off->toOne()),
+      | ^platform::pure::compiler::pdb::fbb::BuilderAndOffset(builder = $b, offset = $hit->toOne()),
       | let r = $b->platform::pure::compiler::pdb::fbb::createString($s);
         ^platform::pure::compiler::pdb::fbb::BuilderAndOffset(
-           builder = ^$r.builder(strings = $r.builder.strings->concatenate(^platform::pure::compiler::pdb::fbb::SharedString(s = $s, off = $r.offset))),
+           builder = ^$r.builder(strings = $r.builder.strings->put($s, $r.offset)),
            offset  = $r.offset););
 }
 
@@ -170,7 +186,7 @@ function platform::pure::compiler::pdb::fbb::startVector(b:platform::pure::compi
 function platform::pure::compiler::pdb::fbb::endVector(b:platform::pure::compiler::pdb::fbb::Builder[1], count:Integer[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
    let b1 = $b->platform::pure::compiler::pdb::fbb::prepend(platform::pure::functions::binary::intToLeBytes($count, 4));
-   ^platform::pure::compiler::pdb::fbb::BuilderAndOffset(builder = $b1, offset = $b1->platform::pure::compiler::pdb::fbb::offset());
+   ^platform::pure::compiler::pdb::fbb::BuilderAndOffset(builder = $b1, offset = $b1.written);
 }
 
 // Finish: prepend the root uoffset.
@@ -185,27 +201,23 @@ function platform::pure::compiler::pdb::fbb::finish(b:platform::pure::compiler::
 // startObject + addField* + endObject — only one vtable is ever in flight,
 // so it can live on the threaded builder.
 
+// `list` with `v` at `i`: two slices around it, where mapping the whole list called a lambda per entry, for every
+// field of every table.
 function platform::pure::compiler::pdb::fbb::setAt(list:Integer[*], i:Integer[1], v:Integer[1]):Integer[*]
 {
-   range(0, $list->size())->map(j | if($j == $i, |$v, |$list->at($j)));
+   $list->slice(0, $i)->concatenate($v)->concatenate($list->slice($i + 1, $list->size()));
 }
 
 function platform::pure::compiler::pdb::fbb::startObject(b:platform::pure::compiler::pdb::fbb::Builder[1], numFields:Integer[1]):platform::pure::compiler::pdb::fbb::Builder[1]
 {
-   ^$b(vtable = range(0, $numFields)->map(x | 0), objectStart = $b->platform::pure::compiler::pdb::fbb::offset());
-}
-
-// Record the current position as the data slot for vtable field `voffset`.
-function platform::pure::compiler::pdb::fbb::slot(b:platform::pure::compiler::pdb::fbb::Builder[1], voffset:Integer[1]):platform::pure::compiler::pdb::fbb::Builder[1]
-{
-   ^$b(vtable = platform::pure::compiler::pdb::fbb::setAt($b.vtable, $voffset, $b->platform::pure::compiler::pdb::fbb::offset()));
+   ^$b(vtable = range(0, $numFields)->map(x | 0), objectStart = $b.written);
 }
 
 // Scalar field: written (and slotted) only when it differs from the default.
 function platform::pure::compiler::pdb::fbb::addFieldScalar(b:platform::pure::compiler::pdb::fbb::Builder[1], voff:Integer[1], value:Integer[1], default:Integer[1], width:Integer[1]):platform::pure::compiler::pdb::fbb::Builder[1]
 {
    if($value == $default, |$b,
-      |$b->platform::pure::compiler::pdb::fbb::addScalar($value, $width)->platform::pure::compiler::pdb::fbb::slot($voff));
+      |$b->platform::pure::compiler::pdb::fbb::prependField($voff, $width, platform::pure::functions::binary::intToLeBytes($value, $width)));
 }
 
 // Float (fbs `double`) field: written only when it differs from the 0.0 default
@@ -213,9 +225,7 @@ function platform::pure::compiler::pdb::fbb::addFieldScalar(b:platform::pure::co
 function platform::pure::compiler::pdb::fbb::addFieldFloat(b:platform::pure::compiler::pdb::fbb::Builder[1], voff:Integer[1], value:Float[1]):platform::pure::compiler::pdb::fbb::Builder[1]
 {
    if($value == 0.0, |$b,
-      |$b->platform::pure::compiler::pdb::fbb::prep(8, 0)
-         ->platform::pure::compiler::pdb::fbb::prepend(platform::pure::functions::binary::floatToLeBytes($value))
-         ->platform::pure::compiler::pdb::fbb::slot($voff));
+      |$b->platform::pure::compiler::pdb::fbb::prependField($voff, 8, platform::pure::functions::binary::floatToLeBytes($value)));
 }
 
 // Float (fbs `double`) field written whenever the property HAS a value, 0.0 included — the field's
@@ -223,16 +233,15 @@ function platform::pure::compiler::pdb::fbb::addFieldFloat(b:platform::pure::com
 // force_defaults). Used for metamodel properties; m3's FloatValueDef keeps the eliding form above.
 function platform::pure::compiler::pdb::fbb::addFieldFloatPresent(b:platform::pure::compiler::pdb::fbb::Builder[1], voff:Integer[1], value:Float[1]):platform::pure::compiler::pdb::fbb::Builder[1]
 {
-   $b->platform::pure::compiler::pdb::fbb::prep(8, 0)
-      ->platform::pure::compiler::pdb::fbb::prepend(platform::pure::functions::binary::floatToLeBytes($value))
-      ->platform::pure::compiler::pdb::fbb::slot($voff);
+   $b->platform::pure::compiler::pdb::fbb::prependField($voff, 8, platform::pure::functions::binary::floatToLeBytes($value));
 }
 
 // Offset field: written (and slotted) only when non-zero (i.e. present).
 function platform::pure::compiler::pdb::fbb::addFieldOffset(b:platform::pure::compiler::pdb::fbb::Builder[1], voff:Integer[1], off:Integer[1]):platform::pure::compiler::pdb::fbb::Builder[1]
 {
    if($off == 0, |$b,
-      |$b->platform::pure::compiler::pdb::fbb::addOffset($off)->platform::pure::compiler::pdb::fbb::slot($voff));
+      | let afterPadding = $b.written + mod(4 - mod($b.written, 4), 4);
+        $b->platform::pure::compiler::pdb::fbb::prependField($voff, 4, platform::pure::functions::binary::intToLeBytes($afterPadding - $off + 4, 4)););
 }
 
 // Does the previously-written vtable at buffer position `e` byte-match the
@@ -250,8 +259,8 @@ function platform::pure::compiler::pdb::fbb::endObject(b:platform::pure::compile
 {
    // Where the 4-byte soffset will land (== "vtableloc"): current offset,
    // plus the padding addScalar's prep(4, 0) will insert, plus 4.
-   let vtableloc = $b->platform::pure::compiler::pdb::fbb::offset()
-      + mod(4 - mod($b->platform::pure::compiler::pdb::fbb::offset(), 4), 4) + 4;
+   let vtableloc = $b.written
+      + mod(4 - mod($b.written, 4), 4) + 4;
    // trimmed vtable size = (highest field id with a non-zero slot) + 1; 0 if none.
    let nonZeroIdx = range(0, $b.vtable->size())->filter(i | $b.vtable->at($i) != 0);
    let trimmedSize = if($nonZeroIdx->isEmpty(), |0, |$nonZeroIdx->last()->toOne() + 1);

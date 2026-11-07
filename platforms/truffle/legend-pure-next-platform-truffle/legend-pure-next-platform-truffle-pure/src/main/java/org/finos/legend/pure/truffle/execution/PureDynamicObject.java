@@ -75,6 +75,10 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
     /** Parent for {@code AncestorRef} resolution; null for top-level / Pure-built. */
     public final Object parent;
 
+    /** The new/copy scope this instance was registered in as fresh, if any: runtime bookkeeping for the
+     *  association immutability check (see {@link PureContext.FreshScope}), never a Pure value. */
+    public PureContext.FreshScope freshScope;
+
     public PureDynamicObject(PureClassInfo classInfo, Object fb, Object resolver, Object parent)
     {
         this.classInfo = classInfo;
@@ -142,11 +146,13 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
             //      exceeds classInfo.slotCount) — return null = "absent".
             //   2. Bootstrap-cycle: this PDO was constructed before classInfo
             //      grew. The slot IS in classInfo.nameBySlot but past this
-            //      PDO's slots[]. Fall back to FB decode by name if we can.
+            //      PDO's slots[]. Grow slots[] and decode it once, like any
+            //      LAZY slot: decoding on every read was a quarter of a
+            //      module compile, the base-PDB metadata being built this way.
             String[] names = classInfo.nameBySlot();
             if (fb != null && slotIdx < names.length && names[slotIdx] != null)
             {
-                return decodeFromFb(names[slotIdx]);
+                return materializeGrown(slotIdx);
             }
             return null;
         }
@@ -184,6 +190,13 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
             Arrays.fill(grown, slots.length, newLength, LAZY);
         }
         slots = grown;
+    }
+
+    @TruffleBoundary
+    private Object materializeGrown(int slotIdx)
+    {
+        ensureSlotCapacity(slotIdx);
+        return materialize(slotIdx);
     }
 
     @TruffleBoundary

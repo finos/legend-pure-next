@@ -46,3 +46,16 @@ function <<PCT.test>> platform::pure::functions::collection::tests::put::testPut
     assertEquals(['key1', 'key2', 'key3'], $f->eval(|newMap([pair('key1', 1), pair('key2', 2), pair('key3', 3)])->put('key1', 10)->keys()));
     assertEquals([10, 2, 3], $f->eval(|newMap([pair('key1', 1), pair('key2', 2), pair('key3', 3)])->put('key1', 10)->values()));
 }
+
+// A Pure map is a value: every map keeps its entries, whatever is put into or removed from the maps made from it.
+// Hosts share structure between a map and the maps made from it, so this pins that nothing is ever shared mutably.
+function <<PCT.test>> platform::pure::functions::collection::tests::put::testPut_leavesEarlierMapsUnchanged<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(range(0, 41)->concatenate([10, 20, -1, 19]), $f->eval(|
+        let versions = range(1, 41)->fold({i, acc | ^$acc(values = $acc.values->concatenate($acc.values->last()->toOne()->put($i, $i * 10)))},
+                                          list(newMap([]->cast(@Pair<Integer, Integer>)))).values;
+        let changed = $versions->at(20)->put(1, -1)->remove(2);
+        $versions->map(m | $m->keys()->size())
+            ->concatenate([$versions->at(20)->get(1)->toOne(), $versions->at(20)->get(2)->toOne(), $changed->get(1)->toOne(), $changed->keys()->size()]);
+    ));
+}
