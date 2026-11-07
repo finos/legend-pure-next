@@ -331,34 +331,18 @@ public final class PointerGraphImmutableResolver
         Object elementObj = _Any.readBySlot(ptr, SLOT_ELEMENT);
         if (elementObj instanceof String elementName && !elementName.isEmpty())
         {
-            Object owner = ctx.byPath.get(path);
-            // A member of an element a dependency also owns, from outside it: the dependency's, as the element is.
-            if (owner == null || (owner != ctx.root && shadowsDep(owner, path, ctx)))
+            Object local = ctx.byPath.get(path);
+            // A member of an element a dependency also owns, from outside it: the dependency's, as the element is,
+            // unless only what is compiled has it (a member added since that PDB was built).
+            if (local != null && local != ctx.root && shadowsDep(local, path, ctx))
             {
-                Object dep = ctx.resolver != null ? ctx.resolver.getElement(path) : null;
-                owner = dep != null ? dep : owner;
+                Object member = memberOf(ptr, ctx.resolver.getElement(path), elementName);
+                if (member != null) return member;
             }
+            Object owner = local;
+            if (owner == null && ctx.resolver != null) owner = ctx.resolver.getElement(path);
             if (owner == null) return null;
-            String pointerType = _Any.pureTypeOf(ptr);
-            if (pointerType == null) return owner;
-            switch (pointerType)
-            {
-                case "platform::pure::metamodel::pointer::PropertyPointer":
-                {
-                    Object hit = findByName(owner, "properties", elementName);
-                    return hit != null ? hit : findByName(owner, "propertiesFromAssociations", elementName);
-                }
-                case "platform::pure::metamodel::pointer::QualifiedPropertyPointer":
-                    return findByName(owner, "qualifiedProperties", elementName);
-                case "platform::pure::metamodel::pointer::StereotypePointer":
-                    return findByValue(owner, "p_stereotypes", elementName);
-                case "platform::pure::metamodel::pointer::TagPointer":
-                    return findByValue(owner, "p_tags", elementName);
-                case "platform::pure::metamodel::pointer::EnumPointer":
-                    return findByName(owner, "values", elementName);
-                default:
-                    return owner;
-            }
+            return memberOf(ptr, owner, elementName);
         }
         Object live = ctx.byPath.get(path);
         if (live == null && ctx.resolver != null) live = ctx.resolver.getElement(path);
@@ -369,6 +353,31 @@ public final class PointerGraphImmutableResolver
             live = ctx.resolver.getElement("::");
         }
         return live;
+    }
+
+    /** The member {@code ptr} names in {@code owner}, by the kind of pointer; the owner itself for any other kind. */
+    private static Object memberOf(Object ptr, Object owner, String elementName)
+    {
+        String pointerType = _Any.pureTypeOf(ptr);
+        if (pointerType == null) return owner;
+        switch (pointerType)
+        {
+            case "platform::pure::metamodel::pointer::PropertyPointer":
+            {
+                Object hit = findByName(owner, "properties", elementName);
+                return hit != null ? hit : findByName(owner, "propertiesFromAssociations", elementName);
+            }
+            case "platform::pure::metamodel::pointer::QualifiedPropertyPointer":
+                return findByName(owner, "qualifiedProperties", elementName);
+            case "platform::pure::metamodel::pointer::StereotypePointer":
+                return findByValue(owner, "p_stereotypes", elementName);
+            case "platform::pure::metamodel::pointer::TagPointer":
+                return findByValue(owner, "p_tags", elementName);
+            case "platform::pure::metamodel::pointer::EnumPointer":
+                return findByName(owner, "values", elementName);
+            default:
+                return owner;
+        }
     }
 
     private static Object findByName(Object owner, String listName, String memberName)
