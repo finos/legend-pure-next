@@ -18,7 +18,8 @@
 #   guard
 #   └── bootstrap                       the bootstrap, its PDBs, the field-ID registry checks
 #       ├── bootstrap-self-host         the bootstrap tests, specification suites and self-host (tagged manual):
-#       │                               [pdb-golden | compiler | printer-compiled | self-host | rest], interpreted
+#       │                               [pdb-golden | compiler | printer-compiled | compiler-pure | language |
+#       │                               translation | legacy | specification-and-extensions], interpreted
 #       ├── printer-compiled            compiler-pure printed back, on Truffle
 #       ├── pdb-golden                  compiler-pure PDB goldens, on Truffle
 #       ├── printer-protocol            the protocol printer corpus, on Truffle
@@ -148,7 +149,10 @@ jobs:
     name: "Bootstrap tier (${{ matrix.part }})"
     needs: bootstrap
     runs-on: ubuntu-24.04
-    # Its suites are interpreted: the heaviest each on a runner of its own, the rest together.
+    # Its suites are interpreted, and so is each module compiled again by the compiler written in Pure (the
+    # 'recompile' of bootstrap/test/pure), the slowest work of all: the heaviest suites each on a runner of their own,
+    # the modules by family. The matrix jobs share no outputs, so a recompile belongs to exactly one part: the one
+    # running the tests that need it.
     strategy:
       fail-fast: false
       matrix:
@@ -159,10 +163,19 @@ jobs:
             query: //bootstrap/test/java/specification/compiler/code/compiler-pure:test_compiler
           - part: printer-compiled
             query: //bootstrap/test/java/specification/compiler/code/compiler-pure:test_printer_compiled
-          - part: self-host
+          # compiler-pure and its two PDB writers compiled by the compiler written in Pure, and the compiler corpus
+          # run on what that made (self-host): the corpus needs all three, so they stay on one runner.
+          - part: compiler-pure
             query: //bootstrap/test/pure/specification/compiler/code/compiler-pure:test_compiler_selfhost + //bootstrap/test/pure/specification/compiler/code/compiler-pure:test_pdb_check + //bootstrap/test/pure/specification/compiler/code/compiler-core-metamodel-pdb-writer:test_pdb_check + //bootstrap/test/pure/specification/compiler/code/compiler-island-pdb-writer:test_pdb_check
-          - part: rest
-            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap/test/java/specification/compiler/code/compiler-pure:test_pdb_golden - //bootstrap/test/java/specification/compiler/code/compiler-pure:test_compiler - //bootstrap/test/java/specification/compiler/code/compiler-pure:test_printer_compiled - //bootstrap/test/pure/specification/compiler/code/compiler-pure:test_compiler_selfhost - (//bootstrap/test/pure/specification/compiler/code/compiler-pure:test_pdb_check + //bootstrap/test/pure/specification/compiler/code/compiler-core-metamodel-pdb-writer:test_pdb_check + //bootstrap/test/pure/specification/compiler/code/compiler-island-pdb-writer:test_pdb_check)
+          - part: language
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //bootstrap/test/pure/modules/language/...)
+          - part: translation
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //bootstrap/test/pure/modules/translation/...)
+          - part: legacy
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //bootstrap/test/pure/legacy/... + //bootstrap/test/java/legacy/...)
+          # Every other bootstrap target, so that a new one runs without being listed here.
+          - part: specification-and-extensions
+            query: attr(tags, "[\[ ]bootstrap[,\]]", //...) - attr(tags, "job:", //...) - //bootstrap/test/java/specification/compiler/code/compiler-pure:test_pdb_golden - //bootstrap/test/java/specification/compiler/code/compiler-pure:test_compiler - //bootstrap/test/java/specification/compiler/code/compiler-pure:test_printer_compiled - //bootstrap/test/pure/specification/compiler/... - //bootstrap/test/pure/modules/language/... - //bootstrap/test/pure/modules/translation/... - //bootstrap/test/pure/legacy/... - //bootstrap/test/java/legacy/...
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
