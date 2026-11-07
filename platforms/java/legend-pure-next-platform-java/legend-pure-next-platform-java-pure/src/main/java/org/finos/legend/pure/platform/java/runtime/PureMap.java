@@ -18,14 +18,15 @@ import org.finos.legend.pure.m3.platform.pure.functions.collection.PairImpl;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 /**
  * Pure's Map functions over a Java Map. Pure Maps are immutable, so every change returns a new map (insertion
- * ordered, as Pure's are). Methods use raw types so they accept whatever the call site passes — Pure's generics
+ * ordered, as Pure's are): a {@link PersistentOrderedMap}, which shares structure with the map it came from in
+ * O(log n) where copying the whole map made a map grown in a loop quadratic. A map from elsewhere is converted
+ * on its first change. Methods use raw types so they accept whatever the call site passes — Pure's generics
  * erase at the Java boundary anyway.
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
@@ -37,9 +38,7 @@ public final class PureMap
 
     public static Map newMap(Object entries)
     {
-        Map m = new LinkedHashMap();
-        addEntries(m, entries);
-        return m;
+        return withEntries(PersistentOrderedMap.EMPTY, entries);
     }
 
     public static Object get(Map m, Object key)
@@ -49,30 +48,18 @@ public final class PureMap
 
     public static Map put(Map m, Object key, Object value)
     {
-        Map nm = new LinkedHashMap(m);
-        nm.put(key, value);
-        return nm;
+        return PersistentOrderedMap.of(m).with(key, value);
     }
 
     public static Map putAll(Map m, Object additions)
     {
-        Map nm = new LinkedHashMap(m);
-        if (additions instanceof Map)
-        {
-            nm.putAll((Map) additions);
-        }
-        else
-        {
-            addEntries(nm, additions);
-        }
-        return nm;
+        PersistentOrderedMap map = PersistentOrderedMap.of(m);
+        return additions instanceof Map ? map.withAll((Map) additions) : withEntries(map, additions);
     }
 
     public static Map remove(Map m, Object key)
     {
-        Map nm = new LinkedHashMap(m);
-        nm.remove(key);
-        return nm;
+        return PersistentOrderedMap.of(m).without(key);
     }
 
     public static List keys(Map m)
@@ -110,18 +97,20 @@ public final class PureMap
         return m.containsKey(key) ? m.get(key) : fn.apply(key);
     }
 
-    /** A List of Map.Entry, or a single one, poured into {@code m}. */
-    private static void addEntries(Map m, Object entries)
+    /** {@code map} with a List of Map.Entry, or a single one, put in order. */
+    private static PersistentOrderedMap withEntries(PersistentOrderedMap map, Object entries)
     {
         if (entries == null)
         {
-            return;
+            return map;
         }
         List list = entries instanceof List ? (List) entries : Collections.singletonList(entries);
+        PersistentOrderedMap result = map;
         for (Object e : list)
         {
             Map.Entry pair = (Map.Entry) e;
-            m.put(pair.getKey(), pair.getValue());
+            result = result.with(pair.getKey(), pair.getValue());
         }
+        return result;
     }
 }

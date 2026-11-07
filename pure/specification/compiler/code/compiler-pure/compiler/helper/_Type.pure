@@ -118,11 +118,16 @@ function platform::pure::compiler::helper::type::linearize(t:Type[1], context:pl
 {
     if(!$t->instanceOf(PackageableElement),
         | [],
-        | let path = $t->cast(@PackageableElement)->elementToPath();
-          let cached = $context.linearizationCache->get($path);
-          assert($cached->isNotEmpty(), | 'LINEARIZE MISS: ' + $path + ' — buildLinearizationCache must seed every PE Type before this call');
-          $cached->toOne().values;
+        | $t->cast(@PackageableElement)->elementToPath()->linearizePath($context)
     );
+}
+
+// The linearization of the type at `path`, from the cache every PE Type is seeded into.
+function platform::pure::compiler::helper::type::linearizePath(path:String[1], context:platform::pure::compiler::CompilerContext[1]):String[*]
+{
+    let cached = $context.linearizationCache->get($path);
+    assert($cached->isNotEmpty(), | 'LINEARIZE MISS: ' + $path + ' — buildLinearizationCache must seed every PE Type before this call');
+    $cached->toOne().values;
 }
 
 // Path-based linearization is unaffected by path-preserving resolves —
@@ -181,14 +186,24 @@ function platform::pure::compiler::helper::type::c3merge(lists:List<String>[*]):
     );
 }
 
+// typeEquals, then the bottom and top types, then the linearization: each path is read once (elementToPath), where
+// spelling it as typeEquals / isBottomType / isTopType / linearize read up to six for the same two types.
 function platform::pure::compiler::helper::type::subtypeOf(sub:Type[1], super:Type[1], context:platform::pure::compiler::CompilerContext[1]):Boolean[1]
 {
-    if([pair(| typeEquals($sub, $super), | true),
-        pair(| $sub->isBottomType() || $super->isTopType(), | true),
-        pair(| !$super->instanceOf(PackageableElement), | false)],
-       | let superPath = $super->cast(@PackageableElement)->elementToPath();
-         $sub->linearize($context)->contains($superPath);
+    if([pair(| $sub == $super, | true),
+        pair(| !$super->instanceOf(PackageableElement), | $sub->isBottomType()),
+        pair(| !$sub->instanceOf(PackageableElement), | $super->isTopType())],
+       | platform::pure::compiler::helper::type::subtypeOfPath(
+             $sub->cast(@PackageableElement)->elementToPath(), $super->cast(@PackageableElement)->elementToPath(), $context)
     );
+}
+
+function platform::pure::compiler::helper::type::subtypeOfPath(subPath:String[1], superPath:String[1], context:platform::pure::compiler::CompilerContext[1]):Boolean[1]
+{
+    $subPath == $superPath
+        || $subPath == 'platform::pure::metamodel::type::Nil'
+        || $superPath == 'platform::pure::metamodel::type::Any'
+        || $subPath->linearizePath($context)->contains($superPath);
 }
 
 function platform::pure::compiler::helper::type::findCommonType(types:Type[*], context:platform::pure::compiler::CompilerContext[1]):Type[0..1]

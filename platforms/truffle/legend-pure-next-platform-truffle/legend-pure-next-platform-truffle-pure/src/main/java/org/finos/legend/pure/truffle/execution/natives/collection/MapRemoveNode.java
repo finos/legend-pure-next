@@ -76,13 +76,12 @@ public final class MapRemoveNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doRemove(Object map, Object key, Object mapCGT)
     {
-        MapImpl newMap = new MapImpl();
-        org.finos.legend.pure.truffle.compiler.helper._Any.write(newMap, "classifierGenericType", mapCGT);
         if (map instanceof MapImpl mi)
         {
-            newMap.putAll(mi);
-            newMap.getMap().remove(key);
+            return mi.without(mapCGT, key);
         }
+        MapImpl newMap = new MapImpl();
+        org.finos.legend.pure.truffle.compiler.helper._Any.write(newMap, "classifierGenericType", mapCGT);
         return newMap;
     }
 }

@@ -108,7 +108,20 @@ public final class PureContext
     // enforce that association-property values are themselves products of
     // the current expression (immutability rule — see Java's
     // ValueSpecificationEvaluator.freshScopeStack for the mirror).
-    private final ArrayDeque<java.util.IdentityHashMap<Object, Boolean>> freshScopeStack = new ArrayDeque<>();
+    private final ArrayDeque<FreshScope> freshScopeStack = new ArrayDeque<>();
+
+    /**
+     * One new/copy expression's fresh-instance scope, active while it is on the stack. A
+     * {@link PureDynamicObject} registered in it points back here ({@link PureDynamicObject#freshScope}), so
+     * registering and asking are O(1): hashing every product of every new/copy into the scope's map was 5% of a
+     * module compile, and an outer scope's map held everything built under it alive. Other values (rare) go in
+     * {@link #others}.
+     */
+    public static final class FreshScope
+    {
+        boolean active = true;
+        java.util.IdentityHashMap<Object, Boolean> others;
+    }
     // Function-level type-variable bindings stack: one entry per active generic
     // function call, mapping `<T>` parameter names → resolved Type (PDO or
     // typed XHelper). Populated at function entry by walking the function's
@@ -249,16 +262,34 @@ public final class PureContext
     public void popConstruction() { constructionStack.pop(); }
 
     /** Push a fresh-instance scope at the start of a new/copy expression. */
-    public void pushFreshScope() { freshScopeStack.push(new java.util.IdentityHashMap<>()); }
+    public void pushFreshScope() { freshScopeStack.push(new FreshScope()); }
 
     /** Pop the fresh-scope and register {@code result} in the parent scope (if any). */
     public void popFreshScopeAndRegister(Object result)
     {
-        freshScopeStack.pop();
+        freshScopeStack.pop().active = false;
         if (!freshScopeStack.isEmpty() && result != null)
         {
-            freshScopeStack.peek().put(result, Boolean.TRUE);
+            registerFresh(freshScopeStack.peek(), result);
         }
+    }
+
+    // An object already in a scope still on the stack keeps it: that scope sits below `scope` and outlives it.
+    private static void registerFresh(FreshScope scope, Object value)
+    {
+        if (value instanceof PureDynamicObject pdo)
+        {
+            if (pdo.freshScope == null || !pdo.freshScope.active)
+            {
+                pdo.freshScope = scope;
+            }
+            return;
+        }
+        if (scope.others == null)
+        {
+            scope.others = new java.util.IdentityHashMap<>();
+        }
+        scope.others.put(value, Boolean.TRUE);
     }
 
     /**
@@ -273,9 +304,13 @@ public final class PureContext
     public boolean isFreshInCurrentScope(Object value)
     {
         if (value == null) return false;
-        for (java.util.IdentityHashMap<Object, Boolean> scope : freshScopeStack)
+        if (value instanceof PureDynamicObject pdo)
         {
-            if (scope.containsKey(value)) return true;
+            return pdo.freshScope != null && pdo.freshScope.active;
+        }
+        for (FreshScope scope : freshScopeStack)
+        {
+            if (scope.others != null && scope.others.containsKey(value)) return true;
         }
         return false;
     }
@@ -284,8 +319,8 @@ public final class PureContext
     public void registerFreshInCurrentScope(Object value)
     {
         if (value == null) return;
-        java.util.IdentityHashMap<Object, Boolean> top = freshScopeStack.peek();
-        if (top != null) top.put(value, Boolean.TRUE);
+        FreshScope top = freshScopeStack.peek();
+        if (top != null) registerFresh(top, value);
     }
 
     /** Push a function's `<T>` type-variable bindings (may be empty). */

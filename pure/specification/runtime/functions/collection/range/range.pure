@@ -23,19 +23,11 @@ function platform::pure::functions::collection::range(count:Integer[1]):Integer[
 }
 
 // range(start, end) returns [start, start+1, ..., end-1]. Empty when start >= end.
-// Implemented as divide-and-conquer so the recursion depth is O(log n) rather
-// than O(n) — important on a tree-walking interpreter where each Pure call
-// consumes many Java stack frames.
+// The native with a step of 1: every host builds the list in one pass, where the former divide-and-conquer in Pure
+// copied the list at each of its O(log n) levels (5% of the self-host compile on Truffle).
 function platform::pure::functions::collection::range(start:Integer[1], end:Integer[1]):Integer[*]
 {
-    if($start >= $end,
-        | [],
-        | if($start + 1 == $end,
-            | $start,
-            | let mid = floor(($start + $end) / 2);
-              range($start, $mid)->concatenate(range($mid, $end));
-        )
-    );
+    range($start, $end, 1);
 }
 
 // range(start, end, step) returns [start, start+step, ...], stopping before

@@ -50,7 +50,7 @@ public final class MapKeyValuesNode extends PureNode
     {
         if (map instanceof MapImpl mi)
         {
-            java.util.LinkedHashMap<Object, Object> raw = mi.getMap();
+            java.util.Map<Object, Object> raw = mi.getMap();
             if (raw.isEmpty())
             {
                 return PureSequence.EMPTY;

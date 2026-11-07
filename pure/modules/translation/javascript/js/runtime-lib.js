@@ -795,11 +795,10 @@ function __eq(a, b) {
     if (!__isMap(a) || !__isMap(b)) return false;
     const ea = a.__mapEntries, eb = b.__mapEntries;
     if (ea.length !== eb.length) return false;
-    for (const [k, va] of ea) {
-      const i = __mapFindIdx(eb, k);
-      if (i < 0 || !__eq(va, eb[i][1])) return false;
-    }
-    return true;
+    return ea.every(([k, va]) => {
+      const got = __mapGet(b, k);
+      return got.length > 0 && __eq(va, got[0]);
+    });
   }
   const ppA = a.__purePath, ppB = b.__purePath;
   if (typeof ppA === "string" || typeof ppB === "string") return ppA === ppB;
@@ -1579,8 +1578,224 @@ function __matchType(v, typePath, lower, upper) {
   };
   return elems.every(checkOne);
 }
+// --- Persistent maps --------------------------------------------------------
+// A Pure Map never changes: put, putAll and remove return a new map. A __PureMap shares all but one path of its
+// structures with the map it came from, O(log n), where copying every entry made a map grown in a loop
+// quadratic. Keys compare with ===, as before. A hash trie finds a key's entry ({key, hash, value, seq}), and a
+// vector holds the entries by insertion position (null where one was removed), so the order is the insertion
+// order. `__mapEntries` stays the [k, v] array every other reader uses, built on its first read. No array or
+// node is written once a map holds it, so every earlier map stays valid and unchanged.
+
+// The vector: a 32-way trie of full leaves plus a tail of up to 32 (Clojure's PersistentVector).
+const __PV_EMPTY = { count: 0, shift: 5, root: [], tail: [] };
+function __pvTailOffset(v) {
+  return v.count < 32 ? 0 : ((v.count - 1) >>> 5) << 5;
+}
+function __pvNewPath(level, leaf) {
+  return level === 0 ? leaf : [__pvNewPath(level - 5, leaf)];
+}
+function __pvPushTail(count, level, parent, leaf) {
+  const sub = ((count - 1) >>> level) & 31;
+  const result = parent.slice();
+  result[sub] = level === 5
+    ? leaf
+    : parent[sub] !== void 0 ? __pvPushTail(count, level - 5, parent[sub], leaf) : __pvNewPath(level - 5, leaf);
+  return result;
+}
+function __pvAppend(v, x) {
+  if (v.count - __pvTailOffset(v) < 32) return { count: v.count + 1, shift: v.shift, root: v.root, tail: [...v.tail, x] };
+  // The tail is full: it becomes a leaf, under a new root when the trie is full at this height.
+  const overflow = (v.count >>> 5) > (1 << v.shift);
+  return {
+    count: v.count + 1,
+    shift: overflow ? v.shift + 5 : v.shift,
+    root: overflow ? [v.root, __pvNewPath(v.shift, v.tail)] : __pvPushTail(v.count, v.shift, v.root, v.tail),
+    tail: [x],
+  };
+}
+function __pvSet(v, i, x) {
+  if (i >= __pvTailOffset(v)) {
+    const tail = v.tail.slice();
+    tail[i & 31] = x;
+    return { count: v.count, shift: v.shift, root: v.root, tail };
+  }
+  const setIn = (node, level) => {
+    const result = node.slice();
+    const sub = (i >>> level) & 31;
+    result[sub] = level === 0 ? x : setIn(node[sub], level - 5);
+    return result;
+  };
+  return { count: v.count, shift: v.shift, root: setIn(v.root, v.shift), tail: v.tail };
+}
+function __pvForEach(v, f) {
+  const walk = (node, level) => node.forEach((child) => (level === 0 ? f(child) : walk(child, level - 5)));
+  if (__pvTailOffset(v) > 0) walk(v.root, v.shift);
+  v.tail.forEach((x) => f(x));
+}
+
+// The hash trie (Bagwell's HAMT): a node is a bitmap of the occupied 5-bit hash fragments and its children in
+// bit order, each an entry or a deeper node; keys with equal hashes share a collision node.
+const __pmObjectIds = new WeakMap();
+let __pmNextObjectId = 1;
+function __pmStringHash(s) {
+  return Array.prototype.reduce.call(s, (h, c, i) => (Math.imul(h, 31) + s.charCodeAt(i)) | 0, 0);
+}
+function __pmHash(k) {
+  switch (typeof k) {
+    case "string": return __pmStringHash(k);
+    case "bigint": return Number(BigInt.asIntN(32, k));
+    case "number": return Number.isInteger(k) && Math.abs(k) < 2147483648 ? k | 0 : __pmStringHash(String(k));
+    case "boolean": return k ? 1231 : 1237;
+    case "object":
+    case "function": {
+      if (k === null) return 0;
+      let id = __pmObjectIds.get(k);
+      if (id === void 0) {
+        id = __pmNextObjectId++;
+        __pmObjectIds.set(k, id);
+      }
+      return id;
+    }
+    default: return __pmStringHash(String(k));
+  }
+}
+function __pmBitCount(x) {
+  const a = x - ((x >>> 1) & 0x55555555);
+  const b = (a & 0x33333333) + ((a >>> 2) & 0x33333333);
+  return Math.imul((b + (b >>> 4)) & 0x0f0f0f0f, 0x01010101) >>> 24;
+}
+function __pmBit(hash, shift) {
+  return 1 << ((hash >>> shift) & 31);
+}
+function __pmIndex(node, bit) {
+  return __pmBitCount(node.bitmap & (bit - 1));
+}
+function __pmHasKey(entry, key, hash) {
+  return entry.hash === hash && entry.key === key;
+}
+function __pmFind(node, key, hash, shift) {
+  if (node === null) return void 0;
+  if (node.entries !== void 0) return node.hash === hash ? node.entries.find((e) => e.key === key) : void 0;
+  const bit = __pmBit(hash, shift);
+  if ((node.bitmap & bit) === 0) return void 0;
+  const child = node.children[__pmIndex(node, bit)];
+  if (child.seq !== void 0) return __pmHasKey(child, key, hash) ? child : void 0;
+  return __pmFind(child, key, hash, shift + 5);
+}
+function __pmTrieWith(node, shift, entry) {
+  if (node === null) return { bitmap: __pmBit(entry.hash, shift), children: [entry] };
+  if (node.entries !== void 0) {
+    if (node.hash === entry.hash) {
+      const i = node.entries.findIndex((e) => e.key === entry.key);
+      return { hash: node.hash, entries: i < 0 ? [...node.entries, entry] : node.entries.map((e, j) => (j === i ? entry : e)) };
+    }
+    // A different hash reaching a collision node: put the node under a bitmap at this level, then add.
+    return __pmTrieWith({ bitmap: __pmBit(node.hash, shift), children: [node] }, shift, entry);
+  }
+  const bit = __pmBit(entry.hash, shift);
+  const index = __pmIndex(node, bit);
+  if ((node.bitmap & bit) === 0) {
+    const children = node.children.slice();
+    children.splice(index, 0, entry);
+    return { bitmap: node.bitmap | bit, children };
+  }
+  const child = node.children[index];
+  const newChild = child.seq === void 0
+    ? __pmTrieWith(child, shift + 5, entry)
+    : __pmHasKey(child, entry.key, entry.hash) ? entry : __pmMerge(child, entry, shift + 5);
+  const children = node.children.slice();
+  children[index] = newChild;
+  return { bitmap: node.bitmap, children };
+}
+// The node holding two entries of different keys from `shift` down; different hashes differ by shift 30.
+function __pmMerge(a, b, shift) {
+  if (a.hash === b.hash) return { hash: a.hash, entries: [a, b] };
+  const fa = (a.hash >>> shift) & 31;
+  const fb = (b.hash >>> shift) & 31;
+  if (fa === fb) return { bitmap: 1 << fa, children: [__pmMerge(a, b, shift + 5)] };
+  return { bitmap: (1 << fa) | (1 << fb), children: fa < fb ? [a, b] : [b, a] };
+}
+// The node without the key: the node itself when absent, null when nothing is left; a node left with one entry
+// is replaced by that entry in its parent.
+function __pmTrieWithout(node, shift, key, hash) {
+  if (node === null) return null;
+  if (node.entries !== void 0) {
+    if (node.hash !== hash || !node.entries.some((e) => e.key === key)) return node;
+    return { hash: node.hash, entries: node.entries.filter((e) => e.key !== key) };
+  }
+  const bit = __pmBit(hash, shift);
+  if ((node.bitmap & bit) === 0) return node;
+  const index = __pmIndex(node, bit);
+  const child = node.children[index];
+  const isEntry = child.seq !== void 0;
+  if (isEntry && !__pmHasKey(child, key, hash)) return node;
+  const newChild = isEntry ? null : __pmSingleEntryOf(__pmTrieWithout(child, shift + 5, key, hash));
+  if (newChild === child) return node;
+  if (newChild !== null) {
+    const children = node.children.slice();
+    children[index] = newChild;
+    return { bitmap: node.bitmap, children };
+  }
+  if (node.children.length === 1) return null;
+  return { bitmap: node.bitmap ^ bit, children: node.children.filter((c, j) => j !== index) };
+}
+function __pmSingleEntryOf(node) {
+  if (node !== null && node.children !== void 0 && node.children.length === 1 && node.children[0].seq !== void 0) return node.children[0];
+  if (node !== null && node.entries !== void 0 && node.entries.length === 1) return node.entries[0];
+  return node;
+}
+
+class __PureMap {
+  constructor(index, order, size) {
+    this.__index = index;
+    this.__order = order;
+    this.__size = size;
+    this.__entries = void 0;
+  }
+  get __mapEntries() {
+    if (this.__entries === void 0) {
+      const entries = [];
+      __pvForEach(this.__order, (e) => {
+        if (e !== null) entries.push([e.key, e.value]);
+      });
+      this.__entries = Object.freeze(entries);
+    }
+    return this.__entries;
+  }
+}
+const __PM_EMPTY = new __PureMap(null, __PV_EMPTY, 0);
+function __pmEntry(m, key) {
+  return __pmFind(m.__index, key, __pmHash(key), 0);
+}
+function __pmWith(m, key, value) {
+  const hash = __pmHash(key);
+  const existing = __pmFind(m.__index, key, hash, 0);
+  if (existing === void 0) {
+    const entry = { key, hash, value, seq: m.__order.count };
+    return new __PureMap(__pmTrieWith(m.__index, 0, entry), __pvAppend(m.__order, entry), m.__size + 1);
+  }
+  if (existing.value === value) return m;
+  const entry = { key: existing.key, hash, value, seq: existing.seq };
+  return new __PureMap(__pmTrieWith(m.__index, 0, entry), __pvSet(m.__order, existing.seq, entry), m.__size);
+}
+function __pmWithout(m, key) {
+  const hash = __pmHash(key);
+  const existing = __pmFind(m.__index, key, hash, 0);
+  if (existing === void 0) return m;
+  const removed = new __PureMap(__pmTrieWithout(m.__index, 0, key, hash), __pvSet(m.__order, existing.seq, null), m.__size - 1);
+  // Rebuilt without the positions removals left once they outnumber the entries.
+  return removed.__order.count > 32 && removed.__size * 2 < removed.__order.count ? __pmWithEntries(__PM_EMPTY, removed.__mapEntries) : removed;
+}
+function __pmWithEntries(m, entries) {
+  return entries.reduce((acc, [k, v]) => __pmWith(acc, k, v), m);
+}
+// A __PureMap with the entries of any map value: a map built as a literal { __mapEntries } is converted.
+function __pmOf(m) {
+  return m instanceof __PureMap ? m : __pmWithEntries(__PM_EMPTY, __mapEntriesOf(m));
+}
+
 function __isMap(m) {
-  return !!m && typeof m === "object" && Array.isArray(m.__mapEntries);
+  return m instanceof __PureMap || (!!m && typeof m === "object" && Array.isArray(m.__mapEntries));
 }
 function __mapEntriesOf(m) {
   return __isMap(m) ? m.__mapEntries : [];
@@ -1591,27 +1806,17 @@ function __mapFindIdx(entries, k) {
   }
   return -1;
 }
-function __mapSet(entries, k, v) {
-  const i = __mapFindIdx(entries, k);
-  if (i >= 0) {
-    entries[i] = [k, v];
-  } else {
-    entries.push([k, v]);
-  }
-}
 function __newMap(pairs) {
-  const entries = [];
-  if (pairs !== void 0) for (const p of Array.isArray(pairs) ? pairs : [pairs]) __mapSet(entries, p.first, p.second);
-  return { __mapEntries: entries };
+  return pairs === void 0 ? __PM_EMPTY : __pmWithPairs(__PM_EMPTY, Array.isArray(pairs) ? pairs : [pairs]);
+}
+function __pmWithPairs(m, pairs) {
+  return pairs.reduce((acc, p) => __pmWith(acc, p.first, p.second), m);
 }
 function __mapPut(m, k, v) {
-  const e = __mapEntriesOf(m).map((x) => x.slice());
-  __mapSet(e, k, v);
-  return { __mapEntries: e };
+  return __pmWith(__pmOf(m), k, v);
 }
 function __mapRemoveAll(m, keys) {
-  const ks = __asArr(keys);
-  return { __mapEntries: __mapEntriesOf(m).filter((x) => !ks.some((k) => k === x[0])) };
+  return __asArr(keys).reduce((acc, k) => __pmWithout(acc, k), __pmOf(m));
 }
 // platform::pure::functions::collection::removeAll(set, other): `set` minus every
 // element __eq to one in `other` (so <<equality.Key>> classes compare by key).
@@ -1634,8 +1839,8 @@ function __mapValues(m) {
   return __mapEntriesOf(m).map((x) => x[1]);
 }
 function __mapGetIfAbsentPut(m, k, keyFn) {
-  const i = __mapFindIdx(__mapEntriesOf(m), k);
-  return i >= 0 ? __mapEntriesOf(m)[i][1] : keyFn(k);
+  const got = __mapGet(m, k);
+  return got.length > 0 ? got[0] : keyFn(k);
 }
 function __contains(coll, x) {
   if (typeof coll === "string") return coll.includes(String(x));
@@ -1651,21 +1856,21 @@ function __multiIf(pairs, defaultFn) {
   return defaultFn();
 }
 function __mapPutAll(m, kvs) {
-  const e = __mapEntriesOf(m).map((x) => x.slice());
-  if (Array.isArray(kvs)) {
-    for (const kv of kvs) __mapSet(e, kv.first, kv.second);
-  } else if (__isMap(kvs)) {
-    for (const [k, v] of kvs.__mapEntries) __mapSet(e, k, v);
-  } else if (kvs && typeof kvs === "object" && "first" in kvs && "second" in kvs) {
-    __mapSet(e, kvs.first, kvs.second);
-  }
-  return { __mapEntries: e };
+  const map = __pmOf(m);
+  if (Array.isArray(kvs)) return __pmWithPairs(map, kvs);
+  if (__isMap(kvs)) return map.__size === 0 ? __pmOf(kvs) : __pmWithEntries(map, kvs.__mapEntries);
+  if (kvs && typeof kvs === "object" && "first" in kvs && "second" in kvs) return __pmWith(map, kvs.first, kvs.second);
+  return map;
 }
 function __mapRemove(m, k) {
-  return { __mapEntries: __mapEntriesOf(m).filter((x) => x[0] !== k) };
+  return __pmWithout(__pmOf(m), k);
 }
 function __mapGet(m, k) {
   // Pure `map->get(k)` is V[0..1] -> array representation ([] or [value]).
+  if (m instanceof __PureMap) {
+    const entry = __pmEntry(m, k);
+    return entry === void 0 ? [] : [entry.value];
+  }
   const e = __mapEntriesOf(m);
   const i = __mapFindIdx(e, k);
   return i >= 0 ? [e[i][1]] : [];
