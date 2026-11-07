@@ -22,8 +22,8 @@
 //
 // NO BROWSER AUTOMATION DEPENDENCY. Node has a built-in WebSocket, so the Chrome DevTools Protocol is
 // reachable directly; Playwright or Puppeteer would add a browser download to CI for what is ~80 lines
-// of protocol here. Chrome itself comes from the environment (CHROME_PATH, or the usual locations) and
-// is preinstalled on GitHub's ubuntu runners.
+// of protocol here. Chrome itself is CHROME_PATH: under Bazel, the pinned Chrome for Testing headless
+// shell (//tools/bazel:chrome) as a runfiles path; run by hand, any Chrome, else the usual locations.
 //
 // EVERY WAIT IS CONDITION-BASED. The page downloads 13.6 MB of pdb archives before it is ready, so a
 // fixed budget would either flake or have to be absurd — `--virtual-time-budget` in particular cuts
@@ -34,7 +34,7 @@ import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { dirname, join, normalize, extname } from "node:path";
+import { dirname, join, normalize, extname, isAbsolute, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { TestReport } from "../../../core/tests/test-report.js";
@@ -107,8 +107,12 @@ function serveRepo() {
 
 // --- Chrome ------------------------------------------------------------------
 function chromeBinary() {
+    // Bazel passes a path relative to the workspace runfiles directory, which a test does not run in.
+    const given = process.env.CHROME_PATH && process.env.TEST_SRCDIR && !isAbsolute(process.env.CHROME_PATH)
+        ? resolvePath(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE ?? "_main", process.env.CHROME_PATH)
+        : process.env.CHROME_PATH;
     const candidates = [
-        process.env.CHROME_PATH,
+        given,
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
         "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable",
         "/usr/bin/chromium", "/usr/bin/chromium-browser",
