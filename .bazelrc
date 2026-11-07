@@ -30,6 +30,15 @@ build --javacopt=-XepDisableAllChecks
 build --host_javacopt=-XepDisableAllChecks
 
 test --test_output=errors
+
+# The test JVMs (Truffle with its Graal JIT, the bootstrap) size their compiler and GC threads to the processors they
+# see: each is told 4, and at most a quarter of the processors' worth of tests run at once, so together they fit the
+# machine. Without it a full `bazel test //...` on a many-core machine runs a test per core, each JVM sizing its pools for
+# all of them, and the JIT-heavy suites slow twentyfold (test_junit of truffle-pure: 13s alone, past its 300s timeout).
+# The compiles get the same from target_genrule.bzl.
+test --test_env=JAVA_TOOL_OPTIONS=-XX:ActiveProcessorCount=4
+test --local_test_jobs=HOST_CPUS*.25
+
 # Reports stay files, so tools/bazel/collect-reports.mjs copies them as they are.
 test --nozip_undeclared_test_outputs
 
@@ -45,5 +54,7 @@ common:ci --experimental_disk_cache_gc_max_size=6G
 common:ci --color=yes
 common:ci --curses=no
 common:ci --show_progress_rate_limit=30
+# A CI runner has about 4 processors, a test JVM's whole share already: a quarter of them would run its tests one by one.
+test:ci --local_test_jobs=auto
 
 try-import %workspace%/.bazelrc.user

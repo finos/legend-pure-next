@@ -14,6 +14,25 @@
 
 """A genrule whose tools are built like what they build, not in the exec configuration of a genrule."""
 
+# What one action reserves from Bazel's local CPUs, and the processor count its JVMs are told (ActiveProcessorCount):
+# the two agree, so a JVM sizes its Graal/Truffle compiler, C1/C2 and GC threads to the share Bazel scheduled it on.
+# Without this Bazel counts each action as 1 CPU and runs --jobs (= cores) of them, each JVM sizing its pools for
+# every core of the machine, and the Graal compiles of the parser's big units then miss their 100s deadline.
+# resource_set takes a top-level function, hence one per value.
+def _cpus_1(_os, _inputs):
+    return {"cpu": 1}
+
+def _cpus_2(_os, _inputs):
+    return {"cpu": 2}
+
+def _cpus_4(_os, _inputs):
+    return {"cpu": 4}
+
+def _cpus_8(_os, _inputs):
+    return {"cpu": 8}
+
+_RESOURCE_SETS = {1: _cpus_1, 2: _cpus_2, 4: _cpus_4, 8: _cpus_8}
+
 def _target_genrule_impl(ctx):
     bin_package = ctx.bin_dir.path + ("/" + ctx.label.package if ctx.label.package else "")
     # A genrule command: $$ is a $, and what is left starting with $ is expanded.
@@ -32,7 +51,10 @@ def _target_genrule_impl(ctx):
         tools = [tool[DefaultInfo].files_to_run for tool in tools] + [tool[DefaultInfo].files for tool in tools],
         outputs = ctx.outputs.outs,
         # What a genrule sets before its command.
-        command = "set -o errexit -o nounset -o pipefail\n" + cmd.replace("\0", "$"),
+        command = "set -o errexit -o nounset -o pipefail\n" +
+                  'export JAVA_TOOL_OPTIONS="-XX:ActiveProcessorCount=%d ${JAVA_TOOL_OPTIONS:-}"\n' % ctx.attr.cpus +
+                  cmd.replace("\0", "$"),
+        resource_set = _RESOURCE_SETS[ctx.attr.cpus],
         mnemonic = "Genrule",
         progress_message = "Executing genrule %{label}",
         use_default_shell_env = True,
@@ -52,5 +74,6 @@ target_genrule = rule(
         "cmd": attr.string(mandatory = True),
         "tools": attr.label_list(allow_files = True, cfg = "target", doc = "What the command runs, built as what it builds."),
         "exec_tools": attr.label_list(allow_files = True, cfg = "exec", doc = "Tools no target depends on, such as Bazel's own."),
+        "cpus": attr.int(default = 4, values = [1, 2, 4, 8], doc = "The CPUs the action reserves, and its JVMs see."),
     },
 )

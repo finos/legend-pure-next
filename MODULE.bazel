@@ -105,6 +105,37 @@ http_archive(
     urls = ["https://github.com/google/flatbuffers/releases/download/v25.2.10/Linux.flatc.binary.g++-13.zip"],
 )
 
+# Chrome for Testing's headless shell, which the web IDE test drives (//platforms/javascript:test_js_ide), selected by
+# //tools/bazel:chrome: pinned, so the test needs no browser on the machine. A new version changes the three URLs and
+# their checksums together: https://googlechromelabs.github.io/chrome-for-testing/.
+_CHROME_BUILD = """filegroup(
+    name = "chrome",
+    srcs = ["chrome-headless-shell-{p}/chrome-headless-shell"],
+    data = glob(["chrome-headless-shell-{p}/**"]),
+    visibility = ["//visibility:public"],
+)"""
+
+http_archive(
+    name = "chrome_mac_arm64",
+    build_file_content = _CHROME_BUILD.format(p = "mac-arm64"),
+    sha256 = "2fd1c09a3e1ebde9e69e6aba92f1dd3f21ad247b55d9bf66e39213ff4205436d",
+    urls = ["https://storage.googleapis.com/chrome-for-testing-public/156.0.8078.47/mac-arm64/chrome-headless-shell-mac-arm64.zip"],
+)
+
+http_archive(
+    name = "chrome_linux_x64",
+    build_file_content = _CHROME_BUILD.format(p = "linux64"),
+    sha256 = "0d5acc62c3e213f8c87d3c298d66ffcf9a236d12ea4b9f85318bf85dbc279daa",
+    urls = ["https://storage.googleapis.com/chrome-for-testing-public/156.0.8078.47/linux64/chrome-headless-shell-linux64.zip"],
+)
+
+http_archive(
+    name = "chrome_linux_arm64",
+    build_file_content = _CHROME_BUILD.format(p = "linux-arm64"),
+    sha256 = "955059fa7020d7be85eb503e21339fd4d718f51f5996d3b60633fbf908bda132",
+    urls = ["https://storage.googleapis.com/chrome-for-testing-public/156.0.8078.47/linux-arm64/chrome-headless-shell-linux-arm64.zip"],
+)
+
 # GraalVM Community for JDK 25, the runtime of Java binaries and tests (tools/bazel/graalvm.bzl).
 graalvm = use_extension("//tools/bazel:graalvm.bzl", "graalvm")
 use_repo(

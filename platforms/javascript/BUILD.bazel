@@ -249,8 +249,8 @@ _NODE_TESTS = {
     "diagram": ("src/interfaces/web/diagram/tests/diagram-tests.js", "javascript/core/diagram-tests.json", []),
     "section-hint": ("src/interfaces/web/tests/section-hint-tests.js", "javascript/core/section-hint-tests.json", []),
     "source-store": ("src/interfaces/web/tests/source-store-tests.js", "javascript/core/source-store-tests.json", []),
-    # A headless Chrome over the web IDE: Chrome from the machine (CHROME_PATH or its usual place), so unsandboxed.
-    "ide": ("src/interfaces/web/tests/ide-tests.js", "javascript/web/ide-tests.json", ["local", "requires-chrome"]),
+    # A headless Chrome over the web IDE: Chrome for Testing's headless shell, pinned (//tools/bazel:chrome).
+    "ide": ("src/interfaces/web/tests/ide-tests.js", "javascript/web/ide-tests.json", []),
 }
 
 [js_binary(
@@ -265,7 +265,8 @@ _NODE_TESTS = {
     name = "test_js_" + name.replace("-", "_"),
     srcs = ["//tools/bazel:run-suite.sh"],
     args = [report or "javascript/%s/none.json" % name, "$(rootpath :%s_script)" % name] + (["--report", "{report}"] if report else []),
-    data = [":%s_script" % name],
+    data = [":%s_script" % name] + (["//tools/bazel:chrome"] if name == "ide" else []),
+    env = {"CHROME_PATH": "$(rootpath //tools/bazel:chrome)"} if name == "ide" else {},
     tags = tags + ["kind:js", "job:translations/javascript"],
 ) for name, (_, report, tags) in _NODE_TESTS.items()]
 
