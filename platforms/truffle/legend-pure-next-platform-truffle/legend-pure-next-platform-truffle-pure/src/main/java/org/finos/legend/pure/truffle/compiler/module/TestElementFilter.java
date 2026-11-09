@@ -17,7 +17,7 @@ package org.finos.legend.pure.truffle.compiler.module;
 
 /**
  * The {@code --tests} modes of {@code pure-truffle compile}, which the compile hands to
- * {@code platform::pure::compiler::pdb::archive::compileModule}: where the split happens.
+ * {@code platform::pure::compiler::archive::compileModule}: where the split happens.
  */
 public final class TestElementFilter
 {

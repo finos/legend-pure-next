@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Host wiring over the TRANSLATED SELF-HOSTED PURE READER (pdb/reader/reader.pure +
-// pdb/schema/parser.pure, compiled into generated/pure/compiler/compiler.js — the same Pure code
+// pdb/schema/parser.pure, compiled into generated/pure/pdb/pdb.js — the same Pure code
 // that runs on the JVM and Truffle). reader.pure is deliberately format-only:
 // element identity, caching and reference resolution are the host's job, and
 // this module is that thin layer for JS — translated-function lookup, byte-list
@@ -23,17 +23,17 @@
 // ReadAncestorRef, which surface as plain objects with .pos / .segs / .depth).
 //
 // The translated functions are resolved from globalThis lazily AT CALL TIME:
-// the store is built (and the metadata globals installed) before generated/pure/compiler/compiler.js
+// the store is built (and the metadata globals installed) before generated/pure/pdb/pdb.js
 // is imported, and nothing here may touch the translated code until the first
 // real metadata read — which only happens once the compiler is loaded.
 
 const FNS = {
-    parseFbs: "platform$pure$compiler$pdb$schema$parseFbs_String_1__FbsSchema_1_",
-    elementNode: "platform$pure$compiler$pdb$reader$elementNode_Binary_1__String_1__FbsNode_1_",
-    rootNode: "platform$pure$compiler$pdb$reader$rootNode_Binary_1__String_1__FbsNode_1_",
-    readField: "platform$pure$compiler$pdb$reader$readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_",
-    fieldPos: "platform$pure$compiler$pdb$reader$fieldPos_FbsNode_1__Integer_1__Integer_1_",
-    unwrapValueDef: "platform$pure$compiler$pdb$reader$unwrapValueDef_FbsNode_1__Any_1_",
+    parseFbs: "platform$pure$pdb$schema$parseFbs_String_1__FbsSchema_1_",
+    elementNode: "platform$pure$pdb$reader$elementNode_Binary_1__String_1__FbsNode_1_",
+    rootNode: "platform$pure$pdb$reader$rootNode_Binary_1__String_1__FbsNode_1_",
+    readField: "platform$pure$pdb$reader$readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_",
+    fieldPos: "platform$pure$pdb$reader$fieldPos_FbsNode_1__Integer_1__Integer_1_",
+    unwrapValueDef: "platform$pure$pdb$reader$unwrapValueDef_FbsNode_1__Any_1_",
 };
 
 function fn(name) {

@@ -29,7 +29,6 @@
 import platform::pure::compiler::*;
 import platform::pure::metamodel::*;
 import platform::pure::metamodel::type::*;
-import platform::pure::compiler::helper::packageableElement::*;
 import platform::pure::compiler::helper::class::*;
 import platform::pure::compiler::extension::*;
 import platform::pure::compiler::helper::pointer::*;

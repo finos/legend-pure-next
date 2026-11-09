@@ -48,9 +48,12 @@ alias(
 _SHARED = {
     "core.pdb": "//pure/specification:core.pdb",
     "core-tests.pdb": "//pure/specification:core-tests.pdb",
+    "pdb.pdb": "//pure/specification:pdb.pdb",
+    "pdb-tests.pdb": "//pure/specification:pdb-tests.pdb",
     "compiler.pdb": "//pure/specification:compiler.pdb",
     "compiler-tests.pdb": "//pure/specification:compiler-tests.pdb",
-    "core_metamodel_pdb_writer.pdb": "//pure/specification:core_metamodel_pdb_writer.pdb",
+    "pdb_writer.pdb": "//pure/specification:pdb_writer.pdb",
+    "pdb_writer-tests.pdb": "//pure/specification:pdb_writer-tests.pdb",
     "island_pdb_writer-with-tests.pdb": "//pure/specification:island_pdb_writer-with-tests.pdb",
     "parser-mappings.pdb": "//pure/specification:parser-mappings.pdb",
     # The schemas, side by side: a reader given m3.fbs finds the test island fragment beside it.

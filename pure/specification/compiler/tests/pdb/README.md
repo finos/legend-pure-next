@@ -22,7 +22,7 @@ Consumers:
 - `pure/specification/compiler/code/compiler-pure/test/pdbGoldenRunner.pure`
   (`runPdbGoldenTests`: compiles each fixture with the Pure compiler, writes it with
   the Pure writer and compares the archive with its golden, entirely in Pure — the
-  golden's deflated entries are opened by `pdb/reader/inflate.pure`. Run by the
+  golden's deflated entries are opened by the reader, `pure/specification/pdb/pdb-pure/reader/reader.pure`. Run by the
   pdb suites on cli-truffle, cli-truffle-native and cli-javascript —
   not on bootstrap, whose interpreter takes minutes per large archive; reported as
   the dashboard's PDB row)

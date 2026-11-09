@@ -27,8 +27,9 @@ exports_files(
         "m3_protocol_addition.ttl",
         "module.json",
         "grammar/mapping/mappings-pure/module.json",
+        "pdb/pdb-pure/module.json",
         "compiler/code/compiler-pure/module.json",
-        "compiler/code/compiler-core-metamodel-pdb-writer/module.json",
+        "pdb/pdb-writer/module.json",
         "compiler/code/compiler-island-pdb-writer/module.json",
         "compiler/code/compiler-pure/test/islands/islandTest-fbs-field-ids.txt",
         "language_pure.json",
@@ -77,13 +78,9 @@ filegroup(
 )
 
 # ---------------------------------------------------------------------------------------------------------------------
-# compiler.pdb and compiler-tests.pdb, compiled once, and what is generated from them.
-#
-# compiler-pure reaches its generated writer by name at run time (writerHelper::genFn), so it compiles without it. The
-# generators then run on the compiled PDBs, and what they generate is compiled on top: core_metamodel_pdb_writer.pdb, the writer of
-# m3, and island_pdb_writer-with-tests.pdb, the writer of the test island values, test as they are. Everything that writes a PDB
-# through the compiler written in Pure loads core_metamodel_pdb_writer.pdb with compiler.pdb. The generated sources are outputs here,
-# never written to the source tree.
+# compiler.pdb and compiler-tests.pdb, compiled once. pdb_writer.pdb, the writer of m3 generated from pdb.pdb, is compiled
+# before them: the compiler calls it statically. What is generated from the compiler is the writer of the test island
+# values, island_pdb_writer-with-tests.pdb. The generated sources are outputs here, never written to the source tree.
 
 _CLI = "//bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap"
 
@@ -176,15 +173,31 @@ _EXECUTE_ON_COMPILER = """
     run() {{
         (cd $$W && $$R/$(execpath {cli}) execute \\
             --pdb $$R/$(execpath {core}) --pdb $$R/$(execpath {core_tests}) \\
-            --pdb $$R/$(execpath :compiler.pdb) --pdb $$R/$(execpath :compiler-tests.pdb) "$$@") > $$OUT 2> $$W/stderr \\
+            --pdb $$R/$(execpath :pdb.pdb) --pdb $$R/$(execpath :pdb_writer.pdb) --pdb $$R/$(execpath :compiler.pdb) --pdb $$R/$(execpath :compiler-tests.pdb) "$$@") > $$OUT 2> $$W/stderr \\
             || {{ cat $$W/stderr >&2; exit 1; }}
     }}
 """.format(m3_fbs = _M3_FBS, cli = _CLI, core = _CORE_PDB, core_tests = _CORE_TESTS_PDB)
+
+# The same over core and the PDB format alone: the writer of m3 is generated before the compiler exists.
+_EXECUTE_ON_PDB = """
+    set -e
+    R=$$PWD
+    W=$$(mktemp -d)
+    mkdir -p $$W/shared/specification
+    cp $(execpath {m3_fbs}) $$W/shared/specification/m3.fbs
+    OUT=$$W/stdout
+    run() {{
+        (cd $$W && $$R/$(execpath {cli}) execute --pdb $$R/$(execpath {core}) --pdb $$R/$(execpath :pdb.pdb) "$$@") > $$OUT 2> $$W/stderr \\
+            || {{ cat $$W/stderr >&2; exit 1; }}
+    }}
+""".format(m3_fbs = _M3_FBS, cli = _CLI, core = _CORE_PDB)
 
 _COMPILER_INPUTS = [
     _CORE_PDB,
     _CORE_TESTS_PDB,
     _M3_FBS,
+    ":pdb.pdb",
+    ":pdb_writer.pdb",
     ":compiler.pdb",
     ":compiler-tests.pdb",
 ]
@@ -198,10 +211,33 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "pdb_sources",
+    srcs = glob([
+        "pdb/pdb-pure/**/*.pure",
+        "pdb/pdb-pure/module.json",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
+# pdb.pdb and pdb-tests.pdb: the PDB format, on core alone.
+pure_bootstrap_compile(
+    name = "pdb_compile",
+    srcs = [":pdb_sources"],
+    base_pdbs = [_CORE_PDB],
+    outs = [
+        "pdb.pdb",
+        "pdb-tests.pdb",
+    ],
+    source_dir = "pure/specification/pdb/pdb-pure",
+    split_tests = True,
+    visibility = ["//visibility:public"],
+)
+
 pure_bootstrap_compile(
     name = "compiler_compile",
     srcs = [":compiler_sources"],
-    base_pdbs = [_CORE_PDB],
+    base_pdbs = [_CORE_PDB, ":pdb.pdb", ":pdb_writer.pdb"],
     outs = [
         "compiler.pdb",
         "compiler-tests.pdb",
@@ -212,11 +248,15 @@ pure_bootstrap_compile(
 )
 
 target_genrule(
-    name = "core_metamodel_pdb_writer_generate",
-    srcs = _COMPILER_INPUTS,
-    outs = ["compiler/generated/generatedWriter.pure"],
-    cmd = _EXECUTE_ON_COMPILER + """
-        run --function "platform::pure::compiler::pdb::generator::printGeneratedWriter__Boolean_1_"
+    name = "pdb_writer_generate",
+    srcs = [
+        _CORE_PDB,
+        _M3_FBS,
+        ":pdb.pdb",
+    ],
+    outs = ["pdb/generated/generatedWriter.pure"],
+    cmd = _EXECUTE_ON_PDB + """
+        run --function "platform::pure::pdb::generator::printGeneratedWriter__Boolean_1_"
         awk '/===GENWRITER-BEGIN===/{f=1;next} /===GENWRITER-END===/{f=0} f' $$OUT > $$W/body
         test -s $$W/body || { echo "printGeneratedWriter produced no output between its markers" >&2; exit 1; }
         { %s; cat $$W/body; } > $@
@@ -235,7 +275,7 @@ target_genrule(
         "compiler/generated/islandTest-fbs-field-ids.txt",
     ],
     cmd = _EXECUTE_ON_COMPILER + """
-        run --function "platform::pure::compiler::pdb::fbsgen::printFbs_String_1__String_1__String_1__Boolean_1_" \\
+        run --function "platform::pure::pdb::fbsgen::printFbs_String_1__String_1__String_1__Boolean_1_" \\
             --args "platform::pure::compiler::test::islands::metamodel" $$M3_FBS \\
             $$R/$(execpath compiler/code/compiler-pure/test/islands/islandTest-fbs-field-ids.txt)
         awk '/^===FBS-BEGIN===$$/{f=1;next} /^===FBS-END===$$/{f=0} f' $$OUT > $(execpath compiler/generated/islandTest.fbs)
@@ -251,7 +291,7 @@ target_genrule(
     srcs = _COMPILER_INPUTS + ["compiler/generated/islandTest.fbs"],
     outs = ["compiler/generated/islandWriter.pure"],
     cmd = _EXECUTE_ON_COMPILER + """
-        run --function "platform::pure::compiler::pdb::generator::printExtensionWriter_String_1__String_1__String_1__String_1__Boolean_1_" \\
+        run --function "platform::pure::pdb::generator::printExtensionWriter_String_1__String_1__String_1__String_1__Boolean_1_" \\
             --args $$M3_FBS $$R/$(execpath compiler/generated/islandTest.fbs) \\
             "platform::pure::compiler::test::islands::metamodel" "platform::pure::compiler::test::islands::pdb::gen"
         { %s; awk '/^===GENWRITER-BEGIN===$$/{f=1;next} /^===GENWRITER-END===$$/{f=0} f' $$OUT; } > $@
@@ -261,20 +301,33 @@ target_genrule(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "pdb_writer_sources",
+    srcs = glob([
+        "pdb/pdb-writer/**/*.pure",
+        "pdb/pdb-writer/module.json",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
 pure_bootstrap_compile(
-    name = "core_metamodel_pdb_writer_compile",
-    srcs = ["compiler/code/compiler-core-metamodel-pdb-writer/module.json"],
-    base_pdbs = [_CORE_PDB, ":compiler.pdb"],
-    generated = {":compiler/generated/generatedWriter.pure": "generated/writer.pure"},
-    outs = ["core_metamodel_pdb_writer.pdb"],
-    source_dir = "pure/specification/compiler/code/compiler-core-metamodel-pdb-writer",
+    name = "pdb_writer_compile",
+    srcs = [":pdb_writer_sources"],
+    base_pdbs = [_CORE_PDB, ":pdb.pdb"],
+    generated = {":pdb/generated/generatedWriter.pure": "generated/writer.pure"},
+    outs = [
+        "pdb_writer.pdb",
+        "pdb_writer-tests.pdb",
+    ],
+    source_dir = "pure/specification/pdb/pdb-writer",
+    split_tests = True,
     visibility = ["//visibility:public"],
 )
 
 pure_bootstrap_compile(
     name = "island_pdb_writer_compile",
     srcs = ["compiler/code/compiler-island-pdb-writer/module.json"],
-    base_pdbs = [_CORE_PDB, _CORE_TESTS_PDB, ":compiler.pdb", ":compiler-tests.pdb", ":core_metamodel_pdb_writer.pdb"],
+    base_pdbs = [_CORE_PDB, _CORE_TESTS_PDB, ":pdb.pdb", ":pdb_writer.pdb", ":compiler.pdb", ":compiler-tests.pdb"],
     generated = {":compiler/generated/islandWriter.pure": "generated/writer.pure"},
     outs = ["island_pdb_writer-with-tests.pdb"],
     source_dir = "pure/specification/compiler/code/compiler-island-pdb-writer",
@@ -288,7 +341,7 @@ sh_test(
     srcs = ["//tools/bazel:pdb-lacks.sh"],
     args = [
         "$(rootpath :compiler.pdb)",
-        "elements/platform/pure/compiler/pdb/gen/write",
+        "elements/platform/pure/pdb/gen/write",
         "elements/platform/pure/compiler/test/islands/metamodel/",
         "elements/platform/pure/compiler/test/islands/pdb/",
     ],
@@ -315,6 +368,10 @@ copy_to_bin(
         "$(rootpath %s)" % _CORE_PDB,
     ] + extra_pdbs + [
         "--pdb",
+        "$(rootpath :pdb.pdb)",
+        "--pdb",
+        "$(rootpath :pdb_writer.pdb)",
+        "--pdb",
         "$(rootpath :compiler.pdb)",
     ] + tests_pdbs + [
         "--function",
@@ -325,6 +382,8 @@ copy_to_bin(
         _CLI,
         _CORE_PDB,
         _CORE_TESTS_PDB,
+        ":pdb.pdb",
+        ":pdb_writer.pdb",
         ":compiler.pdb",
         ":compiler-tests.pdb",
         ":m3-fbs-field-ids.txt",
@@ -339,7 +398,7 @@ copy_to_bin(
         "test_m3_fbs_written_in_pure_matches_bootstrap",
         [],
         [],
-        "platform::pure::compiler::pdb::fbsgen::printFbsParity_String_1__String_1__Boolean_1_",
+        "platform::pure::pdb::fbsgen::printFbsParity_String_1__String_1__Boolean_1_",
         ["$(rootpath //:shared/specification/m3.fbs)", "$(rootpath :m3-fbs-field-ids.txt)"],
     ),
     (

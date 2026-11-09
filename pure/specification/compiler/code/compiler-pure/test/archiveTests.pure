@@ -1,0 +1,56 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// ###Pure is never optional: what the archive writer is given always includes m3's own serialization.
+
+import platform::pure::functions::binary::*;
+
+function <<test.Test>> platform::pure::compiler::test::archive::testPureExtensionIsAddedByDefault():Boolean[1]
+{
+   // ###Pure is never optional: a list that does not name pureExtension() still writes m3's elements.
+   let widgetExtension = ^platform::pure::compiler::extension::CompilerExtension(
+      name    = 'Widget',
+      handles = e: platform::pure::protocol::grammar::PackageableElement[1] | false,
+      pdb     = ^platform::pure::pdb::PdbSerialization(
+                   elementTypeName  = e: Any[1] | []->cast(@String)->head(),
+                   writeElementBlob = e: Any[1] | stringToUtf8Bytes('W')));
+   let infos = platform::pure::pdb::archive::elementEntryInfos(
+                  platform::pure::compiler::test::archive::testElements(),
+                  platform::pure::compiler::archive::serializations($widgetExtension));
+   assertEquals(['myPkg', 'myProf'], $infos.path);
+   assertEquals(['Package', 'Profile'], $infos.typeName);
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::archive::testElements():Any[*]
+{
+   // cgt anchors: name-only on the wire (PointerRef arm), but their `type`
+   // must be the REAL class element — in interpreted Pure the cgt is the
+   // instance's runtime type descriptor and drives the match dispatch.
+   let anchorPkg  = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                       type = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::Package')->cast(@Class<Any>));
+   let anchorProf = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                       type = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::extension::Profile')->cast(@Class<Any>));
+   let anchorSt   = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                       type = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::extension::Stereotype')->cast(@Class<Any>));
+   let pkg  = ^platform::pure::metamodel::Package(name = 'myPkg',
+                 classifierGenericType = $anchorPkg,
+                 children = ^platform::pure::metamodel::pointer::ProfilePointer(path = 'myProf'));
+   let prof = ^platform::pure::metamodel::extension::Profile(name = 'myProf',
+                 package = $pkg,
+                 classifierGenericType = $anchorProf,
+                 p_stereotypes = ^platform::pure::metamodel::extension::Stereotype(value = 'st1',
+                    profile = ^platform::pure::metamodel::pointer::ProfilePointer(path = 'myProf'),
+                    classifierGenericType = $anchorSt));
+   [$pkg, $prof];
+}

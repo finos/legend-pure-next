@@ -31,13 +31,13 @@ import java.util.function.Consumer;
 
 /**
  * {@code pure-truffle compile}: boots the Truffle runtime on the base PDBs and runs
- * {@code platform::pure::compiler::pdb::archive::compileModule}, what every host's {@code compile} runs,
+ * {@code platform::pure::compiler::archive::compileModule}, what every host's {@code compile} runs,
  * so that a difference between their PDBs is a difference between the hosts.
  */
 public final class TruffleCompilerBinaryBuilder
 {
     private static final String COMPILE_MODULE_FN_PATH =
-            "platform::pure::compiler::pdb::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
+            "platform::pure::compiler::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
 
     private TruffleCompilerBinaryBuilder()
     {

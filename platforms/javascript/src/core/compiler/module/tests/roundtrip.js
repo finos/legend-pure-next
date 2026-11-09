@@ -14,8 +14,8 @@
 
 // Round-trip harness for the PDB writer, exercised by the compiler tests: take a
 // freshly compiled in-memory graph, serialize it to .pdb bytes with the
-// TRANSLATED SELF-HOSTED PURE WRITER (platform::pure::compiler::pdb::archive +
-// gen::writeX, compiled into generated/pure/compiler/compiler.js — the same Pure code that
+// TRANSLATED SELF-HOSTED PURE WRITER (platform::pure::pdb::archive +
+// gen::writeX, compiled into generated/pure/pdb/pdb.js — the same Pure code that
 // runs on the JVM), reopen those bytes with the TRANSLATED SELF-HOSTED PURE
 // READER (pdb/reader/reader.pure via store.js/pure-reader.js), and re-print the graph
 // straight out of the reader. Diffing that against the direct print is a
@@ -46,8 +46,8 @@ const pathFromEntry = (name) => {
 // CompilerContext.referencedBy (a translated Pure Map); when absent, the
 // overload without it writes no reverse index.
 function pureWriteArchive(elements, referencedBy) {
-    const WRITE = "platform$pure$compiler$pdb$archive$writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Binary_1_";
-    const WRITE_WITH_REFERENCES = "platform$pure$compiler$pdb$archive$writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Map_1__Binary_1_";
+    const WRITE = "platform$pure$compiler$archive$writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Binary_1_";
+    const WRITE_WITH_REFERENCES = "platform$pure$compiler$archive$writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Map_1__Binary_1_";
     const PURE_EXTENSION = "platform$pure$compiler$extension$pureExtension__CompilerExtension_1_";
     const name = referencedBy != null ? WRITE_WITH_REFERENCES : WRITE;
     if (typeof globalThis[name] !== "function" || typeof globalThis[PURE_EXTENSION] !== "function") {

@@ -42,7 +42,7 @@ public class ArchiveNatives
                                 MetadataAccess resolver)
     {
         // entryNames(Binary[1]) : String[*] — every entry, in archive order.
-        natives.put("platform::pure::compiler::pdb::archive::entryNames_Binary_1__String_MANY_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::pdb::archive::entryNames_Binary_1__String_MANY_", (args, eval, genericType, multiplicity) ->
         {
             List<ValueSpecification> names = new ArrayList<>();
             for (String name : names(bytes(args.get(0))))
@@ -53,7 +53,7 @@ public class ArchiveNatives
         });
 
         // entryBytes(Binary[1], String[1]) : Binary[1] — one entry, inflated.
-        natives.put("platform::pure::compiler::pdb::archive::entryBytes_Binary_1__String_1__Binary_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::pdb::archive::entryBytes_Binary_1__String_1__Binary_1_", (args, eval, genericType, multiplicity) ->
         {
             String wanted = (String) _E_ValueSpecification.unwrap(args.get(1));
             byte[] found = entry(bytes(args.get(0)), wanted);

@@ -57,6 +57,7 @@ const GEN = "../../../generated";
 const GEN_MODULES = [
     "pure/compiler/metamodel.js", "pure/grammar/protocol.js", "pure/runtime/functions.js", "ui.js",
     "test.js", "pure/runtime/translator/shared.js", "pure/runtime/translator/javascript.js", "pure/runtime/translator/translation.js",
+    "pure/pdb/pdb.js",
     "pure/compiler/compiler.js",
     // Every extension's translated Pure, from its descriptor — no extension is named here.
     ...EXTENSION_DESCRIPTORS.flatMap((extension) => extension.jsPaths),

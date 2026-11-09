@@ -144,7 +144,7 @@ public final class PureRuntime
                     // writeDotApplication_body), so exclude the namespace from
                     // compilation — it stays interpreted, correctness is
                     // covered by byte-parity tests against the Java reference.
-                    .option("engine.CompileOnly", "~platform::pure::compiler::pdb::");
+                    .option("engine.CompileOnly", "~platform::pure::pdb::");
             // Instrument options (cpusampler.*, pureprofiler.*) and explicit
             // engine.* overrides must go on the Engine, not the Context — when
             // a Context shares an Engine, instrument-scope options can only

@@ -1,7 +1,7 @@
 {
   "name": "tds",
   "packagePattern": "(platform::extensions::pure::tds)(::.*)?",
-  "dependencies": ["core", "compiler", "core_metamodel_pdb_writer"],
+  "dependencies": ["core", "pdb", "pdb_writer", "compiler"],
   "testDependencies": ["core-tests", "compiler-tests"],
   "tests": [
     {"suite": "compiler", "runner": "compiler", "target": "tests/compiler/definition"},

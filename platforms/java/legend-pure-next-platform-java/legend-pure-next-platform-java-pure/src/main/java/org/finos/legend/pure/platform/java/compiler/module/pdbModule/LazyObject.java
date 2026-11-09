@@ -17,7 +17,7 @@ package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.FbsNode;
+import org.finos.legend.pure.m3.platform.pure.pdb.reader.FbsNode;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

@@ -62,10 +62,14 @@ public final class PureNativeLib
 
     /** Embedded PDB resource names (under {@code src/main/resources/}). */
     private static final String EMBEDDED_CORE = "/embedded/core.pdb";
+    private static final String EMBEDDED_PDB = "/embedded/pdb.pdb";
+    private static final String EMBEDDED_PDB_WRITER = "/embedded/pdb_writer.pdb";
     private static final String EMBEDDED_COMPILER = "/embedded/compiler.pdb";
 
     /** Process-wide PDB cache. Populated on first {@link #ensureLoaded} call. */
     private static volatile Path embeddedCorePath;
+    private static volatile Path embeddedPdbPath;
+    private static volatile Path embeddedPdbWriterPath;
     private static volatile Path embeddedCompilerPath;
     private static final Object LOAD_LOCK = new Object();
 
@@ -88,6 +92,8 @@ public final class PureNativeLib
             String out = CTypeConversion.toJavaString(outputDir);
             List<Path> basePdbs = new ArrayList<>();
             basePdbs.add(embeddedCorePath);
+            basePdbs.add(embeddedPdbPath);
+            basePdbs.add(embeddedPdbWriterPath);
             basePdbs.add(embeddedCompilerPath);
             for (String p : splitCsv(CTypeConversion.toJavaString(extraPdbsCsv)))
             {
@@ -135,6 +141,8 @@ public final class PureNativeLib
             String fn = CTypeConversion.toJavaString(functionPath);
             List<String> pdbPaths = new ArrayList<>();
             pdbPaths.add(embeddedCorePath.toString());
+            pdbPaths.add(embeddedPdbPath.toString());
+            pdbPaths.add(embeddedPdbWriterPath.toString());
             pdbPaths.add(embeddedCompilerPath.toString());
             for (String p : splitCsv(CTypeConversion.toJavaString(extraPdbsCsv)))
             {
@@ -217,6 +225,8 @@ public final class PureNativeLib
             Path tmp = Files.createTempDirectory("pure-native-lib-");
             tmp.toFile().deleteOnExit();
             Path core = extractResource(EMBEDDED_CORE, tmp.resolve("core.pdb"));
+            embeddedPdbPath = extractResource(EMBEDDED_PDB, tmp.resolve("pdb.pdb"));
+            embeddedPdbWriterPath = extractResource(EMBEDDED_PDB_WRITER, tmp.resolve("pdb_writer.pdb"));
             Path comp = extractResource(EMBEDDED_COMPILER, tmp.resolve("compiler.pdb"));
             embeddedCorePath = core;
             embeddedCompilerPath = comp;
@@ -230,7 +240,7 @@ public final class PureNativeLib
             if (in == null)
             {
                 throw new IOException("Embedded resource missing: " + resource
-                        + " (was the native-lib build run with shared/core.pdb + shared/compiler.pdb copied into src/main/resources/embedded/?)");
+                        + " (was the native-lib build run with shared/core.pdb + shared/pdb.pdb + shared/pdb_writer.pdb + shared/compiler.pdb copied into src/main/resources/embedded/?)");
             }
             Files.copy(in, dest);
             dest.toFile().deleteOnExit();

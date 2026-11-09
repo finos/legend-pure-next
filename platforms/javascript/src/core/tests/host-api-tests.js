@@ -75,7 +75,7 @@ check("PdbModule.open reads identity from the manifest", () => {
 check("new PdbModule(archive) reads the same identity", () => {
     const compiler = new PdbModule(openZip(readFileSync(join(SHARED, "compiler.pdb"))));
     assert.equal(compiler.name, "compiler");
-    assert.deepEqual([...compiler.dependencies], ["core"]);
+    assert.deepEqual([...compiler.dependencies], ["core", "pdb", "pdb_writer"]);
 });
 
 check("PdbModule is MetadataAccess over its elements", () => {
@@ -121,16 +121,20 @@ check("ModuleRegistry registers modules in order", () => {
     const registry = new ModuleRegistry().useLanguages(CORE);
     const core = PdbModule.open(join(SHARED, "core.pdb"));
     registry.register(core);
+    registry.register(PdbModule.open(join(SHARED, "pdb.pdb")));
+    registry.register(PdbModule.open(join(SHARED, "pdb_writer.pdb")));
     registry.register(PdbModule.open(join(SHARED, "compiler.pdb")));
     assert.equal(core.name, "core");
-    assert.deepEqual(registry.modules.map((m) => m.name), ["core", "compiler"]);
-    assert.deepEqual([...registry.module("compiler").dependencies], ["core"]);
+    assert.deepEqual(registry.modules.map((m) => m.name), ["core", "pdb", "pdb_writer", "compiler"]);
+    assert.deepEqual([...registry.module("compiler").dependencies], ["core", "pdb", "pdb_writer"]);
     assert.equal(registry.module("missing"), null);
 });
 
 check("ModuleRegistry.validate accepts satisfied dependencies", () => {
     const registry = new ModuleRegistry().useLanguages(CORE);
     registry.register(PdbModule.open(join(SHARED, "core.pdb")));
+    registry.register(PdbModule.open(join(SHARED, "pdb.pdb")));
+    registry.register(PdbModule.open(join(SHARED, "pdb_writer.pdb")));
     registry.register(PdbModule.open(join(SHARED, "compiler.pdb")));
     assert.equal(registry.validate(), registry);
 });
@@ -218,7 +222,7 @@ check("PureRuntime.parse parses a ###Pure section, and runtime-lib's __pureParse
 
 check("compiler test sections are contributed only when compiler-tests is registered", () => {
     const withTests = new ModuleRegistry().useLanguages(CORE);
-    for (const pdb of ["core.pdb", "compiler.pdb", "compiler-tests.pdb"]) withTests.register(PdbModule.open(join(SHARED, pdb)));
+    for (const pdb of ["core.pdb", "pdb.pdb", "pdb_writer.pdb", "compiler.pdb", "compiler-tests.pdb"]) withTests.register(PdbModule.open(join(SHARED, pdb)));
     const withoutTests = new ModuleRegistry().useLanguages(CORE);
     withoutTests.register(PdbModule.open(join(SHARED, "core.pdb")));
     // Reached by NAME now: the test sections are a core language from pure/specification/language_test.json,
@@ -304,17 +308,18 @@ check("registerExtension pairs an extension with its module, and validate() enfo
                   /declares module 'diagram' but was given 'core'/);
 
     // The extension's module brings dependencies of its own, and they have to be there too. The
-    // message blames the extension, because the caller asked for an extension and not for 'compiler'.
+    // message blames the extension, because the caller asked for an extension and not for 'pdb'.
     const partial = new ModuleRegistry().useLanguages(CORE);
     partial.register(PdbModule.open(join(SHARED, "core.pdb")));
     partial.registerExtension(diagram, PdbModule.open(join(REPO, diagram.pdbs.find((p) => p.endsWith(`/${diagram.module}.pdb`)))));
-    assert.throws(() => partial.validate(), /declares dependency 'compiler' but it was not loaded/);
+    assert.throws(() => partial.validate(), /declares dependency .pdb. but it was not loaded/);
 
     // Complete, and valid — and validate() may be called as often as you like.
     const paired = new ModuleRegistry().useLanguages(WITH_DIAGRAM);
     paired.register(PdbModule.open(join(SHARED, "core.pdb")));
+    paired.register(PdbModule.open(join(SHARED, "pdb.pdb")));
+    paired.register(PdbModule.open(join(SHARED, "pdb_writer.pdb")));
     paired.register(PdbModule.open(join(SHARED, "compiler.pdb")));
-    paired.register(PdbModule.open(join(SHARED, "core_metamodel_pdb_writer.pdb")));
     paired.registerExtension(diagram, PdbModule.open(join(REPO, diagram.pdbs.find((p) => p.endsWith(`/${diagram.module}.pdb`)))));
     paired.validate().validate();
     assert.equal(paired.extensions.length, 1);

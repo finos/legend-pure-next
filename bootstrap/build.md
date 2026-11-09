@@ -16,8 +16,8 @@ package below is relative to `bootstrap/legend-pure-next-bootstrap/`.
 | `…-interfaces/legend-pure-next-bootstrap-cli:pure-bootstrap` | the CLI: `compile`, `compile-via-pure`, `execute` |
 | `…-interfaces/legend-pure-next-bootstrap-ide:pure-ide` | the IDE server |
 
-compiler-pure is compiled from these in `//pure/specification` (`compiler_pass1`, the generated writer, then
-`compiler_compile`: `compiler.pdb` and `compiler-tests.pdb`). `//:shared` gathers the PDBs and schemas into the
+The PDB format and compiler-pure are compiled from these in `//pure/specification`: `pdb_compile` (`pdb.pdb`), the
+generated writer and archive writer (`pdb_writer_compile`), then `compiler_compile` (`compiler.pdb` and `compiler-tests.pdb`). `//:shared` gathers the PDBs and schemas into the
 `shared/` layout the tests and the language manifests name.
 
 ## Its tests

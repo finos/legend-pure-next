@@ -35,13 +35,13 @@ import java.util.Locale;
 
 /**
  * {@code pure-bootstrap compile-via-pure}: runs
- * {@code platform::pure::compiler::pdb::archive::compileModule}, what every host's {@code compile} runs, on the
+ * {@code platform::pure::compiler::archive::compileModule}, what every host's {@code compile} runs, on the
  * bootstrap's interpreter. {@link CompilerBinaryBuilder}, the Java compiler, is what it is compared with.
  */
 public final class PureRuntimeCompilerBinaryBuilder
 {
     private static final String COMPILE_MODULE =
-            "platform::pure::compiler::pdb::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
+            "platform::pure::compiler::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
 
     private PureRuntimeCompilerBinaryBuilder()
     {

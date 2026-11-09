@@ -56,14 +56,20 @@ public class MetamodelFactoriesWarmWallBenchTest
     {
         Path buildDir = locateBuildDir();
         PdbModule coreLoader = new PdbModule(buildDir.resolve("core.pdb"));
+        PdbModule pdbLoader = new PdbModule(buildDir.resolve("pdb.pdb"));
+        PdbModule pdbWriterLoader = new PdbModule(buildDir.resolve("pdb_writer.pdb"));
         PdbModule compilerLoader = new PdbModule(buildDir.resolve("compiler.pdb"));
         PdbModule parserMappingsLoader = new PdbModule(buildDir.resolve("parser-mappings.pdb"));
         ModuleRegistry registry = new ModuleRegistry();
         registry.register(coreLoader);
+        registry.register(pdbLoader);
+        registry.register(pdbWriterLoader);
         registry.register(compilerLoader);
         registry.register(parserMappingsLoader);
         resolver = registry;
         coreLoader.setResolver(resolver);
+        pdbLoader.setResolver(resolver);
+        pdbWriterLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
         parserMappingsLoader.setResolver(resolver);
 

@@ -169,12 +169,12 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
     pure_compile(
         name = name + "_metamodel_compile",
         srcs = ["module.json", metamodel],
-        base_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb", _CORE + ":core-tests.pdb", "//pure/specification:compiler-tests.pdb"],
+        base_pdbs = [_CORE + ":core.pdb", "//pure/specification:pdb.pdb", "//pure/specification:pdb_writer.pdb", "//pure/specification:compiler.pdb", _CORE + ":core-tests.pdb", "//pure/specification:compiler-tests.pdb"],
         outs = ["metamodel/%s.pdb" % name],
         source_dir = native.package_name(),
         tool = "bootstrap",
     )
-    metamodel_pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb", ":metamodel/%s.pdb" % name]
+    metamodel_pdbs = [_CORE + ":core.pdb", "//pure/specification:pdb.pdb", "//pure/specification:pdb_writer.pdb", "//pure/specification:compiler.pdb", ":metamodel/%s.pdb" % name]
     target_genrule(
         name = name + "_fbs_generate",
         srcs = metamodel_pdbs + [ids, _M3_FBS],
@@ -183,7 +183,7 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
             set -e
             T=$$(mktemp -d)
             $(execpath {cli}) execute {pdbs} \\
-                --function "platform::pure::compiler::pdb::fbsgen::printFbs_String_1__String_1__String_1__Boolean_1_" \\
+                --function "platform::pure::pdb::fbsgen::printFbs_String_1__String_1__String_1__Boolean_1_" \\
                 --args "{package}" $(execpath {m3_fbs}) $(execpath {ids}) > $$T/gen 2> $$T/log || {{ cat $$T/log >&2; exit 1; }}
             awk '/^===FBS-BEGIN===$$/{{f=1;next}} /^===FBS-END===$$/{{f=0}} f' $$T/gen > $(execpath generated/{name}.fbs)
             awk '/^===IDS-BEGIN===$$/{{f=1;next}} /^===IDS-END===$$/{{f=0}} f' $$T/gen > $(execpath generated/{name}-fbs-field-ids.txt)
@@ -204,7 +204,7 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
         visibility = ["//visibility:public"],
         out = "generated/writer.pure",
         pdbs = metamodel_pdbs,
-        function = "platform::pure::compiler::pdb::generator::printExtensionWriter_String_1__String_1__String_1__String_1__Boolean_1_",
+        function = "platform::pure::pdb::generator::printExtensionWriter_String_1__String_1__String_1__String_1__Boolean_1_",
         args = ["$(execpath %s)" % _M3_FBS, "$(execpath :generated/%s.fbs)" % name, metamodel_package, writer_package],
         srcs = [_M3_FBS, ":generated/%s.fbs" % name],
         markers = ("===GENWRITER-BEGIN===", "===GENWRITER-END==="),
@@ -214,7 +214,7 @@ def pure_extension_generated(name, metamodel, metamodel_package, ids, writer_pac
             name = name + "_protocol_generate",
             visibility = ["//visibility:public"],
             out = "generated/protocol.pure",
-            pdbs = [_CORE + ":core.pdb", "//pure/specification:compiler.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb", "//pure/modules/protocol:build/protocol.pdb", ":metamodel/%s.pdb" % name],
+            pdbs = [_CORE + ":core.pdb", "//pure/specification:pdb.pdb", "//pure/specification:pdb_writer.pdb", "//pure/specification:compiler.pdb", "//pure/modules/protocol:build/protocol.pdb", ":metamodel/%s.pdb" % name],
             function = "platform::pure::protocol::generation::generateProtocol_String_1__String_1__String_1_",
             args = [metamodel_package, protocol_package],
         )
@@ -240,7 +240,7 @@ def pure_module(name, base_pdbs, sources = ["."], generated = {}, srcs = None):
     pure_compile(
         name = "compile",
         srcs = srcs,
-        base_pdbs = [_CORE + ":core.pdb", _PARSER_MAPPINGS, "//pure/specification:compiler.pdb", "//pure/specification:core_metamodel_pdb_writer.pdb"] + base_pdbs,
+        base_pdbs = [_CORE + ":core.pdb", _PARSER_MAPPINGS, "//pure/specification:pdb.pdb", "//pure/specification:pdb_writer.pdb", "//pure/specification:compiler.pdb",] + base_pdbs,
         outs = outs,
         source_dir = native.package_name(),
         sources = sources,

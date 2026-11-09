@@ -48,15 +48,21 @@ public class IslandValueReadTest
         }
         Path shared = root.resolve("shared");
         PdbModule core = new PdbModule(shared.resolve("core.pdb"));
+        PdbModule pdb = new PdbModule(shared.resolve("pdb.pdb"));
+        PdbModule pdbWriter = new PdbModule(shared.resolve("pdb_writer.pdb"));
         PdbModule compiler = new PdbModule(shared.resolve("compiler.pdb"));
         PdbModule compilerTests = new PdbModule(shared.resolve("compiler-tests.pdb"));
         PdbModule golden = new PdbModule(root.resolve("pure/specification/compiler/tests/pdb/valueSpecification/island/ref.pdb"));
         registry = new ModuleRegistry();
         registry.register(core);
+        registry.register(pdb);
+        registry.register(pdbWriter);
         registry.register(compiler);
         registry.register(compilerTests);
         registry.register(golden);
         core.setResolver(registry);
+        pdb.setResolver(registry);
+        pdbWriter.setResolver(registry);
         compiler.setResolver(registry);
         compilerTests.setResolver(registry);
         golden.setResolver(registry);

@@ -34,8 +34,8 @@
 // hand-maintained subtype table.
 //
 // The PDB decoding itself is done by the TRANSLATED SELF-HOSTED PURE READER
-// (pdb/reader/reader.pure). The compiler host gets it as part of generated/pure/compiler/compiler.js;
-// this parser-only host loads the small generated/pure/compiler/pdb.js instead
+// (pdb/reader/reader.pure). The compiler host loads the same file;
+// this parser-only host loads the small generated/pure/pdb/pdb.js instead
 // (`bazel build //platforms/javascript:generated`), so it still doesn't depend on the
 // whole generated compiler.
 
@@ -57,7 +57,7 @@ const BUILD = join(HERE, "../../../build");
 const ANTLR_BUNDLE = join(BUILD, "antlr-bundle.js");
 const PARSER_MAPPINGS_BUNDLE = join(BUILD, "parser-mappings-bundle.js");
 const RUNTIME_LIB = join(HERE, "../../../../../pure/modules/translation/javascript/js/runtime-lib.js");
-const PDB_READER = join(HERE, "../../../generated/pure/compiler/pdb.js");
+const PDB_READER = join(HERE, "../../../generated/pure/pdb/pdb.js");
 // The CLASSES the translated parser constructs. A Pure class is emitted as a JavaScript class and
 // `^X(...)` as `new X()._a(1)`, so the module that DEFINES a class has to be loaded in every host
 // that runs code constructing it — this one builds 44 protocol classes plus Pair. Without them the
@@ -134,10 +134,10 @@ export function loadBundle() {
 // its PDB-backed metadata access without the whole generated compiler.
 let pdbReaderLoaded = false;
 export function loadPdbReader() {
-    if (pdbReaderLoaded || typeof globalThis.platform$pure$compiler$pdb$schema$parseFbs_String_1__FbsSchema_1_ === "function") return;
+    if (pdbReaderLoaded || typeof globalThis.platform$pure$pdb$schema$parseFbs_String_1__FbsSchema_1_ === "function") return;
     vm.runInThisContext(
         readBundleFile(PDB_READER, "bazel build //platforms/javascript:generated").replace(/^export /gm, ""),
-        { filename: "pure/compiler/pdb.js" },
+        { filename: "pure/pdb/pdb.js" },
     );
     pdbReaderLoaded = true;
 }
