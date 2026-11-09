@@ -344,21 +344,19 @@ _TRUFFLE_JOBS = {
     "compiler/printer-compiled": "printer-compiled",
     "compiler/pdb": "pdb-golden",
     "core/printer-protocol": "printer-protocol",
-    "java/unit": "translation-deps/language-java",
-    "javascript/unit": "translation-deps/language-javascript",
-    "translation-shared/unit": "translation-deps/translation-shared",
-    "java-translation/unit": "translations/truffle",
 }
+
+_MODULES_DIR = "pure/modules/"
 
 def job_of(host, variant, owner, suite):
     """The CI job that runs a suite of 'owner' on a variant of 'host'."""
     if host == "truffle" and variant == "native":
         return "truffle-native/specifications"
+    # A module under pure/modules: its own job in the matrix of its platform (modules-<platform>/<module>).
+    if host in ["truffle", "java", "javascript"] and MODULES[owner]["dir"].startswith(_MODULES_DIR):
+        return "modules-%s/%s" % (host, MODULES[owner]["dir"][len(_MODULES_DIR):].strip("/").replace("/", "-"))
     if host == "truffle":
         return _TRUFFLE_JOBS.get("%s/%s" % (owner, suite), "truffle-specifications")
-    # The module suites on the Java platform compile and run Java as they go: minutes each, on a runner of their own.
-    if host == "java" and owner in ["java", "java-translation", "javascript", "translation-shared"]:
-        return "translations/java-modules"
     return "translations/" + host
 
 # What a runner tests, which names its test ('test_<kind>') and tags it ('kind:<kind>'), so that a kind runs on every host:

@@ -25,9 +25,10 @@
 #       ├── truffle-native              the native image: [specifications | self-host (Truffle JIT and native image)]
 #       └── truffle                     Truffle: its build, JUnit tests, the compiler corpus, the usage example
 #           ├── truffle-specifications  every other suite on Truffle
-#           └── translation-deps        the module suites on Truffle: [language-java | language-javascript | translation-shared]
-#               └── translations        the Java and JavaScript hosts, the Truffle translator:
-#                                       [java | javascript | truffle | java-modules (the module suites on Java)]
+#           └── translations            the Java and JavaScript hosts, the Truffle translator: [java | javascript | truffle]
+#               ├── modules-truffle     the suites of pure/modules on Truffle, one job per module
+#               ├── modules-java        the same on the Java platform, which compile and run Java as they go
+#               └── modules-javascript  the same on JavaScript
 #   publish-gallery → all-green
 #
 # Jobs hand their work on through the Bazel disk cache (.bazelrc config ci): bootstrap and truffle save
@@ -404,47 +405,9 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
 
-  translation-deps:
-    name: Module suites on Truffle (${{ matrix.target }})
-    needs: truffle
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: language-java
-          - target: language-javascript
-          - target: translation-shared
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v6
-
-      - name: Set up Bazel
-        uses: ./.github/actions/bazel
-        with:
-          restore-from: truffle
-
-      - name: Test
-        run: bazel test --build_tests_only --test_tag_filters=job:translation-deps/${{ matrix.target }} //...
-
-      - name: Collect dashboard reports
-        if: always()
-        run: |
-          mkdir -p test-results
-          node tools/bazel/collect-reports.mjs
-          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
-
-      - name: Upload dashboard reports
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: dashboard-reports-translation-deps-${{ matrix.target }}
-          path: test-results/
-          if-no-files-found: ignore
-
   translations:
     name: Translations (${{ matrix.target }})
-    needs: translation-deps
+    needs: truffle
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -459,8 +422,6 @@ jobs:
           - target: truffle
             gallery: //platforms/truffle:gallery
             gallery_file: truffle-translation-gallery.html
-          # The module suites on the Java platform, which compile and run Java as they go.
-          - target: java-modules
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -470,7 +431,9 @@ jobs:
         with:
           restore-from: truffle
 
+      # Truffle's translator has no test of its own here: its module suites are in modules-truffle, and this entry builds its gallery.
       - name: Test
+        if: matrix.target != 'truffle'
         run: bazel test --build_tests_only --test_tag_filters=job:translations/${{ matrix.target }} //...
 
       - name: Build the gallery
@@ -519,6 +482,134 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
 
+  modules-truffle:
+    name: Modules on Truffle (${{ matrix.module }})
+    needs: translations
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - module: analysis-diagram
+          - module: functions-relation
+          - module: language-java
+          - module: language-javascript
+          - module: protocol
+          - module: translation-java
+          - module: translation-shared
+          - module: translation-truffle
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
+        with:
+          restore-from: truffle
+
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:modules-truffle/${{ matrix.module }} //...
+
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-modules-truffle-${{ matrix.module }}
+          path: test-results/
+          if-no-files-found: ignore
+
+  modules-java:
+    name: Modules on Java (${{ matrix.module }})
+    needs: translations
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - module: analysis-diagram
+          - module: functions-relation
+          - module: language-java
+          - module: language-javascript
+          - module: protocol
+          - module: translation-java
+          - module: translation-shared
+          - module: translation-truffle
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
+        with:
+          restore-from: truffle
+
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:modules-java/${{ matrix.module }} //...
+
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-modules-java-${{ matrix.module }}
+          path: test-results/
+          if-no-files-found: ignore
+
+  modules-javascript:
+    name: Modules on JavaScript (${{ matrix.module }})
+    needs: translations
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - module: analysis-diagram
+          - module: functions-relation
+          - module: language-javascript
+          - module: protocol
+          - module: translation-javascript
+          - module: translation-shared
+          - module: translation-truffle
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Set up Bazel
+        uses: ./.github/actions/bazel
+        with:
+          restore-from: truffle
+
+      - name: Test
+        run: bazel test --build_tests_only --test_tag_filters=job:modules-javascript/${{ matrix.module }} //...
+
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results
+          node tools/bazel/collect-reports.mjs
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-modules-javascript-${{ matrix.module }}
+          path: test-results/
+          if-no-files-found: ignore
+
   publish-gallery:
     name: Publish galleries and test dashboard to GitHub Pages
     needs:
@@ -530,8 +621,10 @@ jobs:
       - truffle
       - truffle-native
       - truffle-specifications
-      - translation-deps
       - translations
+      - modules-truffle
+      - modules-java
+      - modules-javascript
     if: ${{ !cancelled() && github.repository == 'finos/legend-pure-next' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     # Serialise Pages deploys so rapid main pushes don't race. `cancel-in-progress:
@@ -665,8 +758,10 @@ jobs:
       - truffle
       - truffle-native
       - truffle-specifications
-      - translation-deps
       - translations
+      - modules-truffle
+      - modules-java
+      - modules-javascript
       - publish-gallery
     if: always()
     runs-on: ubuntu-24.04
