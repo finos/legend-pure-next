@@ -63,6 +63,11 @@ Class platform::extensions::language::java::translation::Conventions
    // its declarator on, so `let x = <lambda>` already binds `x` inside the
    // lambda — unlike `scope`, which follows Pure's binding order.
    javaLocals       : String[*];
+   // The Java booleans in scope saying whether a Pure parameter was passed updatable in place, by its name: a fold step's
+   // accumulator (see foldUpdatingInPlace). A use the compiler marked updatable in place if that parameter was passed updatable in place reads it.
+   updatableInPlaceFlags   : Pair<String, String>[*];
+   // The next lambda translated is handed each element of a list that alone holds it (elementsUpdatableInPlace).
+   elementParameterUpdatableInPlace : Boolean[0..1];
    functionCoders  : Map<String, platform::pure::metamodel::function::Function<{FunctionExpression[1], Conventions[1] -> Code[1]}>>[1];
    // Which parameter of the function being translated witnesses each of its
    // type parameters: `castAsHint<T>(value:Any[1], hint:T[1])` casts to T, and
@@ -369,7 +374,7 @@ function platform::extensions::language::java::translation::conventionsFor(baseP
          pair('platform::pure::functions::collection::filter_T_MANY__Function_1__T_MANY_', filterCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::collection::removeDuplicates_T_MANY__Function_$0_1$__Function_$0_1$__T_MANY_', removeDuplicatesCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::collection::removeAll_T_MANY__T_MANY__T_MANY_', removeAllCoder_FunctionExpression_1__Conventions_1__Code_1_),
-         pair('platform::pure::functions::boolean::is_Any_1__Any_1__Boolean_1_', isCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('platform::pure::functions::boolean::is_Any_MANY__Any_MANY__Boolean_1_', isCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::collection::at_T_MANY__Integer_1__T_1_', atCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::string::reverseString_String_1__String_1_', reverseStringCoder_FunctionExpression_1__Conventions_1__Code_1_),
          pair('platform::pure::functions::io::directoryTree_String_1__String_MANY_', directoryTreeCoder_FunctionExpression_1__Conventions_1__Code_1_),
@@ -858,30 +863,22 @@ function <<access.private>> platform::extensions::language::java::translation::t
    $extracted->fitToType($feRetType->toBoxed(), $conv);
 }
 
-// Collection slice + transform — Pure's `take`/`drop`/`map` over `[*]` map
-// onto Java `Stream` ops with `.toList()` (Java 16+ shortcut for
-// `.collect(Collectors.toList())`). The 4-arg j_invoke variant carries an
-// explicit return type since these stream methods aren't in apiKnowledge.
+// Collection slice + transform — Pure's `take`/`drop`/`map` over `[*]`: each a
+// PureCollections call returning a fresh list.
 function <<access.private>> platform::extensions::language::java::translation::takeCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'takeCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
-   let coll = $conv->translateAsList($fe.parametersValues->at(0));
-   // A negative count takes nothing; Stream.limit would throw on it.
-   let n    = j_invoke(javaMath(), 'max', [j_long(0), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong())], javaLong());
-   $coll->j_invoke('stream', [], javaStream(javaObject()))
-        ->j_invoke('limit',  [$n], javaStream(javaObject()))
-        ->j_invoke('toList', [], javaList(javaObject()));
+   // A negative count takes nothing (PureCollections.take clamps it).
+   $conv->runtimeCall('PureCollections', 'take',
+      [$conv->translateAsList($fe.parametersValues->at(0)), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong())], javaList());
 }
 
 function <<access.private>> platform::extensions::language::java::translation::dropCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'dropCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
-   let coll = $conv->translateAsList($fe.parametersValues->at(0));
-   // A negative count drops nothing; Stream.skip would throw on it.
-   let n    = j_invoke(javaMath(), 'max', [j_long(0), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong())], javaLong());
-   $coll->j_invoke('stream', [], javaStream(javaObject()))
-        ->j_invoke('skip',   [$n], javaStream(javaObject()))
-        ->j_invoke('toList', [], javaList(javaObject()));
+   // A negative count drops nothing (PureCollections.drop clamps it).
+   $conv->runtimeCall('PureCollections', 'drop',
+      [$conv->translateAsList($fe.parametersValues->at(0)), $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong())], javaList());
 }
 
 // map's second arg is an AtomicValue holding a LambdaFunction; the scalar
@@ -907,7 +904,7 @@ function <<access.private>> platform::extensions::language::java::translation::a
            j_block([j_return(
               j_invoke(javaClass($conv->pdbClass('Metadata')), 'invoke',
                  [$f->toObjectCode(),
-                  j_invoke(javaClass('java.util.List'), 'of', [j_variable(javaObject(), 'pureFnArg')], javaList())],
+                  newPureList([j_variable(javaObject(), 'pureFnArg')], javaList())],
                  javaObject()))]))
            ->j_castWithoutChecks(javaClass('java.util.function.Function')));
 }
@@ -918,7 +915,7 @@ function <<access.private>> platform::extensions::language::java::translation::m
    let coll = $conv->translateAsList($fe.parametersValues->at(0));
    let fnArg = $fe.parametersValues->at(1);
    let f    = $conv->platform::extensions::language::java::translation::asJavaFunctionValue(
-                  $conv->translateExpression($fnArg),
+                  ^$conv(elementParameterUpdatableInPlace = $fe.parametersValues->at(0)->elementsMarkedUpdatableInPlace() && $fnArg->instanceOf(platform::pure::metamodel::valuespecification::AtomicValue))->translateExpression($fnArg),
                   $fnArg->instanceOf(platform::pure::metamodel::valuespecification::VariableExpression));
    // Pure's map concatenates the results: a to-many result is flattened and an
    // empty one (null) dropped.
@@ -1005,7 +1002,7 @@ function <<access.private>> platform::extensions::language::java::translation::e
    if ($conv.metadataElements,
       | j_invoke(javaClass($conv->pdbClass('Metadata')), 'invoke',
                  [$lambdaCode->typedFunctionValue(),
-                  j_invoke(javaArrays(), 'asList', $evalArgs->map(a | $a->typedFunctionValue()), javaList())], javaObject()),
+                  newPureList($evalArgs->map(a | $a->typedFunctionValue()), javaList())], javaObject()),
    |if ($evalArgs->isEmpty(),
        | $lambdaCode->j_cast(javaSupplier(javaObject()))->j_invoke('get', [], javaObject()),
        |if ($evalArgs->size() == 1,
@@ -1330,8 +1327,7 @@ function <<access.private>> platform::extensions::language::java::translation::t
 function <<access.private>> platform::extensions::language::java::translation::conditionalBranch(code: Code[1], type: platform::extensions::language::java::metamodel::Type[1], many: Boolean[1], conv: Conventions[1]): Code[1]
 {
    let isList       = $code.type->platform::extensions::language::java::serialization::typeToString()->startsWith('java.util.List');
-   let isEmptyList  = $code->instanceOf(platform::extensions::language::java::metamodel::StaticMethodCall)
-                      && $code->cast(@platform::extensions::language::java::metamodel::StaticMethodCall).methodName == 'emptyList';
+   let isEmptyList  = $code->isEmptyPureList();
    if ($many && $isList, | $code->j_castWithoutChecks(javaList()),
    |if ($many,           | $conv->runtimeCall('PureValues', 'list', [$code->toObjectCode()], javaList()),
    |if ($isEmptyList,    | j_null(),
@@ -1503,31 +1499,11 @@ function <<access.private>> platform::extensions::language::java::translation::i
    $conv->runtimeCall('PureCollections', 'init', [$conv->translateAsList($fe.parametersValues->at(0))], javaList());
 }
 
-// `reverse(coll)` — Pure: returns a fresh reversed list. {@code Collections.reverse}
-// mutates in place, so we wrap in a copy first via {@code new ArrayList<>(coll)}.
-// Pass the raw listCode (no Collection cast) into the ArrayList ctor; Java's
-// {@code <? extends T>} ArrayList(Collection) overload accepts any List
-// directly. Casting to {@code Collection<Object>} would flip the variance
-// rules and fail to compile.
+// `reverse(coll)` — Pure: returns a fresh reversed list (PureCollections.reverse).
 function <<access.private>> platform::extensions::language::java::translation::reverseCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'reverseCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   let listCode = $conv->translateExpression($fe.parametersValues->at(0));
-   // Raw ArrayList / raw List throughout the Supplier IIFE — same rationale
-   // as {@link tailCoder}'s raw-type choice: the result threads into method
-   // signatures whose return type is e.g. {@code List<String>}, which raw
-   // List flows into without an invariant-generics rejection.
-   let rawList = javaList();
-   let copy = j_new(javaArrayList(), [$listCode]);
-   let reverseCall = j_invoke(javaCollections(), 'reverse', [j_variable($rawList, 'list')], javaVoid());
-   let supplierBody = j_block([
-      j_declare($rawList, 'list', $copy),
-      j_expressionStatement($reverseCall),
-      j_return(j_variable($rawList, 'list'))
-   ]);
-   j_lambda([], $supplierBody)
-      ->j_cast(javaSupplier($rawList))
-      ->j_invoke('get', [], $rawList);
+   $conv->updatableInPlaceCall($fe.parametersValues->at(0), 'reverse', [$conv->translateAsList($fe.parametersValues->at(0))]);
 }
 
 // `parseFloat(str)` — Pure: returns Float. Java: {@code Double.parseDouble(s)}
@@ -1629,7 +1605,7 @@ function <<access.private>> platform::extensions::language::java::translation::s
    // would split on every character. -1 keeps trailing empty strings, as Pure does.
    let quoted = j_invoke(javaClass('java.util.regex.Pattern'), 'quote', [$token->j_cast(javaString())], javaString());
    let array = $s->j_cast(javaString())->j_invoke('split', [$quoted, j_int(-1)], javaObject());
-   j_invoke(javaArrays(), 'asList', [$array], javaList(javaString()));
+   newPureList([$array], javaList(javaString()));
 }
 
 // `matches(s, regexp)` — Java's String.matches anchors implicitly to the
@@ -1815,20 +1791,14 @@ function <<access.private>> platform::extensions::language::java::translation::e
       | j_invoke(javaString(), 'valueOf', [$el], javaString()));
 }
 
-// `concatenate(a, b)` — return a new List combining both. Use
-// {@code Stream.concat(a.stream(), b.stream()).toList()} (mutable-safe;
-// returns an unmodifiable List which Pure handles fine).
+// `concatenate(a, b)` — a fresh List, a's values then b's (PureCollections.concatenate).
+// translateAsList lifts a lone value and turns a null into an empty list; the
+// runtime takes raw lists, so typed lists of different element types mix.
 function <<access.private>> platform::extensions::language::java::translation::concatenateCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'concatenateCoder expects exactly 2 arguments');
-   // Raw lists: concatenating typed lists of different element types
-   // (List<Long> with List<String>) infers an intersection element type that
-   // isn't List<Object>. translateAsList also lifts a lone value and turns a
-   // null into an empty list.
-   let sa = $conv->translateAsList($fe.parametersValues->at(0))->j_invoke('stream', [], javaStream(javaObject()));
-   let sb = $conv->translateAsList($fe.parametersValues->at(1))->j_invoke('stream', [], javaStream(javaObject()));
-   j_invoke(javaClass('java.util.stream.Stream'), 'concat', [$sa, $sb], javaStream(javaObject()))
-      ->j_invoke('toList', [], javaList(javaObject()));
+   $conv->updatableInPlaceCall($fe.parametersValues->at(0), 'concatenate',
+      [$conv->translateAsList($fe.parametersValues->at(0)), $conv->translateAsList($fe.parametersValues->at(1))]);
 }
 
 function <<access.private>> platform::extensions::language::java::translation::collectionStream(conv: Conventions[1], code: Code[1]): Code[1]
@@ -1873,7 +1843,7 @@ function <<access.private>> platform::extensions::language::java::translation::t
    // through SAM inference — no per-element cast needed.
    let suplType = javaSupplier(javaObject());
    let thunks   = $coll.values->map(v | $conv->translateExpression($v));
-   j_invoke(javaArrays(), [$suplType], 'asList', $thunks, javaList($suplType));
+   j_invoke(pureListClass(), [$suplType], 'newListWith', $thunks, javaList($suplType));
 }
 
 // `slice(coll, start, end)` — Pure: returns elements [start, end). Java:
@@ -1915,34 +1885,20 @@ function <<access.private>> platform::extensions::language::java::translation::f
         ->j_invoke('allMatch', [$pred->asPredicate()], javaBoolean());
 }
 
-// `add(set, val)` and `add(set, offset, val)` — return a new list with val
-// appended (2-arg) or inserted at offset (3-arg). Pure semantics are
-// immutable so copy first; same raw-List rationale as {@link tailCoder} to
-// keep return-type inference quiet.
+// `add(set, val)` and `add(set, offset, val)` — a fresh list with val appended
+// (2-arg) or inserted at offset (3-arg): PureCollections.add.
 function <<access.private>> platform::extensions::language::java::translation::addCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    let n = $fe.parametersValues->size();
    assert($n == 2 || $n == 3, | 'addCoder expects 2 or 3 arguments, got ' + $n->toString());
    // translateAsList: inside fold's reducer the collection is an Object-typed
-   // accumulator, and `new ArrayList(Object)` has no matching constructor.
+   // accumulator, and the runtime takes a List.
    let coll = $conv->translateAsList($fe.parametersValues->at(0));
-   let copy = j_new(javaArrayList(), [$coll]);
-   // Wrap in a Supplier IIFE so the multi-statement (copy + add + return)
-   // stays expression-shaped — Java won't accept it inline otherwise.
-   let rawList = javaList();
-   let addStmt = if ($n == 2,
-      | let v = $conv->translateExpression($fe.parametersValues->at(1));
-        j_expressionStatement(j_invoke(j_variable($rawList, 'list'), 'add', [$v], javaBoolean()));,
-      | let off = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaInt());
-        let v   = $conv->translateExpression($fe.parametersValues->at(2));
-        j_expressionStatement(j_invoke(j_variable($rawList, 'list'), 'add', [$off, $v], javaVoid()));
+   let args = if ($n == 2,
+      | [$coll, $conv->translateExpression($fe.parametersValues->at(1))->toObjectCode()],
+      | [$coll, $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaLong()), $conv->translateExpression($fe.parametersValues->at(2))->toObjectCode()]
    );
-   let body = j_block([
-      j_declare($rawList, 'list', $copy),
-      $addStmt,
-      j_return(j_variable($rawList, 'list'))
-   ]);
-   j_lambda([], $body)->j_cast(javaSupplier($rawList))->j_invoke('get', [], $rawList);
+   $conv->updatableInPlaceCall($fe.parametersValues->at(0), 'add', $args);
 }
 
 // `chunk(s, n)` — split a String into fixed-size pieces. Emit an IntStream
@@ -1962,6 +1918,108 @@ function <<access.private>> platform::extensions::language::java::translation::v
    j_lambda([j_parameter($argType, 'pureIifeIn')], j_block($body))
       ->j_cast(javaFunction($argType, $resultType))
       ->j_invoke('apply', [$arg], $resultType);
+}
+
+// The class every list the generated code builds is: an Eclipse Collections
+// FastList — fresh, growable and never shared, which is what lets a value the
+// compiler marks `updatableInPlace` be grown in place (PureCollections.isGrowable).
+function <<access.private>> platform::extensions::language::java::translation::pureListClass(): platform::extensions::language::java::metamodel::Class[1]
+{
+   javaClass('org.eclipse.collections.impl.list.mutable.FastList');
+}
+
+// A fresh list of `values` (`FastList.newListWith(...)`, or `FastList.newList()`
+// when there are none), typed `type` for the translator.
+function <<access.private>> platform::extensions::language::java::translation::newPureList(values: Code[*], type: platform::extensions::language::java::metamodel::Type[1]): Code[1]
+{
+   if ($values->isEmpty(),
+      | j_invoke(pureListClass(), 'newList', [], $type),
+      | j_invoke(pureListClass(), 'newListWith', $values, $type));
+}
+
+// Is `code` the empty list newPureList emits?
+function <<access.private>> platform::extensions::language::java::translation::isEmptyPureList(code: Code[1]): Boolean[1]
+{
+   $code->instanceOf(platform::extensions::language::java::metamodel::StaticMethodCall)
+      && $code->cast(@platform::extensions::language::java::metamodel::StaticMethodCall).methodName == 'newList'
+      && $code->cast(@platform::extensions::language::java::metamodel::StaticMethodCall).arguments->isEmpty();
+}
+
+// The runtime method for a collection operation on `receiver`: its in-place variant (`addInPlace`, ...) when the
+// compiler marked the receiver updatable in place — it holds the only reference to its value
+// (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md) —, the IfUpdatableInPlace one given the flag when it is updatable in place provided a parameter
+// whose flag is in scope was passed updatable in place, else the copying one. The in-place variants still copy a list the
+// runtime did not allocate (PureCollections.isGrowable).
+function <<access.private>> platform::extensions::language::java::translation::updatableInPlaceCall(conv: Conventions[1], receiver: ValueSpecification[1], method: String[1], args: Code[*]): Code[1]
+{
+   let flag = $conv->updatableInPlaceFlagOfValue($receiver);
+   if ($receiver->markedUpdatableInPlace(),
+      | $conv->runtimeCall('PureCollections', $method + 'InPlace', $args, javaList()),
+      | if ($flag->isNotEmpty(),
+           | $conv->runtimeCall('PureCollections', $method + 'IfUpdatableInPlace', $args->concatenate(j_variable(javaBoolean(), $flag->toOne())), javaList()),
+           | $conv->runtimeCall('PureCollections', $method, $args, javaList())));
+}
+
+// The Java boolean saying whether the parameter a use is conditionally updatable in place on was passed updatable in place, when one is
+// in scope.
+function <<access.private>> platform::extensions::language::java::translation::updatableInPlaceFlagOf(conv: Conventions[1], ve: VariableExpression[0..1]): String[0..1]
+{
+   if ($ve->isEmpty() || $ve.updatableInPlaceIfParameter->isEmpty(),
+      | [],
+      | $conv.updatableInPlaceFlags->filter(f | $f.first == $ve.updatableInPlaceIfParameter->toOne())->map(f | $f.second)->head());
+}
+
+// The flag of the parameter a use or an expression is updatable in place on (updatableInPlaceIfParameter), when one is in scope: a
+// variable's use, or a function expression the compiler marked (a key value, a read of a field's own collection).
+function <<access.private>> platform::extensions::language::java::translation::updatableInPlaceFlagOfValue(conv: Conventions[1], vs: ValueSpecification[1]): String[0..1]
+{
+   let parameter = $vs->match([
+      ve: VariableExpression[1] | $ve.updatableInPlaceIfParameter,
+      fe: FunctionExpression[1] | $fe.updatableInPlaceIfParameter,
+      other: ValueSpecification[1] | []->cast(@String)
+   ]);
+   if ($parameter->isEmpty(), | [], | $conv.updatableInPlaceFlags->filter(f | $f.first == $parameter->toOne())->map(f | $f.second)->head());
+}
+
+// Whether the compiler proved each element of this list argument referenced only by it (elementsUpdatableInPlace).
+function <<access.private>> platform::extensions::language::java::translation::elementsMarkedUpdatableInPlace(vs: ValueSpecification[1]): Boolean[1]
+{
+   $vs->match([
+      ve: VariableExpression[1] | $ve.elementsUpdatableInPlace == true,
+      fe: FunctionExpression[1] | $fe.elementsUpdatableInPlace == true,
+      other: ValueSpecification[1] | false
+   ]);
+}
+
+// Whether the compiler marked a variable's use, or a function expression, updatable in place.
+function <<access.private>> platform::extensions::language::java::translation::markedUpdatableInPlace(vs: ValueSpecification[1]): Boolean[1]
+{
+   $vs->match([
+      ve: VariableExpression[1] | $ve.updatableInPlace == true,
+      fe: FunctionExpression[1] | $fe.updatableInPlace == true,
+      other: ValueSpecification[1] | false
+   ]);
+}
+
+// Whether `code` is the literal `false`, as updatableInPlaceCode writes a value that may be shared.
+function <<access.private>> platform::extensions::language::java::translation::isFalseLiteral(code: Code[1]): Boolean[1]
+{
+   $code->codeToText() == 'false'
+}
+
+function <<access.private>> platform::extensions::language::java::translation::codeToText(code: Code[1]): String[1]
+{
+   $code->platform::extensions::language::java::serialization::codeToString()
+}
+
+// Whether a value is updatable in place once computed, as Java: a use the compiler marked updatable in place, or updatable in place if a parameter
+// whose flag is in scope was passed updatable in place. Anything else may be shared.
+function <<access.private>> platform::extensions::language::java::translation::updatableInPlaceCode(conv: Conventions[1], vs: ValueSpecification[1]): Code[1]
+{
+   let flag = $conv->updatableInPlaceFlagOfValue($vs);
+   if ($vs->markedUpdatableInPlace(),
+      | j_boolean(true),
+      | if ($flag->isNotEmpty(), | j_variable(javaBoolean(), $flag->toOne()), | j_boolean(false)));
 }
 
 // A call to a class of the runtime library (platforms/java/…/runtime): PureValues, PureCollections,
@@ -2125,7 +2183,7 @@ function <<access.private>> platform::extensions::language::java::translation::m
    let type = $conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed();
    $conv->runtimeCall('PureMemo', 'memoize',
                       [$conv->translateExpression($fe.parametersValues->at(0))->typedFunctionValue(),
-                       j_invoke(javaArrays(), 'asList', $args, javaList())], javaObject())
+                       newPureList($args, javaList())], javaObject())
       ->fitToType($type, $conv);
 }
 
@@ -2307,18 +2365,15 @@ function <<access.private>> platform::extensions::language::java::translation::c
         $conv->runtimeCall('PureCollections', 'contains', [$conv->translateAsList($fe.parametersValues->at(0)), $val->toObjectCode(), $conv->translateExpression($fe.parametersValues->at(2))->j_castWithoutChecks(javaClass('java.util.function.BiFunction'))], javaBoolean()));
 }
 
-// `filter(coll, predicate)` — Stream.filter + toList. The predicate is a
-// Pure `Function<{T[1] -> Boolean[1]}>` value; translateScalarAtomicValue
-// produces the Java functional-interface lambda for the literal-closure
-// case (the common one).
+// `filter(coll, predicate)` — PureCollections.filter, a fresh list. The
+// predicate is a Pure `Function<{T[1] -> Boolean[1]}>` value; asPredicate
+// adapts it to a java.util.function.Predicate.
 function <<access.private>> platform::extensions::language::java::translation::filterCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'filterCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
    let coll = $conv->translateAsList($fe.parametersValues->at(0));
    let pred = $conv->translateExpression($fe.parametersValues->at(1));
-   $coll->j_invoke('stream',  [], javaStream(javaObject()))
-        ->j_invoke('filter',  [$pred->asPredicate()], javaStream(javaObject()))
-        ->j_invoke('toList',  [], javaList(javaObject()));
+   $conv->runtimeCall('PureCollections', 'filter', [$coll, $pred->asPredicate()], javaList());
 }
 
 // `removeDuplicates(coll)`, `(coll, eql)` and `(coll, key, eql)` — PureCollections.removeDuplicates.
@@ -3195,10 +3250,12 @@ function <<access.private>> platform::extensions::language::java::translation::c
 {
    let className = $target->cast(@platform::pure::metamodel::PackageableElement).name->toOne();
    let name      = if ($constraint.name->isEmpty(), | '0', | $constraint.name->toOne());
-   let condition = $conv->translateExpression($constraint.functionDefinition.expressionSequence->toOne())->asBooleanCode();
+   // A constraint never owns what it checks: no updatability flag of the code around it applies inside it.
+   let checking  = ^$conv(updatableInPlaceFlags = []);
+   let condition = $checking->translateExpression($constraint.functionDefinition.expressionSequence->toOne())->asBooleanCode();
    let prefix    = j_string('Constraint :[' + $name + '] violated in the Class ' + $className);
    let message   = $constraint.messageFunction->map(m |
-                      j_string(', Message: ')->j_plus($conv->translateExpression($m.expressionSequence->toOne())->j_castWithoutChecks(javaString())));
+                      j_string(', Message: ')->j_plus($checking->translateExpression($m.expressionSequence->toOne())->j_castWithoutChecks(javaString())));
    let text      = $message->fold({m, acc | $acc->j_plus($m)}, $prefix);
    j_if(j_not($condition), j_throw(j_new(javaClass('java.lang.RuntimeException'), [$text])));
 }
@@ -3266,6 +3323,55 @@ function <<access.private>> platform::extensions::language::java::translation::f
    // The reducer (Object, Object) → Object around the translated lambda. A fold of many (its accumulator V[*]) keeps
    // its accumulator a list: a step may give ONE value (V[*] admits it), which the next reads back as many.
    let many    = $fe.func->toOne()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath() == 'platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_';
+   let lambda  = $lambdaArg->match([
+                    av: AtomicValue[1] | $av.value->filter(v | $v->instanceOf(LambdaFunction))->map(l | $l->cast(@LambdaFunction<Any>))->head(),
+                    other: ValueSpecification[1] | []
+                 ]);
+   if ($lambda->isNotEmpty() && ($lambda.parameters->size() == 2)
+         && $lambda.expressionSequence->platform::extensions::pure::translation::inPlaceUpdate::flagReaders($lambda.parameters->at(1).name)->isNotEmpty(),
+      | $conv->foldUpdatingInPlace($fe, $lambda->toOne(), $coll, $init, $many),
+      | $conv->streamFold($fe, $lambdaArg, $coll, $init, $many));
+}
+
+// A fold whose step may take its accumulator over when it holds the only reference to it (it reads the accumulator's
+// flag, flagReaders): PureCollections.fold tells each step, from whether the
+// start value was passed updatable in place and from the step's result summary (resultUpdatableInPlace, resultUpdatableInPlaceIfParameter).
+function <<access.private>> platform::extensions::language::java::translation::foldUpdatingInPlace(conv: Conventions[1], fe: FunctionExpression[1], lambda: LambdaFunction<Any>[1], coll: Code[1], init: Code[1], many: Boolean[1]): Code[1]
+{
+   let accumulator = $lambda.parameters->at(1).name;
+   let call = $conv->runtimeCall('PureCollections', 'fold',
+        [$coll, $init, $conv->updatableInPlaceCode($fe.parametersValues->at(2)),
+         j_boolean($lambda.resultUpdatableInPlace == true), j_boolean($lambda.resultUpdatableInPlaceIfParameter == $accumulator), j_boolean($many),
+         $conv->translateFoldStep($lambda, $fe.parametersValues->at(0)->elementsMarkedUpdatableInPlace())], javaObject());
+   $call->j_castWithoutChecks($conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed());
+}
+
+// The step of a fold updatable in place: `(elt, acc, accUpdatableInPlace) -> body`, its third parameter the flag a use of the accumulator
+// updatable in place if it was passed updatable in place reads (updatableInPlaceFlags). Otherwise as translateLambdaValue.
+function <<access.private>> platform::extensions::language::java::translation::translateFoldStep(conv: Conventions[1], lambda: LambdaFunction<Any>[1], elementUpdatableInPlace: Boolean[1]): Code[1]
+{
+   let params  = $lambda.parameters;
+   let taken   = $conv.scope->concatenate($conv.javaLocals)->map(n | $conv->platform::extensions::language::java::translation::javaNameFor($n));
+   let named   = ^$conv(scope   = $conv.scope->concatenate($params->map(p | $p.name)),
+                        renames = $params->map(p | $p->platform::extensions::language::java::translation::renameIfShadowing($taken))
+                                          ->concatenate($conv.renames));
+   let flag    = $named->platform::extensions::language::java::translation::javaNameFor($params->at(1).name) + '_pureUpdatableInPlace';
+   let elementFlag = if($elementUpdatableInPlace, | pair($params->at(0).name, 'true'), | []->cast(@Pair<String, String>));
+   let inner   = ^$named(updatableInPlaceFlags = pair($params->at(1).name, $flag)->concatenate($elementFlag)->concatenate($conv.updatableInPlaceFlags->filter(f | !$params.name->contains($f.first))));
+   let jParams = $params->map(p | j_parameter(javaTypeVar('var'), $inner->platform::extensions::language::java::translation::javaNameFor($p.name) + '_pureArg'))
+                   ->concatenate(j_parameter(javaTypeVar('var'), $flag));
+   let rebinds = $params->map(p | $inner->rebindLambdaParameter($p));
+   let exprs   = $lambda.expressionSequence;
+   let stmts   = if ($exprs->size() == 1,
+      | [j_return($inner->translateExpression($exprs->toOne()))],
+      | $inner->buildJavaBody($exprs->toOneMany())
+   );
+   j_lambda($jParams, j_block($rebinds->concatenate($stmts)));
+}
+
+// Any other fold: Stream.reduce over the translated lambda.
+function <<access.private>> platform::extensions::language::java::translation::streamFold(conv: Conventions[1], fe: FunctionExpression[1], lambdaArg: ValueSpecification[1], coll: Code[1], init: Code[1], many: Boolean[1]): Code[1]
+{
    let reducer = $conv->buildFoldReducer($lambdaArg, $many);
    // Prefixed names: a lambda parameter may not shadow one of the enclosing
    // method's, and a Pure function is free to call its own parameters a and b.
@@ -3370,10 +3476,10 @@ function <<access.private>> platform::extensions::language::java::translation::l
 {
    let lambdas   = $fe.parametersValues->at(1)->matchLambdas();
    let fnType    = if ($withExtra, | javaClass('java.util.function.BiFunction'), | javaClass('java.util.function.Function'));
-   let arms      = j_invoke(javaArrays(), 'asList', $lambdas->map(l | $conv->translateLambdaValue($l)->j_castWithoutChecks($fnType)), javaList());
+   let arms      = newPureList($lambdas->map(l | $conv->translateLambdaValue($l)->j_castWithoutChecks($fnType)), javaList());
    let params    = $lambdas->map(l | $l.parameters->at(0));
-   let bounds    = j_invoke(javaArrays(), 'asList', $params->map(p | $p.multiplicity->matchBounds())->map(b | j_long($b)), javaList());
-   let classes   = j_invoke(javaArrays(), 'asList', $params->map(p | $conv->matchClassLiteral($p)), javaList());
+   let bounds    = newPureList($params->map(p | $p.multiplicity->matchBounds())->map(b | j_long($b)), javaList());
+   let classes   = newPureList($params->map(p | $conv->matchClassLiteral($p)), javaList());
    let extra     = if ($withExtra, | $conv->translateExpression($fe.parametersValues->at(2))->toObjectCode(), | j_null());
    let many      = if ($fe.multiplicity->holdsManyValues(), | j_true(), | j_false());
    j_invoke(javaClass($conv->platform::extensions::language::java::translation::runtimeClass('PureMatch')), 'match',
@@ -3670,12 +3776,8 @@ function platform::extensions::language::java::translation::translateExpression(
       fe: FunctionExpression[1] | $conv->translateFunctionExpression($fe),
       // Compiled-form list literal (`[a, b, c]` / `[]`). Each element is
       // itself a VS, so recurse via translateExpression and concatenate into
-      // a `List<Object>`. The Arrays.asList variant boxes primitives via the
-      // standard auto-boxing path; Collections.emptyList handles `[]`.
-      c: Collection[1]          | if ($c.values->isEmpty(),
-                                      | j_invoke(javaCollections(), 'emptyList', [], javaList(javaObject())),
-                                      | j_invoke(javaArrays(), 'asList', $c.values->map(v | $conv->translateExpression($v)), javaList(javaObject()))
-                                  ),
+      // a fresh `List<Object>` (newPureList, primitives auto-boxed).
+      c: Collection[1]          | newPureList($c.values->map(v | $conv->translateExpression($v)), javaList(javaObject())),
       // `@CC_Person` — a type written as a value. With metadata it is the
       // holder the platform builds for that type.
       h: platform::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder[1] | $conv->translateTypeHolder($h),
@@ -3726,7 +3828,7 @@ function <<access.private>> platform::extensions::language::java::translation::s
 {
    if([pair(| $values->isEmpty(), | $acc),
        pair(| $values->size() == 1, | $acc->j_invoke('_' + $p.name->toOne(), [$conv->translateMetamodelValue($values->toOne())], $clsType))],
-      | $acc->j_invoke('_' + $p.name->toOne(), [j_invoke(javaArrays(), 'asList', $values->map(x | $conv->translateMetamodelValue($x)), javaList(javaObject()))], $clsType));
+      | $acc->j_invoke('_' + $p.name->toOne(), [newPureList($values->map(x | $conv->translateMetamodelValue($x)), javaList(javaObject()))], $clsType));
 }
 
 // Every property of `cls`, inherited ones included, metamodel ancestors and all (allUserProperties stops at them).
@@ -3871,7 +3973,15 @@ function <<access.private>> platform::extensions::language::java::translation::t
    // is rejected by javac, but `(Long) someObject` works and Java auto-unboxes
    // in primitive-typed contexts (return, assignment, arithmetic).
    let castTarget = $feRetType->toBoxed();
-   let call = j_invoke($cls, 'execute', $typedArgs, javaObject());
+   // A function that takes its arguments over when told they are updatable in place (executeUpdatingInPlace): each flag is whether this
+   // call's argument for that parameter is updatable in place. A call that can tell it nothing calls `execute`.
+   let updatableInPlace = $udf->updatableInPlaceParameters();
+   let mask  = $conv->updatableInPlaceMask(range($params->size())
+                  ->filter(i | $updatableInPlace->contains($params->at($i).name) && ($i < $fe.parametersValues->size()))
+                  ->map(i | pair($i, $fe.parametersValues->at($i))));
+   let call = if ($mask->isEmpty(),
+      | j_invoke($cls, 'execute', $typedArgs, javaObject()),
+      | j_invoke($cls, 'executeUpdatingInPlace', $typedArgs->concatenate($mask), javaObject()));
    // A function returning T[m] gives a single value as itself (PureValues.norm): a call site wanting many lifts
    // it into a list rather than casting it to one.
    let liftsOne = !$udf.returnMultiplicity->instanceOf(platform::pure::metamodel::multiplicity::ConcreteMultiplicity)
@@ -3955,8 +4065,12 @@ function <<access.private>> platform::extensions::language::java::translation::t
    let args       = range(0, $actuals->size())->map(i |
                        $conv->qualifiedPropertyArgument($actuals->at($i), $declared->slice($i, $i + 1), $javaRoot));
    let returnType = $qp.genericType->platform::extensions::language::java::translation::platform::platformValueType($qp.multiplicity, $javaRoot);
-   $receiver->j_invoke($name, $args, $returnType)
-      ->fitToType($conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed(), $conv);
+   // The mask of the arguments that are updatable in place (platformQualifiedPropertyMethodsFor): `<name>UpdatingInPlace` when any may be.
+   let mask       = if ($actuals->size() == $declared->size(), | $conv->updatableInPlaceMask(range($declared->size())->map(i | pair($i, $actuals->at($i)))), | []);
+   let call       = if ($mask->isEmpty(),
+                       | $receiver->j_invoke($name, $args, $returnType),
+                       | $receiver->j_invoke($name + 'UpdatingInPlace', $args->concatenate($mask), $returnType));
+   $call->fitToType($conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed(), $conv);
 }
 
 // The receiver of a qualified-property call, read through the platform interface
@@ -3998,7 +4112,17 @@ function <<access.private>> platform::extensions::language::java::translation::i
 function <<access.private>> platform::extensions::language::java::translation::translatePropertyAccess(conv: Conventions[1], fe: FunctionExpression[1]): Code[1]
 {
    assert($fe.parametersValues->size() >= 1, | 'translatePropertyAccess: property FE needs a receiver, got ' + $fe.parametersValues->size()->toString() + ' args');
-   if ($fe->parentRefDepth()->isNotEmpty(), | $conv->parentRefCode($fe), | $conv->translateNonParentPropertyAccess($fe));
+   let read = if ($fe->parentRefDepth()->isNotEmpty(), | $conv->parentRefCode($fe), | $conv->translateNonParentPropertyAccess($fe));
+   // A read the compiler proved holds the only reference to a field's collection (IN_PLACE_UPDATE_ANALYSIS.md): the
+   // object's own list, which the reader may change in place (LazyObject.updatableInPlaceValues).
+   let updatableInPlace = if ($fe.multiplicity->holdsManyValues() && $fe.parametersValues->at(0)->instanceOf(VariableExpression), | $conv->updatableInPlaceCode($fe), | j_boolean(false));
+   let updatableInPlaceRead = {| j_invoke(javaClass($conv->pdbClass('LazyObject')), 'updatableInPlaceValues',
+                        [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode(), j_string($fe.functionName->toOne())], javaList())};
+   if ($updatableInPlace->platform::extensions::language::java::translation::isFalseLiteral(),
+      | $read,
+      | if ($updatableInPlace->platform::extensions::language::java::translation::codeToText() == 'true',
+           | $updatableInPlaceRead->eval(),
+           | j_conditional($updatableInPlace, $updatableInPlaceRead->eval(), $read->j_castWithoutChecks(javaList()), javaList())));
 }
 
 function <<access.private>> platform::extensions::language::java::translation::translateNonParentPropertyAccess(conv: Conventions[1], fe: FunctionExpression[1]): Code[1]
@@ -4235,8 +4359,8 @@ function <<access.private>> platform::extensions::language::java::translation::w
         let typeVars = $typeVariableValues->map(v | $conv->translateExpression($v)->toObjectCode());
         let classifier = j_invoke(javaClass($conv->pdbClass('Metadata')), 'classifier',
                                   [j_string($pureClass->at(0)->elementToPath()),
-                                   j_invoke(javaArrays(), 'asList', $typeArgs, javaList()),
-                                   j_invoke(javaArrays(), 'asList', $typeVars, javaList())], javaObject());
+                                   newPureList($typeArgs, javaList()),
+                                   newPureList($typeVars, javaList())], javaObject());
         $ctor->j_invoke('_classifierGenericType', [$classifier], $cls););
 }
 
@@ -4258,9 +4382,47 @@ function <<access.private>> platform::extensions::language::java::translation::s
       let propName = $conv->extractKeyExpressionPropName($ke);
       // A setter takes Object, and a bare Java lambda has no type there: a
       // function-valued property (a section parser) needs its interface named.
-      let valCode  = $conv->translateExpression($ke.parametersValues->at(1))->typedFunctionValue();
+      let valCode  = $conv->storedValue($ke, $conv->translateExpression($ke.parametersValues->at(1))->typedFunctionValue());
       $acc->j_invoke($ke->keyExpressionSetter($propName), [$valCode], $cls);
    }, $target);
+}
+
+// A key value the compiler proved updatable in place, stored as the object's own (LazyObject.updatableInPlace): a list the object may
+// later hand to a read holding the only reference to it. A literal of no value or several is a new list. A key
+// appending (`+=`) stores a new list anyway.
+function <<access.private>> platform::extensions::language::java::translation::storedValue(conv: Conventions[1], ke: FunctionExpression[1], value: Code[1]): Code[1]
+{
+   let vs     = $ke.parametersValues->at(1);
+   let plain  = $ke.parametersValues->size() == 2;
+   let fresh  = $vs->instanceOf(platform::pure::metamodel::valuespecification::Collection) && ($vs->cast(@platform::pure::metamodel::valuespecification::Collection).values->size() != 1);
+   let updatableInPlace  = if (!$plain, | j_boolean(false), | if ($fresh, | j_boolean(true), | $conv->updatableInPlaceCode($vs)));
+   let lazy   = javaClass($conv->pdbClass('LazyObject'));
+   if ($updatableInPlace->platform::extensions::language::java::translation::isFalseLiteral(),
+      | $value,
+      | if ($updatableInPlace->platform::extensions::language::java::translation::codeToText() == 'true',
+           | j_invoke($lazy, 'updatableInPlace', [$value->toObjectCode()], javaObject()),
+           | j_invoke($lazy, 'updatableInPlaceIf', [$value->toObjectCode(), $updatableInPlace], javaObject())));
+}
+
+// A copy changing its source itself (copyCoder): made what a copy would be first (LazyObject.reusedForCopy), then its
+// keys set. A copy computes every key value before it sets any (a value may read a property another key sets), so
+// with several keys they are computed first, as the arguments of LazyObject.reuse, and set by a lambda given them:
+// `(X) LazyObject.reuse(src, ($o, $keys) -> ((X) $o)._a($keys[0])._b($keys[1]), v1, v2)`. (A Pure name has no `$`:
+// the lambda's parameters hide nothing.)
+function <<access.private>> platform::extensions::language::java::translation::reusedForCopy(conv: Conventions[1], src: Code[1], cls: platform::extensions::language::java::metamodel::Type[1], keyExprs: FunctionExpression[*]): Code[1]
+{
+   let lazy = javaClass($conv->pdbClass('LazyObject'));
+   if ($keyExprs->size() <= 1,
+      | $conv->setKeys(j_invoke($lazy, 'reusedForCopy', [$src], javaObject())->j_castWithoutChecks($cls), $cls, $keyExprs),
+      | let object = j_parameter(javaObject(), '$o');
+        let keys   = j_parameter(javaArray(javaObject()), '$keys');
+        let set    = range(0, $keyExprs->size())->fold({i, acc |
+                        let ke = $keyExprs->at($i);
+                        $acc->j_invoke($ke->keyExpressionSetter($conv->extractKeyExpressionPropName($ke)), [j_arrayAccess(j_variable(javaArray(javaObject()), '$keys'), j_int($i))], $cls);
+                     }, j_variable(javaObject(), '$o')->j_castWithoutChecks($cls));
+        let values = $keyExprs->map(ke | $conv->storedValue($ke, $conv->translateExpression($ke.parametersValues->at(1))->typedFunctionValue()));
+        j_invoke($lazy, 'reuse', [$src, j_lambda([$object, $keys], $set, javaBiFunction(javaObject(), javaArray(javaObject()), javaObject()))]->concatenate($values), javaObject())->j_castWithoutChecks($cls);
+   );
 }
 
 // A construction needs the PureNew scope when its class has association
@@ -4355,13 +4517,23 @@ function <<access.private>> platform::extensions::language::java::translation::c
    );
    let typedSrc = if ($clsOpt->isEmpty(), | $srcCode, | $srcCode->j_cast($clsOpt->toOne()));
    let copyType = if ($clsOpt->isEmpty(), | javaObject(), | $clsOpt->toOne()->cast(@platform::extensions::language::java::metamodel::Type));
-   let copied = $typedSrc->j_invoke('_copy', [], $copyType);
    let pureClass = $rawOpt->filter(t | $t->instanceOf(platform::pure::metamodel::type::Class))->cast(@platform::pure::metamodel::type::Class<Any>);
+   // A source holding the only reference to its object (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md) is changed itself
+   // rather than copied — no one else can see it — when nothing but its keys is set: a copy needing the construction
+   // scope (associations to link, `~` references) is still a copy. UpdatableInPlace if a parameter was passed updatableInPlace: its
+   // flag chooses.
+   let updatableInPlace  = if ($clsOpt->isEmpty() || $conv->needsConstructionScope($pureClass, $keyExprs), | j_boolean(false), | $conv->updatableInPlaceCode($src));
+   let copy   = {| $conv->setKeys($typedSrc->j_invoke('_copy', [], $copyType), $copyType, $keyExprs)};
+   let reuse  = {| $conv->reusedForCopy($typedSrc, $copyType, $keyExprs)};
    // A key-less copy (`^$x()`) only registers as fresh: like the other
    // platforms, it doesn't re-check or re-link the association values it copies.
    if ($conv->needsConstructionScope($pureClass, $keyExprs),
-      | $conv->scopedConstruction($copied, $copyType, $pureClass->filter(c | $keyExprs->isNotEmpty()), $keyExprs),
-      | $conv->setKeys($copied, $copyType, $keyExprs));
+      | $conv->scopedConstruction($typedSrc->j_invoke('_copy', [], $copyType), $copyType, $pureClass->filter(c | $keyExprs->isNotEmpty()), $keyExprs),
+      | if ($updatableInPlace->platform::extensions::language::java::translation::codeToText() == 'true',
+           | $reuse->eval(),
+           | if ($updatableInPlace->platform::extensions::language::java::translation::isFalseLiteral(),
+                | $copy->eval(),
+                | j_conditional($updatableInPlace, $reuse->eval(), $copy->eval(), $copyType))));
 }
 
 // ----------------------------------------------------------------------------
@@ -4590,16 +4762,15 @@ function <<access.private>> platform::extensions::language::java::translation::k
 // Literals: dispatch on the Pure primitive type. Integer→j_long mirrors the
 // translator's `Integer→long` type mapping in pureTypeToJavaType so the
 // emitted Java compiles without explicit conversions. Multi-valued atomic
-// values turn into `Arrays.asList(...)` (typed `List<Object>`); empty
-// values become `Collections.emptyList()`.
+// values and empty ones turn into a fresh list (newPureList, typed `List<Object>`).
 function <<access.private>> platform::extensions::language::java::translation::translateAtomicValue(conv: Conventions[1], a: AtomicValue[1]): Code[1]
 {
    let v = $a.value;
    if ($v->isEmpty(),
-       | j_invoke(javaCollections(), 'emptyList', [], javaList(javaObject())),
+       | newPureList([], javaList(javaObject())),
        | if ($v->size() == 1,
              | $conv->translateScalarAtomicValueTyped($v->toOne(), $a),
-             | j_invoke(javaArrays(), 'asList', $v->map(x | $conv->translateScalarAtomicValue($x)), javaList(javaObject()))
+             | newPureList($v->map(x | $conv->translateScalarAtomicValue($x)), javaList(javaObject()))
          )
    );
 }
@@ -4789,8 +4960,69 @@ function platform::extensions::language::java::translation::platformQualifiedPro
 ): platform::extensions::language::java::metamodel::Method[*]
 {
    $cls->platform::extensions::language::java::translation::platform::allPlatformQualifiedProperties()
-      ->map(qp | $conv->platformQualifiedPropertyMethod($qp, $cls, $javaRoot, $withBody));
+      ->map(qp | $conv->platformQualifiedPropertyMethodsFor($qp, $cls, $javaRoot, $withBody));
 }
+
+// A qualified property's methods. One with parameters besides `$this` also gets `<name>UpdatingInPlace(params, long pureUpdatableInPlace)`,
+// holding the body: bit i of `pureUpdatableInPlace` says whether the caller passed argument i updatable in place (the compiler marked it
+// so). One extra parameter whatever the parameters are, so every override has exactly the plain method's signature plus
+// a long and a call compiled against any class reaches the override that runs — one in a module compiled later
+// included. The body decodes only the bits its uses updatable in place if a parameter was read (updatableInPlaceFlags). The plain method
+// forwards to it with no bit set: what a caller that knows nothing calls. `$this` has no bit: an instance is never
+// changed in place.
+function <<access.private>> platform::extensions::language::java::translation::platformQualifiedPropertyMethodsFor(
+   conv: Conventions[1],
+   qp: platform::pure::metamodel::function::property::QualifiedProperty<platform::pure::metamodel::type::Any>[1],
+   cls: platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>[1],
+   javaRoot: String[1],
+   withBody: Boolean[1]
+): platform::extensions::language::java::metamodel::Method[*]
+{
+   let declared = $qp.parameters->slice(1, $qp.parameters->size());
+   if ($declared->isEmpty(),
+      | $conv->platformQualifiedPropertyMethod($qp, $cls, $javaRoot, $withBody),
+      | let name        = $qp->platform::extensions::language::java::translation::platform::qualifiedPropertyName()->platform::extensions::language::java::translation::platform::getterName();
+        let returnType  = $qp.genericType->platform::extensions::language::java::translation::platform::platformValueType($qp.multiplicity, $javaRoot);
+        let params      = $declared->map(p | j_parameter($p.genericType->platform::extensions::language::java::translation::platform::platformValueType($p.multiplicity, $javaRoot), $p.name->safeJavaName()));
+        let updatableInPlaceParams = $params->concatenate(j_parameter(javaLong(), 'pureUpdatableInPlace'));
+        let updatableInPlaceName   = $name + 'UpdatingInPlace';
+        if (!$withBody,
+           | [javaMethod([], $returnType, $name, $params), javaMethod([], $returnType, $updatableInPlaceName, $updatableInPlaceParams)],
+           | let self        = j_this(javaClass($cls->platform::extensions::language::java::translation::platform::platformTypeName($javaRoot) + 'Impl'));
+             let forward     = $self->j_invoke($updatableInPlaceName,
+                                  $params->map(jp | j_variable($jp.type, $jp->cast(@platform::extensions::language::java::metamodel::CodeParameter).name))->concatenate(j_long(0)),
+                                  $returnType);
+             let read        = $qp.expressionSequence->platform::extensions::pure::translation::inPlaceUpdate::flagReaders($declared->map(p | $p.name));
+             let conditional = range($declared->size())->filter(i | $read->contains($declared->at($i).name));
+             let flags       = $conditional->map(i | pair($declared->at($i).name, $declared->at($i).name->safeJavaName() + '_pureUpdatableInPlace'));
+             let decodes     = $conditional->map(i | $declared->at($i).name->platform::extensions::language::java::translation::updatableInPlaceDecode($i));
+             [javaMethod(['public'], $returnType, $name, $params, [j_return($forward)]),
+              javaMethod(['public'], $returnType, $updatableInPlaceName, $updatableInPlaceParams,
+                         $decodes->concatenate(^$conv(updatableInPlaceFlags = $flags)->qualifiedPropertyBody($qp, $cls, $javaRoot, $returnType)))];
+        );
+   );
+}
+
+// The updatability mask a call passes to an `UpdatingInPlace` method (a user function's executeUpdatingInPlace, a qualified property's
+// <name>UpdatingInPlace): bit i set when argument i is updatable in place — a literal when the compiler marked it so, a test of the
+// caller's own flag when it is updatable in place if the caller's parameter was. None when no argument can be.
+function <<access.private>> platform::extensions::language::java::translation::updatableInPlaceMask(conv: Conventions[1], arguments: Pair<Integer, ValueSpecification>[*]): Code[0..1]
+{
+   let bits = $arguments->map(a | pair($a.first, $conv->updatableInPlaceCode($a.second)))
+                ->filter(b | !$b.second->platform::extensions::language::java::translation::isFalseLiteral())
+                ->map(b | if ($b.second->platform::extensions::language::java::translation::codeToText() == 'true',
+                             | j_long($b.first->platform::extensions::pure::translation::inPlaceUpdate::updatableInPlaceBit()),
+                             | j_conditional($b.second, j_long($b.first->platform::extensions::pure::translation::inPlaceUpdate::updatableInPlaceBit()), j_long(0), javaLong())));
+   if ($bits->isEmpty(), | [], | $bits->tail()->fold({b, acc | $acc->j_plus($b)}, $bits->at(0)));
+}
+
+// `boolean <p>_pureUpdatableInPlace = (pureUpdatableInPlace & <bit i>) != 0;`: the flag of parameter `name`, the i-th, out of the mask.
+function <<access.private>> platform::extensions::language::java::translation::updatableInPlaceDecode(name: String[1], i: Integer[1]): Code[1]
+{
+   j_declare(javaBoolean(), $name->platform::extensions::language::java::translation::safeJavaName() + '_pureUpdatableInPlace',
+             j_ne(j_bitwiseAnd(j_variable(javaLong(), 'pureUpdatableInPlace'), j_long($i->platform::extensions::pure::translation::inPlaceUpdate::updatableInPlaceBit())), j_long(0)));
+}
+
 
 function <<access.private>> platform::extensions::language::java::translation::platformQualifiedPropertyMethod(
    conv: Conventions[1],
@@ -4916,7 +5148,7 @@ function <<access.private>> platform::extensions::language::java::translation::t
 {
    if ($values->size() == 1,
       | $conv->translateScalarAtomicValue($values->toOne()),
-      | j_invoke(javaArrays(), 'asList', $values->map(x | $conv->translateScalarAtomicValue($x)), javaList(javaObject())));
+      | newPureList($values->map(x | $conv->translateScalarAtomicValue($x)), javaList(javaObject())));
 }
 
 // `cls`'s properties including those inherited from user superclasses, stopping
@@ -4996,7 +5228,11 @@ function <<access.private>> platform::extensions::language::java::translation::t
    let taken   = $conv.scope->concatenate($conv.javaLocals)->map(n | $conv->platform::extensions::language::java::translation::javaNameFor($n));
    let inner   = ^$conv(scope   = $conv.scope->concatenate($params->map(p | $p.name)),
                         renames = $params->map(p | $p->platform::extensions::language::java::translation::renameIfShadowing($taken))
-                                          ->concatenate($conv.renames));
+                                          ->concatenate($conv.renames),
+                        // Its own parameters hide an enclosing fold step's of the same name.
+                        elementParameterUpdatableInPlace = false,
+                        updatableInPlaceFlags = if($conv.elementParameterUpdatableInPlace == true && $params->isNotEmpty(), | pair($params->at(0).name, 'true'), | []->cast(@Pair<String, String>))
+                                                   ->concatenate($conv.updatableInPlaceFlags->filter(f | !$params.name->contains($f.first))));
    let jParams = $params->map(p | j_parameter(javaTypeVar('var'), $inner->platform::extensions::language::java::translation::javaNameFor($p.name) + '_pureArg'));
    let rebinds = $params->map(p | $inner->rebindLambdaParameter($p));
    let exprs   = $lambda.expressionSequence;
@@ -5047,7 +5283,7 @@ function <<access.private>> platform::extensions::language::java::translation::c
                   ->filter(n | !$n->startsWith('~') && $scope->contains($n));
    let pairs = $names->map(n | [j_string($n), j_variable(javaObject(), $n->platform::extensions::language::java::translation::safeJavaName())]);
    j_invoke(javaClass($conv->platform::extensions::language::java::translation::runtimeClass('PureValues')), 'captures',
-            [j_invoke(javaArrays(), 'asList', $pairs, javaList())], javaClass('java.util.Map'));
+            [newPureList($pairs, javaList())], javaClass('java.util.Map'));
 }
 
 // A Java name not already bound in `taken`, reached by appending `_` until free.
@@ -5091,8 +5327,8 @@ function <<access.private>> platform::extensions::language::java::translation::r
    // reference such as equal_Any_MANY__Any_MANY_ called with two elements).
    let value = if ($p.multiplicity->holdsManyValues(),
       | j_conditional(j_instanceof($arg, javaList()), $arg,
-           j_conditional(j_eq($arg, j_null()), j_invoke(javaCollections(), 'emptyList', [], javaList()),
-              j_invoke(javaCollections(), 'singletonList', [$arg], javaList()), javaObject()), javaObject()),
+           j_conditional(j_eq($arg, j_null()), newPureList([], javaList()),
+              newPureList([$arg], javaList()), javaObject()), javaObject()),
       | $arg);
    j_declare(if ($declared->platform::extensions::language::java::metamodel::isJavaPrimitive(), | $declared, | $type), $name, $value->j_castWithoutChecks($type));
 }
@@ -5366,14 +5602,42 @@ function <<access.private>> platform::extensions::language::java::translation::t
    // A return multiplicity that is a PARAMETER (`T[m]`) is neither one value nor
    // many until the call site says so: what the body produced passes through,
    // where fitting it would take the first value of a list.
-   let raw         = $conv->buildJavaBodyReturning($expressions, $udf.returnMultiplicity->holdsManyValues());
+   // The parameters whose uses the compiler marked updatable in place if they were passed updatableInPlace: their bits of the updatability
+   // mask, decoded into the flags the body reads (updatableInPlaceFlags); passed by the callers that know (translateUdfCall).
+   let updatableInPlace       = $udf->updatableInPlaceParameters();
+   let conditional = range($udf.parameters->size())->filter(i | $updatableInPlace->contains($udf.parameters->at($i).name));
+   let flags       = $conditional->map(i | pair($udf.parameters->at($i).name, $udf.parameters->at($i).name->platform::extensions::language::java::translation::safeJavaName() + '_pureUpdatableInPlace'));
+   let bodyConv    = ^$conv(updatableInPlaceFlags = $flags);
+   let raw         = $bodyConv->buildJavaBodyReturning($expressions, $udf.returnMultiplicity->holdsManyValues());
    let body        = if ($udf.returnMultiplicity->instanceOf(platform::pure::metamodel::multiplicity::ConcreteMultiplicity),
                         | $raw->returningType($returnType, $conv),
                         | $raw->returningNormalized($conv));
    let javaCls     = javaClass(['public'], $className);
-   let javaMtd     = javaMethod(['public', 'static'], $returnType, 'execute', $jParams, $body);
-   $javaCls->addMethod($javaMtd);
+   if ($updatableInPlace->isEmpty(),
+      | $javaCls->addMethod(javaMethod(['public', 'static'], $returnType, 'execute', $jParams, $body)),
+      | // `executeUpdatingInPlace(params, long pureUpdatableInPlace)` holds the body, bit i of the mask saying whether argument i was passed
+        // updatable in place, as for a qualified property (platformQualifiedPropertyMethodsFor); `execute(params)`, what every
+        // other caller (a reflective or dynamic call) reaches, passes no bit set: those arguments may be shared.
+        let updatableInPlaceMtd = javaMethod(['public', 'static'], $returnType, 'executeUpdatingInPlace',
+                                  $jParams->concatenate(j_parameter(javaLong(), 'pureUpdatableInPlace')),
+                                  $conditional->map(i | $udf.parameters->at($i).name->platform::extensions::language::java::translation::updatableInPlaceDecode($i))->concatenate($body));
+        let forward  = j_invoke($javaCls, 'executeUpdatingInPlace',
+                                $jParams->map(jp | j_variable($jp.type, $jp->cast(@platform::extensions::language::java::metamodel::CodeParameter).name))->concatenate(j_long(0)), $returnType);
+        $javaCls->addMethod(javaMethod(['public', 'static'], $returnType, 'execute', $jParams, [j_return($forward)]))
+                ->addMethod($updatableInPlaceMtd););
 }
+
+// The parameters of a user function its translated body reads the updatability flag of (flagReaders): what its
+// `executeUpdatingInPlace` decodes, and what its callers give a bit to. None for a native.
+function <<access.private>> platform::extensions::language::java::translation::updatableInPlaceParameters(f: platform::pure::metamodel::function::PackageableFunction<platform::pure::metamodel::type::Any>[1]): String[*]
+{
+   if ($f->instanceOf(platform::pure::metamodel::function::UserDefinedFunction),
+      | let udf = $f->cast(@platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>);
+        let read = $udf.expressionSequence->platform::extensions::pure::translation::inPlaceUpdate::flagReaders($udf.parameters->map(p | $p.name));
+        $udf.parameters->map(p | $p.name)->filter(n | $read->contains($n));,
+      | []);
+}
+
 
 // Holds the Pure-Class identity + the property names seen during AST walk.
 // Properties are inferred from the actual `^X(prop1=v, prop2=v)` shapes,

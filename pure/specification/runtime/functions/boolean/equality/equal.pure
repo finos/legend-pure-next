@@ -25,7 +25,7 @@ native function
                 'properties with this stereotype have equal values.',
         PCT.grammarDoc='$first == $second',
         PCT.grammarCharacters='=='
-    }
+    , inPlaceUpdate.onlyReads='left,right'}
     platform::pure::functions::boolean::equal(left:Any[*], right:Any[*]):Boolean[1];
 
 

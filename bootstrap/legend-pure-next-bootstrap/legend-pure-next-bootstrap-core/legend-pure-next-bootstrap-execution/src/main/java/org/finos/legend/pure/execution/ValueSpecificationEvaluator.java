@@ -599,6 +599,11 @@ public class ValueSpecificationEvaluator
                 case NativeFunction nf ->
                 {
                     Object resolved = natives.resolve(natives.id(nf));
+                    ValueSpecification owning = natives.isLazyResolved(resolved) ? null : inPlaceNative(natives.id(nf), resolved, fe);
+                    if (owning != null)
+                    {
+                        yield owning;
+                    }
                     yield natives.isLazyResolved(resolved)
                             ? natives.invokeLazy(resolved, fe, this)
                             : natives.invokeEager(resolved, evaluateArgs(fe), this,
@@ -610,7 +615,8 @@ public class ValueSpecificationEvaluator
                     pushScope();
                     try
                     {
-                        yield evaluateFunctionDefinition(fd, evaluateArgs(fe));
+                        boolean[] updatableInPlace = argumentUpdatability(fe);
+                        yield evaluateFunctionDefinition(fd, evaluateArgs(fe), updatableInPlace);
                     }
                     finally
                     {
@@ -733,6 +739,12 @@ public class ValueSpecificationEvaluator
 
         // Evaluate the target object (first parameter), read as Object: it can be an island value (evaluateNode).
         ValueSpecification targetVs = evaluateNode(((List<?>) paramSpecs).get(0));
+        // A read the compiler proved holds the only reference to a field's collection: the instance's own collection,
+        // which the reader may change in place (IN_PLACE_UPDATE_ANALYSIS.md, Fields).
+        if (updatableInPlace(fe) && _E_ValueSpecification.unwrap(targetVs) instanceof DynamicInstance di && di.updatableInPlaceCollection(propertyName) != null)
+        {
+            return di.updatableInPlaceCollection(propertyName);
+        }
 
         return accessProperty(targetVs, propertyName, fe._genericType(), fe._multiplicity(), isEnumValueProperty(prop));
     }
@@ -898,14 +910,22 @@ public class ValueSpecificationEvaluator
         // DynamicInstance (from 'new' function) — property access via map
         if (target instanceof DynamicInstance di)
         {
-            // An unset property with a default value: the default, computed now against this object.
-            // Never stored — a copy holds only what was set, and recomputes (testCopyKeepsDefaultValues).
+            // An unset property with a default value: the default, computed against this object on the first read and
+            // kept, so every read is the same collection (is.pure). Not stored among its values — a copy holds only
+            // what was set, and computes its own (testCopyKeepsDefaultValues).
             if (!di.hasProperty(propertyName) && !"classifierGenericType".equals(propertyName))
             {
+                Object kept = di.keptDefault(propertyName);
+                if (kept != null)
+                {
+                    return (ValueSpecification) kept;
+                }
                 platform.pure.metamodel.function.LambdaFunction defaultValue = defaultValueOf(di.getClassPath(), propertyName);
                 if (defaultValue != null)
                 {
-                    return evaluateDefaultValue(defaultValue, di, di.getClassPath(), propertyName, targetVs);
+                    ValueSpecification computed = evaluateDefaultValue(defaultValue, di, di.getClassPath(), propertyName, targetVs);
+                    di.keepDefault(propertyName, computed);
+                    return computed;
                 }
             }
             Object propertyValueRaw = "classifierGenericType".equals(propertyName) ? di.getClassifierGenericType() : di.get(propertyName);
@@ -1027,6 +1047,233 @@ public class ValueSpecificationEvaluator
      */
     public ValueSpecification evaluateFunctionDefinition(FunctionDefinition fd, List<ValueSpecification> args)
     {
+        return evaluateFunctionDefinition(fd, args, null);
+    }
+
+    // -- updatability (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md) ---------------------------------------------------------
+    // A collection the compiler proved updatable in place may be changed in place instead of copied, when this interpreter built
+    // it (its values are GrowableValues). A parameter passed updatable in place is marked in the callee's scope by a hidden
+    // binding next to it; a use updatable in place if that parameter was passed updatable in place reads it.
+
+    private static final String UPDATABLE_IN_PLACE_MARK = "\u0001updatableInPlace ";
+    private static final String ADD = "platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_";
+    private static final String ADD_AT = "platform::pure::functions::collection::add_T_MANY__Integer_1__T_1__T_$1_MANY$_";
+    private static final String CONCATENATE = "platform::pure::functions::collection::concatenate_T_MANY__T_MANY__T_MANY_";
+    private static final String REVERSE = "platform::pure::functions::collection::reverse_T_m__T_m_";
+    private static final String FOLD_MANY = "platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_";
+    private static final String FOLD_ONE = "platform::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_";
+    private static final String MAP_MANY = "platform::pure::functions::collection::map_T_MANY__Function_1__V_MANY_";
+    private static final String MAP_M = "platform::pure::functions::collection::map_T_m__Function_1__V_m_";
+    private static final String KEY = "platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_";
+
+    /**
+     * Whether a call argument holds the only reference to its value: a use the compiler marked updatable in place; one updatable in place if
+     * a parameter was passed updatable in place, when that parameter's mark is bound beside it (an inner lambda's parameter of the
+     * same name hides it); a literal of no value or several (a new collection at each evaluation).
+     */
+    public boolean updatableInPlace(Object arg)
+    {
+        if (arg instanceof VariableExpression ve)
+        {
+            if (Boolean.TRUE.equals(ve._updatableInPlace()))
+            {
+                return true;
+            }
+            String parameter = ve._updatableInPlaceIfParameter();
+            if (parameter != null)
+            {
+                Scope scope = varStack.peek();
+                Scope mark = scope.definingScope(UPDATABLE_IN_PLACE_MARK + parameter);
+                return mark != null && mark == scope.definingScope(parameter);
+            }
+            return false;
+        }
+        if (arg instanceof FunctionExpression fe)
+        {
+            // A key value, or a read of a field's own collection, the compiler marked (IN_PLACE_UPDATE_ANALYSIS.md, Fields).
+            if (Boolean.TRUE.equals(fe._updatableInPlace()))
+            {
+                return true;
+            }
+            String parameter = fe._updatableInPlaceIfParameter();
+            if (parameter != null)
+            {
+                Scope scope = varStack.peek();
+                Scope mark = scope.definingScope(UPDATABLE_IN_PLACE_MARK + parameter);
+                return mark != null && mark == scope.definingScope(parameter);
+            }
+            return false;
+        }
+        return arg instanceof Collection literal && literal._values() != null && literal._values().size() != 1;
+    }
+
+    /** Which arguments of a call to a user function are updatable in place, or null when none is. */
+    private boolean[] argumentUpdatability(FunctionExpression fe)
+    {
+        List<?> params = fe._parametersValues();
+        boolean[] updatableInPlace = null;
+        for (int i = 0; i < params.size(); i++)
+        {
+            if (updatableInPlace(params.get(i)))
+            {
+                if (updatableInPlace == null)
+                {
+                    updatableInPlace = new boolean[params.size()];
+                }
+                updatableInPlace[i] = true;
+            }
+        }
+        return updatableInPlace;
+    }
+
+    /**
+     * add, concatenate and reverse on a receiver that holds the only reference to its collection change it in place;
+     * fold with a literal step tells the step whether it holds the only reference to its accumulator. Null for any
+     * other call: the native runs as usual.
+     */
+    private ValueSpecification inPlaceNative(String id, Object resolved, FunctionExpression fe)
+    {
+        boolean fold = FOLD_MANY.equals(id) || FOLD_ONE.equals(id);
+        if ((MAP_MANY.equals(id) || MAP_M.equals(id)) && fe._parametersValues().size() == 2 && elementsMarked(fe._parametersValues().get(0))
+                && fe._parametersValues().get(1) instanceof AtomicValue av && av._value() instanceof platform.pure.metamodel.function.LambdaFunction)
+        {
+            return mapUpdatingInPlace(fe);
+        }
+        if (!(fold || ADD.equals(id) || ADD_AT.equals(id) || CONCATENATE.equals(id) || REVERSE.equals(id) || KEY.equals(id)))
+        {
+            return null;
+        }
+        List<?> params = fe._parametersValues();
+        if (KEY.equals(id))
+        {
+            // A key setting a property to a collection the compiler proved updatable in place, one this interpreter built: the
+            // instance keeps it as its own (DynamicInstance.putUpdatableInPlace, when the key is applied).
+            if (params.size() != 2 || !updatableInPlace(params.get(1)))
+            {
+                return null;
+            }
+            List<ValueSpecification> args = evaluateArgs(fe);
+            if (!(args.get(1) instanceof platform.pure.metamodel.valuespecification.CollectionImpl col && col._values() instanceof GrowableValues<?>))
+            {
+                return natives.invokeEager(resolved, args, this, fe._genericType(), fe._multiplicity());
+            }
+            // As the native builds it, without making the value a raw list first (a copy of it).
+            DynamicInstance keyExpression = new DynamicInstance("platform::pure::functions::lang::KeyExpression");
+            keyExpression.put("name", args.get(0));
+            keyExpression.putUpdatableInPlace("expression", col);
+            return _E_ValueSpecification.wrap(keyExpression, fe._genericType(), fe._multiplicity(), this.natives.resolver());
+        }
+        if (fold)
+        {
+            return params.size() == 3 && params.get(1) instanceof AtomicValue av && av._value() instanceof platform.pure.metamodel.function.LambdaFunction lambda
+                    && lambda._parameters().size() == 2
+                    ? foldUpdatingInPlace(fe, lambda) : null;
+        }
+        if (params.isEmpty() || !updatableInPlace(params.get(0)))
+        {
+            return null;
+        }
+        List<ValueSpecification> args = evaluateArgs(fe);
+        if (!(args.get(0) instanceof platform.pure.metamodel.valuespecification.CollectionImpl col && col._values() instanceof GrowableValues<?>))
+        {
+            // Not one this interpreter built: copied by the native (into one it built).
+            return natives.invokeEager(resolved, args, this, fe._genericType(), fe._multiplicity());
+        }
+        @SuppressWarnings("unchecked")
+        java.util.List<ValueSpecification> values = (java.util.List<ValueSpecification>) (java.util.List<?>) col._values();
+        platform.pure.metamodel.type.generics.GenericType added = null;
+        if (ADD.equals(id))
+        {
+            values.add(args.get(1));
+            added = args.get(1)._genericType();
+        }
+        else if (ADD_AT.equals(id))
+        {
+            values.add(((Long) _E_ValueSpecification.unwrap(args.get(1))).intValue(), args.get(2));
+            added = args.get(2)._genericType();
+        }
+        else if (CONCATENATE.equals(id))
+        {
+            Collection other = _E_ValueSpecification.toCollection(args.get(1), this.natives.resolver());
+            values.addAll(other._values());
+            added = other._values().isEmpty() ? null : other._genericType();
+        }
+        else
+        {
+            java.util.Collections.reverse(values);
+        }
+        if (added != null && col._genericType() != null)
+        {
+            col._genericType(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.findCommonGenericType(
+                    org.eclipse.collections.api.factory.Lists.mutable.with(col._genericType(), added), this.natives.resolver()));
+        }
+        else if (added != null)
+        {
+            col._genericType(added);
+        }
+        col._multiplicity(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(values.size(), values.size(), this.natives.resolver()));
+        return col;
+    }
+
+    /**
+     * fold(values, step, start), telling each step whether it holds the only reference to its accumulator: the first
+     * when the start value is updatable in place, each next one when the previous step's result is (resultUpdatableInPlace), or is whenever
+     * its accumulator was (resultUpdatableInPlaceIfParameter naming it).
+     */
+    /** The compiler proved each element of this list referenced only by it (IN_PLACE_UPDATE_ANALYSIS.md, Elements). */
+    private static boolean elementsMarked(Object list)
+    {
+        return list instanceof VariableExpression ve ? Boolean.TRUE.equals(ve._elementsUpdatableInPlace())
+                : list instanceof FunctionExpression fe && Boolean.TRUE.equals(fe._elementsUpdatableInPlace());
+    }
+
+    /** {@code map} over a list alone holding its elements, with its lambda written inline: each element is handed over. */
+    private ValueSpecification mapUpdatingInPlace(FunctionExpression fe)
+    {
+        List<ValueSpecification> args = evaluateArgs(fe);
+        Collection items = _E_ValueSpecification.toCollection(args.get(0), this.natives.resolver());
+        FunctionDefinition step = (FunctionDefinition) _E_ValueSpecification.unwrap(args.get(1));
+        List<ValueSpecification> results = new java.util.ArrayList<>();
+        for (ValueSpecification item : items._values())
+        {
+            ValueSpecification result = evaluateFunctionDefinition(step, List.of(item), new boolean[]{true});
+            if (result instanceof Collection resultCol)
+            {
+                results.addAll(resultCol._values());
+            }
+            else if (!_E_ValueSpecification.toCollection(result, this.natives.resolver())._values().isEmpty())
+            {
+                results.add(result);
+            }
+        }
+        return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(results, this.natives.resolver());
+    }
+
+    private ValueSpecification foldUpdatingInPlace(FunctionExpression fe, platform.pure.metamodel.function.LambdaFunction lambda)
+    {
+        List<?> params = fe._parametersValues();
+        boolean updatableInPlaceAccumulator = updatableInPlace(params.get(2));
+        boolean elementUpdatableInPlace = elementsMarked(params.get(0));
+        List<ValueSpecification> args = evaluateArgs(fe);
+        String accumulatorName = lambda._parameters().get(1)._name();
+        boolean stepResultUpdatableInPlace = Boolean.TRUE.equals(lambda._resultUpdatableInPlace());
+        boolean stepResultUpdatableInPlaceIfAccumulator = accumulatorName.equals(lambda._resultUpdatableInPlaceIfParameter());
+        ValueSpecification accumulator = args.get(2);
+        Collection items = _E_ValueSpecification.toCollection(args.get(0), this.natives.resolver());
+        Object step = _E_ValueSpecification.unwrap(args.get(1));
+        for (ValueSpecification item : items._values())
+        {
+            List<ValueSpecification> stepArgs = List.of(item, accumulator);
+            accumulator = step instanceof FunctionDefinition fd
+                    ? evaluateFunctionDefinition(fd, stepArgs, new boolean[]{elementUpdatableInPlace, updatableInPlaceAccumulator})
+                    : executeFunction(args.get(1), stepArgs);
+            updatableInPlaceAccumulator = stepResultUpdatableInPlace || stepResultUpdatableInPlaceIfAccumulator && updatableInPlaceAccumulator;
+        }
+        return accumulator;
+    }
+
+    public ValueSpecification evaluateFunctionDefinition(FunctionDefinition fd, List<ValueSpecification> args, boolean[] updatableInPlace)
+    {
         if (fd == null)
         {
             throw new RuntimeException("Cannot evaluate null FunctionDefinition");
@@ -1097,6 +1344,11 @@ public class ValueSpecificationEvaluator
                     boundArg = _E_ValueSpecification.wrap(_E_ValueSpecification.unwrap(arg), gt, mul, this.natives.resolver());
                 }
                 childVars.put(paramName, boundArg);
+                // Passed updatableInPlace: marked beside the parameter (see updatable in place).
+                if (updatableInPlace != null && i < updatableInPlace.length && updatableInPlace[i])
+                {
+                    childVars.put(UPDATABLE_IN_PLACE_MARK + paramName, boundArg);
+                }
             }
         }
 

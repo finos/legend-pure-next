@@ -35,7 +35,7 @@ public final class BooleanNodeFactories
                 (args, gt, mul, fe) -> new NotBooleanNode(args[0]));
         registry.register("platform::pure::functions::boolean::equal_Any_MANY__Any_MANY__Boolean_1_",
                 (args, gt, mul, fe) -> new EqualNode(args[0], args[1]));
-        registry.register("platform::pure::functions::boolean::is_Any_1__Any_1__Boolean_1_",
+        registry.register("platform::pure::functions::boolean::is_Any_MANY__Any_MANY__Boolean_1_",
                 (args, gt, mul, fe) -> new IsNode(args[0], args[1]));
         registry.register("platform::pure::functions::boolean::compare_T_1__T_1__Integer_1_",
                 (args, gt, mul, fe) -> new CompareNode(args[0], args[1], gt, mul));

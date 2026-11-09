@@ -69,3 +69,94 @@ function <<test.Test>> platform::extensions::language::javascript::translation::
    assertEquals([], $coders->filter(c | platform::pure::functions::meta::lenientPathToElement($c)
                                            ->filter(e | !$e->instanceOf(platform::pure::metamodel::function::NativeFunction))->isNotEmpty())->sort());
 }
+
+// -- updatability (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md) ---------------------------------------------------------
+// A use the compiler marked updatable in place calls the in-place helper; a fold whose step adds to its accumulator is told its
+// updatability; a call passes the mask of its updatable in place arguments, and the callee decodes the bits its body reads.
+
+function platform::extensions::language::javascript::translation::tests::grow(): Integer[*]
+{
+   let xs = [1, 2]->map(x|$x);
+   $xs->add(3);
+}
+
+function platform::extensions::language::javascript::translation::tests::collect(values: Integer[*]): Integer[*]
+{
+   $values->fold({e, acc|if($e > 1, |$acc->add($e), |$acc)}, [])
+}
+
+function platform::extensions::language::javascript::translation::tests::append(values: Integer[*], value: Integer[1]): Integer[*]
+{
+   $values->add($value)
+}
+
+function platform::extensions::language::javascript::translation::tests::appendTwice(values: Integer[*]): Integer[*]
+{
+   platform::extensions::language::javascript::translation::tests::append(platform::extensions::language::javascript::translation::tests::append($values, 3), 4)
+}
+
+function platform::extensions::language::javascript::translation::tests::callsAppend(): Integer[*]
+{
+   let xs = [1, 2]->map(x|$x);
+   platform::extensions::language::javascript::translation::tests::appendTwice($xs);
+}
+
+function <<test.TestDependency>> platform::extensions::language::javascript::translation::tests::compactTs(f: platform::pure::metamodel::function::FunctionDefinition<Any>[1]): String[1]
+{
+   $f->translateFunctionDef(conventionForRoot($f))->serialize()->replace('\n', '')->replace(' ', '');
+}
+
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::testUpdatableInPlaceAddIsInPlace(): Boolean[1]
+{
+   let js = platform::extensions::language::javascript::translation::tests::grow__Integer_MANY_->platform::extensions::language::javascript::translation::tests::compactTs();
+   assert($js->contains('__addInPlace('), | 'expected an in-place add in:\n' + $js);
+}
+
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::testFoldStepIsToldItsUpdatability(): Boolean[1]
+{
+   let js = platform::extensions::language::javascript::translation::tests::collect_Integer_MANY__Integer_MANY_->platform::extensions::language::javascript::translation::tests::compactTs();
+   assert($js->contains('__foldUpdatingInPlace(') && $js->contains('__addIfUpdatableInPlace('), | 'expected an updatableInPlace fold whose add is told its updatability in:\n' + $js);
+}
+
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::testUpdatabilityPassesThroughCalls(): Boolean[1]
+{
+   let js = platform::extensions::language::javascript::translation::tests::callsAppend__Integer_MANY_->platform::extensions::language::javascript::translation::tests::compactTs();
+   assert($js->contains('__updatableInPlaceBit(pureUpdatableInPlace,1)'), | 'expected the callee to decode bit 0 in:\n' + $js);
+   assert($js->contains('values_pureUpdatableInPlace?1:0'), | 'expected appendTwice to pass its own flag on in:\n' + $js);
+   assert($js->contains('__addIfUpdatableInPlace('), | 'expected append to add told its updatability in:\n' + $js);
+}
+
+// A qualified property with a list parameter it concatenates to takes the mask (defaulted, so __qp still matches it by
+// arity); a call passing a list it never reads again goes through __qpUpdatingInPlace with that list's bit.
+Class platform::extensions::language::javascript::translation::tests::Collector
+{
+   base: Integer[*];
+   withAll(extra: Integer[*]) {$extra->concatenate($this.base)}: Integer[*];
+}
+
+function platform::extensions::language::javascript::translation::tests::collectInto(): Integer[*]
+{
+   let xs = [1, 2]->map(x|$x);
+   ^platform::extensions::language::javascript::translation::tests::Collector(base = [3, 4]).withAll($xs);
+}
+
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::testUpdatabilityPassesIntoAQualifiedProperty(): Boolean[1]
+{
+   let js = platform::extensions::language::javascript::translation::tests::collectInto__Integer_MANY_->platform::extensions::language::javascript::translation::tests::compactTs();
+   assert($js->contains('\'withAll\',2,'), | 'expected the call to pass bit 1 (2) through __qpUpdatingInPlace in:\n' + $js);
+   assert($js->contains('pureUpdatableInPlace=0') && $js->contains('__updatableInPlaceBit(pureUpdatableInPlace,2)'), | 'expected the qualified property to take a defaulted mask and decode bit 1 in:\n' + $js);
+}
+
+// A fold step growing a field of its accumulator: the read takes the object's own array (__updatableInPlaceRead) when the
+// accumulator was passed updatable in place, and the grown array is stored as the object's own (__updatableInPlace).
+function platform::extensions::language::javascript::translation::tests::growAField(): Integer[*]
+{
+   [1, 2, 3]->fold({e, acc|^$acc(base = $acc.base->add($e))}, ^platform::extensions::language::javascript::translation::tests::Collector(base = [])).base;
+}
+
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::testAFieldGivenAwayIsGrownInPlace(): Boolean[1]
+{
+   let js = platform::extensions::language::javascript::translation::tests::growAField__Integer_MANY_->platform::extensions::language::javascript::translation::tests::compactTs();
+   assert($js->contains('__updatableInPlaceRead('), | 'expected the field read to take the object\'s own array in:\n' + $js);
+   assert($js->contains('__updatableInPlace('), | 'expected the grown array stored as the object\'s own in:\n' + $js);
+}

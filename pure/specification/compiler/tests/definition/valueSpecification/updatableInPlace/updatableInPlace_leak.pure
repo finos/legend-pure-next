@@ -1,0 +1,113 @@
+// xs is stored in an instance before add: mutating it would change h.values.
+// A user function is assumed to retain its arguments.
+###Pure
+import test::updatableInPlace::*;
+
+Class test::updatableInPlace::Holder
+{
+  values: Integer[*];
+}
+
+function test::updatableInPlace::storedInInstance(): Integer[*]
+{
+  let xs = [1, 2]->map(x|$x);
+  let h = ^Holder(values = $xs);
+  $xs->add(1);
+}
+
+function test::updatableInPlace::keep(v: Integer[*]): Integer[*]
+{
+  $v
+}
+
+function test::updatableInPlace::passedToUserFunction(): Integer[*]
+{
+  let p = [1, 2]->map(x|$x);
+  let k = keep($p);
+  $p->add(2);
+}
+
+###CompiledGraph
+class test::updatableInPlace::Holder extends Any  ~Class<test::updatableInPlace::Holder>  @6:1-9:1
+  property values :@Integer@[*]  ~Property<test::updatableInPlace::Holder, @Integer@|*>
+
+function test::updatableInPlace::storedInInstance__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @13:3-13:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @13:7-13:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @13:18-13:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @13:12-13:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @13:13-13:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @13:16-13:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @13:24-13:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @13:26-13:27
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Holder##[1]#  ~@FunctionInvocation@  @14:3-14:31
+    typeParam T -> #test::updatableInPlace::Holder#
+    mulParam m -> #[1]#
+    AtomicValue  'h' :@String@[1]  ~@AtomicValue@  @14:7-14:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Holder##[1]#  ~@FunctionInvocation@  @14:11-14:31
+      typeParam T -> test::updatableInPlace::Holder
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Holder|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Holder|1>  @14:11-14:31
+      Collection :#KeyExpression#[1]  ~@Collection@  @14:11-14:31
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @14:19-14:30
+          AtomicValue  'values' :@String@[1]  ~@AtomicValue@  @14:19-14:30
+          Variable xs :#Integer##[2]#  ~@VariableExpression@  @14:28-14:30
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @15:6-15:13
+    typeParam T -> #Integer#
+    Variable xs :#Integer##[2]#  ~@VariableExpression@  @15:3-15:5
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @15:12-15:12
+
+function test::updatableInPlace::keep_Integer_MANY__Integer_MANY_(v:@Integer@[*]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[*]}>
+  resultUpdatableInPlaceIf v
+  Variable v :#Integer##[*]#  ~@VariableExpression@  @20:3-20:4
+
+function test::updatableInPlace::passedToUserFunction__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @25:3-25:27
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @25:7-25:7
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @25:17-25:27
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @25:11-25:16
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @25:12-25:12
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @25:15-25:15
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @25:23-25:26
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @25:25-25:26
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @26:3-26:18
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'k' :@String@[1]  ~@AtomicValue@  @26:7-26:7
+    FunctionInvocation test::updatableInPlace::keep_Integer_MANY__Integer_MANY_ :#Integer##[*]#  ~@FunctionInvocation@  @26:11-26:18
+      Variable p :#Integer##[2]#  ~@VariableExpression@  @26:16-26:17
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @27:5-27:12
+    typeParam T -> #Integer#
+    Variable p :#Integer##[2]#  ~@VariableExpression@  @27:3-27:4
+    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @27:11-27:11
+
+###ReverseIndex
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::passedToUserFunction__Integer_MANY_
+  test::updatableInPlace::storedInInstance__Integer_MANY_
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::updatableInPlace::passedToUserFunction__Integer_MANY_
+  test::updatableInPlace::storedInInstance__Integer_MANY_
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::updatableInPlace::storedInInstance__Integer_MANY_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::passedToUserFunction__Integer_MANY_
+  test::updatableInPlace::storedInInstance__Integer_MANY_
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::updatableInPlace::storedInInstance__Integer_MANY_
+test::updatableInPlace::Holder:
+  test::updatableInPlace::storedInInstance__Integer_MANY_
+test::updatableInPlace::keep_Integer_MANY__Integer_MANY_:
+  test::updatableInPlace::passedToUserFunction__Integer_MANY_
+

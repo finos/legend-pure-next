@@ -20,7 +20,7 @@ native function
     {
         doc.doc='Concatenate several string with a prefix, a suffix and a separator',
         PCT.grammarDoc='joinStrings is used by plus(String[*])'
-    }
+    , inPlaceUpdate.onlyReads='strings,prefix,separator,suffix'}
     platform::pure::functions::string::joinStrings(strings:String[*], prefix:String[1], separator:String[1], suffix:String[1]):String[1];
 
 function

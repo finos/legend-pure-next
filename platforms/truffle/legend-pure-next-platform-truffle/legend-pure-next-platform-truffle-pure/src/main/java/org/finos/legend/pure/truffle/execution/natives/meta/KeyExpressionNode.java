@@ -34,6 +34,20 @@ public final class KeyExpressionNode extends PureNode
     private final Object genericType;
     private final Object multiplicity;
 
+    /** Whether its value is updatable in place (IN_PLACE_UPDATE_ANALYSIS.md, Fields), as AddNode reads it; set by the builder. */
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private int updatableInPlace = org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY;
+
+    public int updatableInPlace()
+    {
+        return updatableInPlace;
+    }
+
+    public void updatableInPlace(int updatableInPlace)
+    {
+        this.updatableInPlace = updatableInPlace;
+    }
+
     public KeyExpressionNode(PureNode[] children, Object genericType, Object multiplicity)
     {
         this.children = children;

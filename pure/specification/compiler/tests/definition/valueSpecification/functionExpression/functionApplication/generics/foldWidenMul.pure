@@ -29,6 +29,7 @@ function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @18:10-18:10
       AtomicValue  4 :@Integer@[1]  ~@AtomicValue@  @18:13-18:13
     Lambda(x:@Integer@[1], y:@Integer@[*]) :#LambdaFunction<#{@Integer@[1], @Integer@[*]->#Integer##[*]#}#>#[1]  ~@AtomicValue@  @18:22-18:104
+      resultUpdatableInPlace
       FunctionInvocation if_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @18:50-18:103
         typeParam T -> #Integer#
         mulParam m -> #[*]#
@@ -39,18 +40,20 @@ function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
         Lambda :#LambdaFunction<#{->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @18:69-18:80
           openVar y :#Integer##[*]#
           openVar x :#Integer##[1]#
+          resultUpdatableInPlace
           ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @18:72-18:80
             typeParam T -> #Integer#
-            Variable y :#Integer##[*]#  ~@VariableExpression@  @18:70-18:71
+            Variable y :#Integer##[*]#  ~@VariableExpression@  @18:70-18:71  updatableInPlaceIf y
             Variable x :#Integer##[1]#  ~@VariableExpression@  @18:78-18:79
         Lambda :#LambdaFunction<#{->#Integer##[*]#}#>#[1]  ~@AtomicValue@  @18:83-18:102
           openVar y :#Integer##[*]#
           openVar x :#Integer##[1]#
+          resultUpdatableInPlace
           ArrowInvocation tail_T_MANY__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @18:86-18:102
             typeParam T -> #Integer#
             ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @18:86-18:102
               typeParam T -> #Integer#
-              Variable y :#Integer##[*]#  ~@VariableExpression@  @18:84-18:85
+              Variable y :#Integer##[*]#  ~@VariableExpression@  @18:84-18:85  updatableInPlaceIf y
               Variable x :#Integer##[1]#  ~@VariableExpression@  @18:92-18:93
     Collection :#Integer#[2]  ~@Collection@  @18:107-18:113
       AtomicValue  -1 :@Integer@[1]  ~@AtomicValue@  @18:108-18:109

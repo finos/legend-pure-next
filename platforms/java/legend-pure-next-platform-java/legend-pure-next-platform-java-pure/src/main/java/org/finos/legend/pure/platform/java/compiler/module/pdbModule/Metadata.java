@@ -180,8 +180,8 @@ public final class Metadata
         boolean many = value instanceof List;
         Object classifier = new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValueImpl()
                 ._type(element(HOLDER))
-                ._typeArguments(List.of(genericType(value)))
-                ._multiplicityArguments(List.of(element("platform::pure::metamodel::multiplicity::"
+                ._typeArguments(Lists.fixedSize.of(genericType(value)))
+                ._multiplicityArguments(Lists.fixedSize.of(element("platform::pure::metamodel::multiplicity::"
                         + (many ? "ZeroMany" : "PureOne"))));
         return new org.finos.legend.pure.m3.platform.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolderImpl()
                 ._classifierGenericType(classifier);
@@ -191,7 +191,7 @@ public final class Metadata
     public static Object genericTypeHolderOf(String typePath)
     {
         return new org.finos.legend.pure.m3.platform.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolderImpl()
-                ._classifierGenericType(classifier(HOLDER, List.of(typePath)));
+                ._classifierGenericType(classifier(HOLDER, Lists.fixedSize.of(typePath)));
     }
 
     /**
@@ -484,7 +484,7 @@ public final class Metadata
     static List<Object> enumValueSlots(PureEnumValue constant, String property)
     {
         Object value = enumValueObject(constant);
-        return value == null ? List.of() : ((LazyObject) value).__values(property);
+        return value == null ? Lists.fixedSize.of() : ((LazyObject) value).__values(property);
     }
 
     /**
@@ -614,9 +614,9 @@ public final class Metadata
     @SuppressWarnings("unchecked")
     public static Object evaluate(Object function, Object arguments)
     {
-        List<Object> wrappers = arguments == null ? List.of()
+        List<Object> wrappers = arguments == null ? Lists.fixedSize.of()
                 : arguments instanceof List ? (List<Object>) arguments
-                : List.of(arguments);
+                : Lists.fixedSize.of(arguments);
         // Only here: a List is `evaluate`'s envelope around one argument. It is
         // an ordinary value everywhere else, and unwrapping it there would take
         // a genuine List away from the function being called.
@@ -730,16 +730,16 @@ public final class Metadata
         }
         if (value == null)
         {
-            return List.of();
+            return Lists.fixedSize.of();
         }
         try
         {
             Object read = value.getClass().getMethod(property).invoke(value);
-            return read == null ? List.of() : read instanceof List ? (List<Object>) read : List.of(read);
+            return read == null ? Lists.fixedSize.of() : read instanceof List ? (List<Object>) read : Lists.fixedSize.of(read);
         }
         catch (ReflectiveOperationException e)
         {
-            return List.of();
+            return Lists.fixedSize.of();
         }
     }
 
@@ -845,7 +845,7 @@ public final class Metadata
         {
             return value;
         }
-        for (Object one : value instanceof List ? (List<?>) value : value == null ? List.of() : List.of(value))
+        for (Object one : value instanceof List ? (List<?>) value : value == null ? Lists.fixedSize.of() : Lists.fixedSize.of(value))
         {
             if (!instanceOf(one, type))
             {
@@ -1051,7 +1051,7 @@ public final class Metadata
     public static Object setKeysFrom(Object instance, Object keyExpressions)
     {
         for (Object keyExpression : keyExpressions instanceof List ? (List<?>) keyExpressions
-                : keyExpressions == null ? List.of() : List.of(keyExpressions))
+                : keyExpressions == null ? Lists.fixedSize.of() : Lists.fixedSize.of(keyExpressions))
         {
             Object name = first(values(keyExpression, "name"));
             if (name != null)

@@ -19,11 +19,13 @@ import platform::pure::functions::collection::tests::fold::*;
 native function
     <<PCT.function>>
     {
-        doc.doc=''
+        doc.doc='',
+        inPlaceUpdate.callsLambdaRepeatedly='func',
+        inPlaceUpdate.callsLambdaWithElementsOf='value'
     }
     platform::pure::functions::collection::fold<T,V>(value:T[*], func:Function<{T[1],V[1]->V[1]}>[1], accumulator:V[1]):V[1];
 
-native function platform::pure::functions::collection::fold<T,V>(value:T[*], func:Function<{T[1],V[*]->V[*]}>[1], accumulator:V[*]):V[*];
+native function {inPlaceUpdate.callsLambdaRepeatedly='func', inPlaceUpdate.callsLambdaWithElementsOf='value'} platform::pure::functions::collection::fold<T,V>(value:T[*], func:Function<{T[1],V[*]->V[*]}>[1], accumulator:V[*]):V[*];
 
 function <<PCT.test>> platform::pure::functions::collection::tests::fold::testIntegerSum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

@@ -12,6 +12,7 @@ function protocol::f(): Any[*]
 native function x::f_Float_1__Float_1_(x:Float[1]):Float[1]  ~NativeFunction<{Float[1]->Float[1]}>
 
 function protocol::f__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  resultUpdatableInPlace
   Collection :#FunctionWithParameters<#{#Nil##[1]#->#Number##[1]#}#>#[2]  ~@Collection@  @8:3-8:39
     Lambda(x:@Integer@[1]) :#LambdaFunction<#{@Integer@[1]->@Integer@[1]}#>#[1]  ~@AtomicValue@  @8:4-8:17
       AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:17-8:17

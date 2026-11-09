@@ -16,9 +16,10 @@
 import platform::pure::test::pct::*;
 
 native function
-    <<PCT.function>>
+    <<PCT.function, inPlaceUpdate.NewCollectionResult>>
     {
-        doc.doc='Return the initial segment of the collection, which is everything but the last element'
+        doc.doc='Return the initial segment of the collection, which is everything but the last element',
+        inPlaceUpdate.resultMayHoldElementsOf='set'
     }
     platform::pure::functions::collection::init<T>(set:T[*]):T[*];
 

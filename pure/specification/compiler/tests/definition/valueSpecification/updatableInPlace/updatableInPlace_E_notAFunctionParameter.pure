@@ -1,0 +1,9 @@
+###Error
+Updatability tag 'callsLambdaAtMostOnce' on 'test::updatableInPlace::count_Integer_MANY__Integer_1_' names 'xs', which is not a function parameter (at valueSpecification/updatableInPlace/updatableInPlace_E_notAFunctionParameter:5c1-5c117)
+
+###Pure
+native function {inPlaceUpdate.callsLambdaAtMostOnce='xs'} test::updatableInPlace::count(xs: Integer[*]): Integer[1];
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

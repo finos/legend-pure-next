@@ -1,0 +1,9 @@
+###Error
+Updatability tag 'onlyReads' on 'test::updatableInPlace::count_Any_MANY__Integer_1_' names 'values', which 'resultMayHoldElementsOf' says comes out of the call (at valueSpecification/updatableInPlace/updatableInPlace_E_onlyReadsAndContentsClaim:5c1-5c157)
+
+###Pure
+native function {inPlaceUpdate.onlyReads='values', inPlaceUpdate.resultMayHoldElementsOf='values'} test::updatableInPlace::count(values: Any[*]): Integer[1];
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

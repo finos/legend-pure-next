@@ -64,14 +64,20 @@ public class BooleanNatives
         });
 
         // is — identity comparison
-        natives.put("platform::pure::functions::boolean::is_Any_1__Any_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        natives.put("platform::pure::functions::boolean::is_Any_MANY__Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
-            Object a = _E_ValueSpecification.unwrap(args.get(0));
-            Object b = _E_ValueSpecification.unwrap(args.get(1));
+            Object a = identityOf(args.get(0));
+            Object b = identityOf(args.get(1));
             boolean result;
             if (a == b)
             {
                 result = true;
+            }
+            else if (a == NO_VALUES || b == NO_VALUES || a instanceof platform.pure.metamodel.valuespecification.Collection || b instanceof platform.pure.metamodel.valuespecification.Collection
+                    || a instanceof java.util.List || b instanceof java.util.List)
+            {
+                // Collections of several values are the same only when they are the same collection.
+                result = false;
             }
             else if (a instanceof Number && b instanceof Number || a instanceof String && b instanceof String || a instanceof Boolean && b instanceof Boolean || a instanceof platform.pure.metamodel.type.Enum && b instanceof platform.pure.metamodel.type.Enum)
             {
@@ -161,5 +167,25 @@ public class BooleanNatives
         {
             return n1.compareTo(n2);
         }
+    }
+
+    private static final Object NO_VALUES = new Object();
+
+    /**
+     * What {@code is} compares a value by: nothing for an empty collection (every empty collection is the same), the
+     * element of a collection of one, the collection itself otherwise; a single value as itself.
+     */
+    private static Object identityOf(Object value)
+    {
+        if (value instanceof platform.pure.metamodel.valuespecification.Collection col)
+        {
+            java.util.List<?> values = col._values();
+            if (values.isEmpty())
+            {
+                return NO_VALUES;
+            }
+            return values.size() == 1 ? identityOf(values.get(0)) : _E_ValueSpecification.identityOf(col);
+        }
+        return _E_ValueSpecification.unwrap(value);
     }
 }

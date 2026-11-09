@@ -1190,6 +1190,11 @@ public final class PureContext
         {
             return org.finos.legend.pure.truffle.execution.types.PureSequence.EMPTY;
         }
+        // Computed on the first read and kept, so every read is the same collection (is.pure).
+        if (object instanceof org.finos.legend.pure.truffle.execution.PureDynamicObject pdo && pdo.keptDefault(property) != null)
+        {
+            return pdo.keptDefault(property);
+        }
         MutableSet<String> computing = computingDefaults.getIfAbsentPut(object, Sets.mutable::empty);
         if (!computing.add(property))
         {
@@ -1202,7 +1207,12 @@ public final class PureContext
         }
         try
         {
-            return org.finos.legend.pure.truffle.execution.natives.lang.EvalNode.dispatch(this, lambda, new Object[]{object}, null);
+            Object computed = org.finos.legend.pure.truffle.execution.natives.lang.EvalNode.dispatch(this, lambda, new Object[]{object}, null);
+            if (computed != null && object instanceof org.finos.legend.pure.truffle.execution.PureDynamicObject pdo)
+            {
+                pdo.keepDefault(property, computed);
+            }
+            return computed;
         }
         finally
         {

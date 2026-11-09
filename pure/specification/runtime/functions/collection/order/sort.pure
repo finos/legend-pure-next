@@ -16,9 +16,11 @@
 import platform::pure::test::pct::*;
 
 native function
-    <<PCT.function>>
+    <<PCT.function, inPlaceUpdate.NewCollectionResult>>
     {
-        doc.doc=''
+        doc.doc='',
+        inPlaceUpdate.callsLambdaRepeatedly='key,comp',
+        inPlaceUpdate.resultMayHoldElementsOf='col', inPlaceUpdate.callsLambdaWithElementsOf='col'
     }
     platform::pure::functions::collection::sort<T,U|m>(col:T[m], key:Function<{T[1]->U[1]}>[0..1], comp:Function<{U[1],U[1]->Integer[1]}>[0..1]):T[m];
 

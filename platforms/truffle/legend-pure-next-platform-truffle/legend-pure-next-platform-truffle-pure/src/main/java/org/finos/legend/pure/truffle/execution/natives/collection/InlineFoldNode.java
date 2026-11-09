@@ -48,6 +48,17 @@ public final class InlineFoldNode extends PureNode
 
     private static final Object[] EMPTY_ARGS = new Object[0];
 
+    /**
+     * Updatability of the accumulator (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): the lambda-frame slot of its flag (-1 when
+     * the body reads none); whether the start value is updatable in place (AddNode's COPY, IN_PLACE, or a caller-frame flag slot);
+     * whether a step's result is updatable in place, or is whenever its accumulator was.
+     */
+    @CompilationFinal private final int accFlagSlot;
+    @CompilationFinal private final int elementFlagSlot;
+    @CompilationFinal private final int seedUpdatableInPlace;
+    @CompilationFinal private final boolean stepResultUpdatableInPlace;
+    @CompilationFinal private final boolean stepResultUpdatableInPlaceIfAccumulator;
+
     public InlineFoldNode(PureNode collection,
                           PureNode seed,
                           PureNode[] body,
@@ -57,6 +68,28 @@ public final class InlineFoldNode extends PureNode
                           int[] callerSlots,
                           int[] lambdaSlots)
     {
+        this(collection, seed, body, lambdaDescriptor, elemSlot, accSlot, callerSlots, lambdaSlots, -1, AddNode.COPY, false, false, -1);
+    }
+
+    public InlineFoldNode(PureNode collection,
+                          PureNode seed,
+                          PureNode[] body,
+                          FrameDescriptor lambdaDescriptor,
+                          int elemSlot,
+                          int accSlot,
+                          int[] callerSlots,
+                          int[] lambdaSlots,
+                          int accFlagSlot,
+                          int seedUpdatableInPlace,
+                          boolean stepResultUpdatableInPlace,
+                          boolean stepResultUpdatableInPlaceIfAccumulator,
+                          int elementFlagSlot)
+    {
+        this.accFlagSlot = accFlagSlot;
+        this.elementFlagSlot = elementFlagSlot;
+        this.seedUpdatableInPlace = seedUpdatableInPlace;
+        this.stepResultUpdatableInPlace = stepResultUpdatableInPlace;
+        this.stepResultUpdatableInPlaceIfAccumulator = stepResultUpdatableInPlaceIfAccumulator;
         this.collection = collection;
         this.seed = seed;
         this.body = body;
@@ -79,10 +112,20 @@ public final class InlineFoldNode extends PureNode
         }
         VirtualFrame sub = Truffle.getRuntime().createVirtualFrame(EMPTY_ARGS, lambdaDescriptor);
         bindCaptures(frame, sub);
+        boolean updatableInPlace = seedUpdatableInPlace == AddNode.IN_PLACE || seedUpdatableInPlace >= 0 && frame.getValue(seedUpdatableInPlace) == Boolean.TRUE;
         for (int i = 0; i < sz; i++)
         {
             sub.setObject(elemSlot, CollectionHelper.at(col, i));
             sub.setObject(accSlot, acc);
+            if (elementFlagSlot >= 0)
+            {
+                sub.setObject(elementFlagSlot, Boolean.TRUE);
+            }
+            if (accFlagSlot >= 0)
+            {
+                sub.setObject(accFlagSlot, updatableInPlace);
+                updatableInPlace = stepResultUpdatableInPlace || stepResultUpdatableInPlaceIfAccumulator && updatableInPlace;
+            }
             Object result = null;
             for (int b = 0; b < body.length; b++)
             {

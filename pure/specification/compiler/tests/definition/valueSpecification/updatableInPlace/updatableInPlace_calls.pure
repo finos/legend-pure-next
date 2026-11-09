@@ -1,0 +1,159 @@
+// A call to a user function takes its summary: a function returning a fresh list gives a value updatable in place, and one
+// returning its parameter gives a value as updatable in place as its argument was.
+// A function calling itself has no summary while it is analysed: its recursive call gives a shared value, so its
+// result is not updatable in place, and neither is a value bound to a call of it.
+###Pure
+import test::updatableInPlace::*;
+
+function test::updatableInPlace::fresh(): Integer[*]
+{
+  [1, 2]->map(x|$x)
+}
+
+function test::updatableInPlace::same(xs: Integer[*]): Integer[*]
+{
+  $xs
+}
+
+function test::updatableInPlace::useFresh(): Integer[*]
+{
+  let a = fresh();
+  $a->add(3);
+}
+
+function test::updatableInPlace::throughSame(): Integer[*]
+{
+  let a = [1, 2]->map(x|$x);
+  let b = same($a);
+  $b->add(3);
+}
+
+function test::updatableInPlace::recursive(n: Integer[1]): Integer[*]
+{
+  if($n == 0, |[1, 2]->map(x|$x), |recursive($n - 1))
+}
+
+function test::updatableInPlace::useRecursive(): Integer[*]
+{
+  let r = recursive(2);
+  $r->add(1);
+}
+
+###CompiledGraph
+function test::updatableInPlace::fresh__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @10:9-10:19
+    typeParam T -> #Integer#
+    typeParam V -> #Integer#
+    mulParam m -> [2]
+    Collection :#Integer#[2]  ~@Collection@  @10:3-10:8
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @10:4-10:4
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @10:7-10:7
+    Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @10:15-10:18
+      Variable x :#Integer##[1]#  ~@VariableExpression@  @10:17-10:18
+
+function test::updatableInPlace::same_Integer_MANY__Integer_MANY_(xs:@Integer@[*]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[*]}>
+  resultUpdatableInPlaceIf xs
+  Variable xs :#Integer##[*]#  ~@VariableExpression@  @15:3-15:5
+
+function test::updatableInPlace::useFresh__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @20:3-20:17
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @20:7-20:7
+    FunctionInvocation test::updatableInPlace::fresh__Integer_MANY_ :#Integer##[*]#  ~@FunctionInvocation@  @20:11-20:17
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @21:5-21:12
+    typeParam T -> #Integer#
+    Variable a :#Integer##[*]#  ~@VariableExpression@  @21:3-21:4  updatableInPlace
+    AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @21:11-21:11
+
+function test::updatableInPlace::throughSame__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @26:3-26:27
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @26:7-26:7
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @26:17-26:27
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @26:11-26:16
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @26:12-26:12
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @26:15-26:15
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @26:23-26:26
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @26:25-26:26
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @27:3-27:18
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @27:7-27:7
+    FunctionInvocation test::updatableInPlace::same_Integer_MANY__Integer_MANY_ :#Integer##[*]#  ~@FunctionInvocation@  @27:11-27:18
+      Variable a :#Integer##[2]#  ~@VariableExpression@  @27:16-27:17  updatableInPlace
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @28:5-28:12
+    typeParam T -> #Integer#
+    Variable b :#Integer##[*]#  ~@VariableExpression@  @28:3-28:4  updatableInPlace
+    AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @28:11-28:11
+
+function test::updatableInPlace::recursive_Integer_1__Integer_MANY_(n:@Integer@[1]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[1]->@Integer@[*]}>
+  FunctionInvocation if_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @33:3-33:53
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @33:6-33:12
+      Variable n :#Integer##[1]#  ~@VariableExpression@  @33:6-33:7
+      AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @33:12-33:12
+    Lambda :#LambdaFunction<#{->#Integer##[2]#}#>#[1]  ~@AtomicValue@  @33:15-33:32
+      resultUpdatableInPlace
+      ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @33:22-33:32
+        typeParam T -> #Integer#
+        typeParam V -> #Integer#
+        mulParam m -> [2]
+        Collection :#Integer#[2]  ~@Collection@  @33:16-33:21
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @33:17-33:17
+          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @33:20-33:20
+        Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @33:28-33:31
+          Variable x :#Integer##[1]#  ~@VariableExpression@  @33:30-33:31
+    Lambda :#LambdaFunction<#{->#Integer##[*]#}#>#[1]  ~@AtomicValue@  @33:35-33:52
+      openVar n :#Integer##[1]#
+      FunctionInvocation test::updatableInPlace::recursive_Integer_1__Integer_MANY_ :#Integer##[*]#  ~@FunctionInvocation@  @33:36-33:52
+        FunctionInvocation minus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @33:46-33:51
+          Variable n :#Integer##[1]#  ~@VariableExpression@  @33:46-33:47
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @33:51-33:51
+
+function test::updatableInPlace::useRecursive__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @38:3-38:22
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'r' :@String@[1]  ~@AtomicValue@  @38:7-38:7
+    FunctionInvocation test::updatableInPlace::recursive_Integer_1__Integer_MANY_ :#Integer##[*]#  ~@FunctionInvocation@  @38:11-38:22
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @38:21-38:21
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @39:5-39:12
+    typeParam T -> #Integer#
+    Variable r :#Integer##[*]#  ~@VariableExpression@  @39:3-39:4
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @39:11-39:11
+
+###ReverseIndex
+platform::pure::functions::boolean::equal_Any_MANY__Any_MANY__Boolean_1_:
+  test::updatableInPlace::recursive_Integer_1__Integer_MANY_
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::throughSame__Integer_MANY_
+  test::updatableInPlace::useFresh__Integer_MANY_
+  test::updatableInPlace::useRecursive__Integer_MANY_
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::updatableInPlace::fresh__Integer_MANY_
+  test::updatableInPlace::recursive_Integer_1__Integer_MANY_
+  test::updatableInPlace::throughSame__Integer_MANY_
+platform::pure::functions::lang::if_Boolean_1__Function_1__Function_1__T_m_:
+  test::updatableInPlace::recursive_Integer_1__Integer_MANY_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::throughSame__Integer_MANY_
+  test::updatableInPlace::useFresh__Integer_MANY_
+  test::updatableInPlace::useRecursive__Integer_MANY_
+platform::pure::functions::math::minus_Integer_1__Integer_1__Integer_1_:
+  test::updatableInPlace::recursive_Integer_1__Integer_MANY_
+test::updatableInPlace::fresh__Integer_MANY_:
+  test::updatableInPlace::useFresh__Integer_MANY_
+test::updatableInPlace::recursive_Integer_1__Integer_MANY_:
+  test::updatableInPlace::useRecursive__Integer_MANY_
+test::updatableInPlace::same_Integer_MANY__Integer_MANY_:
+  test::updatableInPlace::throughSame__Integer_MANY_

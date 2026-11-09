@@ -72,7 +72,7 @@ function f_Relation_1__Relation_1_(rel:Relation<(id:@Integer@[1], category:@Stri
   ArrowInvocation extend_Relation_1__Window_1__FuncColSpecArray_1__Relation_1_ :#Relation<#(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#, rnk:@Integer@[1])#>##[1]#  ~@ArrowInvocation@  @47:7-47:75
     typeParam R -> #(rnk:@Integer@[1])#
     typeParam T -> #(id:#Integer##[1]#, category:#String##[1]#, val:#Integer##[1]#)#
-    Variable rel :#Relation<(id:@Integer@[1], category:@String@[1], val:@Integer@[1])>##[1]#  ~@VariableExpression@  @47:3-47:6
+    Variable rel :#Relation<(id:@Integer@[1], category:@String@[1], val:@Integer@[1])>##[1]#  ~@VariableExpression@  @47:3-47:6  updatableInPlaceIf rel
     FunctionInvocation over_ColSpecArray_1__SortInfo_MANY__Window_1_ :#Window<#(id:@Integer@[1], category:@String@[1], val:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @47:16-47:52
       typeParam T -> #(id:@Integer@[1], category:@String@[1], val:@Integer@[1])#
       FunctionInvocation colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_ :#ColSpecArray<#(id:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @47:21-47:25

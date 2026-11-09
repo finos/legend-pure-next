@@ -1,0 +1,1413 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::compiler::*;
+import platform::pure::compiler::updatableInPlace::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::constraint::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::pointer::*;
+import platform::pure::functions::lang::*;
+
+// The updatable in place-value analysis (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): marks a variable use `updatableInPlace` when it
+// holds the only reference to its value — the variable is bound to a fresh value, this is its last use, and no
+// alias of it escaped — so the platform consuming it may mutate the value in place; and `updatableInPlaceIfParameter = p`
+// when the same holds provided the caller passed parameter p updatable in place. Also records, per function and lambda,
+// whether its result is updatable in place (resultUpdatableInPlace) or updatable in place when a parameter is (resultUpdatableInPlaceIfParameter).
+//
+// Defensive by construction: without an `updatability` annotation on a native, every argument is assumed retained,
+// every lambda escapes and no result is fresh. Annotations are trusted on native functions only; calls to
+// user-defined functions leak their arguments.
+//
+// Mirrors Java's InPlaceUpdateAnalyzer. The graph is immutable, so a body is analysed in passes keyed by position
+// (a path from the body's root: statement i of a sequence is `<p>/i`, argument j of a call `<p>/j`, value k of a
+// collection `<p>/k`, statement i of a lambda held at `<p>` is `<p>/l/i`), and only the bodies something was
+// decided in are rebuilt.
+
+Class platform::pure::compiler::updatableInPlace::Callee
+{
+    parameters : VariableExpression[*];
+    freshResult : Boolean[1];
+    singularResult : Boolean[1];
+    onlyReads : String[*];
+    keepsOnlyContentsOf : String[*];
+    invokesOnce : String[*];
+    invokesRepeatedly : String[*];
+    propertyRead : Boolean[1];
+    // A user function's own summary: its result is updatable in place, or is when the argument at this index is.
+    userResultUpdatableInPlace : Boolean[0..1];
+    userResultParameter : Integer[0..1];
+    // The user function's result has multiplicity [m]: what m is depends on the call.
+    userResultOfMultiplicityParameter : Boolean[0..1];
+    userResultElementsUpdatableInPlace : Boolean[0..1];
+    resultMayHoldElementsOf : String[*];
+    callsLambdaWithElementsOf : String[*];
+}
+
+Class platform::pure::compiler::updatableInPlace::Binding
+{
+    id : Integer[1];
+    name : String[1];
+    parameter : Boolean[1];
+    home : Integer[1];
+    genericType : GenericType[0..1];
+    multiplicity : Multiplicity[0..1];
+    value : ValueSpecification[0..1];
+    valuePath : String[0..1];
+}
+
+Class platform::pure::compiler::updatableInPlace::Use
+{
+    path : String[1];
+    binding : Integer[1];
+    position : String[1];
+    released : Boolean[1];
+}
+
+Class platform::pure::compiler::updatableInPlace::LambdaScope
+{
+    id : Integer[1];
+    parent : Integer[0..1];
+    kind : String[1];
+    path : String[1];
+    params : Integer[*];
+}
+
+Class platform::pure::compiler::updatableInPlace::Arg
+{
+    path : String[1];
+    value : ValueSpecification[1];
+    lambda : LambdaFunction<Any>[0..1];
+    kind : String[0..1];
+}
+
+Class platform::pure::compiler::updatableInPlace::State
+{
+    context : CompilerContext[1];
+    nextId : Integer[1];
+    bindings : Map<Integer, Binding>[1];
+    order : Integer[*];
+    uses : Map<String, Use>[1];
+    usesOf : Map<Integer, List<String>>[1];
+    lambdas : Map<Integer, LambdaScope>[1];
+    lambdaAt : Map<String, Integer>[1];
+    lambdaFns : Map<String, LambdaFunction<Any>>[1];
+    captures : Map<Integer, List<Integer>>[1];
+    poisoned : Map<Integer, Boolean>[1];
+    calls : Map<String, List<Arg>>[1];
+    calleeAt : Map<String, Callee>[1];
+    lets : Map<String, Integer>[1];
+    callees : Map<String, Callee>[1];
+    // The recursive group being analysed: its members' summaries are not known yet.
+    recursive : String[*];
+    // Whether the root's own parameters may be passed updatable in place by its caller (not a constraint's).
+    rootParametersUpdatableInPlace : Boolean[1];
+    // Every copy with keys, the value of every key setting a property, and every property read, by path.
+    copies : String[*];
+    keyValues : String[*];
+    expressions : Map<String, FunctionExpression>[1];
+}
+
+// Tarjan's strongly connected components, as a fold's state.
+Class platform::pure::compiler::updatableInPlace::Tarjan
+{
+    calls : Map<String, List<String>>[1];
+    next : Integer[1];
+    index : Map<String, Integer>[1];
+    low : Map<String, Integer>[1];
+    stack : String[*];
+    onStack : Map<String, Boolean>[1];
+    groups : List<String>[*];
+}
+
+Class platform::pure::compiler::updatableInPlace::CallAcc
+{
+    state : State[1];
+    args : Arg[*];
+}
+
+Class platform::pure::compiler::updatableInPlace::Walk
+{
+    state : State[1];
+    scope : Pair<String, Integer>[*];
+}
+
+Class platform::pure::compiler::updatableInPlace::Live
+{
+    live : Integer[*];
+    last : Map<String, Boolean>[1];
+}
+
+// Who solely holds a value: nobody else (fresh, no parameter), or nobody else provided the caller passed `parameter` (a
+// binding id) updatable in place. A value someone else may hold (shared) has no updatability.
+Class platform::pure::compiler::updatableInPlace::Updatability
+{
+    parameter : Integer[0..1];
+}
+
+Class platform::pure::compiler::updatableInPlace::Decision
+{
+    updatabilities : Map<Integer, Updatability>[1];
+    updatableInPlaceIf : Map<String, Integer>[1];
+    updatableInPlace : Map<String, Boolean>[1];
+}
+
+Class platform::pure::compiler::updatableInPlace::Summary
+{
+    resultUpdatableInPlace : Boolean[1];
+    resultUpdatableInPlaceIfParameter : String[0..1];
+    resultElementsUpdatableInPlace : Boolean[0..1];
+}
+
+// What is known when deciding which lists hold elements nothing else references.
+Class platform::pure::compiler::updatableInPlace::Elements
+{
+    st : State[1];
+    live : Live[1];
+    decision : Decision[1];
+    summaries : Map<String, Summary>[1];
+    updatableInPlace : Map<Integer, Boolean>[1];
+}
+
+Class platform::pure::compiler::updatableInPlace::Analysis
+{
+    updatableInPlace : Map<String, Boolean>[1];
+    elementsUpdatableInPlace : Map<String, Boolean>[1];
+    updatableInPlaceIf : Map<String, String>[1];
+    summaries : Map<String, Summary>[1];
+    dirty : Map<String, Boolean>[1];
+}
+
+// ----------------------------------------------------------------------------
+// Entry point: annotate every body of the compiled elements
+// ----------------------------------------------------------------------------
+
+function platform::pure::compiler::annotateUpdatableInPlace(context:CompilerContext[1], elements:PackageableElement[*]):CompilerContext[1]
+{
+    // User functions first, callees before callers, so a call reads its callee's summary (from the element map, where
+    // the callee already analysed is); within a recursive group none is known yet, so calls between its members are
+    // treated as unknown, whatever the order.
+    let functions = $elements->filter(e | $e->instanceOf(UserDefinedFunction));
+    let paths = $functions->map(f | $f->elementToPath());
+    let afterFunctions = recursiveGroups($paths, $context.referencedBy)->fold({group, ctx0 |
+        $group.values->fold({path, ctx |
+            let el = $ctx.elementMap->get($path)->toOne();
+            let annotated = $el->annotateElement($ctx, $group.values);
+            if($annotated->is($el), | $ctx, | ^$ctx(elementMap = $ctx.elementMap->put($path, $annotated)));
+        }, $ctx0);
+    }, $context);
+    $elements->filter(e | !$e->instanceOf(UserDefinedFunction))->fold({el, ctx |
+        let annotated = $el->annotateElement($ctx, []);
+        if($annotated->is($el),
+            | $ctx,
+            | ^$ctx(elementMap = $ctx.elementMap->put($el->elementToPath(), $annotated))
+        );
+    }, $afterFunctions);
+}
+
+// The strongly connected groups of `functions` under "references" (`referencedBy`: a function to the elements
+// referencing it), callees' groups before their callers' (Tarjan's order). Groups do not depend on the order functions
+// are visited in, and neither does the analysis: it reads summaries only across groups.
+function platform::pure::compiler::updatableInPlace::recursiveGroups(functions:String[*], referencedBy:Map<String, List<String>>[1]):List<String>[*]
+{
+    let sorted = $functions->sort();
+    let known = newMap($sorted->map(f | pair($f, true)));
+    let edges = $sorted->map(target |
+        let callers = $referencedBy->get($target);
+        if($callers->isEmpty(), | [], | $callers->toOne().values->filter(c | $known->get($c) == true)->map(c | pair($c, $target)));
+    );
+    let calls = $edges->fold({e, m |
+        let existing = $m->get($e.first);
+        $m->put($e.first, ^List<String>(values = if($existing->isEmpty(), | [$e.second], | $existing->toOne().values->concatenate($e.second))));
+    }, newMap([]->cast(@Pair<String, List<String>>)));
+    let sortedCalls = newMap($calls->keyValues()->map(kv | pair($kv.first, ^List<String>(values = $kv.second.values->removeDuplicates()->sort()))));
+    let start = ^Tarjan(calls = $sortedCalls, next = 0,
+                        index = newMap([]->cast(@Pair<String, Integer>)), low = newMap([]->cast(@Pair<String, Integer>)),
+                        stack = [], onStack = newMap([]->cast(@Pair<String, Boolean>)), groups = []);
+    $sorted->fold({f, t | if($t.index->get($f)->isEmpty(), | $f->connect($t), | $t)}, $start).groups;
+}
+
+function platform::pure::compiler::updatableInPlace::connect(v:String[1], t:Tarjan[1]):Tarjan[1]
+{
+    let t1 = ^$t(next = $t.next + 1, index = $t.index->put($v, $t.next), low = $t.low->put($v, $t.next),
+                 stack = $v->concatenate($t.stack), onStack = $t.onStack->put($v, true));
+    let callees = $t1.calls->get($v);
+    let t2 = if($callees->isEmpty(), | $t1, | $callees->toOne().values->fold({w, s |
+        if($s.index->get($w)->isEmpty(),
+            | let s2 = $w->connect($s);
+              ^$s2(low = $s2.low->put($v, lower($s2.low->get($v)->toOne(), $s2.low->get($w)->toOne())));,
+            | if($s.onStack->get($w) == true,
+                  | ^$s(low = $s.low->put($v, lower($s.low->get($v)->toOne(), $s.index->get($w)->toOne()))),
+                  | $s));
+    }, $t1));
+    if($t2.low->get($v) == $t2.index->get($v),
+        | let n = $t2.stack->indexOf($v) + 1;
+          let group = $t2.stack->take($n);
+          ^$t2(stack = $t2.stack->drop($n), onStack = $group->fold({g, m | $m->put($g, false)}, $t2.onStack),
+               groups = $t2.groups->concatenate(^List<String>(values = $group->sort())));,
+        | $t2);
+}
+
+function platform::pure::compiler::updatableInPlace::lower(a:Integer[1], b:Integer[1]):Integer[1]
+{
+    if($a < $b, | $a, | $b);
+}
+
+function platform::pure::compiler::updatableInPlace::annotateElement(element:PackageableElement[1], context:CompilerContext[1], recursive:String[*]):PackageableElement[1]
+{
+    $element->match([
+        fn:UserDefinedFunction<Any>[1] |
+            let body = $fn->analyzeRoot($context, $recursive);
+            let pre = $fn.preConstraints->map(c | $c->annotateConstraint($context, $recursive));
+            let post = $fn.postConstraints->map(c | $c->annotateConstraint($context, $recursive));
+            if($body->is($fn) && $pre->zip($fn.preConstraints)->forAll(p | $p.first->is($p.second)) && $post->zip($fn.postConstraints)->forAll(p | $p.first->is($p.second)),
+                | $fn,
+                | let udf = $body->cast(@UserDefinedFunction<Any>);
+                  ^$udf(preConstraints = $pre, postConstraints = $post);
+            );,
+        cls:Class<Any>[1] |
+            let qps = $cls.qualifiedProperties->map(qp | $qp->analyzeRoot($context, [])->cast(@QualifiedProperty<Any>));
+            let cons = $cls.constraints->map(c | $c->annotateConstraint($context, []));
+            let props = $cls.properties->map(p | $p->annotateDefault($context));
+            if($qps->zip($cls.qualifiedProperties)->forAll(p | $p.first->is($p.second))
+                    && $cons->zip($cls.constraints)->forAll(p | $p.first->is($p.second))
+                    && $props->zip($cls.properties)->forAll(p | $p.first->is($p.second)),
+                | $cls,
+                | ^$cls(
+                      qualifiedProperties = $qps->map(qp | ^$qp(owner = ~.~)),
+                      constraints = $cons,
+                      properties = $props->map(p | ^$p(owner = ~.~)),
+                      generalizations = $cls.generalizations->map(g | ^$g(specific = ~.~))
+                  )
+            );,
+        assoc:Association[1] |
+            let qps = $assoc.qualifiedProperties->map(qp | $qp->analyzeRoot($context, [])->cast(@QualifiedProperty<Any>));
+            let props = $assoc.properties->map(p | $p->annotateDefault($context));
+            if($qps->zip($assoc.qualifiedProperties)->forAll(p | $p.first->is($p.second))
+                    && $props->zip($assoc.properties)->forAll(p | $p.first->is($p.second)),
+                | $assoc,
+                | ^$assoc(qualifiedProperties = $qps->map(qp | ^$qp(owner = ~.~)), properties = $props->map(p | ^$p(owner = ~.~)))
+            );,
+        pt:PrimitiveType[1] |
+            let cons = $pt.constraints->map(c | $c->annotateConstraint($context, []));
+            if($cons->zip($pt.constraints)->forAll(p | $p.first->is($p.second)), | $pt, | ^$pt(constraints = $cons));,
+        a:PackageableElement[1] | $element
+    ]);
+}
+
+// A constraint never solely holds what it checks: the instance, or the function's arguments and result, are used again once it
+// passes. Its own parameters are shared.
+function platform::pure::compiler::updatableInPlace::annotateConstraint(c:Constraint[1], context:CompilerContext[1], recursive:String[*]):Constraint[1]
+{
+    let fd = $c.functionDefinition->analyzeRoot($context, $recursive, false);
+    let mf = if($c.messageFunction->isEmpty(), | [], | $c.messageFunction->toOne()->analyzeRoot($context, $recursive, false));
+    if($fd->is($c.functionDefinition) && ($mf->isEmpty() || $mf->toOne()->is($c.messageFunction->toOne())),
+        | $c,
+        | ^$c(functionDefinition = $fd, messageFunction = $mf)
+    );
+}
+
+function platform::pure::compiler::updatableInPlace::annotateDefault(p:Property<Nil, Any|*>[1], context:CompilerContext[1]):Property<Nil, Any|*>[1]
+{
+    if($p.defaultValue->isEmpty(),
+        | $p,
+        | let dv = $p.defaultValue->toOne();
+          let annotated = $dv->analyzeRoot($context, [])->cast(@LambdaFunction<Any>);
+          if($annotated->is($dv), | $p, | ^$p(defaultValue = $annotated));
+    );
+}
+
+// ----------------------------------------------------------------------------
+// One root body: forward walk, backward liveness, forward decision, rebuild
+// ----------------------------------------------------------------------------
+
+function platform::pure::compiler::updatableInPlace::analyzeRoot(root:FunctionDefinition<Any>[1], context:CompilerContext[1], recursive:String[*]):FunctionDefinition<Any>[1]
+{
+    $root->analyzeRoot($context, $recursive, true);
+}
+
+function platform::pure::compiler::updatableInPlace::analyzeRoot(root:FunctionDefinition<Any>[1], context:CompilerContext[1], recursive:String[*], parametersUpdatableInPlace:Boolean[1]):FunctionDefinition<Any>[1]
+{
+    let empty = ^State(
+        context = $context, nextId = 1,
+        bindings = newMap([]->cast(@Pair<Integer, Binding>)),
+        uses = newMap([]->cast(@Pair<String, Use>)),
+        usesOf = newMap([]->cast(@Pair<Integer, List<String>>)),
+        lambdas = newMap(pair(0, ^LambdaScope(id = 0, kind = 'ROOT', path = 'r'))),
+        lambdaAt = newMap([]->cast(@Pair<String, Integer>)),
+        lambdaFns = newMap([]->cast(@Pair<String, LambdaFunction<Any>>)),
+        captures = newMap([]->cast(@Pair<Integer, List<Integer>>)),
+        poisoned = newMap([]->cast(@Pair<Integer, Boolean>)),
+        calls = newMap([]->cast(@Pair<String, List<Arg>>)),
+        calleeAt = newMap([]->cast(@Pair<String, Callee>)),
+        lets = newMap([]->cast(@Pair<String, Integer>)),
+        callees = newMap([]->cast(@Pair<String, Callee>)),
+        recursive = $recursive,
+        rootParametersUpdatableInPlace = $parametersUpdatableInPlace,
+        expressions = newMap([]->cast(@Pair<String, FunctionExpression>))
+    );
+    let bound = $root->functionParameters()->fold({p, w | $w->bindParameter($p, 0)}, ^Walk(state = $empty, scope = []));
+    let walked = $root.expressionSequence->walkSequence('r', $bound, 0, 'RETURN');
+    let st = $walked.state;
+    let live = $root.expressionSequence->liveSequence('r', ^Live(live = [], last = newMap([]->cast(@Pair<String, Boolean>))), $st);
+    let decided = $st.order->fold({id, d | $st->decide($id, $live, $d)},
+        ^Decision(updatabilities = newMap([]->cast(@Pair<Integer, Updatability>)), updatableInPlaceIf = newMap([]->cast(@Pair<String, Integer>)), updatableInPlace = newMap([]->cast(@Pair<String, Boolean>))));
+    let decision = $st->markFields($live, $decided);
+    let lambdaSummaries = $st.lambdas->keyValues()->filter(kv | $kv.first != 0)->fold({kv, m |
+        let lambdaPath = $kv.second.path;
+        let lambda = $st.lambdaFns->get($lambdaPath);
+        if($lambda->isEmpty(), | $m, | $m->put($lambdaPath, $lambda->toOne()->summarize($lambdaPath + '/l', $kv.first, $st, $live, $decision)));
+    }, newMap([]->cast(@Pair<String, Summary>)));
+    let rootSummary = $root->summarize('r', 0, $st, $live, $decision);
+    let elements = $st->decideElements($live, $decision, $lambdaSummaries);
+    let rootResult = $root.expressionSequence->cast(@ValueSpecification);
+    let rootElements = $root->instanceOf(UserDefinedFunction) && $rootResult->isNotEmpty() && $rootResult->last()->toOne()->elementsUpdatableInPlace('r/' + ($rootResult->size() - 1)->toString(), $elements);
+    let summaries = $lambdaSummaries->put('r', if($rootElements, | ^$rootSummary(resultElementsUpdatableInPlace = true), | $rootSummary));
+    let elementMarks = $elements->elementMarks();
+    let interesting = $summaries->keyValues()->filter(kv | $kv.second.resultUpdatableInPlace || $kv.second.resultUpdatableInPlaceIfParameter->isNotEmpty() || ($kv.second.resultElementsUpdatableInPlace == true));
+    let keys = $decision.updatableInPlace->keys()->concatenate($decision.updatableInPlaceIf->keys())->concatenate($interesting->map(kv | $kv.first))->concatenate($elementMarks);
+    if($keys->isEmpty(),
+        | $root,
+        | let analysis = ^Analysis(
+              updatableInPlace = $decision.updatableInPlace,
+              elementsUpdatableInPlace = newMap($elementMarks->map(k | pair($k, true))),
+              updatableInPlaceIf = newMap($decision.updatableInPlaceIf->keyValues()->map(kv | pair($kv.first, $st.bindings->get($kv.second)->toOne().name))),
+              summaries = newMap($interesting),
+              dirty = newMap($keys->map(k | $k->prefixes())->removeDuplicates()->map(k | pair($k, true)))
+          );
+          $root->rebuildFunction('r', $analysis);
+    );
+}
+
+// The parameters a function binds: a lambda's, a user function's or a qualified property's.
+function platform::pure::compiler::updatableInPlace::functionParameters(f:FunctionDefinition<Any>[1]):VariableExpression[*]
+{
+    $f->match([
+        fwp:FunctionWithParameters<Any>[1] | $fwp.parameters->cast(@VariableExpression),
+        a:Any[1] | []->cast(@VariableExpression)
+    ]);
+}
+
+// Every prefix of a path ('r/1/l/0' -> 'r', 'r/1', 'r/1/l', 'r/1/l/0').
+function platform::pure::compiler::updatableInPlace::prefixes(path:String[1]):String[*]
+{
+    let parts = $path->split('/');
+    range(1, $parts->size() + 1)->map(n | $parts->take($n)->joinStrings('/'));
+}
+
+// ----------------------------------------------------------------------------
+// Forward walk
+// ----------------------------------------------------------------------------
+
+function platform::pure::compiler::updatableInPlace::bindParameter(w:Walk[1], p:VariableExpression[1], lambdaId:Integer[1]):Walk[1]
+{
+    let st = $w.state;
+    let id = $st.nextId;
+    let b = ^Binding(id = $id, name = $p.name->toOne(), parameter = true, home = $lambdaId, genericType = $p.genericType, multiplicity = $p.multiplicity);
+    let lambda = $st.lambdas->get($lambdaId)->toOne();
+    ^Walk(
+        state = ^$st(nextId = $id + 1, bindings = $st.bindings->put($id, $b), order += $id,
+                     lambdas = $st.lambdas->put($lambdaId, ^$lambda(params += $id))),
+        scope = pair($p.name->toOne(), $id)->concatenate($w.scope)
+    );
+}
+
+function platform::pure::compiler::updatableInPlace::walkSequence(sequence:ValueSpecification[*], prefix:String[1], w:Walk[1], lambdaId:Integer[1], resultPosition:String[1]):Walk[1]
+{
+    let n = $sequence->size();
+    range(0, $n)->fold({i, acc |
+        $sequence->at($i)->walk($prefix + '/' + $i->toString(), $acc, $lambdaId, if($i == $n - 1, | $resultPosition, | 'OTHER'), false);
+    }, $w);
+}
+
+function platform::pure::compiler::updatableInPlace::walk(vs:ValueSpecification[1], path:String[1], w:Walk[1], lambdaId:Integer[1], position:String[1], released:Boolean[1]):Walk[1]
+{
+    $vs->match([
+        ve:VariableExpression[1] | ^$w(state = $w.state->use($ve, $path, $w.scope, $lambdaId, $position, $released)),
+        fe:FunctionExpression[1] |
+            if($fe->isLet(), | $fe->walkLet($path, $w, $lambdaId), | $fe->walkCall($path, $w, $lambdaId, $position));,
+        av:AtomicValue[1] |
+            if($av.value->isNotEmpty() && $av.value->toOne()->instanceOf(LambdaFunction),
+                | // A lambda value not handed straight to a native that declares how it runs it: it may run any time,
+                  // any number of times.
+                  ^$w(state = $av.value->toOne()->cast(@LambdaFunction<Any>)->walkLambda($path, $w, $lambdaId, 'ESCAPING', 'OTHER')),
+                | $w
+            );,
+        col:Collection[1] |
+            let vals = $col.values->cast(@ValueSpecification);
+            let r = range(0, $vals->size())->fold({k, acc | $vals->at($k)->walk($path + '/' + $k->toString(), $acc, $lambdaId, 'OTHER', false)}, $w);
+            ^$w(state = $r.state);,
+        a:ValueSpecification[1] | $w
+    ]);
+}
+
+function platform::pure::compiler::updatableInPlace::use(st:State[1], ve:VariableExpression[1], path:String[1], scope:Pair<String, Integer>[*], lambdaId:Integer[1], position:String[1], released:Boolean[1]):State[1]
+{
+    let name = $ve.name->toOne();
+    let found = if($name->startsWith('~'), | [], | $scope->filter(p | $p.first == $name)->head());
+    if($found->isEmpty(),
+        | $st,
+        | let bid = $found->toOne().second;
+          let b = $st.bindings->get($bid)->toOne();
+          // A use from inside a lambda the variable was not bound in is a capture; one through a lambda that escapes
+          // means the value may be read at any later time, so no use of it is ever updatable in place.
+          let st1 = $st->captureChain($lambdaId, $b.home, $bid);
+          let u = ^Use(path = $path, binding = $bid, position = $position, released = $released);
+          let existing = $st1.usesOf->get($bid);
+          ^$st1(uses = $st1.uses->put($path, $u),
+                usesOf = $st1.usesOf->put($bid, ^List<String>(values = if($existing->isEmpty(), | [], | $existing->toOne().values)->concatenate($path))));
+    );
+}
+
+function platform::pure::compiler::updatableInPlace::captureChain(st:State[1], lambdaId:Integer[1], home:Integer[1], bid:Integer[1]):State[1]
+{
+    if($lambdaId == $home,
+        | $st,
+        | let l = $st.lambdas->get($lambdaId)->toOne();
+          let existing = $st.captures->get($lambdaId);
+          let caps = if($existing->isEmpty(), | [], | $existing->toOne().values);
+          let st1 = ^$st(captures = $st.captures->put($lambdaId, ^List<Integer>(values = if($caps->contains($bid), | $caps, | $caps->concatenate($bid)))));
+          let st2 = if($l.kind == 'ESCAPING', | ^$st1(poisoned = $st1.poisoned->put($bid, true)), | $st1);
+          if($l.parent->isEmpty(), | $st2, | $st2->captureChain($l.parent->toOne(), $home, $bid));
+    );
+}
+
+function platform::pure::compiler::updatableInPlace::isLet(fe:FunctionExpression[1]):Boolean[1]
+{
+    $fe.functionName == 'letFunction'
+}
+
+function platform::pure::compiler::updatableInPlace::letName(fe:FunctionExpression[1]):String[0..1]
+{
+    let first = $fe.parametersValues->head();
+    if($first->isNotEmpty() && $first->toOne()->instanceOf(AtomicValue),
+        | let v = $first->toOne()->cast(@AtomicValue).value;
+          if($v->isNotEmpty() && $v->toOne()->instanceOf(String), | $v->toOne()->cast(@String), | []);,
+        | []
+    );
+}
+
+function platform::pure::compiler::updatableInPlace::walkLet(fe:FunctionExpression[1], path:String[1], w:Walk[1], lambdaId:Integer[1]):Walk[1]
+{
+    let args = $fe.parametersValues->cast(@ValueSpecification);
+    let value = if($args->size() > 1, | $args->at(1), | []);
+    let valuePath = $path + '/1';
+    let w1 = if($value->isEmpty(), | $w, | $value->toOne()->walk($valuePath, $w, $lambdaId, 'MOVE', false));
+    let name = $fe->letName();
+    if($name->isEmpty(),
+        | $w1,
+        | let st = $w1.state;
+          let id = $st.nextId;
+          let b = ^Binding(id = $id, name = $name->toOne(), parameter = false, home = $lambdaId,
+                           genericType = $fe.genericType, multiplicity = $fe.multiplicity, value = $value,
+                           valuePath = if($value->isEmpty(), | [], | $valuePath));
+          ^Walk(state = ^$st(nextId = $id + 1, bindings = $st.bindings->put($id, $b), order += $id, lets = $st.lets->put($path, $id)),
+                scope = pair($name->toOne(), $id)->concatenate($w1.scope));
+    );
+}
+
+function platform::pure::compiler::updatableInPlace::walkCall(fe:FunctionExpression[1], path:String[1], w:Walk[1], lambdaId:Integer[1], position:String[1]):Walk[1]
+{
+    let looked = $w.state->lookupCallee($fe.func);
+    let callee = $looked.callee;
+    let args = $fe.parametersValues->cast(@ValueSpecification);
+    let branchResult = if($position == 'MOVE' || $position == 'RETURN', | $position, | 'OTHER');
+    let r = range(0, $args->size())->fold({i, acc |
+        let arg = $args->at($i);
+        let argPath = $path + '/' + $i->toString();
+        let parameter = if($i < $callee.parameters->size(), | $callee.parameters->at($i), | []);
+        let kind = $callee->lambdaKind($parameter);
+        let lambdaOf = {v:ValueSpecification[1] | if($v->instanceOf(AtomicValue) && $v->cast(@AtomicValue).value->isNotEmpty() && $v->cast(@AtomicValue).value->toOne()->instanceOf(LambdaFunction),
+                                                     | $v->cast(@AtomicValue).value->toOne()->cast(@LambdaFunction<Any>), | [])};
+        let direct = $lambdaOf->eval($arg);
+        if($direct->isNotEmpty(),
+            | // A branch of an exclusive-alternatives native (if, match) in a position where its result moves (a let,
+              // a return) hands that result straight on.
+              let st = $direct->toOne()->walkLambda($argPath, ^Walk(state = $acc.state, scope = $w.scope), $lambdaId, $kind, if($kind == 'ONCE', | $branchResult, | 'OTHER'));
+              ^CallAcc(state = $st, args = $acc.args->concatenate(^Arg(path = $argPath, value = $arg, lambda = $direct, kind = $kind)));,
+            | if($arg->instanceOf(Collection) && $arg->cast(@Collection).values->exists(v | $lambdaOf->eval($v->cast(@ValueSpecification))->isNotEmpty()),
+                  | // match's arms: a literal collection of lambdas handed to the native as one parameter.
+                    let vals = $arg->cast(@Collection).values->cast(@ValueSpecification);
+                    range(0, $vals->size())->fold({k, acc2 |
+                        let v = $vals->at($k);
+                        let vPath = $argPath + '/' + $k->toString();
+                        let l = $lambdaOf->eval($v);
+                        if($l->isNotEmpty(),
+                            | let st = $l->toOne()->walkLambda($vPath, ^Walk(state = $acc2.state, scope = $w.scope), $lambdaId, $kind, if($kind == 'ONCE', | $branchResult, | 'OTHER'));
+                              ^CallAcc(state = $st, args = $acc2.args->concatenate(^Arg(path = $vPath, value = $v, lambda = $l, kind = $kind)));,
+                            | let wv = $v->walk($vPath, ^Walk(state = $acc2.state, scope = $w.scope), $lambdaId, 'OTHER', false);
+                              ^CallAcc(state = $wv.state, args = $acc2.args->concatenate(^Arg(path = $vPath, value = $v)));
+                        );
+                    }, $acc);,
+                  | let isVar = $arg->instanceOf(VariableExpression);
+                    // A property read only looks at its receiver (a qualified property runs a body, which may keep it).
+                    let read = $callee.propertyRead && ($i == 0);
+                    let released = $isVar && $callee->releases($i, $parameter, $acc.state->multiplicityOf($arg->cast(@VariableExpression), $w.scope));
+                    let wa = $arg->walk($argPath, ^Walk(state = $acc.state, scope = $w.scope), $lambdaId, if($read, | 'READ', | 'ARGUMENT'), $released);
+                    ^CallAcc(state = $wa.state, args = $acc.args->concatenate(^Arg(path = $argPath, value = $arg)));
+              )
+        );
+    }, ^CallAcc(state = $looked.state, args = []));
+    let st = $r.state;
+    let fpath = if($fe.func->isEmpty(), | [], | $fe.func->toOne()->functionPath());
+    let keyValue = ($fpath == keyPath()) && ($args->size() == 2) && $args->at(1)->instanceOf(FunctionExpression) && !$args->at(1)->cast(@FunctionExpression)->isLet();
+    let recorded = if($fpath == copyPath(),
+        | ^$st(copies = $st.copies->concatenate($path), expressions = $st.expressions->put($path, $fe)),
+        | if($keyValue,
+              | ^$st(keyValues = $st.keyValues->concatenate($path + '/1'), expressions = $st.expressions->put($path + '/1', $args->at(1)->cast(@FunctionExpression))),
+              | if($callee.propertyRead, | ^$st(expressions = $st.expressions->put($path, $fe)), | $st)));
+    ^$w(state = ^$recorded(calls = $recorded.calls->put($path, ^List<Arg>(values = $r.args)), calleeAt = $recorded.calleeAt->put($path, $callee)));
+}
+
+function platform::pure::compiler::updatableInPlace::copyPath():String[1]
+{
+    'platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_'
+}
+
+function platform::pure::compiler::updatableInPlace::keyPath():String[1]
+{
+    'platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_'
+}
+
+// A field's collection, read from an object a copy consumes, in the key replacing that field
+// (`^$acc(items = $acc.items->add($e))`): the read holds the only reference to the collection when the copy's source
+// does (marked), the read is the one use of the object reading that property, every other use reads another property,
+// and the read is in that key's value outside any lambda. A platform keeps a field's collection as its own only when it
+// was stored updatable in place and never read otherwise (IN_PLACE_UPDATE_ANALYSIS.md). Then each key value that is a call is marked as
+// updatable in place as it is.
+function platform::pure::compiler::updatableInPlace::markFields(st:State[1], live:Live[1], d:Decision[1]):Decision[1]
+{
+    let withReads = $st.copies->fold({cp, acc | $st->markCopyReads($cp, $acc)}, $d);
+    $st.keyValues->fold({kv, acc | $acc->markPath($kv, $st.expressions->get($kv)->toOne()->updatability($kv, $st, $live, $acc))}, $withReads);
+}
+
+function platform::pure::compiler::updatableInPlace::markPath(d:Decision[1], path:String[1], o:Updatability[0..1]):Decision[1]
+{
+    if($o->isEmpty(),
+        | $d,
+        | if($o.parameter->isEmpty(), | ^$d(updatableInPlace = $d.updatableInPlace->put($path, true)), | ^$d(updatableInPlaceIf = $d.updatableInPlaceIf->put($path, $o.parameter->toOne()))));
+}
+
+function platform::pure::compiler::updatableInPlace::markCopyReads(st:State[1], cp:String[1], d:Decision[1]):Decision[1]
+{
+    let args = $st.expressions->get($cp)->toOne().parametersValues->cast(@ValueSpecification);
+    let sourcePath = $cp + '/0';
+    let consumed = $st.uses->get($sourcePath);
+    let updatableInPlace = if($d.updatableInPlace->get($sourcePath) == true, | ^Updatability(), | if($d.updatableInPlaceIf->get($sourcePath)->isNotEmpty(), | ^Updatability(parameter = $d.updatableInPlaceIf->get($sourcePath)), | []));
+    if(($args->size() < 2) || !$args->at(0)->instanceOf(VariableExpression) || $consumed->isEmpty() || $updatableInPlace->isEmpty(),
+        | $d,
+        | let others = $st->usesOfBinding($consumed->toOne().binding)->filter(o | $o.path != $sourcePath);
+          let readOf = {o:Use[1] | if(($o.position == 'READ') && $o.path->endsWith('/0'), | $o.path->substring(0, $o.path->length() - 2), | [])};
+          if($others->exists(o | $readOf->eval($o)->isEmpty() || $st.expressions->get($readOf->eval($o)->toOne())->isEmpty()),
+              | $d,
+              | let reads = $others->map(o | $readOf->eval($o)->toOne());
+                $st->plainKeys($cp + '/1', $args->at(1))->fold({key, acc |
+                    let fieldReads = $reads->filter(r | $st.expressions->get($r)->toOne().functionName == $key.first);
+                    let read = if($fieldReads->size() == 1, | $fieldReads->toOne(), | []);
+                    let fe = $read->map(r | $st.expressions->get($r)->toOne());
+                    if($read->isNotEmpty() && $fe.multiplicity->isNotEmpty() && toMany($fe.multiplicity->toOne()) && $read->toOne()->within($key.second),
+                        | $acc->markPath($read->toOne(), $updatableInPlace),
+                        | $acc);
+                }, $d);
+          );
+    );
+}
+
+// A copy's keys setting a property (not appending to it, not a property of a property): name and value path.
+function platform::pure::compiler::updatableInPlace::plainKeys(st:State[1], path:String[1], keys:ValueSpecification[1]):Pair<String, String>[*]
+{
+    let each = if($keys->instanceOf(Collection),
+        | let vals = $keys->cast(@Collection).values->cast(@ValueSpecification);
+          range(0, $vals->size())->map(k | pair($path + '/' + $k->toString(), $vals->at($k)));,
+        | pair($path, $keys));
+    $each->filter(k | $k.second->instanceOf(FunctionExpression))->map(k |
+        let kfe = $k.second->cast(@FunctionExpression);
+        let kargs = $kfe.parametersValues->cast(@ValueSpecification);
+        let name = if(($kargs->size() == 2) && $kargs->at(0)->instanceOf(AtomicValue) && $kargs->at(0)->cast(@AtomicValue).value->isNotEmpty() && $kargs->at(0)->cast(@AtomicValue).value->toOne()->instanceOf(String),
+                      | $kargs->at(0)->cast(@AtomicValue).value->toOne()->cast(@String), | []);
+        let isKey = $kfe.func->isNotEmpty() && ($kfe.func->toOne()->functionPath() == keyPath());
+        if($isKey && $name->isNotEmpty() && !$name->toOne()->contains('.'), | pair($name->toOne(), $k.first + '/1'), | []);
+    );
+}
+
+// Whether the expression at `path` is the one at `container` or one of its subexpressions, not looking into lambdas.
+function platform::pure::compiler::updatableInPlace::within(path:String[1], container:String[1]):Boolean[1]
+{
+    ($path == $container) || ($path->startsWith($container + '/') && !$path->substring($container->length())->contains('/l/'))
+}
+
+function platform::pure::compiler::updatableInPlace::multiplicityOf(st:State[1], ve:VariableExpression[1], scope:Pair<String, Integer>[*]):Multiplicity[0..1]
+{
+    let found = $scope->filter(p | $p.first == $ve.name->toOne())->head();
+    if($found->isEmpty(), | $ve.multiplicity, | $st.bindings->get($found->toOne().second)->toOne().multiplicity);
+}
+
+function platform::pure::compiler::updatableInPlace::walkLambda(lambda:LambdaFunction<Any>[1], path:String[1], outer:Walk[1], outerLambda:Integer[1], kind:String[1], resultPosition:String[1]):State[1]
+{
+    let st = $outer.state;
+    let id = $st.nextId;
+    let scopeObj = ^LambdaScope(id = $id, parent = $outerLambda, kind = $kind, path = $path);
+    let st1 = ^$st(nextId = $id + 1, lambdas = $st.lambdas->put($id, $scopeObj), lambdaAt = $st.lambdaAt->put($path, $id), lambdaFns = $st.lambdaFns->put($path, $lambda));
+    let bound = $lambda.parameters->cast(@VariableExpression)->fold({p, w | $w->bindParameter($p, $id)}, ^Walk(state = $st1, scope = $outer.scope));
+    $lambda.expressionSequence->cast(@ValueSpecification)->walkSequence($path + '/l', $bound, $id, $resultPosition).state;
+}
+
+// ----------------------------------------------------------------------------
+// Backward liveness: a use is the last of its binding when the binding is not live right after it
+// ----------------------------------------------------------------------------
+
+function platform::pure::compiler::updatableInPlace::liveSequence(sequence:ValueSpecification[*], prefix:String[1], live:Live[1], st:State[1]):Live[1]
+{
+    let n = $sequence->size();
+    range(0, $n)->reverse()->fold({i, acc | $sequence->at($i)->liveBefore($prefix + '/' + $i->toString(), $acc, $st)}, $live);
+}
+
+function platform::pure::compiler::updatableInPlace::liveBefore(vs:ValueSpecification[1], path:String[1], live:Live[1], st:State[1]):Live[1]
+{
+    $vs->match([
+        ve:VariableExpression[1] |
+            let u = $st.uses->get($path);
+            if($u->isEmpty(),
+                | $live,
+                | let b = $u->toOne().binding;
+                  ^Live(last = $live.last->put($path, !$live.live->contains($b)), live = if($live.live->contains($b), | $live.live, | $live.live->concatenate($b)));
+            );,
+        fe:FunctionExpression[1] |
+            let letId = $st.lets->get($path);
+            if($letId->isNotEmpty(),
+                | let without = ^$live(live = $live.live->filter(b | $b != $letId->toOne()));
+                  let args = $fe.parametersValues->cast(@ValueSpecification);
+                  if($args->size() > 1, | $args->at(1)->liveBefore($path + '/1', $without, $st), | $without);,
+                | let args = $st.calls->get($path);
+                  if($args->isEmpty(),
+                      | $live,
+                      | // Lambdas the native runs do so when it is called, after every argument is evaluated.
+                        let after = $live.live;
+                        let withLambdas = $args->toOne().values->filter(a | $a.lambda->isNotEmpty())->fold({a, acc |
+                            let l = $a.lambda->toOne()->liveLambda($a.path, $a.kind->toOne(), ^Live(live = $after, last = $acc.last), $st);
+                            ^Live(last = $l.last, live = $acc.live->concatenate($l.live->filter(b | !$acc.live->contains($b))));
+                        }, $live);
+                        // A call runs once every argument is evaluated, so it reads a receiver held by a variable last:
+                        // a later argument only reading it ($xs->add($xs->size()), ^$acc(count = $acc.count + 1)) is done
+                        // with it by then. A variable passed as another argument of the call is read while it runs
+                        // ($ys->concatenate($ys)): it still holds the receiver. A later argument keeping it keeps it alive
+                        // (othersHarmless). A receiver computed by an expression is evaluated first, as any argument.
+                        let plain = $args->toOne().values->filter(a | $a.lambda->isEmpty());
+                        let receiverPath = $path + '/0';
+                        let receiverLast = $plain->exists(a | $a.path == $receiverPath && $a.value->instanceOf(VariableExpression));
+                        let others = $plain->filter(a | !($receiverLast && $a.path == $receiverPath));
+                        let receiverUse = if($receiverLast, | $st.uses->get($receiverPath), | []);
+                        let afterReceiver = if($receiverUse->isEmpty(),
+                            | $withLambdas,
+                            | let b = $receiverUse->toOne().binding;
+                              let held = $withLambdas.live->concatenate($others->filter(a | $a.value->instanceOf(VariableExpression))->map(a | $st.uses->get($a.path))->map(o | $o.binding));
+                              ^Live(last = $withLambdas.last->put($receiverPath, !$held->contains($b)), live = if($withLambdas.live->contains($b), | $withLambdas.live, | $withLambdas.live->concatenate($b)));
+                        );
+                        $others->reverse()->fold({a, acc | $a.value->liveBefore($a.path, $acc, $st)}, $afterReceiver);
+                  );
+            );,
+        av:AtomicValue[1] |
+            if($av.value->isNotEmpty() && $av.value->toOne()->instanceOf(LambdaFunction),
+                | let l = $av.value->toOne()->cast(@LambdaFunction<Any>)->liveLambda($path, 'ESCAPING', $live, $st);
+                  ^Live(last = $l.last, live = $live.live->concatenate($l.live->filter(b | !$live.live->contains($b))));,
+                | $live
+            );,
+        col:Collection[1] |
+            let vals = $col.values->cast(@ValueSpecification);
+            range(0, $vals->size())->reverse()->fold({k, acc | $vals->at($k)->liveBefore($path + '/' + $k->toString(), $acc, $st)}, $live);,
+        a:ValueSpecification[1] | $live
+    ]);
+}
+
+// The outer bindings live when a lambda starts, given those live after the call that runs it. A lambda run once
+// continues straight into what follows the call; one run repeatedly (or at any time) may run again, so each binding
+// it captures is still live at the end of its body.
+function platform::pure::compiler::updatableInPlace::liveLambda(lambda:LambdaFunction<Any>[1], path:String[1], kind:String[1], afterCall:Live[1], st:State[1]):Live[1]
+{
+    let id = $st.lambdaAt->get($path);
+    let captured = if($kind == 'ONCE' || $id->isEmpty(), | [], | let c = $st.captures->get($id->toOne()); if($c->isEmpty(), | [], | $c->toOne().values););
+    let start = ^$afterCall(live = $afterCall.live->concatenate($captured->filter(b | !$afterCall.live->contains($b))));
+    let body = $lambda.expressionSequence->cast(@ValueSpecification)->liveSequence($path + '/l', $start, $st);
+    let params = if($id->isEmpty(), | [], | $st.lambdas->get($id->toOne())->toOne().params);
+    ^$body(live = $body.live->filter(b | !$params->contains($b)));
+}
+
+// ----------------------------------------------------------------------------
+// Decision, in declaration order: a move (let y = $x) sees whether x's use was updatable in place
+// ----------------------------------------------------------------------------
+
+function platform::pure::compiler::updatableInPlace::usesOfBinding(st:State[1], bid:Integer[1]):Use[*]
+{
+    let paths = $st.usesOf->get($bid);
+    if($paths->isEmpty(), | [], | $paths->toOne().values->map(p | $st.uses->get($p)->toOne()));
+}
+
+function platform::pure::compiler::updatableInPlace::isLast(live:Live[1], path:String[1]):Boolean[1]
+{
+    $live.last->get($path) == true
+}
+
+// No other use of the binding can see a mutation made at `u`: each is released (not retained by its callee) or is
+// itself a last use — and two last uses are on exclusive branches.
+function platform::pure::compiler::updatableInPlace::othersHarmless(st:State[1], u:Use[1], live:Live[1]):Boolean[1]
+{
+    $st->usesOfBinding($u.binding)->filter(o | $o.path != $u.path)->forAll(o | $live->isLast($o.path) || $o.released)
+}
+
+function platform::pure::compiler::updatableInPlace::decide(st:State[1], bid:Integer[1], live:Live[1], d:Decision[1]):Decision[1]
+{
+    let b = $st.bindings->get($bid)->toOne();
+    let updatability = if(!$st.poisoned->get($bid)->isEmpty() || !annotatable($b.genericType, $b.multiplicity),
+        | [],
+        | if($b.parameter,
+              | if(($b.home == 0) && !$st.rootParametersUpdatableInPlace, | [], | ^Updatability(parameter = $bid)),
+              | if($b.value->isEmpty(), | [], | $b.value->toOne()->updatability($b.valuePath->toOne(), $st, $live, $d))));
+    if($updatability->isEmpty(),
+        | $d,
+        | let d1 = ^$d(updatabilities = $d.updatabilities->put($bid, $updatability->toOne()));
+          $st->usesOfBinding($bid)->fold({u, acc |
+              if(($u.position == 'ARGUMENT' || $u.position == 'MOVE') && $live->isLast($u.path) && $st->othersHarmless($u, $live),
+                  | if($updatability.parameter->isNotEmpty(),
+                        | ^$acc(updatableInPlaceIf = $acc.updatableInPlaceIf->put($u.path, $updatability.parameter->toOne())),
+                        | ^$acc(updatableInPlace = $acc.updatableInPlace->put($u.path, true))),
+                  | $acc
+              );
+          }, $d1);
+    );
+}
+
+// The updatability of a value that is one of two alternatives (the branches of an if).
+function platform::pure::compiler::updatableInPlace::either(a:Updatability[0..1], b:Updatability[0..1]):Updatability[0..1]
+{
+    if($a->isEmpty() || $b->isEmpty(),
+        | [],
+        | if($a.parameter->isEmpty(),
+              | $b,
+              | if($b.parameter->isEmpty() || ($b.parameter == $a.parameter), | $a, | [])));
+}
+
+// Who solely holds the value of `vs` once computed? None: someone else may hold it.
+function platform::pure::compiler::updatableInPlace::updatability(vs:ValueSpecification[1], path:String[1], st:State[1], live:Live[1], d:Decision[1]):Updatability[0..1]
+{
+    $vs->match([
+        ve:VariableExpression[1] |
+            if($d.updatableInPlace->get($path) == true,
+                | ^Updatability(),
+                | if($d.updatableInPlaceIf->get($path)->isNotEmpty(),
+                      | ^Updatability(parameter = $d.updatableInPlaceIf->get($path)),
+                      | // A value handed on unmarked (a body's result: the summary says it instead).
+                        let u = $st.uses->get($path);
+                        if($u->isNotEmpty() && $live->isLast($path) && $st->othersHarmless($u->toOne(), $live), | $d.updatabilities->get($u->toOne().binding), | []);
+                  )
+            );,
+        fe:FunctionExpression[1] |
+            if($d.updatableInPlace->get($path) == true,
+                | ^Updatability(),
+            | if($d.updatableInPlaceIf->get($path)->isNotEmpty(),
+                | ^Updatability(parameter = $d.updatableInPlaceIf->get($path)),
+            | if($fe->isLet(),
+                | [],
+                | let callee = $st.calleeAt->get($path);
+                  // NewInstanceResult vouches for a singular result's instance (new, copy), and NewCollectionResult for a to-many result's
+                  // collection — which says nothing when this call yields a single value: map over one element returns
+                  // the lambda's value, which may be the element itself.
+                  if($callee->isNotEmpty() && $callee->toOne().freshResult && ($callee->toOne().singularResult || ($fe.multiplicity->isNotEmpty() && toMany($fe.multiplicity->toOne()))),
+                      | ^Updatability(),
+                    | // A user function's summary: its result is updatable in place, or is as much as one of its arguments. A summary
+                      // on a result of multiplicity [m] speaks for its collection, so only for a call yielding several.
+                      if($callee->isNotEmpty() && ($callee->toOne().userResultUpdatableInPlace == true) && (($callee->toOne().userResultOfMultiplicityParameter != true) || ($fe.multiplicity->isNotEmpty() && toMany($fe.multiplicity->toOne()))),
+                      | ^Updatability(),
+                    | if($callee->isNotEmpty() && $callee->toOne().userResultParameter->isNotEmpty() && ($callee->toOne().userResultParameter->toOne() < $fe.parametersValues->size()),
+                      | let i = $callee->toOne().userResultParameter->toOne();
+                        $fe.parametersValues->at($i)->cast(@ValueSpecification)->updatability($path + '/' + $i->toString(), $st, $live, $d);,
+                      | let args = $st.calls->get($path);
+                        if($args->isEmpty(),
+                            | [],
+                            | // if / match: updatable in place when every branch ends in a value updatable in place.
+                              let branches = $args->toOne().values->filter(a | $a.lambda->isNotEmpty());
+                              if($branches->isEmpty() || $branches->exists(a | $a.kind != 'ONCE'),
+                                  | [],
+                                  | let updatabilities = $branches->map(a | $a->branchUpdatability($st, $live, $d));
+                                    if($updatabilities->size() != $branches->size(),
+                                        | [],
+                                        | $updatabilities->eitherAll());
+                              );
+                        );
+                  ));
+                  );
+            )));,
+        // A literal of no value, or of several, is a new collection at each evaluation (is.pure); [e] is e.
+        col:Collection[1] |
+            let values = $col.values;
+            if(($values->size() != 1) && ($values->isEmpty() || ($col.multiplicity->isNotEmpty() && toMany($col.multiplicity->toOne()))), | ^Updatability(), | []);,
+        a:ValueSpecification[1] | []
+    ]);
+}
+
+// The updatability of a value that is one of these alternatives (at least one).
+function platform::pure::compiler::updatableInPlace::eitherAll(updatabilities:Updatability[*]):Updatability[0..1]
+{
+    if($updatabilities->size() <= 1, | $updatabilities->head(), | either($updatabilities->at(0), $updatabilities->tail()->eitherAll()));
+}
+
+// The updatability of the value a branch ends in: none for an empty branch.
+function platform::pure::compiler::updatableInPlace::branchUpdatability(a:Arg[1], st:State[1], live:Live[1], d:Decision[1]):Updatability[0..1]
+{
+    let seq = $a.lambda->toOne().expressionSequence->cast(@ValueSpecification);
+    if($seq->isEmpty(), | [], | $seq->last()->toOne()->updatability($a.path + '/l/' + ($seq->size() - 1)->toString(), $st, $live, $d));
+}
+
+// A result of multiplicity [m] that is fresh whenever a caller's m makes it several values: a NewCollectionResult native, or a
+// user function of the same kind. sort(col), which calls sort(col, [], []).
+function platform::pure::compiler::updatableInPlace::freshWhenToMany(result:ValueSpecification[1], path:String[1], st:State[1]):Boolean[1]
+{
+    $result->match([
+        fe:FunctionExpression[1] |
+            let callee = $st.calleeAt->get($path);
+            !$fe->isLet() && $fe.multiplicity->isNotEmpty() && !$fe.multiplicity->toOne()->instanceOf(ConcreteMultiplicity) && $callee->isNotEmpty()
+                && (($callee->toOne().freshResult && !$callee->toOne().singularResult)
+                    || (($callee->toOne().userResultUpdatableInPlace == true) && ($callee->toOne().userResultOfMultiplicityParameter == true)));,
+        a:ValueSpecification[1] | false
+    ]);
+}
+
+// The function or lambda's result summary.
+function platform::pure::compiler::updatableInPlace::summarize(f:FunctionDefinition<Any>[1], bodyPrefix:String[1], lambdaId:Integer[1], st:State[1], live:Live[1], d:Decision[1]):Summary[1]
+{
+    let seq = $f.expressionSequence->cast(@ValueSpecification);
+    if($seq->isEmpty(),
+        | ^Summary(resultUpdatableInPlace = false),
+        | let result = $seq->last()->toOne();
+          let resultPath = $bodyPrefix + '/' + ($seq->size() - 1)->toString();
+          let o = $result->updatability($resultPath, $st, $live, $d);
+          if(($o->isNotEmpty() && $o.parameter->isEmpty()) || ($f->instanceOf(UserDefinedFunction) && $result->freshWhenToMany($resultPath, $st)),
+              | ^Summary(resultUpdatableInPlace = true),
+              | // UpdatableInPlace when the caller passed this parameter updatable in place (fold threads its accumulator through this).
+                let p = if($o->isEmpty(), | [], | $o.parameter);
+                let b = if($p->isEmpty(), | [], | $st.bindings->get($p->toOne()));
+                if($b->isNotEmpty() && $b->toOne().home == $lambdaId,
+                    | ^Summary(resultUpdatableInPlace = false, resultUpdatableInPlaceIfParameter = $b->toOne().name),
+                    | ^Summary(resultUpdatableInPlace = false)
+                );
+          );
+    );
+}
+
+// ----------------------------------------------------------------------------
+// Elements: which lists hold elements nothing else references (IN_PLACE_UPDATE_ANALYSIS.md, Elements), once the lambda
+// summaries are known. Bindings in declaration order, so a list built from an earlier one sees it. A use that lets an
+// element out before the list's last use loses this for good. Mirrors Java's decideElements.
+// ----------------------------------------------------------------------------
+
+function platform::pure::compiler::updatableInPlace::decideElements(st:State[1], live:Live[1], decision:Decision[1], summaries:Map<String, Summary>[1]):Elements[1]
+{
+    $st.order->fold({bid, e |
+        let b = $st.bindings->get($bid)->toOne();
+        let holds = !$b.parameter && $st.poisoned->get($bid)->isEmpty() && $b.value->isNotEmpty() && $b.multiplicity->isNotEmpty() && toMany($b.multiplicity->toOne())
+            && instances($b.genericType)
+            && $st->usesOfBinding($bid)->forAll(u | $live->isLast($u.path) || !$u->letsElementOut($e))
+            && $b.value->toOne()->elementsUpdatableInPlace($b.valuePath->toOne(), $e);
+        if($holds, | ^$e(updatableInPlace = $e.updatableInPlace->put($bid, true)), | $e);
+    }, ^Elements(st = $st, live = $live, decision = $decision, summaries = $summaries, updatableInPlace = newMap([]->cast(@Pair<Integer, Boolean>))));
+}
+
+// The paths of the list arguments of map and fold calls whose elements are updatable in place.
+function platform::pure::compiler::updatableInPlace::elementMarks(e:Elements[1]):String[*]
+{
+    $e.st.calls->keyValues()->map(kv |
+        let args = $kv.second.values;
+        let callee = $e.st.calleeAt->get($kv.first);
+        if($callee->isEmpty() || !$args->exists(a | $a.lambda->isNotEmpty()),
+            | []->cast(@String),
+            | range(0, $args->size())->filter(i |
+                  let a = $args->at($i);
+                  ($a.value->instanceOf(VariableExpression) || $a.value->instanceOf(FunctionExpression))
+                      && $callee->toOne()->givesUpElements($callee->toOne()->calleeParameterAt($i))
+                      && $a.value->elementsUpdatableInPlace($a.path, $e);
+              )->map(i | $args->at($i).path));
+    );
+}
+
+// A type whose values are class instances, which could be changed in place.
+function platform::pure::compiler::updatableInPlace::instances(genericType:GenericType[0..1]):Boolean[1]
+{
+    annotatable($genericType, [])
+}
+
+function platform::pure::compiler::updatableInPlace::calleeParameterAt(callee:Callee[1], i:Integer[1]):VariableExpression[0..1]
+{
+    if($i < $callee.parameters->size(), | $callee.parameters->at($i), | [])
+}
+
+// The native hands each element of this argument to a lambda once and keeps none: map, fold.
+function platform::pure::compiler::updatableInPlace::givesUpElements(callee:Callee[1], parameter:VariableExpression[0..1]):Boolean[1]
+{
+    $parameter->isNotEmpty() && $callee.callsLambdaWithElementsOf->contains($parameter->toOne().name->toOne())
+        && !$callee.resultMayHoldElementsOf->contains($parameter->toOne().name->toOne())
+}
+
+function platform::pure::compiler::updatableInPlace::inlineLambdaArg(args:Arg[*]):Arg[0..1]
+{
+    $args->filter(a | $a.lambda->isNotEmpty())->head()
+}
+
+// A use of a list after which one of its elements may be held elsewhere. Assumed, unless proved otherwise.
+function platform::pure::compiler::updatableInPlace::letsElementOut(u:Use[1], e:Elements[1]):Boolean[1]
+{
+    if($u.position == 'READ',
+        | false,
+        | if($u.position != 'ARGUMENT',
+              | true,
+              | let callPath = $u.path->split('/')->init()->joinStrings('/');
+                let callee = $e.st.calleeAt->get($callPath);
+                let args = $e.st.calls->get($callPath);
+                if($callee->isEmpty() || $args->isEmpty(),
+                    | true,
+                    | let values = $args->toOne().values;
+                      let index = range(0, $values->size())->filter(i | $values->at($i).path == $u.path)->head();
+                      let parameter = if($index->isEmpty(), | [], | $callee->toOne()->calleeParameterAt($index->toOne()));
+                      if($parameter->isEmpty(),
+                          | true,
+                          | if($callee->toOne().onlyReads->contains($parameter->toOne().name->toOne()),
+                                | false,
+                                | !$callee->toOne()->givesUpElements($parameter) || !$values->lambdaOnlyReadsElement($e)));
+                );
+        ));
+}
+
+// The inline lambda of a call only reads its first parameter: nothing lets that element out.
+function platform::pure::compiler::updatableInPlace::lambdaOnlyReadsElement(args:Arg[*], e:Elements[1]):Boolean[1]
+{
+    let a = $args->inlineLambdaArg();
+    let id = if($a->isEmpty(), | [], | $e.st.lambdaAt->get($a->toOne().path));
+    let scope = if($id->isEmpty(), | [], | $e.st.lambdas->get($id->toOne()));
+    if($scope->isEmpty() || $scope->toOne().params->isEmpty() || $e.st.poisoned->get($scope->toOne().params->at(0))->isNotEmpty(),
+        | false,
+        | $e.st->usesOfBinding($scope->toOne().params->at(0))->forAll(u | !$u->letsElementOut($e)));
+}
+
+// The value of `vs` is a list each of whose elements is referenced only by it, once.
+function platform::pure::compiler::updatableInPlace::elementsUpdatableInPlace(vs:ValueSpecification[1], path:String[1], e:Elements[1]):Boolean[1]
+{
+    $vs->match([
+        ve:VariableExpression[1] |
+            let u = $e.st.uses->get($path);
+            $u->isNotEmpty() && $e.live->isLast($path) && ($e.updatableInPlace->get($u->toOne().binding) == true);,
+        col:Collection[1] |
+            let values = $col.values->cast(@ValueSpecification);
+            $values->isEmpty() || ($col.multiplicity->isNotEmpty() && toMany($col.multiplicity->toOne()) && range(0, $values->size())->forAll(i |
+                let o = $values->at($i)->updatability($path + '/' + $i->toString(), $e.st, $e.live, $e.decision);
+                $o->isNotEmpty() && $o.parameter->isEmpty();));,
+        fe:FunctionExpression[1] |
+            let callee = $e.st.calleeAt->get($path);
+            let args = $e.st.calls->get($path);
+            if($fe->isLet() || $callee->isEmpty() || $fe.multiplicity->isEmpty() || !toMany($fe.multiplicity->toOne()) || !instances($fe.genericType),
+                | false,
+                | if($callee->toOne().userResultElementsUpdatableInPlace == true,
+                      | true,
+                      | if($args->isEmpty(),
+                            | false,
+                            | if(!$callee->toOne().freshResult,
+                                  | // if / match: every branch ends in such a list.
+                                    let branches = $args->toOne().values->filter(a | $a.lambda->isNotEmpty());
+                                    $branches->isNotEmpty() && $branches->forAll(a | ($a.kind == 'ONCE') && $a->branchElementsUpdatableInPlace($e));,
+                                  | $args->toOne().values->nativeElementsUpdatableInPlace($callee->toOne(), $e)))));,
+        other:ValueSpecification[1] | false
+    ]);
+}
+
+function platform::pure::compiler::updatableInPlace::branchElementsUpdatableInPlace(a:Arg[1], e:Elements[1]):Boolean[1]
+{
+    let seq = $a.lambda->toOne().expressionSequence->cast(@ValueSpecification);
+    $seq->isNotEmpty() && $seq->last()->toOne()->elementsUpdatableInPlace($a.path + '/l/' + ($seq->size() - 1)->toString(), $e);
+}
+
+// Every source of the result's elements qualifies, and there is at least one.
+function platform::pure::compiler::updatableInPlace::nativeElementsUpdatableInPlace(args:Arg[*], callee:Callee[1], e:Elements[1]):Boolean[1]
+{
+    let lambda = $args->inlineLambdaArg();
+    let verdicts = range(0, $args->size())->filter(i | $args->at($i).lambda->isEmpty())->map(i |
+        let a = $args->at($i);
+        let parameter = $callee->calleeParameterAt($i);
+        if($parameter->isNotEmpty() && $callee.resultMayHoldElementsOf->contains($parameter->toOne().name->toOne()),
+            | if($a.value->elementsUpdatableInPlace($a.path, $e), | 'source', | 'no'),
+            | if($callee->givesUpElements($parameter),
+                  | if($lambda->isNotEmpty() && $a->lambdaResultQualifies($lambda->toOne(), $e), | 'source', | 'no'),
+                  | // add's value: it joins the list.
+                    let o = $a.value->updatability($a.path, $e.st, $e.live, $e.decision);
+                    if(!annotatable($a.value.genericType, $a.value.multiplicity) || ($o->isNotEmpty() && $o.parameter->isEmpty()), | 'other', | 'no');
+              ));
+    );
+    !$verdicts->contains('no') && $verdicts->contains('source');
+}
+
+// map: the elements are what the lambda returns, each call.
+function platform::pure::compiler::updatableInPlace::lambdaResultQualifies(a:Arg[1], lambda:Arg[1], e:Elements[1]):Boolean[1]
+{
+    let summary = $e.summaries->get($lambda.path);
+    let parameters = $lambda.lambda->toOne().parameters->cast(@VariableExpression);
+    $summary->isNotEmpty() && ($summary->toOne().resultUpdatableInPlace
+        || ($parameters->isNotEmpty() && ($summary->toOne().resultUpdatableInPlaceIfParameter == $parameters->at(0).name) && $summary->toOne().resultUpdatableInPlaceIfParameter->isNotEmpty() && $a.value->elementsUpdatableInPlace($a.path, $e)));
+}
+
+// ----------------------------------------------------------------------------
+// Rebuild: copy only the parts on a path to something decided
+// ----------------------------------------------------------------------------
+
+function platform::pure::compiler::updatableInPlace::rebuildFunction(f:FunctionDefinition<Any>[1], prefix:String[1], a:Analysis[1]):FunctionDefinition<Any>[1]
+{
+    let seq = $f.expressionSequence->cast(@ValueSpecification);
+    let newSeq = range(0, $seq->size())->map(i | $seq->at($i)->rebuild($prefix + '/' + $i->toString(), $a));
+    let summary = $a.summaries->get($prefix);
+    let withSeq = $f->match([
+        udf:UserDefinedFunction<Any>[1] | ^$udf(expressionSequence = $newSeq),
+        qp:QualifiedProperty<Any>[1] | ^$qp(expressionSequence = $newSeq),
+        l:LambdaFunction<Any>[1] | ^$l(expressionSequence = $newSeq),
+        other:FunctionDefinition<Any>[1] | $other
+    ]);
+    if($summary->isEmpty(), | $withSeq, | $withSeq->setSummary($summary->toOne()));
+}
+
+function platform::pure::compiler::updatableInPlace::setSummary(f:FunctionDefinition<Any>[1], s:Summary[1]):FunctionDefinition<Any>[1]
+{
+    let base = if($s.resultUpdatableInPlace,
+        | $f->setResultUpdatableInPlace(),
+        | if($s.resultUpdatableInPlaceIfParameter->isEmpty(), | $f, | $f->setResultUpdatableInPlaceIfParameter($s.resultUpdatableInPlaceIfParameter->toOne())));
+    if($s.resultElementsUpdatableInPlace == true, | $base->setResultElementsUpdatableInPlace(), | $base);
+}
+
+function platform::pure::compiler::updatableInPlace::setResultElementsUpdatableInPlace(f:FunctionDefinition<Any>[1]):FunctionDefinition<Any>[1]
+{
+    $f->match([
+        udf:UserDefinedFunction<Any>[1] | ^$udf(resultElementsUpdatableInPlace = true),
+        other:FunctionDefinition<Any>[1] | $other
+    ]);
+}
+
+function platform::pure::compiler::updatableInPlace::setResultUpdatableInPlace(f:FunctionDefinition<Any>[1]):FunctionDefinition<Any>[1]
+{
+    $f->match([
+        udf:UserDefinedFunction<Any>[1] | ^$udf(resultUpdatableInPlace = true),
+        qp:QualifiedProperty<Any>[1] | ^$qp(resultUpdatableInPlace = true),
+        l:LambdaFunction<Any>[1] | ^$l(resultUpdatableInPlace = true),
+        other:FunctionDefinition<Any>[1] | $other
+    ]);
+}
+
+function platform::pure::compiler::updatableInPlace::setResultUpdatableInPlaceIfParameter(f:FunctionDefinition<Any>[1], name:String[1]):FunctionDefinition<Any>[1]
+{
+    $f->match([
+        udf:UserDefinedFunction<Any>[1] | ^$udf(resultUpdatableInPlaceIfParameter = $name),
+        qp:QualifiedProperty<Any>[1] | ^$qp(resultUpdatableInPlaceIfParameter = $name),
+        l:LambdaFunction<Any>[1] | ^$l(resultUpdatableInPlaceIfParameter = $name),
+        other:FunctionDefinition<Any>[1] | $other
+    ]);
+}
+
+function platform::pure::compiler::updatableInPlace::rebuild(vs:ValueSpecification[1], path:String[1], a:Analysis[1]):ValueSpecification[1]
+{
+    if($a.dirty->get($path)->isEmpty(),
+        | $vs,
+        | $vs->match([
+              ve:VariableExpression[1] |
+                  let marked = if($a.updatableInPlace->get($path) == true,
+                      | ^$ve(updatableInPlace = true),
+                      | if($a.updatableInPlaceIf->get($path)->isNotEmpty(), | ^$ve(updatableInPlaceIfParameter = $a.updatableInPlaceIf->get($path)), | $ve));
+                  if($a.elementsUpdatableInPlace->get($path) == true, | ^$marked(elementsUpdatableInPlace = true), | $marked);,
+              fe:FunctionExpression[1] |
+                  let args = $fe.parametersValues->cast(@ValueSpecification);
+                  let rebuilt = ^$fe(parametersValues = range(0, $args->size())->map(i | $args->at($i)->rebuild($path + '/' + $i->toString(), $a)));
+                  let marked = if($a.updatableInPlace->get($path) == true,
+                      | ^$rebuilt(updatableInPlace = true),
+                      | if($a.updatableInPlaceIf->get($path)->isNotEmpty(), | ^$rebuilt(updatableInPlaceIfParameter = $a.updatableInPlaceIf->get($path)), | $rebuilt));
+                  if($a.elementsUpdatableInPlace->get($path) == true, | ^$marked(elementsUpdatableInPlace = true), | $marked);,
+              av:AtomicValue[1] |
+                  if($av.value->isNotEmpty() && $av.value->toOne()->instanceOf(LambdaFunction),
+                      | ^$av(value = $av.value->toOne()->cast(@LambdaFunction<Any>)->rebuildFunction($path + '/l', $a)->rebuildLambdaSummary($path, $a)),
+                      | $av
+                  );,
+              col:Collection[1] |
+                  let vals = $col.values->cast(@ValueSpecification);
+                  ^$col(values = range(0, $vals->size())->map(k | $vals->at($k)->rebuild($path + '/' + $k->toString(), $a)));,
+              other:ValueSpecification[1] | $other
+          ])
+    );
+}
+
+// A lambda's summary is keyed by the path of the value holding it; its body by `<path>/l`.
+function platform::pure::compiler::updatableInPlace::rebuildLambdaSummary(f:FunctionDefinition<Any>[1], path:String[1], a:Analysis[1]):FunctionDefinition<Any>[1]
+{
+    let summary = $a.summaries->get($path);
+    if($summary->isEmpty(), | $f, | $f->setSummary($summary->toOne()));
+}
+
+// ----------------------------------------------------------------------------
+// What the analysis knows about a callee
+// ----------------------------------------------------------------------------
+
+Class platform::pure::compiler::updatableInPlace::CalleeResult
+{
+    state : State[1];
+    callee : Callee[1];
+}
+
+function platform::pure::compiler::updatableInPlace::unknownCallee():Callee[1]
+{
+    ^Callee(freshResult = false, singularResult = false, propertyRead = false)
+}
+
+function platform::pure::compiler::updatableInPlace::lambdaKind(callee:Callee[1], parameter:VariableExpression[0..1]):String[1]
+{
+    let name = if($parameter->isEmpty(), | [], | $parameter->toOne().name);
+    if($name->isNotEmpty() && $callee.invokesOnce->contains($name->toOne()), | 'ONCE',
+    | if($name->isNotEmpty() && $callee.invokesRepeatedly->contains($name->toOne()), | 'REPEATED', | 'ESCAPING'));
+}
+
+// Does passing a variable of `variableMultiplicity` as argument `index` leave it unaliased? A contents-only parameter
+// releases the argument itself, not its elements: a single value lifted into a to-many parameter is an element, which
+// the native may hand back.
+function platform::pure::compiler::updatableInPlace::releases(callee:Callee[1], index:Integer[1], parameter:VariableExpression[0..1], variableMultiplicity:Multiplicity[0..1]):Boolean[1]
+{
+    if($callee.propertyRead, | $index == 0,
+    | if($parameter->isNotEmpty() && $callee.onlyReads->contains($parameter->toOne().name->toOne()), | true,
+      | $parameter->isNotEmpty() && $callee.keepsOnlyContentsOf->contains($parameter->toOne().name->toOne())
+          && (($parameter->toOne().multiplicity->isNotEmpty() && singular($parameter->toOne().multiplicity->toOne()))
+              || ($variableMultiplicity->isNotEmpty() && toMany($variableMultiplicity->toOne())))));
+}
+
+function platform::pure::compiler::updatableInPlace::lookupCallee(st:State[1], func:Function<Any>[0..1]):CalleeResult[1]
+{
+    if($func->isEmpty(),
+        | ^CalleeResult(state = $st, callee = unknownCallee()),
+        | let f = $func->toOne();
+          if($f->instanceOf(QualifiedProperty),
+              | ^CalleeResult(state = $st, callee = unknownCallee()),
+              | if($f->instanceOf(Property),
+                    | ^CalleeResult(state = $st, callee = ^Callee(freshResult = false, singularResult = false, propertyRead = true)),
+                    | let path = $f->functionPath();
+                      if($path->isEmpty(),
+                          | ^CalleeResult(state = $st, callee = unknownCallee()),
+                          | if($f->instanceOf(UserDefinedFunction) || ($f->instanceOf(TempCompilerPointer) && $st.context->resolveElement($path->toOne())->filter(e | $e->instanceOf(UserDefinedFunction))->isNotEmpty()),
+                                | ^CalleeResult(state = $st, callee = $st->userCallee($path->toOne())),
+                                | let cached = $st.callees->get($path->toOne());
+                            if($cached->isNotEmpty(),
+                                | ^CalleeResult(state = $st, callee = $cached->toOne()),
+                                | // Only natives are trusted: a user function's body is analysed, never taken on faith.
+                                  let element = if($f->instanceOf(TempCompilerPointer), | $st.context->resolveElement($path->toOne()), | $f->cast(@PackageableElement));
+                                  let callee = if($element->isNotEmpty() && $element->toOne()->instanceOf(NativeFunction) && !$element->toOne()->instanceOf(TempCompilerPointer),
+                                      | $element->toOne()->cast(@NativeFunction<Any>)->readCallee(),
+                                      | unknownCallee());
+                                  ^CalleeResult(state = ^$st(callees = $st.callees->put($path->toOne(), $callee)), callee = $callee);
+                            );
+                            );
+                      );
+                )
+          );
+    );
+}
+
+// A user function's body is analysed, never taken on faith: its arguments leak, and its result is what its summary
+// says — once known: a member of the recursive group being analysed has none yet. The summary is read off the element
+// map, where a function of this compilation analysed before is already annotated.
+function platform::pure::compiler::updatableInPlace::userCallee(st:State[1], path:String[1]):Callee[1]
+{
+    let element = $st.context->resolveElement($path)->filter(e | $e->instanceOf(UserDefinedFunction) && !$e->instanceOf(TempCompilerPointer));
+    if($st.recursive->contains($path) || $element->isEmpty(),
+        | unknownCallee(),
+        | let fn = $element->toOne()->cast(@UserDefinedFunction<Any>);
+          let parameters = $fn->functionParameters();
+          let p = $fn.resultUpdatableInPlaceIfParameter;
+          let index = if($p->isEmpty(), | [], | range($parameters->size())->filter(i | $parameters->at($i).name == $p->toOne())->head());
+          ^Callee(parameters = $parameters, freshResult = false, singularResult = false, propertyRead = false,
+                  userResultUpdatableInPlace = $fn.resultUpdatableInPlace == true, userResultParameter = $index, userResultElementsUpdatableInPlace = $fn.resultElementsUpdatableInPlace == true,
+                  userResultOfMultiplicityParameter = !($fn.returnMultiplicity->isNotEmpty() && $fn.returnMultiplicity->toOne()->instanceOf(ConcreteMultiplicity)));
+    );
+}
+
+function platform::pure::compiler::updatableInPlace::functionPath(f:Function<Any>[1]):String[0..1]
+{
+    if($f->instanceOf(TempCompilerPointer), | $f->cast(@TempCompilerPointer).path,
+    | if($f->instanceOf(PackageableElement), | $f->cast(@PackageableElement)->elementToPath(), | []));
+}
+
+function platform::pure::compiler::updatableInPlace::readCallee(nf:NativeFunction<Any>[1]):Callee[1]
+{
+    let stereotypes = $nf->inPlaceUpdateStereotypes();
+    let tags = $nf->inPlaceUpdateTags();
+    ^Callee(
+        parameters = $nf.parameters->cast(@VariableExpression),
+        freshResult = $stereotypes->contains('NewInstanceResult') || $stereotypes->contains('NewCollectionResult'),
+        singularResult = singular($nf.returnMultiplicity),
+        onlyReads = $tags->filter(t | $t.first == 'onlyReads')->map(t | $t.second),
+        keepsOnlyContentsOf = $tags->filter(t | $t.first->isContentsTag())->map(t | $t.second),
+        invokesOnce = $tags->filter(t | $t.first == 'callsLambdaAtMostOnce')->map(t | $t.second),
+        invokesRepeatedly = $tags->filter(t | $t.first == 'callsLambdaRepeatedly')->map(t | $t.second),
+        resultMayHoldElementsOf = $tags->filter(t | $t.first == 'resultMayHoldElementsOf')->map(t | $t.second),
+        callsLambdaWithElementsOf = $tags->filter(t | $t.first == 'callsLambdaWithElementsOf')->map(t | $t.second),
+        propertyRead = false
+    );
+}
+
+function platform::pure::compiler::updatableInPlace::inPlaceUpdateProfile():String[1]
+{
+    'platform::pure::profiles::inPlaceUpdate'
+}
+
+function platform::pure::compiler::updatableInPlace::anyPath(e:Any[1]):String[0..1]
+{
+    if($e->instanceOf(TempCompilerPointer), | $e->cast(@TempCompilerPointer).path,
+    | if($e->instanceOf(PackageableElement), | $e->cast(@PackageableElement)->elementToPath(), | []));
+}
+
+// The values of `element`'s updatability stereotypes.
+function platform::pure::compiler::updatableInPlace::inPlaceUpdateStereotypes(element:Any[1]):String[*]
+{
+    $element->match([
+        ews:ElementWithStereotypes[1] | $ews.stereotypes->map(s |
+            $s->match([
+                sp:StereotypePointer[1] | if($sp.path == inPlaceUpdateProfile(), | $sp.element, | []->cast(@String)),
+                s2:Stereotype[1] | if($s2.profile->anyPath() == inPlaceUpdateProfile(), | $s2.value, | []->cast(@String))
+            ])),
+        a:Any[1] | []->cast(@String)
+    ]);
+}
+
+// `element`'s updatability tags, as (tag name, parameter name) pairs in declaration order.
+function platform::pure::compiler::updatableInPlace::inPlaceUpdateTags(element:Any[1]):Pair<String, String>[*]
+{
+    $element->match([
+        ewt:ElementWithTaggedValues[1] | $ewt.taggedValues->map(tv |
+            let tagName = $tv.tag->match([
+                tp:TagPointer[1] | if($tp.path == inPlaceUpdateProfile(), | $tp.element, | []->cast(@String)),
+                t:Tag[1] | if($t.profile->anyPath() == inPlaceUpdateProfile(), | $t.value, | []->cast(@String))
+            ]);
+            if($tagName->isEmpty(),
+                | []->cast(@Pair<String, String>),
+                | $tv.value->split(',')->map(n | $n->trim())->filter(n | $n != '')->map(n | pair($tagName->toOne(), $n))
+            );
+        ),
+        a:Any[1] | []->cast(@Pair<String, String>)
+    ]);
+}
+
+// Can a value of this type and multiplicity be mutated in place: a collection, or a class instance?
+function platform::pure::compiler::updatableInPlace::annotatable(genericType:GenericType[0..1], multiplicity:Multiplicity[0..1]):Boolean[1]
+{
+    if($multiplicity->isNotEmpty() && toMany($multiplicity->toOne()),
+        | true,
+        | let type = if($genericType->isEmpty(), | [], | $genericType->toOne()->rawType());
+          $type->isNotEmpty() && $type->toOne()->instanceOf(Class) && !$type->toOne()->instanceOf(PrimitiveType)
+              && !$type->toOne()->instanceOf(Enumeration) && !$type->toOne()->isFunctionType();
+    );
+}
+
+function platform::pure::compiler::updatableInPlace::isFunctionType(type:Type[1]):Boolean[1]
+{
+    let path = $type->anyPath();
+    $path->isNotEmpty() && $path->toOne()->startsWith('platform::pure::metamodel::function::');
+}
+
+// A concrete multiplicity whose upper bound is above one; a multiplicity parameter is not known to be.
+function platform::pure::compiler::updatableInPlace::toMany(m:Multiplicity[1]):Boolean[1]
+{
+    $m->instanceOf(ConcreteMultiplicity) && upperAboveOne(platform::pure::compiler::helper::multiplicity::multiplicityUpperBound($m))
+}
+
+function platform::pure::compiler::updatableInPlace::singular(m:Multiplicity[1]):Boolean[1]
+{
+    $m->instanceOf(ConcreteMultiplicity) && !upperAboveOne(platform::pure::compiler::helper::multiplicity::multiplicityUpperBound($m))
+}
+
+// -1 is an unbounded upper bound.
+function platform::pure::compiler::updatableInPlace::upperAboveOne(upper:Integer[1]):Boolean[1]
+{
+    $upper == -1 || $upper > 1
+}
+
+// ----------------------------------------------------------------------------
+// The updatability annotations are claims the compiler cannot check, so it checks what it can: they are trusted on
+// native functions only, a tag may only name parameters of its function — and the lambda tags only function-typed
+// ones — and NewInstanceResult and NewCollectionResult only fit a result of that kind. Mirrors Java's
+// InPlaceUpdateAnnotationValidator.
+// ----------------------------------------------------------------------------
+
+function platform::pure::compiler::validateInPlaceUpdateAnnotations(context:CompilerContext[1], elements:PackageableElement[*]):String[*]
+{
+    $elements->fold({element, errors |
+        let stereotypes = $element->inPlaceUpdateStereotypes();
+        let tags = $element->inPlaceUpdateTags();
+        if($stereotypes->isEmpty() && $tags->isEmpty(),
+            | $errors,
+            | let path = $element->elementToPath();
+              let si = platform::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($element.sourceInformation, $context);
+              if(!$element->instanceOf(NativeFunction),
+                  | $errors->concatenate('Updatability annotations are only trusted on native functions: \'' + $path + '\' is not one' + $si),
+                  | let nf = $element->cast(@NativeFunction<Any>);
+                    let collectionError = if($stereotypes->contains('NewCollectionResult') && singular($nf.returnMultiplicity),
+                        | 'NewCollectionResult on \'' + $path + '\': its result is a single value' + $si,
+                        | []->cast(@String));
+                    let instanceError = if($stereotypes->contains('NewInstanceResult') && !(singular($nf.returnMultiplicity) && canBeMutable($nf.returnGenericType, $nf.returnMultiplicity)),
+                        | 'NewInstanceResult on \'' + $path + '\': its result is not a single class instance' + $si,
+                        | []->cast(@String));
+                    // Only read contradicts any claim that something of the argument comes out.
+                    let contradictionErrors = $tags->filter(t | $t.first == 'onlyReads')->map(t | $t.second)->removeDuplicates()->map(name |
+                        $tags->filter(o | $o.first->isContentsTag() && ($o.second == $name))->map(o | $o.first)->removeDuplicates()->sort()->map(other |
+                            'Updatability tag \'onlyReads\' on \'' + $path + '\' names \'' + $name + '\', which \'' + $other + '\' says comes out of the call' + $si));
+                    let parameters = $nf.parameters->cast(@VariableExpression);
+                    let tagErrors = $tags->map(t | $t.first)->removeDuplicates()->sort()->map(tagName |
+                        $tags->filter(t | $t.first == $tagName)->map(t | $t.second)->removeDuplicates()
+                            ->map(name | $tagName->inPlaceUpdateTagError($name, $path, $parameters, $si))
+                    );
+                    $errors->concatenate($collectionError)->concatenate($instanceError)->concatenate($contradictionErrors)->concatenate($tagErrors);
+              );
+        );
+    }, []->cast(@String));
+}
+
+// The claims that the argument itself is not kept, though its contents may come out of the call.
+function platform::pure::compiler::updatableInPlace::isContentsTag(tag:String[1]):Boolean[1]
+{
+    ['resultMayHoldElementsOf', 'resultMayHoldFieldsOf', 'callsLambdaWithElementsOf']->contains($tag)
+}
+
+function platform::pure::compiler::updatableInPlace::inPlaceUpdateTagError(tagName:String[1], name:String[1], path:String[1], parameters:VariableExpression[*], si:String[1]):String[*]
+{
+    let parameter = $parameters->filter(p | $p.name == $name)->head();
+    if($parameter->isEmpty(),
+        | 'Updatability tag \'' + $tagName + '\' on \'' + $path + '\' names \'' + $name + '\', which is not one of its parameters' + $si,
+        | if(['callsLambdaRepeatedly', 'callsLambdaAtMostOnce']->contains($tagName) && !$parameter->toOne()->isFunctionTyped(),
+              | 'Updatability tag \'' + $tagName + '\' on \'' + $path + '\' names \'' + $name + '\', which is not a function parameter' + $si,
+              | []->cast(@String)));
+}
+
+// A collection, a class instance, or a type parameter that may stand for one (new, copy).
+function platform::pure::compiler::updatableInPlace::canBeMutable(genericType:GenericType[0..1], multiplicity:Multiplicity[0..1]):Boolean[1]
+{
+    annotatable($genericType, $multiplicity)
+        || ($genericType->isNotEmpty() && $genericType->toOne()->rawType()->isNotEmpty() && $genericType->toOne()->rawType()->toOne()->instanceOf(TypeParameter))
+}
+
+function platform::pure::compiler::updatableInPlace::isFunctionTyped(parameter:VariableExpression[1]):Boolean[1]
+{
+    let type = if($parameter.genericType->isEmpty(), | [], | $parameter.genericType->toOne()->rawType());
+    $type->isNotEmpty() && $type->toOne()->isFunctionType();
+}

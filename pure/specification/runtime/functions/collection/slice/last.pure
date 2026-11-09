@@ -16,7 +16,7 @@
 import platform::pure::test::pct::*;
 
 // Return the last element of the collection, or nothing if the collection is empty
-native function <<PCT.function>> platform::pure::functions::collection::last<T>(set:T[*]):T[0..1];
+native function <<PCT.function>> {inPlaceUpdate.resultMayHoldElementsOf='set'} platform::pure::functions::collection::last<T>(set:T[*]):T[0..1];
 
 function <<PCT.test>> platform::pure::functions::collection::tests::last::testLast<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

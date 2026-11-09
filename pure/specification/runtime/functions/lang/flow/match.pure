@@ -21,11 +21,12 @@ import platform::pure::functions::lang::tests::model::*;
 native function
     <<PCT.function>>
     {
-        doc.doc=''
+        doc.doc='',
+        inPlaceUpdate.callsLambdaAtMostOnce='functions'
     }
     platform::pure::functions::lang::match<T|m,n>(var:Any[*], functions:Function<{Nil[n]->T[m]}>[1..*]):T[m];
 
-native function <<PCT.function>> platform::pure::functions::lang::match<T,P|m,n,o>(var:Any[*], functions:Function<{Nil[n],P[o]->T[m]}>[1..*], with:P[o]):T[m];
+native function <<PCT.function>> {inPlaceUpdate.callsLambdaAtMostOnce='functions'} platform::pure::functions::lang::match<T,P|m,n,o>(var:Any[*], functions:Function<{Nil[n],P[o]->T[m]}>[1..*], with:P[o]):T[m];
 
 
 function <<PCT.test>> platform::pure::functions::lang::tests::match::testMatchOneWithZeroOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]

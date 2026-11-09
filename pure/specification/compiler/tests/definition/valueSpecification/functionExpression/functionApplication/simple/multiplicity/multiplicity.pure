@@ -41,7 +41,7 @@ function pack::computeSubsumes_String_1__String_1_(x:@String@[1]):@String@[1]  ~
 function pack::compute_String_MANY__String_1_(x:@String@[*]):@String@[1]  ~UserDefinedFunction<{@String@[*]->@String@[1]}>
   ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @17:5-17:26
     ArrowInvocation pack::doStuff_String_MANY__String_1_ :#String##[1]#  ~@ArrowInvocation@  @17:5-17:26
-      Variable x :#String##[*]#  ~@VariableExpression@  @17:3-17:4
+      Variable x :#String##[*]#  ~@VariableExpression@  @17:3-17:4  updatableInPlaceIf x
 
 function pack::testOverloadNumber_String_1__String_1_(n:@String@[1]):@String@[1]  ~UserDefinedFunction<{@String@[1]->@String@[1]}>
   ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @22:5-22:15
@@ -49,7 +49,7 @@ function pack::testOverloadNumber_String_1__String_1_(n:@String@[1]):@String@[1]
 
 function pack::testOverloadString_String_MANY__String_1_(s:@String@[*]):@String@[1]  ~UserDefinedFunction<{@String@[*]->@String@[1]}>
   ArrowInvocation pack::doStuff_String_MANY__String_1_ :#String##[1]#  ~@ArrowInvocation@  @27:5-27:15
-    Variable s :#String##[*]#  ~@VariableExpression@  @27:3-27:4
+    Variable s :#String##[*]#  ~@VariableExpression@  @27:3-27:4  updatableInPlaceIf s
 
 ###ReverseIndex
 pack::doStuff_String_1__String_1_:

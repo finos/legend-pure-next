@@ -16,7 +16,7 @@
 import platform::pure::test::pct::*;
 import platform::pure::functions::collection::tests::model::*;
 
-native function <<PCT.function>> platform::pure::functions::collection::find<T>(value:T[*], func:Function<{T[1]->Boolean[1]}>[1]):T[0..1];
+native function <<PCT.function>> {inPlaceUpdate.callsLambdaRepeatedly='func', inPlaceUpdate.resultMayHoldElementsOf='value', inPlaceUpdate.callsLambdaWithElementsOf='value'} platform::pure::functions::collection::find<T>(value:T[*], func:Function<{T[1]->Boolean[1]}>[1]):T[0..1];
 
 function <<PCT.test>> platform::pure::functions::collection::tests::find::testFindLiteral<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

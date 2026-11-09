@@ -15,7 +15,7 @@
 
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
-import java.util.ArrayList;
+import org.eclipse.collections.api.factory.Lists;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,7 +55,7 @@ public final class PointerGraph
             }
         }
         IdentityHashMap<Object, Object> copies = new IdentityHashMap<>();
-        List<Object> resolved = new ArrayList<>(map.size());
+        List<Object> resolved = Lists.mutable.withInitialCapacity(map.size());
         for (Map.Entry<?, ?> entry : map.entrySet())
         {
             resolved.add(walk(entry.getValue(), byPath, copies));
@@ -145,7 +145,7 @@ public final class PointerGraph
             return value;
         }
         copies.put(value, copy);
-        for (String property : new ArrayList<>(value._propertyNames()))
+        for (String property : Lists.mutable.withAll(value._propertyNames()))
         {
             List<Object> slot = value.__values(property);
             List<Object> rewritten = walkList(slot, byPath, copies);
@@ -170,7 +170,7 @@ public final class PointerGraph
 
     private static List<Object> walkList(List<?> values, Map<String, Object> byPath, IdentityHashMap<Object, Object> copies)
     {
-        List<Object> out = new ArrayList<>(values.size());
+        List<Object> out = Lists.mutable.withInitialCapacity(values.size());
         boolean changed = false;
         for (Object value : values)
         {

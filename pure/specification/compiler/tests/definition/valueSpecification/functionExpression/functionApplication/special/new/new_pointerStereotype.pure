@@ -33,6 +33,7 @@ Class <<compiler.pointer>> test::new::support::MyPointer extends MyTarget
 
 ###CompiledGraph
 function test::new::testPointerStereotype__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  resultUpdatableInPlace
   FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyPointer##[1]#  ~@FunctionInvocation@  @20:3-20:48
     typeParam T -> test::new::support::MyPointer
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyPointer|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyPointer|1>  @20:3-20:48

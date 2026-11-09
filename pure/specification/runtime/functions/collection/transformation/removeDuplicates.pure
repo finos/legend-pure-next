@@ -17,9 +17,11 @@ import platform::pure::test::pct::*;
 import platform::pure::functions::collection::tests::removeDuplicates::*;
 
 native function
-    <<PCT.function>>
+    <<PCT.function, inPlaceUpdate.NewCollectionResult>>
     {
-        doc.doc='Returns a collection of elements with duplicates removed. The order of elements is unspecified. If a key function is provided, it is used to compute the key for each element and duplicates are determined based on the keys. If an equality function is provided, it is used to compare elements (or keys if a key function is provided) for equality. If no equality function is provided, the default equality comparison is used.'
+        doc.doc='Returns a collection of elements with duplicates removed. The order of elements is unspecified. If a key function is provided, it is used to compute the key for each element and duplicates are determined based on the keys. If an equality function is provided, it is used to compare elements (or keys if a key function is provided) for equality. If no equality function is provided, the default equality comparison is used.',
+        inPlaceUpdate.callsLambdaRepeatedly='key,eql',
+        inPlaceUpdate.resultMayHoldElementsOf='col', inPlaceUpdate.callsLambdaWithElementsOf='col'
     }
     platform::pure::functions::collection::removeDuplicates<T,V>(col:T[*], key:Function<{T[1]->V[1]}>[0..1], eql:Function<{V[1],V[1]->Boolean[1]}>[0..1]):T[*];
 

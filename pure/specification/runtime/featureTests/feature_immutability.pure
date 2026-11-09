@@ -1,0 +1,792 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Values are immutable, whatever a platform does underneath. The compiler marks a use updatable in place when it holds the only
+// reference to its value, or updatable in place if a parameter was passed updatable in place, and a platform may then change the value in
+// place instead of copying it (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md).
+//
+// The tests cannot see whether a platform mutated: that is the point. A "keeps"/"read again" test builds a value
+// something else still sees, exactly where an unsound analysis would allow mutating it, and fails if it changes; with
+// the Java translator forced to mutate everywhere, each of them fails. A "given away" test checks that the in-place
+// paths compute what copying would. Lists come from map over two or more values: map over a single one gives a single
+// value, not a list there would be anything to mutate in.
+
+// -- a local value given away --------------------------------------------------------------------------------------
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAddToAListGivenAway():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    let ys = $xs->add(3);
+    assertEquals([1, 2, 3, 4], $ys->add(4));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAddAtAnOffsetToAListGivenAway():Boolean[1]
+{
+    let xs = [1, 3]->map(x|$x);
+    assertEquals([1, 2, 3], $xs->add(1, 2));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testConcatenateToAListGivenAway():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    assertEquals([1, 2, 3, 4], $xs->concatenate([3, 4]));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testReverseAListGivenAway():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(x|$x);
+    assertEquals([3, 2, 1], $xs->reverse());
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAddInEitherBranch():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    assertEquals([1, 2, 3], if($xs->size() > 1, |$xs->add(3), |$xs->add(4)));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAddAfterAMove():Boolean[1]
+{
+    let a = [1, 2]->map(x|$x);
+    let b = $a;
+    assertEquals([1, 2, 3], $b->add(3));
+}
+
+// -- a value something else still holds ----------------------------------------------------------------------------
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAddKeepsAListAnInstanceHolds():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    let holder = ^List<Integer>(values = $xs);
+    let ys = $xs->add(3);
+    assertEquals([1, 2], $holder.values);
+    assertEquals([1, 2, 3], $ys);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testConcatenateKeepsBothListsReadAgain():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    let ys = [3, 4]->map(x|$x);
+    let zs = $xs->concatenate($ys);
+    assertEquals([1, 2], $xs);
+    assertEquals([3, 4], $ys);
+    assertEquals([1, 2, 3, 4], $zs);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testReverseKeepsAListReadAgain():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(x|$x);
+    let r = $xs->reverse();
+    assertEquals([1, 2, 3], $xs);
+    assertEquals([3, 2, 1], $r);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAddInsideMapKeepsTheCapturedList():Boolean[1]
+{
+    let base = [0, 0]->map(x|$x);
+    assertEquals([0, 0, 1, 0, 0, 2], [1, 2]->map(i|$base->add($i)));
+    assertEquals([0, 0], $base);
+}
+
+// -- fold: the accumulator ------------------------------------------------------------------------------------------
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testFoldAccumulates():Boolean[1]
+{
+    assertEquals([2, 3, 4], [1, 2, 3, 4]->fold({e, acc|if($e > 1, |$acc->add($e), |$acc)}, []));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testFoldFromAStartGivenAway():Boolean[1]
+{
+    let start = [0, 1]->map(x|$x);
+    assertEquals([0, 1, 2, 3], [2, 3]->fold({e, acc|$acc->add($e)}, $start));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testFoldKeepsAStartReadAgain():Boolean[1]
+{
+    let start = [0, 1]->map(x|$x);
+    let all = [2, 3]->fold({e, acc|$acc->add($e)}, $start);
+    assertEquals([0, 1], $start);
+    assertEquals([0, 1, 2, 3], $all);
+}
+
+// -- through a call: a function's parameter ------------------------------------------------------------------------
+
+function <<test.TestDependency>> platform::pure::functions::tests::immutability::appendTo(values:Integer[*], value:Integer[1]):Integer[*]
+{
+    $values->add($value)
+}
+
+function <<test.TestDependency>> platform::pure::functions::tests::immutability::appendTwice(values:Integer[*]):Integer[*]
+{
+    platform::pure::functions::tests::immutability::appendTo(platform::pure::functions::tests::immutability::appendTo($values, 3), 4)
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAddThroughCallsToAListGivenAway():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    assertEquals([1, 2, 3, 4], platform::pure::functions::tests::immutability::appendTwice($xs));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAddThroughCallsKeepsAListReadAgain():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    let ys = platform::pure::functions::tests::immutability::appendTwice($xs);
+    assertEquals([1, 2], $xs);
+    assertEquals([1, 2, 3, 4], $ys);
+}
+
+// -- through a qualified property: its parameter -------------------------------------------------------------------
+
+Class <<test.TestDependency>> platform::pure::functions::tests::immutability::Collector
+{
+    base: Integer[*];
+    withAll(extra: Integer[*]) {$extra->concatenate($this.base)}: Integer[*];
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testQualifiedPropertyToAListGivenAway():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    assertEquals([1, 2, 3, 4], ^platform::pure::functions::tests::immutability::Collector(base = [3, 4]).withAll($xs));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testQualifiedPropertyKeepsAListReadAgain():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    let all = ^platform::pure::functions::tests::immutability::Collector(base = [3, 4]).withAll($xs);
+    assertEquals([1, 2], $xs);
+    assertEquals([1, 2, 3, 4], $all);
+}
+
+// -- constraints: they never own what they check -------------------------------------------------------------------
+
+function <<test.TestDependency>> platform::pure::functions::tests::immutability::grow(xs:Integer[*]):Integer[*]
+[
+    $xs->add(0)->size() > 0
+]
+{
+    $xs->add(9)
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAPreconditionKeepsTheArgument():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    assertEquals([1, 2, 9], platform::pure::functions::tests::immutability::grow($xs));
+}
+
+// -- through an overridden qualified property: the override that runs takes the argument over -----------------------
+
+Class <<test.TestDependency>> platform::pure::functions::tests::immutability::Shelf
+{
+    stack(xs: Integer[*]) {$xs->add(1)}: Integer[*];
+}
+
+Class <<test.TestDependency>> platform::pure::functions::tests::immutability::TopShelf extends platform::pure::functions::tests::immutability::Shelf
+{
+    stack(xs: Integer[*]) {$xs->add(2)}: Integer[*];
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testOverriddenQualifiedPropertyToAListGivenAway():Boolean[1]
+{
+    let shelf = ^platform::pure::functions::tests::immutability::TopShelf()->cast(@platform::pure::functions::tests::immutability::Shelf);
+    let xs = [5, 6]->map(x|$x);
+    assertEquals([5, 6, 2], $shelf.stack($xs));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testOverriddenQualifiedPropertyKeepsAListReadAgain():Boolean[1]
+{
+    let shelf = ^platform::pure::functions::tests::immutability::TopShelf()->cast(@platform::pure::functions::tests::immutability::Shelf);
+    let xs = [5, 6]->map(x|$x);
+    let all = $shelf.stack($xs);
+    assertEquals([5, 6], $xs);
+    assertEquals([5, 6, 2], $all);
+}
+
+// -- native contracts: a reader returns an element, never its collection (resultMayHoldElementsOf) -----------------------
+// Reading an element no longer stops the list being given away afterwards: the add below may change it in place.
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testReadersThenAddToTheList():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(x|$x);
+    let first = $xs->head();
+    let last = $xs->last();
+    let second = $xs->at(1);
+    let found = $xs->find(x|$x > 1);
+    let more = $xs->add(4);
+    assertEquals([1, 3, 2, 2], [$first->toOne(), $last->toOne(), $second, $found->toOne()]);
+    assertEquals([1, 2, 3, 4], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testReadingAnInstanceThenAddToItsList():Boolean[1]
+{
+    let shelves = [1, 2]->map(i|^platform::pure::functions::tests::immutability::Collector(base = [$i]));
+    let first = $shelves->at(0);
+    let more = $shelves->add(^platform::pure::functions::tests::immutability::Collector(base = [3]));
+    assertEquals([1], $first.base);
+    assertEquals(3, $more->size());
+}
+
+// -- native contracts: a NewCollectionResult native's result is its own -------------------------------------------
+// The compiler trusts NewCollectionResult: a value bound to such a call is updatable in place, so the add after it may change it in
+// place. Were a platform to hand an argument back, or a view sharing its storage, that argument would change with it.
+// Each test reads the arguments again, in the cases where such a shortcut is tempting: nothing to do, an empty side.
+// Every argument is read again, so the native's plain (copying) path runs, not an in-place one on a given-away
+// argument; with the Java runtime made to take each shortcut, each test fails.
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testConcatenateOntoNothingIsItsOwn():Boolean[1]
+{
+    let none = [1, 2]->filter(x|$x > 5);
+    let ys = [3, 4]->map(x|$x);
+    let zs = $none->concatenate($ys);
+    let more = $zs->add(9);
+    assertEquals([3, 4], $ys);
+    assertEquals([], $none);
+    assertEquals([3, 4, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testConcatenateNothingIsItsOwn():Boolean[1]
+{
+    let none = [1, 2]->filter(x|$x > 5);
+    let ys = [3, 4]->map(x|$x);
+    let zs = $ys->concatenate($none);
+    let more = $zs->add(9);
+    assertEquals([3, 4], $ys);
+    assertEquals([3, 4, 9], $more);
+}
+
+// Truffle's long sequences: drop gives a view over its input's storage, which concatenate onto nothing must not hand
+// back as its own.
+function <<test.Test>> platform::pure::functions::tests::immutability::testConcatenateADroppedLongRunOntoNothingIsItsOwn():Boolean[1]
+{
+    let source = range(300);
+    let rest = $source->drop(1);
+    let none = [1, 2]->filter(x|$x > 5);
+    let all = $none->concatenate($rest);
+    let more = $all->add(-1);
+    assertEquals([], $none);
+    assertEquals(300, $source->size());
+    assertEquals(299, $rest->size());
+    assertEquals(300, $more->size());
+    assertEquals(-1, $more->last()->toOne());
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testSortingASortedListIsItsOwn():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let sorted = $ys->sort([], []);
+    let more = $sorted->add(0);
+    assertEquals([1, 2, 3], $ys);
+    assertEquals([1, 2, 3, 0], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testReversingOneElementIsItsOwn():Boolean[1]
+{
+    let one = [7, 8]->filter(x|$x < 8);
+    let reversed = $one->reverse();
+    let more = $reversed->add(9);
+    assertEquals([7], $one);
+    assertEquals([7, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testRemovingNoDuplicateIsItsOwn():Boolean[1]
+{
+    let ys = [1, 2]->map(x|$x);
+    let distinct = $ys->removeDuplicates();
+    let more = $distinct->add(3);
+    assertEquals([1, 2], $ys);
+    assertEquals([1, 2, 3], $more);
+}
+
+// -- native contracts: a slice is its own, also when it is the whole list; sort(col) over several values likewise --
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testTakingEverythingIsItsOwn():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->take(3);
+    let more = $got->add(9);
+    assertEquals([1, 2, 3], $ys);
+    assertEquals([1, 2, 3, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testDroppingNothingIsItsOwn():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->drop(0);
+    let more = $got->add(9);
+    assertEquals([1, 2, 3], $ys);
+    assertEquals([1, 2, 3, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testSlicingEverythingIsItsOwn():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->slice(0, 3);
+    let more = $got->add(9);
+    assertEquals([1, 2, 3], $ys);
+    assertEquals([1, 2, 3, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testTailIsItsOwn():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->tail();
+    let more = $got->add(9);
+    assertEquals([1, 2, 3], $ys);
+    assertEquals([2, 3, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testInitIsItsOwn():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->init();
+    let more = $got->add(9);
+    assertEquals([1, 2, 3], $ys);
+    assertEquals([1, 2, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testSortingWithoutArgumentsIsItsOwn():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->sort();
+    let more = $got->add(9);
+    assertEquals([1, 2, 3], $ys);
+    assertEquals([1, 2, 3, 9], $more);
+}
+
+// -- native contracts: an argument a native does not retain is free afterwards -------------------------------------
+// The compiler takes these claims at their word: the argument's use is not an alias, so a later use of the variable may
+// change it in place. Were the native to hand the argument back, or keep it, its result would change with it. Each
+// test changes the argument after the call and reads the result again, in the cases where a shortcut is tempting.
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testConcatenateOntoNothingDoesNotKeepTheList():Boolean[1]
+{
+    let none = [1, 2]->filter(x|$x > 5);
+    let ys = [3, 4]->map(x|$x);
+    let zs = $none->concatenate($ys);
+    let more = $ys->add(9);
+    assertEquals([3, 4], $zs);
+    assertEquals([], $none);
+    assertEquals([3, 4, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testSortingASortedListDoesNotKeepIt():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let sorted = $ys->sort([], []);
+    let more = $ys->add(0);
+    assertEquals([1, 2, 3], $sorted);
+    assertEquals([1, 2, 3, 0], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testReversingOneElementDoesNotKeepIt():Boolean[1]
+{
+    let one = [7, 8]->filter(x|$x < 8);
+    let reversed = $one->reverse();
+    let more = $one->add(9);
+    assertEquals([7], $reversed);
+    assertEquals([7, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testRemovingNoDuplicateDoesNotKeepTheList():Boolean[1]
+{
+    let ys = [1, 2]->map(x|$x);
+    let distinct = $ys->removeDuplicates([], []);
+    let more = $ys->add(3);
+    assertEquals([1, 2], $distinct);
+    assertEquals([1, 2, 3], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testTakingEverythingDoesNotKeepTheList():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->take(3);
+    let more = $ys->add(9);
+    assertEquals([1, 2, 3], $got);
+    assertEquals([1, 2, 3, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testDroppingNothingDoesNotKeepTheList():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->drop(0);
+    let more = $ys->add(9);
+    assertEquals([1, 2, 3], $got);
+    assertEquals([1, 2, 3, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testSlicingEverythingDoesNotKeepTheList():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->slice(0, 3);
+    let more = $ys->add(9);
+    assertEquals([1, 2, 3], $got);
+    assertEquals([1, 2, 3, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testTailDoesNotKeepTheList():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->tail();
+    let more = $ys->add(9);
+    assertEquals([2, 3], $got);
+    assertEquals([1, 2, 3, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testInitDoesNotKeepTheList():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->init();
+    let more = $ys->add(9);
+    assertEquals([1, 2], $got);
+    assertEquals([1, 2, 3, 9], $more);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testSortingWithoutArgumentsDoesNotKeepTheList():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->sort();
+    let more = $ys->add(9);
+    assertEquals([1, 2, 3], $got);
+    assertEquals([1, 2, 3, 9], $more);
+}
+
+// A sort of one value is that value: the object sorted is still the caller's, so a copy of it is not in place.
+function <<test.Test>> platform::pure::functions::tests::immutability::testSortingOneObjectGivesTheObject():Boolean[1]
+{
+    let box = platform::pure::functions::tests::immutability::bagOf([1, 2]->map(x|$x));
+    let sorted = $box->sort();
+    let changed = ^$sorted(items = [3]->map(x|$x));
+    assertEquals([1, 2], $box.items);
+    assertEquals([3], $changed.items);
+}
+
+// A result still read after a later use stays shared.
+function <<test.Test>> platform::pure::functions::tests::immutability::testASliceStillReadKeepsItsValues():Boolean[1]
+{
+    let ys = [1, 2, 3]->map(x|$x);
+    let got = $ys->take(2);
+    let more = $got->add(9);
+    assertEquals([1, 2], $got);
+    assertEquals([1, 2, 9], $more);
+    assertEquals([1, 2, 3], $ys);
+}
+
+// -- an element read out of a list is still in the list: owning a list never means owning its elements --------------
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAnElementReadByAtThenCopiedStaysInTheList():Boolean[1]
+{
+    let xs = [1, 2]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let e = $xs->at(0);
+    let changed = ^$e(count = 9);
+    assertEquals(9, $changed.count);
+    assertEquals([1, 1], $xs.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAnElementReadByHeadThenCopiedStaysInTheList():Boolean[1]
+{
+    let xs = [1, 2]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let e = $xs->head()->toOne();
+    let changed = ^$e(count = 9);
+    assertEquals(9, $changed.count);
+    assertEquals([1, 1], $xs.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testASingleValueReadAsAListIsNotGivenAway():Boolean[1]
+{
+    let bag = platform::pure::functions::tests::immutability::bagOf([1]);
+    let e = $bag->at(0);
+    let changed = ^$bag(count = 9);
+    assertEquals(9, $changed.count);
+    assertEquals(1, $e.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testFoldCopyingElementsLeavesAnElementReadBefore():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let e = $xs->at(0);
+    let got = $xs->fold({x, acc|$acc->add(^$x(count = $x.count + 10))}, []->cast(@platform::pure::functions::tests::immutability::Bag));
+    assertEquals([11, 11, 11], $got.count);
+    assertEquals(1, $e.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testFoldCopyingElementsLeavesTheList():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let e = $xs->at(0);
+    let got = $xs->fold({x, acc|$acc->add(^$x(count = $x.count + 10))}, []->cast(@platform::pure::functions::tests::immutability::Bag));
+    assertEquals([11, 11, 11], $got.count);
+    assertEquals([1, 1, 1], $xs.count);
+    assertEquals(1, $e.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testFoldStartingFromAnElementLeavesIt():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let e = $xs->at(0);
+    let got = $xs->fold({x, acc|^$acc(count = $acc.count + $x.count)}, $e);
+    assertEquals(4, $got.count);
+    assertEquals(1, $e.count);
+    assertEquals([1, 1, 1], $xs.count);
+}
+
+function <<test.TestDependency>> platform::pure::functions::tests::immutability::withCount99(bag: platform::pure::functions::tests::immutability::Bag[1]): platform::pure::functions::tests::immutability::Bag[1]
+{
+    ^$bag(count = 99)
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testFoldGivingElementsToACopyingFunctionLeavesThem():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let e = $xs->at(0);
+    let got = $xs->fold({x, acc|$acc->add($x->platform::pure::functions::tests::immutability::withCount99())}, []->cast(@platform::pure::functions::tests::immutability::Bag));
+    assertEquals([99, 99, 99], $got.count);
+    assertEquals(1, $e.count);
+    assertEquals([1, 1, 1], $xs.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testMapCopyingElementsLeavesAnElementReadBefore():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let e = $xs->at(0);
+    let got = $xs->map(x|^$x(count = 7));
+    assertEquals([7, 7, 7], $got.count);
+    assertEquals(1, $e.count);
+}
+
+// -- a list alone holding its elements: each may be changed in place (elementsUpdatableInPlace), when none can be seen elsewhere --
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testMapChangingElementsOfAFreshList():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let got = $xs->map(x|^$x(count = $x.count + 10));
+    assertEquals([11, 11, 11], $got.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testFoldChangingElementsOfAFreshList():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let got = $xs->fold({x, acc|$acc->add(^$x(count = 5))}, []->cast(@platform::pure::functions::tests::immutability::Bag));
+    assertEquals([5, 5, 5], $got.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testChainedMapChangingElements():Boolean[1]
+{
+    let got = [1, 2]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]))->map(x|^$x(count = 7));
+    assertEquals([7, 7], $got.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testMapOverAnIdentityMapLeavesTheFirstListWhenRead():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let ys = $xs->map(e|$e);
+    let zs = $ys->map(y|^$y(count = 9));
+    assertEquals([9, 9, 9], $zs.count);
+    assertEquals([1, 1, 1], $xs.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testFilterLambdaCopyingItsElementLeavesIt():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let got = $xs->filter(x|^$x(count = 0).count == 0);
+    assertEquals([1, 1, 1], $got.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAnObjectTwiceInAListIsNotChanged():Boolean[1]
+{
+    let a = platform::pure::functions::tests::immutability::bagOf([1]);
+    let xs = [$a, $a];
+    let got = $xs->map(x|^$x(count = $x.count + 1));
+    assertEquals([2, 2], $got.count);
+    assertEquals(1, $a.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAMapResultReadAfterwardsKeepsTheList():Boolean[1]
+{
+    let xs = [1, 2, 3]->map(i|platform::pure::functions::tests::immutability::bagOf([$i]));
+    let got = $xs->map(x|^$x(count = 4));
+    assertEquals([4, 4, 4], $got.count);
+    assertEquals([1, 1, 1], $xs.count);
+}
+
+// -- native contracts: a fresh instance is a new object (NewInstanceResult on new and copy), checked by identity ---------
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testCopyIsANewInstance():Boolean[1]
+{
+    let original = ^platform::pure::functions::tests::immutability::Collector(base = [1]);
+    let same = $original->copy();
+    let changed = ^$original(base = [2]);
+    assertFalse($same->is($original));
+    assertFalse($changed->is($original));
+    assertEquals([1], $original.base);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testNewIsANewInstance():Boolean[1]
+{
+    let a = ^platform::pure::functions::tests::immutability::Collector(base = [1]);
+    let b = ^platform::pure::functions::tests::immutability::Collector(base = [1]);
+    assertFalse($a->is($b));
+}
+
+// -- copying an instance: one given away may be changed in place, one read again keeps its values ------------------
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testCopyOfAnInstanceGivenAway():Boolean[1]
+{
+    let collector = ^platform::pure::functions::tests::immutability::Collector(base = [1, 2]);
+    let rebased = ^$collector(base = [3, 4]);
+    assertEquals([3, 4], $rebased.base);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testCopyKeepsAnInstanceReadAgain():Boolean[1]
+{
+    let collector = ^platform::pure::functions::tests::immutability::Collector(base = [1, 2]);
+    let rebased = ^$collector(base = [3, 4]);
+    assertEquals([1, 2], $collector.base);
+    assertEquals([3, 4], $rebased.base);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testFoldCopyingItsAccumulator():Boolean[1]
+{
+    let total = [1, 2, 3]->fold({e, acc|^$acc(base = $acc.base->add($e))}, ^platform::pure::functions::tests::immutability::Collector(base = []));
+    assertEquals([1, 2, 3], $total.base);
+}
+
+// -- a call reads a receiver held by a variable once every argument is evaluated ------------------------------------
+
+Class <<test.TestDependency>> platform::pure::functions::tests::immutability::Swapped
+{
+    left: Integer[1];
+    right: Integer[1];
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAddingItsOwnSize():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    assertEquals([1, 2, 2], $xs->add($xs->size()));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testConcatenatingToItself():Boolean[1]
+{
+    let ys = [1, 2]->map(x|$x);
+    assertEquals([1, 2, 1, 2], $ys->concatenate($ys));
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAReceiverComputedFirst():Boolean[1]
+{
+    let zs = [1, 2]->map(x|$x);
+    assertEquals([2, 1, 1, 2], $zs->reverse()->concatenate($zs));
+}
+
+// A copy computes every key value before it sets any: each value reads the source as it was.
+function <<test.Test>> platform::pure::functions::tests::immutability::testCopyComputesItsKeysFirst():Boolean[1]
+{
+    let s = ^platform::pure::functions::tests::immutability::Swapped(left = 1, right = 2);
+    let t = ^$s(left = $s.right, right = $s.left);
+    assertEquals(2, $t.left);
+    assertEquals(1, $t.right);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testCopyAppendingToItsSource():Boolean[1]
+{
+    let c = ^platform::pure::functions::tests::immutability::Collector(base = [1, 2]);
+    let d = ^$c(base += 3);
+    assertEquals([1, 2, 3], $d.base);
+}
+
+// -- a field's collection: grown in place only when the object holding it is the only one to ---------------------
+
+Class <<test.TestDependency>> platform::pure::functions::tests::immutability::Bag
+{
+    items: Integer[*];
+    count: Integer[1];
+}
+
+function <<test.TestDependency>> platform::pure::functions::tests::immutability::bagOf(items: Integer[*]): platform::pure::functions::tests::immutability::Bag[1]
+{
+    ^platform::pure::functions::tests::immutability::Bag(items = $items, count = $items->size())
+}
+
+function <<test.TestDependency>> platform::pure::functions::tests::immutability::putIn(bag: platform::pure::functions::tests::immutability::Bag[1], e: Integer[1]): platform::pure::functions::tests::immutability::Bag[1]
+{
+    ^$bag(items = $bag.items->add($e))
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAFieldGivenAway():Boolean[1]
+{
+    let bag = [1, 2, 3]->fold({e, acc|^$acc(items = $acc.items->add($e), count = $acc.count + 1)}, ^platform::pure::functions::tests::immutability::Bag(items = [], count = 0));
+    assertEquals([1, 2, 3], $bag.items);
+    assertEquals(3, $bag.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAFieldGivenAwayThroughAFunction():Boolean[1]
+{
+    let bag = [1, 2, 3]->fold({e, acc|$acc->platform::pure::functions::tests::immutability::putIn($e)}, ^platform::pure::functions::tests::immutability::Bag(items = [], count = 0));
+    assertEquals([1, 2, 3], $bag.items);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAFieldKeepsAListStoredFromAVariableStillRead():Boolean[1]
+{
+    let xs = [1, 2]->map(x|$x);
+    let bag = ^platform::pure::functions::tests::immutability::Bag(items = $xs, count = 2);
+    let more = ^$bag(items = $bag.items->add(3));
+    assertEquals([1, 2], $xs);
+    assertEquals([1, 2, 3], $more.items);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAFieldKeepsAnEarlierRead():Boolean[1]
+{
+    let bag = ^platform::pure::functions::tests::immutability::Bag(items = [1, 2]->map(x|$x), count = 2);
+    let before = $bag.items;
+    let more = ^$bag(items = $bag.items->add(3));
+    assertEquals([1, 2], $before);
+    assertEquals([1, 2, 3], $more.items);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAFieldReadByAnotherKey():Boolean[1]
+{
+    let bag = ^platform::pure::functions::tests::immutability::Bag(items = [1, 2]->map(x|$x), count = 2);
+    let more = ^$bag(items = $bag.items->add(3), count = $bag.items->size());
+    assertEquals([1, 2, 3], $more.items);
+    assertEquals(2, $more.count);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAFieldOfAnObjectStillRead():Boolean[1]
+{
+    let bag = ^platform::pure::functions::tests::immutability::Bag(items = [1, 2]->map(x|$x), count = 2);
+    let more = ^$bag(items = $bag.items->add(3));
+    assertEquals([1, 2], $bag.items);
+    assertEquals([1, 2, 3], $more.items);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAFieldOfAnObjectCopiedBefore():Boolean[1]
+{
+    let bag = ^platform::pure::functions::tests::immutability::Bag(items = [1, 2]->map(x|$x), count = 2);
+    let copied = ^$bag(count = 5);
+    let more = ^$copied(items = $copied.items->add(3));
+    assertEquals([1, 2], $bag.items);
+    assertEquals([1, 2, 3], $more.items);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAFieldOfABagStillHeldByTheCaller():Boolean[1]
+{
+    let bag = platform::pure::functions::tests::immutability::bagOf([1, 2]->map(x|$x));
+    let more = $bag->platform::pure::functions::tests::immutability::putIn(3);
+    assertEquals([1, 2], $bag.items);
+    assertEquals([1, 2, 3], $more.items);
+}
+
+function <<test.Test>> platform::pure::functions::tests::immutability::testAFieldReadInsideALambda():Boolean[1]
+{
+    let bag = ^platform::pure::functions::tests::immutability::Bag(items = [1, 2]->map(x|$x), count = 2);
+    let more = ^$bag(items = [10, 20]->fold({e, a|$a->add($bag.items->size() + $e)}, [0]));
+    assertEquals([0, 12, 22], $more.items);
+}

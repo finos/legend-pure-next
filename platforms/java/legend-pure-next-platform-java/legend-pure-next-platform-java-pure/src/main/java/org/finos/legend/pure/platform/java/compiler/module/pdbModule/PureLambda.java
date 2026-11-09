@@ -15,6 +15,7 @@
 
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
+import org.eclipse.collections.api.factory.Lists;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -228,7 +229,7 @@ public final class PureLambda
             Object[] arguments = args == null ? new Object[0] : args;
             if (name.equals("get") || name.equals("apply"))
             {
-                return Metadata.invoke(callable, Arrays.asList(arguments));
+                return Metadata.invoke(callable, Lists.fixedSize.of(arguments));
             }
             if (name.equals("_purePath"))
             {

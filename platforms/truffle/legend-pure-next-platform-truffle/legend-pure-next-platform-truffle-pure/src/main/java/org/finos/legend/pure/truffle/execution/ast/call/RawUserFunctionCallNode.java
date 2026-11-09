@@ -74,8 +74,22 @@ public final class RawUserFunctionCallNode extends PureNode
 
     public RawUserFunctionCallNode(Object fd, PureNode[] argNodes)
     {
+        this(fd, argNodes, null);
+    }
+
+    /**
+     * Updatability of each argument (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): AddNode's COPY, IN_PLACE, or the slot of a
+     * caller-frame flag; null when no argument can be updatable in place. A call with any passes an {@link UpdatableInPlaceMask} after
+     * its arguments, which the callee decodes into its parameters' flags.
+     */
+    @CompilerDirectives.CompilationFinal(dimensions = 1)
+    private final int[] updatability;
+
+    public RawUserFunctionCallNode(Object fd, PureNode[] argNodes, int[] updatability)
+    {
         this.fd = fd;
         this.argNodes = argNodes;
+        this.updatability = updatability;
     }
 
     @Override
@@ -113,10 +127,23 @@ public final class RawUserFunctionCallNode extends PureNode
     @ExplodeLoop
     private Object[] evaluateArgs(VirtualFrame frame)
     {
-        Object[] args = new Object[argNodes.length];
+        Object[] args = new Object[updatability == null ? argNodes.length : argNodes.length + 1];
         for (int i = 0; i < argNodes.length; i++)
         {
             args[i] = argNodes[i].executeGeneric(frame);
+        }
+        if (updatability != null)
+        {
+            long bits = 0;
+            for (int i = 0; i < updatability.length; i++)
+            {
+                if (updatability[i] == org.finos.legend.pure.truffle.execution.natives.collection.AddNode.IN_PLACE
+                        || updatability[i] >= 0 && frame.getValue(updatability[i]) == Boolean.TRUE)
+                {
+                    bits |= 1L << i;
+                }
+            }
+            args[argNodes.length] = new UpdatableInPlaceMask(bits);
         }
         return args;
     }
@@ -130,13 +157,16 @@ public final class RawUserFunctionCallNode extends PureNode
             CompilerDirectives.transferToInterpreterAndInvalidate();
             indirectCallNode = insert(IndirectCallNode.create());
         }
-        Object resolved = resolveQpTarget(staticQp, args);
+        // An updatability mask after the arguments is not one: the override is matched on the arguments alone, and called
+        // with the mask, which it decodes into its own parameters' flags.
+        Object[] arguments = updatability == null ? args : java.util.Arrays.copyOf(args, args.length - 1);
+        Object resolved = resolveQpTarget(staticQp, arguments);
         RootCallTarget ct = lookupCallTarget(resolved);
         if (ct != null)
         {
             return indirectCallNode.call(ct, args);
         }
-        return invokeWithoutCallTarget(resolved, args);
+        return invokeWithoutCallTarget(resolved, arguments);
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

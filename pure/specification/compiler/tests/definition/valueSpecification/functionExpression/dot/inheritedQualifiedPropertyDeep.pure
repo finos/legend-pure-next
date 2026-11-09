@@ -63,7 +63,7 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
           AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @35:34-35:41
           AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @35:40-35:41
   DotApplication test::GrandParent.tag() :#String##[1]#  ~@DotApplication@  @36:5-36:10
-    Variable c :#test::Child##[1]#  ~@VariableExpression@  @36:3-36:4
+    Variable c :#test::Child##[1]#  ~@VariableExpression@  @36:3-36:4  updatableInPlace
 
 ###ReverseIndex
 platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:

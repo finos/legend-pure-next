@@ -1,0 +1,73 @@
+// A constraint never owns what it checks, which is used again once it passes: its parameters are shared. Neither
+// `$this` handed to a function in a class constraint nor a function's argument in its precondition is marked, while
+// the function's body may take that argument over.
+###Pure
+import test::updatableInPlace::*;
+
+Class test::updatableInPlace::Basket
+[
+  $this->count() > 0
+]
+{
+  items: Integer[*];
+}
+
+function test::updatableInPlace::count(b: Basket[1]): Integer[1]
+{
+  $b.items->size()
+}
+
+function test::updatableInPlace::grow(xs: Integer[*]): Integer[*]
+[
+  $xs->add(0)->size() > 0
+]
+{
+  $xs->add(1)
+}
+
+###CompiledGraph
+class test::updatableInPlace::Basket extends Any  ~Class<test::updatableInPlace::Basket>  @7:1-13:1
+  property items :@Integer@[*]  ~Property<test::updatableInPlace::Basket, @Integer@|*>
+  constraint
+    Lambda(this:test::updatableInPlace::Basket[1])  ~#LambdaFunction<#{test::updatableInPlace::Basket[1]->#Boolean##[1]#}#>#
+      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @9:8-9:20
+        ArrowInvocation test::updatableInPlace::count_Basket_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @9:8-9:16
+          Variable this :#test::updatableInPlace::Basket##[1]#  ~@VariableExpression@  @9:3-9:7
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @9:20-9:20
+
+function test::updatableInPlace::count_Basket_1__Integer_1_(b:test::updatableInPlace::Basket[1]):@Integer@[1]  ~UserDefinedFunction<{test::updatableInPlace::Basket[1]->@Integer@[1]}>
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @17:11-17:18
+    DotApplication test::updatableInPlace::Basket.items :#Integer##[*]#  ~@DotApplication@  @17:5-17:10
+      Variable b :#test::updatableInPlace::Basket##[1]#  ~@VariableExpression@  @17:3-17:4
+
+function test::updatableInPlace::grow_Integer_MANY__Integer_MANY_(xs:@Integer@[*]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[*]}>
+  preConstraint
+    Lambda(xs:@Integer@[*])  ~#LambdaFunction<#{@Integer@[*]->#Boolean##[1]#}#>#
+      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @22:6-22:25
+        ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @22:6-22:21
+          ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @22:6-22:21
+            typeParam T -> #Integer#
+            Variable xs :#Integer##[*]#  ~@VariableExpression@  @22:3-22:5
+            AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @22:12-22:12
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @22:25-22:25
+  resultUpdatableInPlace
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @25:6-25:13
+    typeParam T -> #Integer#
+    Variable xs :#Integer##[*]#  ~@VariableExpression@  @25:3-25:5  updatableInPlaceIf xs
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @25:12-25:12
+
+###ReverseIndex
+platform::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+  test::updatableInPlace::Basket
+  test::updatableInPlace::grow_Integer_MANY__Integer_MANY_
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::grow_Integer_MANY__Integer_MANY_
+platform::pure::functions::collection::size_Any_MANY__Integer_1_:
+  test::updatableInPlace::count_Basket_1__Integer_1_
+  test::updatableInPlace::grow_Integer_MANY__Integer_MANY_
+test::updatableInPlace::Basket:
+  test::updatableInPlace::count_Basket_1__Integer_1_
+test::updatableInPlace::Basket.items:
+  test::updatableInPlace::count_Basket_1__Integer_1_
+test::updatableInPlace::count_Basket_1__Integer_1_:
+  test::updatableInPlace::Basket

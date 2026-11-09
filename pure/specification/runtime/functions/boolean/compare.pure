@@ -20,7 +20,7 @@ native function
     {
         doc.doc='Compare two instances. if $a is equal to $b the result is 0, otherwise if $a comes before $b the result is negative, otherwise the result is positive',
         PCT.grammarDoc='compare is used in the implementation of inequalities functions'
-    }
+    , inPlaceUpdate.onlyReads='a,b'}
     platform::pure::functions::boolean::compare<T>(a:T[1], b:T[1]):Integer[1];
 
 

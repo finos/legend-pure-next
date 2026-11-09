@@ -29,6 +29,7 @@ website/yarn-error.log*
 **/generated/
 /test-results/
 /shared/
+**/*.iml
 
 
 **/graal_dumps/

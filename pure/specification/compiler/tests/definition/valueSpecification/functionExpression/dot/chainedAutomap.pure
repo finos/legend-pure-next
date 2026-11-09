@@ -92,7 +92,7 @@ function test::testChainedAutomap_Function_1__Boolean_1_(f:Function<{Function<{-
           AtomicValue  'Smith' :@String@[1]  ~@AtomicValue@  @39:60-39:66
         FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @39:69-39:91
           AtomicValue  'address' :@String@[1]  ~@AtomicValue@  @39:69-39:91
-          Variable addressParis :#test::CA_Address##[1]#  ~@VariableExpression@  @39:79-39:91
+          Variable addressParis :#test::CA_Address##[1]#  ~@VariableExpression@  @39:79-39:91  updatableInPlace
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CA_Person##[1]#  ~@FunctionInvocation@  @40:3-40:88
     typeParam T -> #test::CA_Person#
     mulParam m -> #[1]#
@@ -109,7 +109,7 @@ function test::testChainedAutomap_Function_1__Boolean_1_(f:Function<{Function<{-
           AtomicValue  'Roe' :@String@[1]  ~@AtomicValue@  @40:56-40:60
         FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @40:63-40:87
           AtomicValue  'address' :@String@[1]  ~@AtomicValue@  @40:63-40:87
-          Variable addressHoboken :#test::CA_Address##[1]#  ~@VariableExpression@  @40:73-40:87
+          Variable addressHoboken :#test::CA_Address##[1]#  ~@VariableExpression@  @40:73-40:87  updatableInPlace
   FunctionInvocation test::myCheck_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @41:3-41:83
     Collection :#String#[2]  ~@Collection@  @41:11-41:42
       AtomicValue  'Paris, FR' :@String@[1]  ~@AtomicValue@  @41:12-41:22
@@ -123,6 +123,7 @@ function test::testChainedAutomap_Function_1__Boolean_1_(f:Function<{Function<{-
       Lambda :#LambdaFunction<#{->#String##[*]#}#>#[1]  ~@AtomicValue@  @41:54-41:81
         openVar smith :#test::CA_Person##[1]#
         openVar roe :#test::CA_Person##[1]#
+        resultUpdatableInPlace
         FunctionInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@FunctionInvocation@  @41:77-41:81
           typeParam T -> #test::CA_Address#
           typeParam V -> #String#

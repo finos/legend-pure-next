@@ -14,9 +14,9 @@
 // limitations under the License.
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
+import org.eclipse.collections.api.factory.Lists;
 import java.lang.reflect.Method;
 import java.util.ArrayDeque;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -119,6 +119,6 @@ public final class PureNew
 
     private static List<?> items(Object value)
     {
-        return value instanceof List<?> list ? list : value == null ? Collections.emptyList() : Collections.singletonList(value);
+        return value instanceof List<?> list ? list : value == null ? Lists.fixedSize.empty() : Lists.fixedSize.of(value);
     }
 }

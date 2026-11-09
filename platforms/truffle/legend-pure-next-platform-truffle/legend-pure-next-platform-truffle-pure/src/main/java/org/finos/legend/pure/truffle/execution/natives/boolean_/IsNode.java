@@ -61,6 +61,11 @@ public final class IsNode extends PureNode
         {
             return true;
         }
+        // Collections of several values are the same only when they are the same collection.
+        if (rawA instanceof PureSequence || rawB instanceof PureSequence || rawA instanceof java.util.List || rawB instanceof java.util.List)
+        {
+            return false;
+        }
         if (rawA instanceof Number && rawB instanceof Number
                 || rawA instanceof String && rawB instanceof String
                 || rawA instanceof Boolean && rawB instanceof Boolean)
@@ -128,11 +133,19 @@ public final class IsNode extends PureNode
 
 
     @TruffleBoundary
+    /**
+     * What {@code is} compares a value by: nothing (null) for an empty collection — every empty collection is the same —
+     * the element of a collection of one, the collection itself otherwise.
+     */
     private static Object normalize(Object v)
     {
-        if (v instanceof PureSequence ps && ps.isEmpty())
+        if (v instanceof PureSequence ps)
         {
-            return null;
+            return ps.isEmpty() ? null : ps.size() == 1 ? normalize(ps.getBoxed(0)) : ps;
+        }
+        if (v instanceof java.util.List<?> l)
+        {
+            return l.isEmpty() ? null : l.size() == 1 ? normalize(l.get(0)) : l;
         }
         return v;
     }

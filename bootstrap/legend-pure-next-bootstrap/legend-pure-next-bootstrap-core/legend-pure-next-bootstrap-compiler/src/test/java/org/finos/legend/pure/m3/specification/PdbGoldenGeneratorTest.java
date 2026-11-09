@@ -21,10 +21,13 @@ import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveWriter;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PDBExtension;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,6 +46,12 @@ import java.util.List;
  *
  * <p>Regenerate: {@code bazel run //:update_pdb_goldens__compiler}, which runs this class with
  * {@code -Dpdb.goldens.dir} set to {@code pure/specification/compiler/tests/pdb}.</p>
+ *
+ * <p>Check: {@code bazel test //tools/bazel:test_pdb_goldens_up_to_date__compiler} runs it with
+ * {@code -Dpdb.goldens.check} instead, writing nothing: it fails when a committed golden is not what the writer
+ * writes today, byte for byte in every entry, when a fixture lacks its golden, or when a golden has no fixture. The
+ * golden test of the ports compares decoded nodes, so a golden that only differs in layout passes there; this is what
+ * keeps the bytes current.</p>
  */
 public class PdbGoldenGeneratorTest
 {
@@ -53,6 +62,8 @@ public class PdbGoldenGeneratorTest
         return CompilerCompiledGraphPdbRoundTripTest.discoverTests();
     }
 
+    private static final String UPDATE = "bazel run //:update_pdb_goldens__compiler";
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("discoverTests")
     public void generate(String testName, String resourcePath) throws Exception
@@ -60,17 +71,123 @@ public class PdbGoldenGeneratorTest
         String dir = System.getProperty("pdb.goldens.dir");
         Assumptions.assumeTrue(dir != null && !dir.isEmpty(), "set -Dpdb.goldens.dir to generate goldens");
 
+        byte[] archive = archive(testName, resourcePath);
+        if (archive != null)
+        {
+            Path out = Path.of(dir).resolve(testName + ".pdb");
+            Files.createDirectories(out.getParent());
+            Files.write(out, archive);
+        }
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("discoverTests")
+    public void upToDate(String testName, String resourcePath) throws Exception
+    {
+        String dir = System.getProperty("pdb.goldens.check");
+        Assumptions.assumeTrue(dir != null && !dir.isEmpty(), "set -Dpdb.goldens.check to check goldens");
+
+        byte[] archive = archive(testName, resourcePath);
+        if (archive == null)
+        {
+            return;
+        }
+        Path golden = Path.of(dir).resolve(testName + ".pdb");
+        if (!Files.isRegularFile(golden))
+        {
+            Assertions.fail("missing golden " + testName + ".pdb: run '" + UPDATE + "'");
+        }
+        String difference = firstDifference(entries(Files.readAllBytes(golden)), entries(archive));
+        if (difference != null)
+        {
+            Assertions.fail("stale golden " + testName + ".pdb (" + difference + "): run '" + UPDATE + "'");
+        }
+    }
+
+    @Test
+    public void noGoldenWithoutFixture() throws Exception
+    {
+        String dir = System.getProperty("pdb.goldens.check");
+        Assumptions.assumeTrue(dir != null && !dir.isEmpty(), "set -Dpdb.goldens.check to check goldens");
+
+        java.util.Set<String> fixtures = new java.util.HashSet<>();
+        for (org.junit.jupiter.params.provider.Arguments arguments : discoverTests())
+        {
+            fixtures.add((String) arguments.get()[0]);
+        }
+        Path root = Path.of(dir);
+        List<String> orphans;
+        try (java.util.stream.Stream<Path> walk = Files.walk(root))
+        {
+            orphans = walk.filter(p -> p.toString().endsWith(".pdb"))
+                    .map(p -> root.relativize(p).toString().replace('\\', '/'))
+                    .map(n -> n.substring(0, n.length() - 4))
+                    // Island values: written by the Pure writer (update_pdb_goldens__island), not this class.
+                    .filter(n -> !n.startsWith(CompilerCompiledGraphTest.ISLAND_VALUE_FIXTURES))
+                    .filter(n -> !fixtures.contains(n))
+                    .sorted()
+                    .toList();
+        }
+        Assertions.assertTrue(orphans.isEmpty(), () -> "goldens without a fixture, to delete: " + orphans);
+    }
+
+    // The uncompressed bytes of each entry of an archive, by name in archive order: what the writer decides. The
+    // deflated bytes also depend on the zlib of the JDK, which is not the writer's.
+    private static java.util.Map<String, byte[]> entries(byte[] archive) throws IOException
+    {
+        java.util.Map<String, byte[]> entries = new java.util.LinkedHashMap<>();
+        try (java.util.zip.ZipInputStream zip = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(archive)))
+        {
+            for (java.util.zip.ZipEntry entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry())
+            {
+                entries.put(entry.getName(), zip.readAllBytes());
+            }
+        }
+        return entries;
+    }
+
+    private static String firstDifference(java.util.Map<String, byte[]> golden, java.util.Map<String, byte[]> written)
+    {
+        if (!golden.keySet().equals(written.keySet()))
+        {
+            java.util.Set<String> missing = new java.util.TreeSet<>(written.keySet());
+            missing.removeAll(golden.keySet());
+            java.util.Set<String> extra = new java.util.TreeSet<>(golden.keySet());
+            extra.removeAll(written.keySet());
+            return "entries the writer writes but the golden lacks: " + missing + ", entries only in the golden: " + extra;
+        }
+        if (!List.copyOf(golden.keySet()).equals(List.copyOf(written.keySet())))
+        {
+            return "entries in another order";
+        }
+        for (java.util.Map.Entry<String, byte[]> entry : golden.entrySet())
+        {
+            byte[] expected = entry.getValue();
+            byte[] actual = written.get(entry.getKey());
+            int at = java.util.Arrays.mismatch(expected, actual);
+            if (at >= 0)
+            {
+                return entry.getKey() + " differs from byte " + at + ", " + expected.length + " bytes in the golden, " + actual.length + " written";
+            }
+        }
+        return null;
+    }
+
+    // The archive the writer writes for a fixture, or null when the fixture has none (an error fixture, or one that
+    // does not compile cleanly).
+    private static byte[] archive(String testName, String resourcePath) throws Exception
+    {
         String content = Files.readString(Path.of(resourcePath), StandardCharsets.UTF_8);
         if (content.contains("###Error"))
         {
-            return; // error tests produce no compiled graph
+            return null; // error tests produce no compiled graph
         }
 
         CompiledSpec spec = RUNTIME.compileSpec(content, testName);
         List<String> errors = spec.result().errors().stream().map(CompilationError::message).toList();
         if (!errors.isEmpty())
         {
-            return; // only round-trippable (clean) graphs get a golden
+            return null; // only round-trippable (clean) graphs get a golden
         }
 
         Module testModule = spec.testModule();
@@ -110,8 +227,7 @@ public class PdbGoldenGeneratorTest
             return serializablePaths.stream().noneMatch(p -> p.startsWith(prefix));
         });
 
-        Path out = Path.of(dir).resolve(testName + ".pdb");
-        Files.createDirectories(out.getParent());
+        Path out = Files.createTempFile("golden", ".pdb");
         List<PDBExtension> pdbExtensions = List.of(new PureLanguageExtension());
         // Carry the reverse reference index like production writers do
         // (SpecificationBinaryBuilder / TruffleCompilerBinaryBuilder), so the
@@ -126,5 +242,13 @@ public class PdbGoldenGeneratorTest
         new CompressedArchiveWriter().write(allModuleElements, pdbExtensions, testModule,
                 new ModuleManifest(testModule.name(), testModule.packagePattern(), testModule.dependencies()),
                 additionalSections, out);
+        try
+        {
+            return Files.readAllBytes(out);
+        }
+        finally
+        {
+            Files.delete(out);
+        }
     }
 }

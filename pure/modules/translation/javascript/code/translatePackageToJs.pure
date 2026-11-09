@@ -317,13 +317,14 @@ function platform::extensions::language::javascript::translation::pdb::renderUdf
    // conventionForRoot (not defaultConvention) so lambdas inside the body get
    // wrapLambdaWithAst's metadata address (`<udfPath>$lambda/<idx>`) — bare
    // arrows can't answer reflective reads (.expressionSequence, genericType).
-   let jsParams = $udf.parameters->map(p | jsParam(safeJsName($p.name)));
-   let body = $udf.expressionSequence->buildJsFunctionBody(conventionForRoot($udf)->withTypeVarWitness($udf.parameters));
+   // Its updatability mask and the flags it decodes (updatableInPlaceSignature), when its body reads one.
+   let updatableInPlace = $udf->platform::extensions::language::javascript::translation::updatableInPlaceSignature(conventionForRoot($udf)->withTypeVarWitness($udf.parameters));
+   let body = $udf.expressionSequence->buildJsFunctionBody($updatableInPlace.conv);
    let fn = ^FunctionDeclaration(
       name              = $shortName,
       modifiers         = [ModifierFlag.Export],
-      parameters        = $jsParams,
-      body              = $body,
+      parameters        = $updatableInPlace.parameters,
+      body              = ^$body(statements = $updatableInPlace.prologue->concatenate($body.statements)),
       sourceInformation = $udf.sourceInformation,
       pureName          = $udf->pureFrameName()
    );

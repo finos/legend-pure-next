@@ -44,6 +44,7 @@ class test::CMP_Address extends Any  ~Class<test::CMP_Address>  @25:1-28:1
   property name :@String@[1]  ~Property<test::CMP_Address, @String@|1>
 
 function test::testChainedAutomap__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  resultUpdatableInPlace
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CMP_Person##[1]#  ~@FunctionInvocation@  @32:3-32:55
     typeParam T -> #test::CMP_Person#
     mulParam m -> #[1]#

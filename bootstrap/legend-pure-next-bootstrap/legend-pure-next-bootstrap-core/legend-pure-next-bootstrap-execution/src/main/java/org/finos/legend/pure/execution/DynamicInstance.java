@@ -82,7 +82,47 @@ public class DynamicInstance
      */
     public void put(String propertyName, Object value)
     {
+        if (own != null)
+        {
+            own.remove(propertyName);
+        }
         values.put(propertyName, _E_ValueSpecification.unwrap(value));
+    }
+
+    // -- a property's own collection (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md, Fields) --------------------------------
+    // A collection stored updatable in place is kept as is, referenced by nothing but this instance, until any access other than
+    // a read the compiler proved holds the only reference to it: then it becomes this instance's raw value, as any
+    // other store would have made it.
+
+    private static final Object OWN = new Object();
+    private Map<String, platform.pure.metamodel.valuespecification.ValueSpecification> own;
+
+    /** Store a collection the compiler proved updatable in place, one this interpreter built: kept as this instance's own. */
+    public void putUpdatableInPlace(String propertyName, platform.pure.metamodel.valuespecification.ValueSpecification collection)
+    {
+        if (own == null)
+        {
+            own = new java.util.HashMap<>();
+        }
+        own.put(propertyName, collection);
+        values.put(propertyName, OWN);
+    }
+
+    /** The collection this instance holds as its own for a property, for a read proved to hold the only reference to it. */
+    public platform.pure.metamodel.valuespecification.ValueSpecification updatableInPlaceCollection(String propertyName)
+    {
+        return own == null ? null : own.get(propertyName);
+    }
+
+    private Object materialized(String propertyName)
+    {
+        Object v = values.get(propertyName);
+        if (v == OWN)
+        {
+            v = _E_ValueSpecification.unwrap(own.remove(propertyName));
+            values.put(propertyName, v);
+        }
+        return v;
     }
 
     /**
@@ -91,7 +131,28 @@ public class DynamicInstance
      */
     public Object get(String propertyName)
     {
-        return values.get(propertyName);
+        return materialized(propertyName);
+    }
+
+    /** The default values computed for this instance's unset properties, kept once read (a copy computes its own). */
+    private final Map<String, Object> defaults = new java.util.HashMap<>();
+
+    /** The default value computed for an unset property, once read; null before. */
+    /** Forget the defaults kept: this instance is being changed by a copy expression, and a copy computes its own. */
+    public void forgetKeptDefaults()
+    {
+        defaults.clear();
+    }
+
+    public Object keptDefault(String propertyName)
+    {
+        return defaults.get(propertyName);
+    }
+
+    /** Keep the default value computed for an unset property: every read is then the same (is.pure). */
+    public void keepDefault(String propertyName, Object value)
+    {
+        defaults.put(propertyName, value);
     }
 
     public boolean hasProperty(String propertyName)
@@ -106,6 +167,13 @@ public class DynamicInstance
 
     public Map<String, Object> getValues()
     {
+        if (own != null)
+        {
+            for (String p : new java.util.ArrayList<>(own.keySet()))
+            {
+                materialized(p);
+            }
+        }
         return values;
     }
 

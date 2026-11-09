@@ -37,11 +37,11 @@ class test::QPL_Holder extends Any  ~Class<test::QPL_Holder>  @18:1-23:1
       mulParam m -> [1]
       mulParam n -> #[1]#
       Variable f :#Function<{test::QPL_Holder[1]->Float[1]}>##[1]#  ~@VariableExpression@  @22:55-22:56
-      Variable this :#test::QPL_Holder##[1]#  ~@VariableExpression@  @22:64-22:68
+      Variable this :#test::QPL_Holder##[1]#  ~@VariableExpression@  @22:64-22:68  updatableInPlaceIf this
 
 function test::untypedLambdaArgument_QPL_Holder_1__Float_1_(h:test::QPL_Holder[1]):Float[1]  ~UserDefinedFunction<{test::QPL_Holder[1]->Float[1]}>
   DotApplication test::QPL_Holder.applied(Function<{test::QPL_Holder[1]->Float[1]}>[1]) :#Float##[1]#  ~@DotApplication@  @27:5-27:24
-    Variable h :#test::QPL_Holder##[1]#  ~@VariableExpression@  @27:3-27:4
+    Variable h :#test::QPL_Holder##[1]#  ~@VariableExpression@  @27:3-27:4  updatableInPlaceIf h
     Lambda(x:#test::QPL_Holder##[1]#) :#LambdaFunction<#{#test::QPL_Holder##[1]#->#Float##[1]#}#>#[1]  ~@AtomicValue@  @27:14-27:23
       DotApplication test::QPL_Holder.value :#Float##[1]#  ~@DotApplication@  @27:18-27:23
         Variable x :#test::QPL_Holder##[1]#  ~@VariableExpression@  @27:16-27:17

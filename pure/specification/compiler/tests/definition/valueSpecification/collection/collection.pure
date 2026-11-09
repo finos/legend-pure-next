@@ -45,6 +45,8 @@ Class a::X
 
 ###CompiledGraph
 function protocol::f_X_1__Any_MANY_(x:a::X[1]):@Any@[*]  ~UserDefinedFunction<{a::X[1]->@Any@[*]}>
+  resultUpdatableInPlace
+  resultElementsUpdatableInPlace
   Collection :#Integer#[2]  ~@Collection@  @20:3-20:8
     AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:4-20:4
     AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @20:7-20:7

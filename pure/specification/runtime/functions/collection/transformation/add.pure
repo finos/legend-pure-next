@@ -16,13 +16,14 @@
 import platform::pure::test::pct::*;
 
 native function
-    <<PCT.function>>
+    <<PCT.function, inPlaceUpdate.NewCollectionResult>>
     {
-        doc.doc=''
+        doc.doc='',
+        inPlaceUpdate.resultMayHoldElementsOf='set'
     }
     platform::pure::functions::collection::add<T>(set:T[*], offset:Integer[1], val:T[1]):T[1..*];
 
-native function <<PCT.function>> platform::pure::functions::collection::add<T>(set:T[*], val:T[1]):T[1..*];
+native function <<PCT.function, inPlaceUpdate.NewCollectionResult>> {inPlaceUpdate.resultMayHoldElementsOf='set'} platform::pure::functions::collection::add<T>(set:T[*], val:T[1]):T[1..*];
 
 function <<PCT.test>> platform::pure::functions::collection::tests::add::testAdd<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

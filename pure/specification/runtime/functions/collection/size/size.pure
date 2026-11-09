@@ -20,7 +20,7 @@ native function
     {
         doc.doc='Returns the number of elements in the given collection',
         PCT.grammarDoc='size is used in the implementation of inequalities functions'
-    }
+    , inPlaceUpdate.onlyReads='p'}
     platform::pure::functions::collection::size(p:Any[*]):Integer[1];
 
 

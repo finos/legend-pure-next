@@ -35,11 +35,11 @@ native function pack2::describe_Thing_1__Integer_1_(thing:pack::b::Thing[1]):@In
 
 function pack::testA_Thing_1__String_1_(t:pack::a::Thing[1]):@String@[1]  ~UserDefinedFunction<{pack::a::Thing[1]->@String@[1]}>
   ArrowInvocation pack::describe_Thing_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @19:5-19:16
-    Variable t :#pack::a::Thing##[1]#  ~@VariableExpression@  @19:3-19:4
+    Variable t :#pack::a::Thing##[1]#  ~@VariableExpression@  @19:3-19:4  updatableInPlaceIf t
 
 function pack::testB_Thing_1__Integer_1_(t:pack::b::Thing[1]):@Integer@[1]  ~UserDefinedFunction<{pack::b::Thing[1]->@Integer@[1]}>
   ArrowInvocation pack2::describe_Thing_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @24:5-24:16
-    Variable t :#pack::b::Thing##[1]#  ~@VariableExpression@  @24:3-24:4
+    Variable t :#pack::b::Thing##[1]#  ~@VariableExpression@  @24:3-24:4  updatableInPlaceIf t
 
 ###ReverseIndex
 pack2::describe_Thing_1__Integer_1_:

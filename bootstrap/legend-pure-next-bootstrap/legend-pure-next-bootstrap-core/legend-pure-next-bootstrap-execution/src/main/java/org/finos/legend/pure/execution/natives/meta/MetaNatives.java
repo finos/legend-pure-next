@@ -533,6 +533,11 @@ public class MetaNatives
             org.eclipse.collections.api.list.MutableList<ValueSpecification> paramSpecs = fe._parametersValues();
             // Step 1: Evaluate the source object (first arg)
             ValueSpecification sourceVS = eval.evaluate(paramSpecs.get(0));
+            // [x] is x: a native typed T[m] (sort, reverse) gives a one-value collection when m is [1].
+            if (sourceVS instanceof platform.pure.metamodel.valuespecification.Collection one && one._values() != null && one._values().size() == 1)
+            {
+                sourceVS = one._values().get(0);
+            }
             Object original = _E_ValueSpecification.unwrap(sourceVS);
             String classPath;
             GenericTypeValue cgt;
@@ -560,6 +565,27 @@ public class MetaNatives
             if ((classPath == null || classPath.isEmpty()) && cgt != null)
             {
                 classPath = resolveClassPathFromCGT(cgt);
+            }
+
+            // Holding the only reference to it (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): the source itself becomes the
+            // copy, its keys — every value computed first — set on it, its kept defaults dropped (a copy computes its
+            // own). Not when a key reads the object being built (`~`), sets a property of a property, or the class has
+            // associations to link: those copy.
+            if (original instanceof DynamicInstance source && eval.updatableInPlace(paramSpecs.get(0)) && changesItself(paramSpecs.get(1), classPath, resolver))
+            {
+                Object keyExprsRaw = _E_ValueSpecification.unwrap(eval.evaluate(paramSpecs.get(1)));
+                List<?> keys = keyExprsRaw instanceof List<?> list ? list : keyExprsRaw == null ? List.of() : List.of(keyExprsRaw);
+                source.forgetKeptDefaults();
+                Map<String, DynamicInstance> none = new HashMap<>();
+                for (Object ke : keys)
+                {
+                    if (ke instanceof DynamicInstance diKe)
+                    {
+                        applyCopyKeyExpressionWithDotPath(source, diKe, none, resolver);
+                    }
+                }
+                copyResult = source;
+                return _E_ValueSpecification.wrap(source, fe._genericType(), fe._multiplicity(), resolver);
             }
 
             // Step 2: Create the copy. No self-reference rewriting — see the
@@ -825,6 +851,8 @@ public class MetaNatives
             {
                 platform.pure.metamodel.valuespecification.CollectionImpl result = col._copy();
                 result._genericType(targetGT);
+                // A cast keeps the collection (is.pure): the copy only restamps its type.
+                _E_ValueSpecification.recordOrigin(result, col);
                 return result;
             }
             return _E_ValueSpecification.wrap(value, targetGT, inputVs._multiplicity(), resolver);
@@ -1659,6 +1687,14 @@ public class MetaNatives
             Object nameVS = di.get("name");
             Object nameObj = _E_ValueSpecification.unwrap(nameVS);
             String key = nameObj != null ? nameObj.toString() : null;
+            // A value the instance keeps as its own (IN_PLACE_UPDATE_ANALYSIS.md, Fields).
+            ValueSpecification own = di.updatableInPlaceCollection("expression");
+            if (key != null && own != null && instance instanceof DynamicInstance target && !"classifierGenericType".equals(key))
+            {
+                target.putUpdatableInPlace(key, own);
+                keyValues.add(Map.entry(key, own));
+                return;
+            }
             // DI stores raw values; wrap back for the execution stack
             Object rawExpr = di.get("expression");
             Object value = _E_ValueSpecification.wrap(rawExpr, null, null, resolver);
@@ -1705,8 +1741,10 @@ public class MetaNatives
         Object nameVS = keyExpr.get("name");
         Object nameObj = _E_ValueSpecification.unwrap(nameVS);
         String fullKey = nameObj != null ? nameObj.toString() : null;
+        // A value the instance keeps as its own (IN_PLACE_UPDATE_ANALYSIS.md, Fields): taken before any read materializes it.
+        ValueSpecification own = keyExpr.updatableInPlaceCollection("expression");
         // DI stores raw values; wrap back for the execution stack
-        Object value = _E_ValueSpecification.wrap(keyExpr.get("expression"), null, null, resolver);
+        Object value = own != null ? own : _E_ValueSpecification.wrap(keyExpr.get("expression"), null, null, resolver);
         if (fullKey == null)
         {
             return;
@@ -1724,7 +1762,12 @@ public class MetaNatives
                     + fullKey.substring(0, fullKey.indexOf('.')) + " = ^Type(...)`.");
         }
         Object addVS = keyExpr.get("add");
-        if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(addVS)))
+        if (own != null && copy instanceof DynamicInstance target)
+        {
+            // A value the instance keeps as its own (IN_PLACE_UPDATE_ANALYSIS.md, Fields).
+            target.putUpdatableInPlace(fullKey, own);
+        }
+        else if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(addVS)))
         {
             appendToProperty(copy, fullKey, value, resolver);
         }
@@ -1938,6 +1981,56 @@ public class MetaNatives
                 }
             }
         }
+    }
+
+    /**
+     * Whether a copy with these keys of an instance of this class may change its source itself: no key reads the
+     * object being built (`~`) or sets a property of a property, and the class has no association property.
+     */
+    private static boolean changesItself(ValueSpecification keys, String classPath, MetadataAccess resolver)
+    {
+        if (refersToTheObjectBuilt(keys) || classPath == null || !(resolver.getElement(classPath) instanceof platform.pure.metamodel.type.Class cls))
+        {
+            return false;
+        }
+        if (keys instanceof platform.pure.metamodel.valuespecification.Collection col)
+        {
+            for (ValueSpecification ke : col._values())
+            {
+                if (ke instanceof platform.pure.metamodel.valuespecification.FunctionExpression kfe
+                        && !kfe._parametersValues().isEmpty()
+                        && kfe._parametersValues().get(0) instanceof platform.pure.metamodel.valuespecification.AtomicValue av
+                        && av._value() instanceof String name && name.contains("."))
+                {
+                    return false;
+                }
+            }
+        }
+        List<platform.pure.metamodel.function.property.Property> associations = new ArrayList<>();
+        collectAssocPropsFromHierarchy(cls, associations, new java.util.HashSet<>());
+        return associations.isEmpty();
+    }
+
+    /** Whether an expression refers to the object a construction is building (`~`, `~.~`), lambdas included. */
+    private static boolean refersToTheObjectBuilt(Object vs)
+    {
+        if (vs instanceof platform.pure.metamodel.valuespecification.VariableExpression ve)
+        {
+            return ve._name() != null && ve._name().startsWith("~");
+        }
+        if (vs instanceof platform.pure.metamodel.valuespecification.FunctionExpression fe)
+        {
+            return "~".equals(fe._functionName()) || fe._parametersValues().anySatisfy(MetaNatives::refersToTheObjectBuilt);
+        }
+        if (vs instanceof platform.pure.metamodel.valuespecification.Collection col)
+        {
+            return col._values().anySatisfy(MetaNatives::refersToTheObjectBuilt);
+        }
+        if (vs instanceof platform.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof platform.pure.metamodel.function.LambdaFunction lambda)
+        {
+            return lambda._expressionSequence().anySatisfy(MetaNatives::refersToTheObjectBuilt);
+        }
+        return false;
     }
 
     private static void collectAssocPropsFromHierarchy(platform.pure.metamodel.type.Class cls,

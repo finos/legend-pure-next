@@ -1440,6 +1440,33 @@
     :genericType :GenericType_platform_pure_metamodel_valuespecification_ValueSpecification ;
     :multiplicity :ZeroMany .
 
+# In-place update analysis: the function returns a value nothing else references (a fresh result, or a variable updatable in place moved out).
+:FunctionDefinition_resultUpdatableInPlace a :Property ;
+    :stereotypes :ProtocolInfo_inferred ;
+    :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "resultUpdatableInPlace" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :FunctionDefinition ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_TypeParameter ; :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "T" ] ] ] ] :GenericType_platform_pure_metamodel_type_primitives_Boolean ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :FunctionDefinition ;
+    :genericType :GenericType_platform_pure_metamodel_type_primitives_Boolean ;
+    :multiplicity :ZeroOne .
+
+# In-place update analysis: each element of the list the function returns is referenced only by that list, once.
+:FunctionDefinition_resultElementsUpdatableInPlace a :Property ;
+    :stereotypes :ProtocolInfo_inferred ;
+    :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "resultElementsUpdatableInPlace" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :FunctionDefinition ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_TypeParameter ; :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "T" ] ] ] ] :GenericType_platform_pure_metamodel_type_primitives_Boolean ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :FunctionDefinition ;
+    :genericType :GenericType_platform_pure_metamodel_type_primitives_Boolean ;
+    :multiplicity :ZeroOne .
+
+# In-place update analysis: the function returns this parameter moved out, so its result is updatable in place when that argument was passed updatable in place.
+:FunctionDefinition_resultUpdatableInPlaceIfParameter a :Property ;
+    :stereotypes :ProtocolInfo_inferred ;
+    :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "resultUpdatableInPlaceIfParameter" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :FunctionDefinition ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_TypeParameter ; :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "T" ] ] ] ] :GenericType_platform_pure_metamodel_type_primitives_String ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :FunctionDefinition ;
+    :genericType :GenericType_platform_pure_metamodel_type_primitives_String ;
+    :multiplicity :ZeroOne .
+
 # --- NativeFunction ---
 
 :NativeFunction a :Class ;
@@ -1750,6 +1777,33 @@
         [ a :Generalization ; :classifierGenericType :GenericType_platform_pure_metamodel_relationship_Generalization ; :specific :VariableExpression ; :general :GenericType_platform_pure_metamodel_NamedElement ]
     ) .
 
+# In-place update analysis (IN_PLACE_UPDATE_ANALYSIS.md): this use holds the only reference to its value — the variable dies here and no alias escaped — so its consumer may mutate the value in place. Absent means shared: copy.
+:VariableExpression_updatableInPlace a :Property ;
+    :stereotypes :ProtocolInfo_inferred ;
+    :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "updatableInPlace" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_platform_pure_metamodel_valuespecification_VariableExpression :GenericType_platform_pure_metamodel_type_primitives_Boolean ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :VariableExpression ;
+    :genericType :GenericType_platform_pure_metamodel_type_primitives_Boolean ;
+    :multiplicity :ZeroOne .
+
+# In-place update analysis (IN_PLACE_UPDATE_ANALYSIS.md): each element of this list is referenced only by this list, once. Absent means shared: copy.
+:VariableExpression_elementsUpdatableInPlace a :Property ;
+    :stereotypes :ProtocolInfo_inferred ;
+    :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "elementsUpdatableInPlace" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_platform_pure_metamodel_valuespecification_VariableExpression :GenericType_platform_pure_metamodel_type_primitives_Boolean ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :VariableExpression ;
+    :genericType :GenericType_platform_pure_metamodel_type_primitives_Boolean ;
+    :multiplicity :ZeroOne .
+
+# In-place update analysis: this use is updatable in place if, and only if, the caller passed this parameter (of the enclosing function or lambda) updatable in place.
+:VariableExpression_updatableInPlaceIfParameter a :Property ;
+    :stereotypes :ProtocolInfo_inferred ;
+    :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "updatableInPlaceIfParameter" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_platform_pure_metamodel_valuespecification_VariableExpression :GenericType_platform_pure_metamodel_type_primitives_String ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :VariableExpression ;
+    :genericType :GenericType_platform_pure_metamodel_type_primitives_String ;
+    :multiplicity :ZeroOne .
+
 
 
 
@@ -1768,6 +1822,36 @@
     :owner :FunctionExpression ;
     :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_maybePointer ;
     :genericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Function ; :typeArguments :GenericType_platform_pure_metamodel_type_Any ] ;
+    :multiplicity :ZeroOne .
+
+# In-place update analysis (IN_PLACE_UPDATE_ANALYSIS.md): this expression's value, once computed, is referenced by nothing
+# else — a key value proved fresh, or a property read holding the only reference to a field's collection — so its
+# consumer may keep or mutate it in place. Absent means shared: copy.
+:FunctionExpression_updatableInPlace a :Property ;
+    :stereotypes :ProtocolInfo_inferred ;
+    :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "updatableInPlace" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_platform_pure_metamodel_valuespecification_FunctionExpression :GenericType_platform_pure_metamodel_type_primitives_Boolean ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :FunctionExpression ;
+    :genericType :GenericType_platform_pure_metamodel_type_primitives_Boolean ;
+    :multiplicity :ZeroOne .
+
+# In-place update analysis (IN_PLACE_UPDATE_ANALYSIS.md): each element of this list is referenced only by this list, once. Absent means shared: copy.
+:FunctionExpression_elementsUpdatableInPlace a :Property ;
+    :stereotypes :ProtocolInfo_inferred ;
+    :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "elementsUpdatableInPlace" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_platform_pure_metamodel_valuespecification_FunctionExpression :GenericType_platform_pure_metamodel_type_primitives_Boolean ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :FunctionExpression ;
+    :genericType :GenericType_platform_pure_metamodel_type_primitives_Boolean ;
+    :multiplicity :ZeroOne .
+
+# In-place update analysis: this expression's value is updatable in place if, and only if, the caller passed this parameter (of
+# the enclosing function or lambda) updatable in place.
+:FunctionExpression_updatableInPlaceIfParameter a :Property ;
+    :stereotypes :ProtocolInfo_inferred ;
+    :name [ :classifierGenericType :GenericType_platform_pure_metamodel_type_primitives_String ; :data "updatableInPlaceIfParameter" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_platform_pure_metamodel_valuespecification_FunctionExpression :GenericType_platform_pure_metamodel_type_primitives_String ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :FunctionExpression ;
+    :genericType :GenericType_platform_pure_metamodel_type_primitives_String ;
     :multiplicity :ZeroOne .
 
 :parametersValues a :Property ;

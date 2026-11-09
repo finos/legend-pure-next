@@ -32,12 +32,14 @@ public final class InlineMapNode extends PureNode
     @CompilationFinal private final int elemSlot;
     @CompilationFinal(dimensions = 1) private final int[] callerSlots;
     @CompilationFinal(dimensions = 1) private final int[] lambdaSlots;
+    /** The element parameter's flag, set when the list alone holds its elements; -1 otherwise. */
+    @CompilationFinal private final int elementFlagSlot;
 
     private static final Object[] EMPTY_ARGS = new Object[0];
 
     public InlineMapNode(PureNode collection, PureNode[] body,
                          FrameDescriptor lambdaDescriptor, int elemSlot,
-                         int[] callerSlots, int[] lambdaSlots)
+                         int[] callerSlots, int[] lambdaSlots, int elementFlagSlot)
     {
         this.collection = collection;
         this.body = body;
@@ -45,6 +47,7 @@ public final class InlineMapNode extends PureNode
         this.elemSlot = elemSlot;
         this.callerSlots = callerSlots;
         this.lambdaSlots = lambdaSlots;
+        this.elementFlagSlot = elementFlagSlot;
     }
 
     @Override
@@ -59,6 +62,10 @@ public final class InlineMapNode extends PureNode
         for (int i = 0; i < sz; i++)
         {
             sub.setObject(elemSlot, CollectionHelper.at(col, i));
+            if (elementFlagSlot >= 0)
+            {
+                sub.setObject(elementFlagSlot, Boolean.TRUE);
+            }
             Object result = null;
             for (int b = 0; b < body.length; b++)
             {

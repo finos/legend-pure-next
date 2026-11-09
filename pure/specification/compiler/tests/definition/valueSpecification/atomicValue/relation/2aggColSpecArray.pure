@@ -57,7 +57,7 @@ function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
             AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @24:60-24:60
           Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @24:65-24:76
             ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @24:69-24:76
-              Variable y :#Integer##[*]#  ~@VariableExpression@  @24:67-24:68
+              Variable y :#Integer##[*]#  ~@VariableExpression@  @24:67-24:68  updatableInPlaceIf y
           AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @24:44-24:47
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
         FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @24:79-24:117
@@ -69,7 +69,7 @@ function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
             AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @24:96-24:98
           Lambda(y:#String##[*]#) :#LambdaFunction<#{#String##[*]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @24:103-24:117
             ArrowInvocation _concat_String_MANY__String_1_ :#String##[1]#  ~@ArrowInvocation@  @24:107-24:117
-              Variable y :#String##[*]#  ~@VariableExpression@  @24:105-24:106
+              Variable y :#String##[*]#  ~@VariableExpression@  @24:105-24:106  updatableInPlaceIf y
           AtomicValue  'other' :@String@[1]  ~@AtomicValue@  @24:79-24:83
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(other:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#, other:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder

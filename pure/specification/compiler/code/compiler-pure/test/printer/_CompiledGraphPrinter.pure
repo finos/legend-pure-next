@@ -146,6 +146,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::printU
         $fn->printAnnotations('  '),
         $fn->printPreConstraints('  ', $context),
         $fn->printPostConstraints('  ', $context),
+        $fn->updatableInPlaceSummaryLines('  ')->map(l | $l + '\n')->joinStrings(''),
         $body
     ]->joinStrings('');
 }
@@ -301,6 +302,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::printQ
             $indent + 'qualifiedProperty ' + $qp.name->toOne() + '(' + $paramStr + ')' +
             ' :' + $qp.genericType->printType() + $qp.multiplicity->printMul() + '\n' +
             $qp->printAnnotations($indent + '  ') +
+            $qp->updatableInPlaceSummaryLines($indent + '  ')->map(l | $l + '\n')->joinStrings('') +
             $qp.expressionSequence->cast(@ValueSpecification)->map(vs | $vs->printVS($indent + '  ', $context))->joinStrings('\n') +
             if($qp.expressionSequence->isEmpty(), | '', | '\n');
         )->joinStrings('')
@@ -423,6 +425,9 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::printF
         $indent, $kind, ' ', $funcName, $retType,
         $fe->vsCGT(),
         $fe.sourceInformation->printSourceInfo(),
+        if($fe.updatableInPlace == true, | '  updatableInPlace', | ''),
+        if($fe.updatableInPlaceIfParameter->isEmpty(), | '', | '  updatableInPlaceIf ' + $fe.updatableInPlaceIfParameter->toOne()),
+        if($fe.elementsUpdatableInPlace == true, | '  elementsUpdatableInPlace', | ''),
         if($resolvedTP == '', | '', | '\n' + $resolvedTP),
         if($resolvedMP == '', | '', | '\n' + $resolvedMP),
         if($children == '', | '', | '\n' + $children)
@@ -442,11 +447,13 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::printA
              $indent + '  openVar ' + $v.name->toOne() + ' :' + $v.genericType->toOne()->printType() + $v.multiplicity->toOne()->printMul()
          )->joinStrings('\n');
          let body = $lambda.expressionSequence->cast(@ValueSpecification)->map(expr | $expr->printVS($indent + '  ', $context))->joinStrings('\n');
+         let summary = $lambda->updatableInPlaceSummaryLines($indent + '  ')->joinStrings('\n');
          [
              $indent, 'Lambda', if($paramStr->length() > 0, | '(' + $paramStr + ')', | ''), $retType,
              $av->vsCGT(),
              $av.sourceInformation->printSourceInfo(),
              if($openVars == '', | '', | '\n' + $openVars),
+             if($summary == '', | '', | '\n' + $summary),
              if($body == '', | '', | '\n' + $body)
          ]->joinStrings('');,
        | [
@@ -476,8 +483,20 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::printV
         $indent, 'Variable ', $v.name->toOne(),
         if($v.genericType->isEmpty(), | '', | ' :' + $v.genericType->toOne()->printType() + $v.multiplicity->toOne()->printMul()),
         $v->vsCGT(),
-        $v.sourceInformation->printSourceInfo()
+        $v.sourceInformation->printSourceInfo(),
+        if($v.updatableInPlace == true, | '  updatableInPlace', | ''),
+        if($v.updatableInPlaceIfParameter->isEmpty(), | '', | '  updatableInPlaceIf ' + $v.updatableInPlaceIfParameter->toOne()),
+        if($v.elementsUpdatableInPlace == true, | '  elementsUpdatableInPlace', | '')
     ]->joinStrings('');
+}
+
+// The updatable in place-value analysis' result summary of a function, qualified property or lambda.
+function <<test.TestDependency>> platform::pure::compiler::test::printer::updatableInPlaceSummaryLines(f:FunctionDefinition<Any>[1], indent:String[1]):String[*]
+{
+    let updatableInPlace = if($f.resultUpdatableInPlace == true, | [$indent + 'resultUpdatableInPlace'], | []->cast(@String));
+    let ifParameter = if($f.resultUpdatableInPlaceIfParameter->isEmpty(), | []->cast(@String), | [$indent + 'resultUpdatableInPlaceIf ' + $f.resultUpdatableInPlaceIfParameter->toOne()]);
+    let elements = if($f.resultElementsUpdatableInPlace == true, | [$indent + 'resultElementsUpdatableInPlace'], | []->cast(@String));
+    $updatableInPlace->concatenate($ifParameter)->concatenate($elements);
 }
 
 function <<test.TestDependency>> platform::pure::compiler::test::printer::printHolder(gmh:GenericTypeAndMultiplicityHolder[1], indent:String[1]):String[1]

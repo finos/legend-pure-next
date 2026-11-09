@@ -32,6 +32,7 @@ class test::TPR_Person extends Any  ~Class<test::TPR_Person>  @18:1-22:1
   property lastName :@String@[1]  ~Property<test::TPR_Person, @String@|1>
 
 function test::testTypeParamResolution_Function_1__Any_MANY_(f:Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>[1]):@Any@[*]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>[1]->@Any@[*]}>
+  resultUpdatableInPlace
   FunctionInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@FunctionInvocation@  @26:66-26:74
     typeParam T -> #test::TPR_Person#
     typeParam V -> #String#

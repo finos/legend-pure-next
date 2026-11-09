@@ -50,20 +50,9 @@ public final class JavaSource
     {
     }
 
-    /**
-     * Classes already compiled in this JVM, keyed by the source that produced
-     * them. Identical source yields identical bytecode, so a repeat call is a
-     * map hit rather than another javac: the PCT corpus called a single
-     * translated function 13 times, paying a full compilation each time.
-     */
-    private static final Map<String, Class<?>> COMPILED = new java.util.concurrent.ConcurrentHashMap<>();
-
     public static Object compileAndExecute(String source, String className, String methodName, List<Object> args)
     {
-        Class<?> cached = COMPILED.get(className + '\u0000' + source);
-        return cached != null
-                ? execute(cached, className, methodName, args)
-                : execute(compile(source, className), className, methodName, args);
+        return execute(compile(source, className), className, methodName, args);
     }
 
     private static Class<?> compile(String source, String className)
@@ -89,9 +78,7 @@ public final class JavaSource
 
         try
         {
-            Class<?> compiled = new InMemoryClassLoader(files.bytecode, JavaSource.class.getClassLoader()).loadClass(className);
-            COMPILED.put(className + '\u0000' + source, compiled);
-            return compiled;
+            return new InMemoryClassLoader(files.bytecode, JavaSource.class.getClassLoader()).loadClass(className);
         }
         catch (ClassNotFoundException e)
         {

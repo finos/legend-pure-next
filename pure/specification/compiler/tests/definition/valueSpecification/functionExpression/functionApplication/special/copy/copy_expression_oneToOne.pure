@@ -45,6 +45,7 @@ function test::copy::oneToOne::testCopyFromFunctionCall__Any_MANY_():@Any@[*]  ~
           AtomicValue  'from-call' :@String@[1]  ~@AtomicValue@  @20:30-20:40
 
 function test::copy::oneToOne::buildOne__Node_1_():test::copy::oneToOne::Node[1]  ~UserDefinedFunction<{->test::copy::oneToOne::Node[1]}>
+  resultUpdatableInPlace
   FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @25:3-25:22
     typeParam T -> test::copy::oneToOne::Node
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::oneToOne::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::oneToOne::Node|1>  @25:3-25:22

@@ -19,7 +19,8 @@ import platform::pure::test::pct::*;
 native function
      <<PCT.function>>
      {
-         doc.doc='Returns the first element of the collection, or nothing if the collection is empty. Equivalent to \'first\''
+         doc.doc='Returns the first element of the collection, or nothing if the collection is empty. Equivalent to \'first\'',
+         inPlaceUpdate.resultMayHoldElementsOf='set'
      }
      platform::pure::functions::collection::head<T>(set:T[*]):T[0..1];
 

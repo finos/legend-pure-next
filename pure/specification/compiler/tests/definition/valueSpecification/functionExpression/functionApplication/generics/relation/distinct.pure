@@ -27,7 +27,7 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:@String@[1], other:@Integer@[
   ArrowInvocation distinct_Relation_1__ColSpecArray_1__Relation_1_ :#Relation<#(legal:@String@[1])#>##[1]#  ~@ArrowInvocation@  @20:5-20:24
     typeParam T -> (legal:@String@[1], other:@Integer@[0..1], yeah:Float[1])
     typeParam X -> #(legal:@String@[1])#
-    Variable x :#Relation<(legal:@String@[1], other:@Integer@[0..1], yeah:Float[1])>##[1]#  ~@VariableExpression@  @20:3-20:4
+    Variable x :#Relation<(legal:@String@[1], other:@Integer@[0..1], yeah:Float[1])>##[1]#  ~@VariableExpression@  @20:3-20:4  updatableInPlaceIf x
     FunctionInvocation colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_ :#ColSpecArray<#(legal:@String@[1])#>##[1]#  ~@FunctionInvocation@  @20:16-20:23
       typeParam T -> #(legal:@String@[1])#
       Collection :#String#[1]  ~@Collection@

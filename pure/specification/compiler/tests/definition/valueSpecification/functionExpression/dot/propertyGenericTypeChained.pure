@@ -49,7 +49,7 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       Collection :#KeyExpression#[1]  ~@Collection@  @30:11-30:70
         FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @30:33-30:69
           AtomicValue  'inner' :@String@[1]  ~@AtomicValue@  @30:33-30:69
-          FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Box<@String@>##[1]#  ~@FunctionInvocation@  @30:41-30:69
+          FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Box<@String@>##[1]#  ~@FunctionInvocation@  @30:41-30:69  updatableInPlace
             typeParam T -> test::Box<@String@>
             TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Box<@String@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Box<@String@>|1>  @30:41-30:69
             Collection :#KeyExpression#[1]  ~@Collection@  @30:41-30:69

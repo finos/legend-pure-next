@@ -37,7 +37,7 @@ function platform::pure::functions::collection::range(start:Integer[1], end:Inte
 // grammar sugar resolves to (mirroring the reference implementation, where
 // the sliceExpression rule builds `range`).
 native function
-    <<PCT.function>>
+    <<PCT.function, inPlaceUpdate.NewCollectionResult>>
     {
         doc.doc='Returns a collection of numbers, starting with the value of the first parameter, then adding the third parameter value (step) ' +
                 'until the new number is strictly greater than the value of the second parameter.',

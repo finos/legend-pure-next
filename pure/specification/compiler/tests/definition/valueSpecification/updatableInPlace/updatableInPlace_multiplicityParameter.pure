@@ -1,0 +1,402 @@
+###Pure
+import test::updatableInPlace::*;
+
+Class test::updatableInPlace::Box
+{
+  v: Integer[1];
+}
+
+function test::updatableInPlace::sorted<T|m>(col: T[m]): T[m]
+{
+  $col->sort([], [])
+}
+
+function test::updatableInPlace::same<T|m>(col: T[m]): T[m]
+{
+  $col
+}
+
+function test::updatableInPlace::sortedMany(): Integer[*]
+{
+  let xs = [2, 1]->filter(x|$x > 0);
+  let s = $xs->sorted();
+  $s->add(3);
+}
+
+function test::updatableInPlace::sortedStillRead(): Integer[1]
+{
+  let xs = [2, 1]->filter(x|$x > 0);
+  let s = $xs->sorted();
+  let t = $s->add(3);
+  $s->size();
+}
+
+function test::updatableInPlace::sortedOneIsTheElement(b: Box[1]): Box[1]
+{
+  let s = $b->sorted();
+  ^$s(v = 2);
+}
+
+function test::updatableInPlace::sameMany(): Integer[*]
+{
+  let xs = [2, 1]->filter(x|$x > 0);
+  let s = $xs->same();
+  let t = $s->add(3);
+  $xs->size();
+  $t;
+}
+
+function test::updatableInPlace::sliceResult(): Integer[*]
+{
+  let xs = [2, 1]->filter(x|$x > 0);
+  let r = $xs->tail();
+  $r->add(3);
+}
+
+function test::updatableInPlace::sliceResultStillRead(): Integer[1]
+{
+  let xs = [2, 1]->filter(x|$x > 0);
+  let r = $xs->take(1);
+  let t = $r->add(3);
+  $r->size();
+}
+
+function test::updatableInPlace::sliceDoesNotRetain(): Integer[*]
+{
+  let xs = [2, 1]->filter(x|$x > 0);
+  let r = $xs->drop(1);
+  let t = $xs->add(3);
+  $r->concatenate($t);
+}
+
+function test::updatableInPlace::sliceArgumentStillRead(): Integer[1]
+{
+  let xs = [2, 1]->filter(x|$x > 0);
+  let r = $xs->slice(0, 1);
+  let t = $xs->add(3);
+  $xs->size();
+}
+
+###CompiledGraph
+class test::updatableInPlace::Box extends Any  ~Class<test::updatableInPlace::Box>  @4:1-7:1
+  property v :@Integer@[1]  ~Property<test::updatableInPlace::Box, @Integer@|1>
+
+function test::updatableInPlace::sorted_T_m__T_m_(col:T~test::updatableInPlace::sorted_T_m__T_m_[m~test::updatableInPlace::sorted_T_m__T_m_]):T~test::updatableInPlace::sorted_T_m__T_m_[m~test::updatableInPlace::sorted_T_m__T_m_]  ~UserDefinedFunction<{T~test::updatableInPlace::sorted_T_m__T_m_[m~test::updatableInPlace::sorted_T_m__T_m_]->T~test::updatableInPlace::sorted_T_m__T_m_[m~test::updatableInPlace::sorted_T_m__T_m_]}>
+  resultUpdatableInPlace
+  ArrowInvocation sort_T_m__Function_$0_1$__Function_$0_1$__T_m_ :#T~test::updatableInPlace::sorted_T_m__T_m_##[m~test::updatableInPlace::sorted_T_m__T_m_]#  ~@ArrowInvocation@  @11:7-11:20
+    typeParam T -> #T~test::updatableInPlace::sorted_T_m__T_m_#
+    mulParam m -> #[m~test::updatableInPlace::sorted_T_m__T_m_]#
+    Variable col :#T~test::updatableInPlace::sorted_T_m__T_m_##[m~test::updatableInPlace::sorted_T_m__T_m_]#  ~@VariableExpression@  @11:3-11:6
+    Collection :#Nil#[0]  ~@Collection@  @11:14-11:15
+    Collection :#Nil#[0]  ~@Collection@  @11:18-11:19
+
+function test::updatableInPlace::same_T_m__T_m_(col:T~test::updatableInPlace::same_T_m__T_m_[m~test::updatableInPlace::same_T_m__T_m_]):T~test::updatableInPlace::same_T_m__T_m_[m~test::updatableInPlace::same_T_m__T_m_]  ~UserDefinedFunction<{T~test::updatableInPlace::same_T_m__T_m_[m~test::updatableInPlace::same_T_m__T_m_]->T~test::updatableInPlace::same_T_m__T_m_[m~test::updatableInPlace::same_T_m__T_m_]}>
+  Variable col :#T~test::updatableInPlace::same_T_m__T_m_##[m~test::updatableInPlace::same_T_m__T_m_]#  ~@VariableExpression@  @16:3-16:6
+
+function test::updatableInPlace::sortedMany__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @21:3-21:35
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @21:7-21:8
+    ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @21:18-21:35
+      typeParam T -> #Integer#
+      Collection :#Integer#[2]  ~@Collection@  @21:12-21:17
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @21:13-21:13
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @21:16-21:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @21:27-21:34
+        FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @21:29-21:34
+          Variable x :#Integer##[1]#  ~@VariableExpression@  @21:29-21:30
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @21:34-21:34
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @22:3-22:23
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  's' :@String@[1]  ~@AtomicValue@  @22:7-22:7
+    ArrowInvocation test::updatableInPlace::sorted_T_m__T_m_ :#Integer##[*]#  ~@ArrowInvocation@  @22:14-22:23
+      typeParam T -> #Integer#
+      mulParam m -> #[*]#
+      Variable xs :#Integer##[*]#  ~@VariableExpression@  @22:11-22:13  updatableInPlace
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @23:5-23:12
+    typeParam T -> #Integer#
+    Variable s :#Integer##[*]#  ~@VariableExpression@  @23:3-23:4  updatableInPlace
+    AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @23:11-23:11
+
+function test::updatableInPlace::sortedStillRead__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @28:3-28:35
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @28:7-28:8
+    ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @28:18-28:35
+      typeParam T -> #Integer#
+      Collection :#Integer#[2]  ~@Collection@  @28:12-28:17
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @28:13-28:13
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @28:16-28:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @28:27-28:34
+        FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @28:29-28:34
+          Variable x :#Integer##[1]#  ~@VariableExpression@  @28:29-28:30
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @28:34-28:34
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @29:3-29:23
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  's' :@String@[1]  ~@AtomicValue@  @29:7-29:7
+    ArrowInvocation test::updatableInPlace::sorted_T_m__T_m_ :#Integer##[*]#  ~@ArrowInvocation@  @29:14-29:23
+      typeParam T -> #Integer#
+      mulParam m -> #[*]#
+      Variable xs :#Integer##[*]#  ~@VariableExpression@  @29:11-29:13  updatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @30:3-30:20
+    typeParam T -> #Integer#
+    mulParam m -> #[1..*]#
+    AtomicValue  't' :@String@[1]  ~@AtomicValue@  @30:7-30:7
+    ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @30:13-30:20
+      typeParam T -> #Integer#
+      Variable s :#Integer##[*]#  ~@VariableExpression@  @30:11-30:12
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @30:19-30:19
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @31:5-31:12
+    Variable s :#Integer##[*]#  ~@VariableExpression@  @31:3-31:4  updatableInPlace
+
+function test::updatableInPlace::sortedOneIsTheElement_Box_1__Box_1_(b:test::updatableInPlace::Box[1]):test::updatableInPlace::Box[1]  ~UserDefinedFunction<{test::updatableInPlace::Box[1]->test::updatableInPlace::Box[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Box##[1]#  ~@FunctionInvocation@  @36:3-36:22
+    typeParam T -> #test::updatableInPlace::Box#
+    mulParam m -> #[1]#
+    AtomicValue  's' :@String@[1]  ~@AtomicValue@  @36:7-36:7
+    ArrowInvocation test::updatableInPlace::sorted_T_m__T_m_ :#test::updatableInPlace::Box##[1]#  ~@ArrowInvocation@  @36:13-36:22
+      typeParam T -> #test::updatableInPlace::Box#
+      mulParam m -> #[1]#
+      Variable b :#test::updatableInPlace::Box##[1]#  ~@VariableExpression@  @36:11-36:12  updatableInPlaceIf b
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Box##[1]#  ~@FunctionInvocation@  @37:3-37:12
+    typeParam T -> #test::updatableInPlace::Box#
+    Variable s :#test::updatableInPlace::Box##[1]#  ~@VariableExpression@  @37:4-37:5
+    Collection :#KeyExpression#[1]  ~@Collection@  @37:3-37:12
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @37:7-37:11
+        AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @37:7-37:11
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @37:11-37:11
+
+function test::updatableInPlace::sameMany__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @42:3-42:35
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @42:7-42:8
+    ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @42:18-42:35
+      typeParam T -> #Integer#
+      Collection :#Integer#[2]  ~@Collection@  @42:12-42:17
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @42:13-42:13
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @42:16-42:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @42:27-42:34
+        FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @42:29-42:34
+          Variable x :#Integer##[1]#  ~@VariableExpression@  @42:29-42:30
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @42:34-42:34
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @43:3-43:21
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  's' :@String@[1]  ~@AtomicValue@  @43:7-43:7
+    ArrowInvocation test::updatableInPlace::same_T_m__T_m_ :#Integer##[*]#  ~@ArrowInvocation@  @43:14-43:21
+      typeParam T -> #Integer#
+      mulParam m -> #[*]#
+      Variable xs :#Integer##[*]#  ~@VariableExpression@  @43:11-43:13
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @44:3-44:20
+    typeParam T -> #Integer#
+    mulParam m -> #[1..*]#
+    AtomicValue  't' :@String@[1]  ~@AtomicValue@  @44:7-44:7
+    ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @44:13-44:20
+      typeParam T -> #Integer#
+      Variable s :#Integer##[*]#  ~@VariableExpression@  @44:11-44:12
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @44:19-44:19
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @45:6-45:13
+    Variable xs :#Integer##[*]#  ~@VariableExpression@  @45:3-45:5
+  Variable t :#Integer##[1..*]#  ~@VariableExpression@  @46:3-46:4
+
+function test::updatableInPlace::sliceResult__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @51:3-51:35
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @51:7-51:8
+    ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @51:18-51:35
+      typeParam T -> #Integer#
+      Collection :#Integer#[2]  ~@Collection@  @51:12-51:17
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @51:13-51:13
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @51:16-51:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @51:27-51:34
+        FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @51:29-51:34
+          Variable x :#Integer##[1]#  ~@VariableExpression@  @51:29-51:30
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @51:34-51:34
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @52:3-52:21
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'r' :@String@[1]  ~@AtomicValue@  @52:7-52:7
+    ArrowInvocation tail_T_MANY__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @52:14-52:21
+      typeParam T -> #Integer#
+      Variable xs :#Integer##[*]#  ~@VariableExpression@  @52:11-52:13  updatableInPlace
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @53:5-53:12
+    typeParam T -> #Integer#
+    Variable r :#Integer##[*]#  ~@VariableExpression@  @53:3-53:4  updatableInPlace
+    AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @53:11-53:11
+
+function test::updatableInPlace::sliceResultStillRead__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @58:3-58:35
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @58:7-58:8
+    ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @58:18-58:35
+      typeParam T -> #Integer#
+      Collection :#Integer#[2]  ~@Collection@  @58:12-58:17
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @58:13-58:13
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @58:16-58:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @58:27-58:34
+        FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @58:29-58:34
+          Variable x :#Integer##[1]#  ~@VariableExpression@  @58:29-58:30
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @58:34-58:34
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @59:3-59:22
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'r' :@String@[1]  ~@AtomicValue@  @59:7-59:7
+    ArrowInvocation take_T_MANY__Integer_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @59:14-59:22
+      typeParam T -> #Integer#
+      Variable xs :#Integer##[*]#  ~@VariableExpression@  @59:11-59:13  updatableInPlace
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @59:21-59:21
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @60:3-60:20
+    typeParam T -> #Integer#
+    mulParam m -> #[1..*]#
+    AtomicValue  't' :@String@[1]  ~@AtomicValue@  @60:7-60:7
+    ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @60:13-60:20
+      typeParam T -> #Integer#
+      Variable r :#Integer##[*]#  ~@VariableExpression@  @60:11-60:12
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @60:19-60:19
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @61:5-61:12
+    Variable r :#Integer##[*]#  ~@VariableExpression@  @61:3-61:4  updatableInPlace
+
+function test::updatableInPlace::sliceDoesNotRetain__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @66:3-66:35
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @66:7-66:8
+    ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @66:18-66:35
+      typeParam T -> #Integer#
+      Collection :#Integer#[2]  ~@Collection@  @66:12-66:17
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @66:13-66:13
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @66:16-66:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @66:27-66:34
+        FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @66:29-66:34
+          Variable x :#Integer##[1]#  ~@VariableExpression@  @66:29-66:30
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @66:34-66:34
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @67:3-67:22
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'r' :@String@[1]  ~@AtomicValue@  @67:7-67:7
+    ArrowInvocation drop_T_MANY__Integer_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @67:14-67:22
+      typeParam T -> #Integer#
+      Variable xs :#Integer##[*]#  ~@VariableExpression@  @67:11-67:13
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @67:21-67:21
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @68:3-68:21
+    typeParam T -> #Integer#
+    mulParam m -> #[1..*]#
+    AtomicValue  't' :@String@[1]  ~@AtomicValue@  @68:7-68:7
+    ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @68:14-68:21
+      typeParam T -> #Integer#
+      Variable xs :#Integer##[*]#  ~@VariableExpression@  @68:11-68:13  updatableInPlace
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @68:20-68:20
+  ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @69:5-69:21
+    typeParam T -> #Integer#
+    Variable r :#Integer##[*]#  ~@VariableExpression@  @69:3-69:4  updatableInPlace
+    Variable t :#Integer##[1..*]#  ~@VariableExpression@  @69:19-69:20  updatableInPlace
+
+function test::updatableInPlace::sliceArgumentStillRead__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @74:3-74:35
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @74:7-74:8
+    ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @74:18-74:35
+      typeParam T -> #Integer#
+      Collection :#Integer#[2]  ~@Collection@  @74:12-74:17
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @74:13-74:13
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @74:16-74:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @74:27-74:34
+        FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @74:29-74:34
+          Variable x :#Integer##[1]#  ~@VariableExpression@  @74:29-74:30
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @74:34-74:34
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @75:3-75:26
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'r' :@String@[1]  ~@AtomicValue@  @75:7-75:7
+    ArrowInvocation slice_T_MANY__Integer_1__Integer_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @75:14-75:26
+      typeParam T -> #Integer#
+      Variable xs :#Integer##[*]#  ~@VariableExpression@  @75:11-75:13
+      AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @75:22-75:22
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @75:25-75:25
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @76:3-76:21
+    typeParam T -> #Integer#
+    mulParam m -> #[1..*]#
+    AtomicValue  't' :@String@[1]  ~@AtomicValue@  @76:7-76:7
+    ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @76:14-76:21
+      typeParam T -> #Integer#
+      Variable xs :#Integer##[*]#  ~@VariableExpression@  @76:11-76:13
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @76:20-76:20
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @77:6-77:13
+    Variable xs :#Integer##[*]#  ~@VariableExpression@  @77:3-77:5  updatableInPlace
+
+###ReverseIndex
+platform::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+  test::updatableInPlace::sameMany__Integer_MANY_
+  test::updatableInPlace::sliceArgumentStillRead__Integer_1_
+  test::updatableInPlace::sliceDoesNotRetain__Integer_MANY_
+  test::updatableInPlace::sliceResultStillRead__Integer_1_
+  test::updatableInPlace::sliceResult__Integer_MANY_
+  test::updatableInPlace::sortedMany__Integer_MANY_
+  test::updatableInPlace::sortedStillRead__Integer_1_
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::sameMany__Integer_MANY_
+  test::updatableInPlace::sliceArgumentStillRead__Integer_1_
+  test::updatableInPlace::sliceDoesNotRetain__Integer_MANY_
+  test::updatableInPlace::sliceResultStillRead__Integer_1_
+  test::updatableInPlace::sliceResult__Integer_MANY_
+  test::updatableInPlace::sortedMany__Integer_MANY_
+  test::updatableInPlace::sortedStillRead__Integer_1_
+platform::pure::functions::collection::concatenate_T_MANY__T_MANY__T_MANY_:
+  test::updatableInPlace::sliceDoesNotRetain__Integer_MANY_
+platform::pure::functions::collection::drop_T_MANY__Integer_1__T_MANY_:
+  test::updatableInPlace::sliceDoesNotRetain__Integer_MANY_
+platform::pure::functions::collection::filter_T_MANY__Function_1__T_MANY_:
+  test::updatableInPlace::sameMany__Integer_MANY_
+  test::updatableInPlace::sliceArgumentStillRead__Integer_1_
+  test::updatableInPlace::sliceDoesNotRetain__Integer_MANY_
+  test::updatableInPlace::sliceResultStillRead__Integer_1_
+  test::updatableInPlace::sliceResult__Integer_MANY_
+  test::updatableInPlace::sortedMany__Integer_MANY_
+  test::updatableInPlace::sortedStillRead__Integer_1_
+platform::pure::functions::collection::size_Any_MANY__Integer_1_:
+  test::updatableInPlace::sameMany__Integer_MANY_
+  test::updatableInPlace::sliceArgumentStillRead__Integer_1_
+  test::updatableInPlace::sliceResultStillRead__Integer_1_
+  test::updatableInPlace::sortedStillRead__Integer_1_
+platform::pure::functions::collection::slice_T_MANY__Integer_1__Integer_1__T_MANY_:
+  test::updatableInPlace::sliceArgumentStillRead__Integer_1_
+platform::pure::functions::collection::sort_T_m__Function_$0_1$__Function_$0_1$__T_m_:
+  test::updatableInPlace::sorted_T_m__T_m_
+platform::pure::functions::collection::tail_T_MANY__T_MANY_:
+  test::updatableInPlace::sliceResult__Integer_MANY_
+platform::pure::functions::collection::take_T_MANY__Integer_1__T_MANY_:
+  test::updatableInPlace::sliceResultStillRead__Integer_1_
+platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+  test::updatableInPlace::sortedOneIsTheElement_Box_1__Box_1_
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::updatableInPlace::sortedOneIsTheElement_Box_1__Box_1_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::sameMany__Integer_MANY_
+  test::updatableInPlace::sliceArgumentStillRead__Integer_1_
+  test::updatableInPlace::sliceDoesNotRetain__Integer_MANY_
+  test::updatableInPlace::sliceResultStillRead__Integer_1_
+  test::updatableInPlace::sliceResult__Integer_MANY_
+  test::updatableInPlace::sortedMany__Integer_MANY_
+  test::updatableInPlace::sortedOneIsTheElement_Box_1__Box_1_
+  test::updatableInPlace::sortedStillRead__Integer_1_
+test::updatableInPlace::Box:
+  test::updatableInPlace::sortedOneIsTheElement_Box_1__Box_1_
+test::updatableInPlace::same_T_m__T_m_:
+  test::updatableInPlace::sameMany__Integer_MANY_
+test::updatableInPlace::sorted_T_m__T_m_:
+  test::updatableInPlace::sortedMany__Integer_MANY_
+  test::updatableInPlace::sortedOneIsTheElement_Box_1__Box_1_
+  test::updatableInPlace::sortedStillRead__Integer_1_

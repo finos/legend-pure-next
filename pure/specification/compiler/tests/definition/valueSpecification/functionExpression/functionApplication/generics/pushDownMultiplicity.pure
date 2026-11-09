@@ -20,6 +20,8 @@ function test(): Any[*]
 native function check_String_MANY__Boolean_1_(s:@String@[*]):@Boolean@[1]  ~NativeFunction<{@String@[*]->@Boolean@[1]}>
 
 function g_Function_1__String_m_(f:Function<{@String@[m~g_Function_1__String_m_]->@Boolean@[1]}>[1]):@String@[m~g_Function_1__String_m_]  ~UserDefinedFunction<{Function<{@String@[m~g_Function_1__String_m_]->@Boolean@[1]}>[1]->@String@[m~g_Function_1__String_m_]}>
+  resultUpdatableInPlace
+  resultElementsUpdatableInPlace
   Collection :#Nil#[0]  ~@Collection@  @6:3-6:4
 
 function f_String_m__String_m__String_1_(s:@String@[m~f_String_m__String_m__String_1_], a:@String@[m~f_String_m__String_m__String_1_]):@String@[1]  ~UserDefinedFunction<{@String@[m~f_String_m__String_m__String_1_], @String@[m~f_String_m__String_m__String_1_]->@String@[1]}>
@@ -35,7 +37,7 @@ function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       mulParam m -> #[2]#
       Lambda(t:#String##[2]#) :#LambdaFunction<#{#String##[2]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @16:19-16:31
         ArrowInvocation check_String_MANY__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @16:23-16:31
-          Variable t :#String##[2]#  ~@VariableExpression@  @16:21-16:22
+          Variable t :#String##[2]#  ~@VariableExpression@  @16:21-16:22  updatableInPlaceIf t
 
 ###ReverseIndex
 check_String_MANY__Boolean_1_:

@@ -95,6 +95,7 @@ function go__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
     AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @12:39-12:41
 
 function pair2_String_1__String_1__Pair_1_(a:@String@[1], b:@String@[1]):Pair<@String@, @String@>[1]  ~UserDefinedFunction<{@String@[1], @String@[1]->Pair<@String@, @String@>[1]}>
+  resultUpdatableInPlace
   FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#Pair<@String@, @String@>##[1]#  ~@FunctionInvocation@  @17:3-17:48
     typeParam T -> Pair<@String@, @String@>
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Pair<@String@, @String@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Pair<@String@, @String@>|1>  @17:3-17:48
@@ -107,6 +108,7 @@ function pair2_String_1__String_1__Pair_1_(a:@String@[1], b:@String@[1]):Pair<@S
         Variable b :#String##[1]#  ~@VariableExpression@  @17:46-17:47
 
 function wrap_String_1__Pair_1_(s:@String@[1]):Pair<@String@, @String@>[1]  ~UserDefinedFunction<{@String@[1]->Pair<@String@, @String@>[1]}>
+  resultUpdatableInPlace
   FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#Pair<@String@, @String@>##[1]#  ~@FunctionInvocation@  @22:3-22:48
     typeParam T -> Pair<@String@, @String@>
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Pair<@String@, @String@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Pair<@String@, @String@>|1>  @22:3-22:48

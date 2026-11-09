@@ -39,9 +39,10 @@ function test::copy::zeroMany::testCopyOfCollection_Node_1__Any_MANY_(node:test:
       DotApplication test::copy::zeroMany::Node.children :#test::copy::zeroMany::Node##[*]#  ~@DotApplication@  @20:23-20:31
         Variable node :#test::copy::zeroMany::Node##[1]#  ~@VariableExpression@  @20:18-20:22
       Lambda(_automap:#test::copy::zeroMany::Node#[1]) :#LambdaFunction<#{#test::copy::zeroMany::Node#[1]->#test::copy::zeroMany::Node##[1]#}#>#[1]  ~@AtomicValue@
+        resultUpdatableInPlace
         FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::zeroMany::Node##[1]#  ~@FunctionInvocation@  @20:17-20:49
           typeParam T -> #test::copy::zeroMany::Node#
-          Variable _automap :#test::copy::zeroMany::Node##[1]#  ~@VariableExpression@
+          Variable _automap :#test::copy::zeroMany::Node##[1]#  ~@VariableExpression@  updatableInPlaceIf _automap
           Collection :#KeyExpression#[1]  ~@Collection@  @20:17-20:49
             FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:33-20:48
               AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @20:33-20:48

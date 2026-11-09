@@ -41,16 +41,49 @@ public final class AddNode extends PureNode
 
     public AddNode(PureNode collectionArg, PureNode indexOrElementArg, PureNode elementArg)
     {
+        this(collectionArg, indexOrElementArg, elementArg, COPY);
+    }
+
+    public AddNode(PureNode collectionArg, PureNode indexOrElementArg, PureNode elementArg, int updatableInPlace)
+    {
         this.collectionArg = collectionArg;
         this.indexOrElementArg = indexOrElementArg;
         this.elementArg = elementArg;
+        this.updatableInPlace = updatableInPlace;
     }
+
+    /**
+     * Whether this call may change its receiver in place (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): {@link #COPY} never,
+     * {@link #IN_PLACE} always — the compiler marked the receiver updatable in place — or, a frame slot, when the flag of the
+     * parameter it is updatable in place on (updatableInPlaceIfParameter) holds true. Only a sequence is changed, and only once it is a
+     * {@link GrowableSequence}: anything else is copied into one first.
+     */
+    public static final int COPY = -2;
+    public static final int IN_PLACE = -1;
+
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private final int updatableInPlace;
+
+    private boolean owns(VirtualFrame frame, Object receiver)
+    {
+        // The mode first: a copying node folds this away entirely.
+        return updatableInPlace != COPY
+                && (updatableInPlace == IN_PLACE || frame.getValue(updatableInPlace) == Boolean.TRUE)
+                && receiver instanceof org.finos.legend.pure.truffle.execution.types.PureSequence;
+    }
+
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object col = collectionArg.executeGeneric(frame);
         Object second = indexOrElementArg.executeGeneric(frame);
+        if (owns(frame, col))
+        {
+            return elementArg == null
+                    ? org.finos.legend.pure.truffle.execution.types.GrowableSequence.append(col, second)
+                    : org.finos.legend.pure.truffle.execution.types.GrowableSequence.insert(col, (int) IntegerHelper.asLong(second, SIG), elementArg.executeGeneric(frame));
+        }
         Object[] arr = CollectionHelper.toArray(col);
         if (elementArg != null)
         {

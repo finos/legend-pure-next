@@ -39,7 +39,6 @@ import org.finos.legend.pure.platform.java.runtime.PlatformModules;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -307,8 +306,8 @@ public final class PureRuntime
      */
     public CompilationResult compile()
     {
-        List<Object> compiled = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
+        List<Object> compiled = Lists.mutable.empty();
+        List<String> errors = Lists.mutable.empty();
         for (Module module : registry.modules())
         {
             if (module instanceof InMemoryModule inMemory && inMemory.hasCode()
@@ -322,7 +321,7 @@ public final class PureRuntime
 
     private boolean compileModule(InMemoryModule module, List<Object> compiled, List<String> errors)
     {
-        List<Object> files = new ArrayList<>();
+        List<Object> files = Lists.mutable.empty();
         try
         {
             for (Map.Entry<String, String> source : module.sources().entrySet())
@@ -376,7 +375,7 @@ public final class PureRuntime
      */
     public Object execute(Object function, Object... args)
     {
-        return Metadata.invoke(function, List.of(args));
+        return Metadata.invoke(function, Lists.fixedSize.of(args));
     }
 
     /** Nothing to release: the archives are read into memory when they are opened. */
@@ -387,7 +386,7 @@ public final class PureRuntime
 
     private static List<Object> values(Object result, String property)
     {
-        return new ArrayList<>(((LazyObject) result).__values(property));
+        return Lists.mutable.withAll(((LazyObject) result).__values(property));
     }
 
     // The overload that takes the LANGUAGES' compiler passes. The CompilerContext overload compiles the

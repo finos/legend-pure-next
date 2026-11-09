@@ -9,7 +9,7 @@ function test::asType_Any_1__T_1__T_1_(value:@Any@[1], witness:T~test::asType_An
   ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#T~test::asType_Any_1__T_1__T_1_##[1]#  ~@ArrowInvocation@  @4:9-4:18
     typeParam T -> T~test::asType_Any_1__T_1__T_1_
     mulParam m -> #[1]#
-    Variable value :#Any##[1]#  ~@VariableExpression@  @4:3-4:8
+    Variable value :#Any##[1]#  ~@VariableExpression@  @4:3-4:8  updatableInPlaceIf value
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<T~test::asType_Any_1__T_1__T_1_|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<T~test::asType_Any_1__T_1__T_1_|?>  @4:16-4:17
 
 ###ReverseIndex

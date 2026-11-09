@@ -76,7 +76,7 @@ function pack::many_String_MANY__String_1_(s:@String@[*]):@String@[1]  ~UserDefi
   ArrowInvocation pack::pick_T_m__String_1_ :#String##[1]#  ~@ArrowInvocation@  @51:5-51:12
     typeParam T -> #String#
     mulParam m -> #[*]#
-    Variable s :#String##[*]#  ~@VariableExpression@  @51:3-51:4
+    Variable s :#String##[*]#  ~@VariableExpression@  @51:3-51:4  updatableInPlaceIf s
 
 ###ReverseIndex
 pack::pick_T_$0_1$__String_1_:

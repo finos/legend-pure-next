@@ -37,15 +37,46 @@ public final class ConcatenateNode extends PureNode
 
     public ConcatenateNode(PureNode left, PureNode right)
     {
+        this(left, right, COPY);
+    }
+
+    public ConcatenateNode(PureNode left, PureNode right, int updatableInPlace)
+    {
         this.left = left;
         this.right = right;
+        this.updatableInPlace = updatableInPlace;
     }
+
+    /**
+     * Whether this call may change its receiver in place (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): {@link #COPY} never,
+     * {@link #IN_PLACE} always — the compiler marked the receiver updatable in place — or, a frame slot, when the flag of the
+     * parameter it is updatable in place on (updatableInPlaceIfParameter) holds true. Only a sequence is changed, and only once it is a
+     * {@link GrowableSequence}: anything else is copied into one first.
+     */
+    public static final int COPY = -2;
+    public static final int IN_PLACE = -1;
+
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private final int updatableInPlace;
+
+    private boolean owns(VirtualFrame frame, Object receiver)
+    {
+        // The mode first: a copying node folds this away entirely.
+        return updatableInPlace != COPY
+                && (updatableInPlace == IN_PLACE || frame.getValue(updatableInPlace) == Boolean.TRUE)
+                && receiver instanceof org.finos.legend.pure.truffle.execution.types.PureSequence;
+    }
+
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object a = left.executeGeneric(frame);
         Object b = right.executeGeneric(frame);
+        if (owns(frame, a))
+        {
+            return org.finos.legend.pure.truffle.execution.types.GrowableSequence.appendAll(a, b);
+        }
         // Unboxed fast paths: Integer[*] byte assemblies (e.g. the self-hosted
         // PDB writer's builder) concatenate long runs millions of times —
         // boxing every element into Object[] dominates the whole write.
@@ -55,9 +86,12 @@ public final class ConcatenateNode extends PureNode
             // The builder's prepend shape: small chunk ++ large buffer.
             // PrependLongSequence turns the linear case into O(chunk) instead
             // of O(buffer) — see that class for the immutability argument.
-            if (b instanceof PrependLongSequence pls)
+            // Not when the left side is empty: the result would be b itself, while concatenate's result is its own
+            // (inPlaceUpdate.NewCollectionResult, pure/specification/IN_PLACE_UPDATE_ANALYSIS.md). The general path below copies.
+            // A prepend's result shares b's buffer below b's window: a distinct value, never changed in place.
+            if (b instanceof PrependLongSequence pls && la.length > 0)
             {
-                return la.length == 0 ? pls : pls.prepend(la);
+                return pls.prepend(la);
             }
             long[] lb = longsOf(b);
             if (lb != null)

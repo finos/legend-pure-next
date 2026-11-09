@@ -111,9 +111,97 @@ public class _E_ValueSpecification
                     results.add(v);
                 }
             }
+            recordOrigin(results, col);
             return results;
         }
         return vs;
+    }
+
+    // -- identity (is.pure) ------------------------------------------------------------------------------------------
+    // A collection is a ValueSpecification over values, unwrapped into a new raw list by every store and wrapped into a
+    // new ValueSpecification by every read: `is` follows each back to the collection it came from. Weak: a record goes
+    // when its value does.
+
+    private static final Origins ORIGINS = new Origins();
+
+    /** Record that {@code value} is {@code origin} under another form (a raw list, a re-wrapped or restamped copy). */
+    public static void recordOrigin(Object value, Object origin)
+    {
+        if (value != null && origin != null && value != origin)
+        {
+            ORIGINS.put(value, origin);
+        }
+    }
+
+    /** The collection {@code value} is, following its recorded origins: what {@code is} compares. */
+    public static Object identityOf(Object value)
+    {
+        Object current = value;
+        for (int i = 0; i < 1000; i++)
+        {
+            Object origin = ORIGINS.get(current);
+            if (origin == null)
+            {
+                return current;
+            }
+            current = origin;
+        }
+        return current;
+    }
+
+    /** A map from objects, by identity and held weakly, to their origins. */
+    private static final class Origins
+    {
+        private final java.lang.ref.ReferenceQueue<Object> queue = new java.lang.ref.ReferenceQueue<>();
+        private final java.util.Map<Key, Object> map = new java.util.HashMap<>();
+
+        synchronized void put(Object value, Object origin)
+        {
+            expunge();
+            map.put(new Key(value, queue), origin);
+        }
+
+        synchronized Object get(Object value)
+        {
+            expunge();
+            return map.get(new Key(value, null));
+        }
+
+        private void expunge()
+        {
+            for (java.lang.ref.Reference<?> r = queue.poll(); r != null; r = queue.poll())
+            {
+                map.remove(r);
+            }
+        }
+
+        private static final class Key extends java.lang.ref.WeakReference<Object>
+        {
+            private final int hash;
+
+            Key(Object referent, java.lang.ref.ReferenceQueue<Object> queue)
+            {
+                super(referent, queue);
+                this.hash = System.identityHashCode(referent);
+            }
+
+            @Override
+            public int hashCode()
+            {
+                return hash;
+            }
+
+            @Override
+            public boolean equals(Object other)
+            {
+                if (other == this)
+                {
+                    return true;
+                }
+                Object referent = get();
+                return referent != null && other instanceof Key key && key.get() == referent;
+            }
+        }
     }
 
     /**
@@ -172,7 +260,9 @@ public class _E_ValueSpecification
             {
                 items.add(wrap(item, genericType, null, resolver));
             }
-            return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(items, resolver);
+            ValueSpecification wrapped = org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(items, resolver);
+            recordOrigin(wrapped, list);
+            return wrapped;
         }
         return new AtomicValueImpl(resolver)
                 ._value(value)
