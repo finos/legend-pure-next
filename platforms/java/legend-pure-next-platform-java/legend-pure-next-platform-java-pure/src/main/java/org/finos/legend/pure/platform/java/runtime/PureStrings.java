@@ -14,11 +14,11 @@
 
 package org.finos.legend.pure.platform.java.runtime;
 
+import org.eclipse.collections.impl.list.mutable.FastList;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject;
 
 import java.math.BigDecimal;
 import java.time.temporal.Temporal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -91,7 +91,7 @@ public final class PureStrings
         }
         if (v instanceof List)
         {
-            List<String> parts = new ArrayList<>();
+            List<String> parts = FastList.newList();
             for (Object e : (List<?>) v)
             {
                 parts.add(printed(e, depth));
@@ -180,7 +180,7 @@ public final class PureStrings
     public static List<String> chunk(String s, long size)
     {
         int sz = (int) size;
-        List<String> out = new ArrayList<>();
+        List<String> out = FastList.newList();
         for (int i = 0; i < s.length(); i += sz)
         {
             out.add(s.substring(i, Math.min(i + sz, s.length())));

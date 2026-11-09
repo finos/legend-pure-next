@@ -46,7 +46,7 @@ function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
         AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @22:59-22:59
       Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @22:64-22:75
         ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @22:68-22:75
-          Variable y :#Integer##[*]#  ~@VariableExpression@  @22:66-22:67
+          Variable y :#Integer##[*]#  ~@VariableExpression@  @22:66-22:67  updatableInPlaceIf y
       AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @22:43-22:46
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
 

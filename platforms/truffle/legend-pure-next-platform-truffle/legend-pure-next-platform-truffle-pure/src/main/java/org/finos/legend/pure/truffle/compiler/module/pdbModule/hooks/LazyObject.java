@@ -89,6 +89,23 @@ public abstract class LazyObject
         properties.put(property, promoted);
     }
 
+    // A field's own collection (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): this reader keeps no list as an object's own,
+    // so a value stored updatable in place is stored as any other, and a read proved to hold the only reference reads a view.
+    public static Object updatableInPlace(Object value)
+    {
+        return value;
+    }
+
+    public static Object updatableInPlaceIf(Object value, boolean updatableInPlace)
+    {
+        return value;
+    }
+
+    public static List<Object> updatableInPlaceValues(Object object, String property)
+    {
+        return object instanceof LazyObject lazy ? Collections.unmodifiableList(lazy.<Object>many(property)) : null;
+    }
+
     /** Copy every property into {@code target} — the generated `_copy()`. */
     protected final <T extends LazyObject> T copyInto(T target)
     {
@@ -99,5 +116,23 @@ public abstract class LazyObject
                     v instanceof List<?> l ? new ArrayList<>(l) : v);
         }
         return target;
+    }
+
+    /**
+     * An object about to be changed by a copy expression that holds its only reference
+     * (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): what a copy would be. The reader's objects keep no defaults, so itself.
+     */
+    /**
+     * A copy with several keys changing its source itself: {@code keys}, every key value, computed before any is set
+     * (as a copy would), then set on the object by {@code set}.
+     */
+    public static Object reuse(Object object, java.util.function.BiFunction<Object, Object[], Object> set, Object... keys)
+    {
+        return set.apply(object, keys);
+    }
+
+    public static Object reusedForCopy(Object object)
+    {
+        return object;
     }
 }

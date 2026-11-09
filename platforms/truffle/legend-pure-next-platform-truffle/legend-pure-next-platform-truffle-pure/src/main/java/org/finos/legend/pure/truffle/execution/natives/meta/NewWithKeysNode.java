@@ -805,12 +805,16 @@ public final class NewWithKeysNode extends PureNode
                     items[seq.size()] = value;
                     writer.execute(target, propName, new org.finos.legend.pure.truffle.execution.types.ObjectSequence(items));
                 }
-                else if (current instanceof org.eclipse.collections.api.list.MutableList<?> list)
+                else if (current instanceof java.util.List<?> list)
                 {
-                    @SuppressWarnings("unchecked")
-                    org.eclipse.collections.api.list.MutableList<Object> mlist =
-                            (org.eclipse.collections.api.list.MutableList<Object>) list;
-                    mlist.add(value);
+                    // A new collection, never the stored one grown: a read of it before keeps its value (is.pure).
+                    Object[] items = new Object[list.size() + 1];
+                    for (int j = 0; j < list.size(); j++)
+                    {
+                        items[j] = list.get(j);
+                    }
+                    items[list.size()] = value;
+                    writer.execute(target, propName, new org.finos.legend.pure.truffle.execution.types.ObjectSequence(items));
                 }
                 else
                 {

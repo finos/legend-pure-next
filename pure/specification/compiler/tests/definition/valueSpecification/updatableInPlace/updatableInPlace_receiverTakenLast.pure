@@ -1,0 +1,202 @@
+// A call to a user function takes its summary: a function returning a fresh list gives a value updatable in place, and one
+// returning its parameter gives a value as updatable in place as its argument was.
+// A function calling itself has no summary while it is analysed: its recursive call gives a shared value, so its
+// result is not updatable in place, and neither is a value bound to a call of it.
+###Pure
+import test::updatableInPlace::*;
+
+// A call reads a receiver held by a variable once every argument is evaluated: a later argument only reading it is
+// done with it by then. One keeping it, or passing it to the call as another argument (read while the call runs),
+// still keeps it alive; a receiver computed by an expression is evaluated first, as any argument.
+
+Class test::updatableInPlace::Counter
+{
+  count: Integer[1];
+}
+
+function test::updatableInPlace::addItsSize(): Integer[*]
+{
+  let xs = [1, 2]->map(x|$x);
+  $xs->add($xs->size());
+}
+
+function test::updatableInPlace::copyReadingItsSource(): Counter[1]
+{
+  let c = ^Counter(count = 0);
+  ^$c(count = $c.count + 1);
+}
+
+function test::updatableInPlace::concatenateToItself(): Integer[*]
+{
+  let ys = [1, 2]->map(x|$x);
+  $ys->concatenate($ys);
+}
+
+function test::updatableInPlace::reverseThenConcatenate(): Integer[*]
+{
+  let zs = [1, 2]->map(x|$x);
+  $zs->reverse()->concatenate($zs);
+}
+
+function test::updatableInPlace::countAll(): Counter[1]
+{
+  [1, 2, 3]->fold({e, acc|^$acc(count = $acc.count + $e)}, ^Counter(count = 0));
+}
+###CompiledGraph
+class test::updatableInPlace::Counter extends Any  ~Class<test::updatableInPlace::Counter>  @12:1-15:1
+  property count :@Integer@[1]  ~Property<test::updatableInPlace::Counter, @Integer@|1>
+
+function test::updatableInPlace::addItsSize__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @19:3-19:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @19:7-19:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @19:18-19:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @19:12-19:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @19:13-19:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @19:16-19:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @19:24-19:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @19:26-19:27
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @20:6-20:23
+    typeParam T -> #Integer#
+    Variable xs :#Integer##[2]#  ~@VariableExpression@  @20:3-20:5  updatableInPlace
+    ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @20:15-20:22
+      Variable xs :#Integer##[2]#  ~@VariableExpression@  @20:12-20:14
+
+function test::updatableInPlace::copyReadingItsSource__Counter_1_():test::updatableInPlace::Counter[1]  ~UserDefinedFunction<{->test::updatableInPlace::Counter[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Counter##[1]#  ~@FunctionInvocation@  @25:3-25:29
+    typeParam T -> #test::updatableInPlace::Counter#
+    mulParam m -> #[1]#
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @25:7-25:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Counter##[1]#  ~@FunctionInvocation@  @25:11-25:29
+      typeParam T -> test::updatableInPlace::Counter
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Counter|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Counter|1>  @25:11-25:29
+      Collection :#KeyExpression#[1]  ~@Collection@  @25:11-25:29
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:20-25:28
+          AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @25:20-25:28
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @25:28-25:28
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Counter##[1]#  ~@FunctionInvocation@  @26:3-26:27
+    typeParam T -> #test::updatableInPlace::Counter#
+    Variable c :#test::updatableInPlace::Counter##[1]#  ~@VariableExpression@  @26:4-26:5  updatableInPlace
+    Collection :#KeyExpression#[1]  ~@Collection@  @26:3-26:27
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @26:7-26:26
+        AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @26:7-26:26
+        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @26:17-26:26
+          DotApplication test::updatableInPlace::Counter.count :#Integer##[1]#  ~@DotApplication@  @26:17-26:22
+            Variable c :#test::updatableInPlace::Counter##[1]#  ~@VariableExpression@  @26:15-26:16
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @26:26-26:26
+
+function test::updatableInPlace::concatenateToItself__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @31:3-31:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'ys' :@String@[1]  ~@AtomicValue@  @31:7-31:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @31:18-31:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @31:12-31:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @31:13-31:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @31:16-31:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @31:24-31:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @31:26-31:27
+  ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @32:6-32:23
+    typeParam T -> #Integer#
+    Variable ys :#Integer##[2]#  ~@VariableExpression@  @32:3-32:5
+    Variable ys :#Integer##[2]#  ~@VariableExpression@  @32:20-32:22
+
+function test::updatableInPlace::reverseThenConcatenate__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @37:3-37:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'zs' :@String@[1]  ~@AtomicValue@  @37:7-37:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @37:18-37:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @37:12-37:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @37:13-37:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @37:16-37:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @37:24-37:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @37:26-37:27
+  ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @38:6-38:34
+    typeParam T -> #Integer#
+    ArrowInvocation reverse_T_m__T_m_ :#Integer##[2]#  ~@ArrowInvocation@  @38:6-38:34
+      typeParam T -> #Integer#
+      mulParam m -> #[2]#
+      Variable zs :#Integer##[2]#  ~@VariableExpression@  @38:3-38:5
+    Variable zs :#Integer##[2]#  ~@VariableExpression@  @38:31-38:33  updatableInPlace
+
+function test::updatableInPlace::countAll__Counter_1_():test::updatableInPlace::Counter[1]  ~UserDefinedFunction<{->test::updatableInPlace::Counter[1]}>
+  ArrowInvocation fold_T_MANY__Function_1__V_1__V_1_ :#test::updatableInPlace::Counter##[1]#  ~@ArrowInvocation@  @43:12-43:79
+    typeParam T -> #Integer#
+    typeParam V -> #test::updatableInPlace::Counter#
+    Collection :#Integer#[3]  ~@Collection@  @43:3-43:11
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @43:4-43:4
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @43:7-43:7
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @43:10-43:10
+    Lambda(e:#Integer##[1]#, acc:#test::updatableInPlace::Counter##[1]#) :#LambdaFunction<#{#Integer##[1]#, #test::updatableInPlace::Counter##[1]#->#test::updatableInPlace::Counter##[1]#}#>#[1]  ~@AtomicValue@  @43:19-43:57
+      resultUpdatableInPlace
+      FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Counter##[1]#  ~@FunctionInvocation@  @43:27-43:56
+        typeParam T -> #test::updatableInPlace::Counter#
+        Variable acc :#test::updatableInPlace::Counter##[1]#  ~@VariableExpression@  @43:28-43:31  updatableInPlaceIf acc
+        Collection :#KeyExpression#[1]  ~@Collection@  @43:27-43:56
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @43:33-43:55
+            AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @43:33-43:55
+            FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @43:45-43:55
+              DotApplication test::updatableInPlace::Counter.count :#Integer##[1]#  ~@DotApplication@  @43:45-43:50
+                Variable acc :#test::updatableInPlace::Counter##[1]#  ~@VariableExpression@  @43:41-43:44
+              Variable e :#Integer##[1]#  ~@VariableExpression@  @43:54-43:55
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Counter##[1]#  ~@FunctionInvocation@  @43:60-43:78
+      typeParam T -> test::updatableInPlace::Counter
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Counter|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Counter|1>  @43:60-43:78
+      Collection :#KeyExpression#[1]  ~@Collection@  @43:60-43:78
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @43:69-43:77
+          AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @43:69-43:77
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @43:77-43:77
+###ReverseIndex
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::addItsSize__Integer_MANY_
+platform::pure::functions::collection::concatenate_T_MANY__T_MANY__T_MANY_:
+  test::updatableInPlace::concatenateToItself__Integer_MANY_
+  test::updatableInPlace::reverseThenConcatenate__Integer_MANY_
+platform::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_:
+  test::updatableInPlace::countAll__Counter_1_
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::updatableInPlace::addItsSize__Integer_MANY_
+  test::updatableInPlace::concatenateToItself__Integer_MANY_
+  test::updatableInPlace::reverseThenConcatenate__Integer_MANY_
+platform::pure::functions::collection::reverse_T_m__T_m_:
+  test::updatableInPlace::reverseThenConcatenate__Integer_MANY_
+platform::pure::functions::collection::size_Any_MANY__Integer_1_:
+  test::updatableInPlace::addItsSize__Integer_MANY_
+platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+  test::updatableInPlace::copyReadingItsSource__Counter_1_
+  test::updatableInPlace::countAll__Counter_1_
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::updatableInPlace::copyReadingItsSource__Counter_1_
+  test::updatableInPlace::countAll__Counter_1_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::addItsSize__Integer_MANY_
+  test::updatableInPlace::concatenateToItself__Integer_MANY_
+  test::updatableInPlace::copyReadingItsSource__Counter_1_
+  test::updatableInPlace::reverseThenConcatenate__Integer_MANY_
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::updatableInPlace::copyReadingItsSource__Counter_1_
+  test::updatableInPlace::countAll__Counter_1_
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test::updatableInPlace::copyReadingItsSource__Counter_1_
+  test::updatableInPlace::countAll__Counter_1_
+test::updatableInPlace::Counter:
+  test::updatableInPlace::copyReadingItsSource__Counter_1_
+  test::updatableInPlace::countAll__Counter_1_
+test::updatableInPlace::Counter.count:
+  test::updatableInPlace::copyReadingItsSource__Counter_1_
+  test::updatableInPlace::countAll__Counter_1_

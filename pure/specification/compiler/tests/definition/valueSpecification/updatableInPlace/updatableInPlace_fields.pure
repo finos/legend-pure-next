@@ -1,0 +1,528 @@
+// A call to a user function takes its summary: a function returning a fresh list gives a value updatable in place, and one
+// returning its parameter gives a value as updatable in place as its argument was.
+// A function calling itself has no summary while it is analysed: its recursive call gives a shared value, so its
+// result is not updatable in place, and neither is a value bound to a call of it.
+###Pure
+import test::updatableInPlace::*;
+
+// A field's collection read from an object a copy consumes, in the key replacing that field, holds the only reference
+// to it when the copy's source does, the read is the object's one read of that property, every other use of the
+// object reads another property, and the read is outside any lambda. A key value that is a call is marked as updatable in place as
+// it is. Anything else stays shared.
+
+Class test::updatableInPlace::Bag
+{
+  items: Integer[*];
+  count: Integer[1];
+  label: String[1];
+}
+
+function test::updatableInPlace::collect(): Bag[1]
+{
+  [1, 2, 3]->fold({e, acc|^$acc(items = $acc.items->add($e), count = $acc.count + 1)}, ^Bag(items = [], count = 0, label = 'b'));
+}
+
+function test::updatableInPlace::storeFresh(): Bag[1]
+{
+  ^Bag(items = [1, 2]->map(x|$x), count = 2, label = 'f');
+}
+
+function test::updatableInPlace::readTwice(b: Bag[1]): Bag[1]
+{
+  ^$b(items = $b.items->add(1), count = $b.items->size());
+}
+
+function test::updatableInPlace::earlierReadKept(): Integer[*]
+{
+  let b = ^Bag(items = [1, 2]->map(x|$x), count = 2, label = 'k');
+  let old = $b.items;
+  let c = ^$b(items = $b.items->add(3));
+  $old->concatenate($c.items);
+}
+
+function test::updatableInPlace::objectStillUsed(): String[1]
+{
+  let b = ^Bag(items = [1, 2]->map(x|$x), count = 2, label = 's');
+  let c = ^$b(items = $b.items->add(3));
+  $b.label + $c.label;
+}
+
+function test::updatableInPlace::objectPassedOn(): Bag[1]
+{
+  let b = ^Bag(items = [1, 2]->map(x|$x), count = 2, label = 'p');
+  let empty = $b->isEmpty();
+  ^$b(items = $b.items->add(3), count = if($empty, |0, |1));
+}
+
+function test::updatableInPlace::readInALambda(): Bag[1]
+{
+  let b = ^Bag(items = [1, 2]->map(x|$x), count = 2, label = 'l');
+  ^$b(items = [1, 2]->map(i|$b.items->size()));
+}
+
+function test::updatableInPlace::appended(): Bag[1]
+{
+  let b = ^Bag(items = [1, 2]->map(x|$x), count = 2, label = 'a');
+  ^$b(items += 3);
+}
+
+function test::updatableInPlace::singleValued(): Bag[1]
+{
+  let b = ^Bag(items = [1, 2]->map(x|$x), count = 2, label = 'v');
+  ^$b(label = $b.label + 'x');
+}
+###CompiledGraph
+class test::updatableInPlace::Bag extends Any  ~Class<test::updatableInPlace::Bag>  @13:1-18:1
+  property items :@Integer@[*]  ~Property<test::updatableInPlace::Bag, @Integer@|*>
+  property count :@Integer@[1]  ~Property<test::updatableInPlace::Bag, @Integer@|1>
+  property label :@String@[1]  ~Property<test::updatableInPlace::Bag, @String@|1>
+
+function test::updatableInPlace::collect__Bag_1_():test::updatableInPlace::Bag[1]  ~UserDefinedFunction<{->test::updatableInPlace::Bag[1]}>
+  ArrowInvocation fold_T_MANY__Function_1__V_1__V_1_ :#test::updatableInPlace::Bag##[1]#  ~@ArrowInvocation@  @22:12-22:128
+    typeParam T -> #Integer#
+    typeParam V -> #test::updatableInPlace::Bag#
+    Collection :#Integer#[3]  ~@Collection@  @22:3-22:11
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @22:4-22:4
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @22:7-22:7
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @22:10-22:10
+    Lambda(e:#Integer##[1]#, acc:#test::updatableInPlace::Bag##[1]#) :#LambdaFunction<#{#Integer##[1]#, #test::updatableInPlace::Bag##[1]#->#test::updatableInPlace::Bag##[1]#}#>#[1]  ~@AtomicValue@  @22:19-22:85
+      resultUpdatableInPlace
+      FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @22:27-22:84
+        typeParam T -> #test::updatableInPlace::Bag#
+        Variable acc :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @22:28-22:31  updatableInPlaceIf acc
+        Collection :#KeyExpression#[2]  ~@Collection@  @22:27-22:84
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:33-22:59
+            AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @22:33-22:59
+            ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @22:51-22:59  updatableInPlace
+              typeParam T -> #Integer#
+              DotApplication test::updatableInPlace::Bag.items :#Integer##[*]#  ~@DotApplication@  @22:45-22:50  updatableInPlaceIf acc
+                Variable acc :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @22:41-22:44
+              Variable e :#Integer##[1]#  ~@VariableExpression@  @22:57-22:58
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:62-22:83
+            AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @22:62-22:83
+            FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @22:74-22:83
+              DotApplication test::updatableInPlace::Bag.count :#Integer##[1]#  ~@DotApplication@  @22:74-22:79
+                Variable acc :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @22:70-22:73
+              AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @22:83-22:83
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @22:88-22:127
+      typeParam T -> test::updatableInPlace::Bag
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>  @22:88-22:127
+      Collection :#KeyExpression#[3]  ~@Collection@  @22:88-22:127
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:93-22:102
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @22:93-22:102
+          Collection :#Nil#[0]  ~@Collection@  @22:101-22:102
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:105-22:113
+          AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @22:105-22:113
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @22:113-22:113
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:116-22:126
+          AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @22:116-22:126
+          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @22:124-22:126
+
+function test::updatableInPlace::storeFresh__Bag_1_():test::updatableInPlace::Bag[1]  ~UserDefinedFunction<{->test::updatableInPlace::Bag[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @27:3-27:57
+    typeParam T -> test::updatableInPlace::Bag
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>  @27:3-27:57
+    Collection :#KeyExpression#[3]  ~@Collection@  @27:3-27:57
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @27:8-27:32
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @27:8-27:32
+        ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @27:22-27:32  updatableInPlace
+          typeParam T -> #Integer#
+          typeParam V -> #Integer#
+          mulParam m -> [2]
+          Collection :#Integer#[2]  ~@Collection@  @27:16-27:21
+            AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @27:17-27:17
+            AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @27:20-27:20
+          Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @27:28-27:31
+            Variable x :#Integer##[1]#  ~@VariableExpression@  @27:30-27:31
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @27:35-27:43
+        AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @27:35-27:43
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @27:43-27:43
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @27:46-27:56
+        AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @27:46-27:56
+        AtomicValue  'f' :@String@[1]  ~@AtomicValue@  @27:54-27:56
+
+function test::updatableInPlace::readTwice_Bag_1__Bag_1_(b:test::updatableInPlace::Bag[1]):test::updatableInPlace::Bag[1]  ~UserDefinedFunction<{test::updatableInPlace::Bag[1]->test::updatableInPlace::Bag[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @32:3-32:57
+    typeParam T -> #test::updatableInPlace::Bag#
+    Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @32:4-32:5  updatableInPlaceIf b
+    Collection :#KeyExpression#[2]  ~@Collection@  @32:3-32:57
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @32:7-32:30
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @32:7-32:30
+        ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @32:23-32:30  updatableInPlace
+          typeParam T -> #Integer#
+          DotApplication test::updatableInPlace::Bag.items :#Integer##[*]#  ~@DotApplication@  @32:17-32:22
+            Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @32:15-32:16
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @32:29-32:29
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @32:33-32:56
+        AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @32:33-32:56
+        ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @32:49-32:56
+          DotApplication test::updatableInPlace::Bag.items :#Integer##[*]#  ~@DotApplication@  @32:43-32:48
+            Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @32:41-32:42
+
+function test::updatableInPlace::earlierReadKept__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @37:3-37:65
+    typeParam T -> #test::updatableInPlace::Bag#
+    mulParam m -> #[1]#
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @37:7-37:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @37:11-37:65
+      typeParam T -> test::updatableInPlace::Bag
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>  @37:11-37:65
+      Collection :#KeyExpression#[3]  ~@Collection@  @37:11-37:65
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @37:16-37:40
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @37:16-37:40
+          ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @37:30-37:40  updatableInPlace
+            typeParam T -> #Integer#
+            typeParam V -> #Integer#
+            mulParam m -> [2]
+            Collection :#Integer#[2]  ~@Collection@  @37:24-37:29
+              AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @37:25-37:25
+              AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @37:28-37:28
+            Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @37:36-37:39
+              Variable x :#Integer##[1]#  ~@VariableExpression@  @37:38-37:39
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @37:43-37:51
+          AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @37:43-37:51
+          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @37:51-37:51
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @37:54-37:64
+          AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @37:54-37:64
+          AtomicValue  'k' :@String@[1]  ~@AtomicValue@  @37:62-37:64
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @38:3-38:20
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'old' :@String@[1]  ~@AtomicValue@  @38:7-38:9
+    DotApplication test::updatableInPlace::Bag.items :#Integer##[*]#  ~@DotApplication@  @38:15-38:20
+      Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @38:13-38:14
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @39:3-39:39
+    typeParam T -> #test::updatableInPlace::Bag#
+    mulParam m -> #[1]#
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @39:7-39:7
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @39:11-39:39
+      typeParam T -> #test::updatableInPlace::Bag#
+      Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @39:12-39:13  updatableInPlace
+      Collection :#KeyExpression#[1]  ~@Collection@  @39:11-39:39
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @39:15-39:38
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @39:15-39:38
+          ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @39:31-39:38  updatableInPlace
+            typeParam T -> #Integer#
+            DotApplication test::updatableInPlace::Bag.items :#Integer##[*]#  ~@DotApplication@  @39:25-39:30
+              Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @39:23-39:24
+            AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @39:37-39:37
+  ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @40:7-40:29
+    typeParam T -> #Integer#
+    Variable old :#Integer##[*]#  ~@VariableExpression@  @40:3-40:6
+    DotApplication test::updatableInPlace::Bag.items :#Integer##[*]#  ~@DotApplication@  @40:23-40:28
+      Variable c :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @40:21-40:22
+
+function test::updatableInPlace::objectStillUsed__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @45:3-45:65
+    typeParam T -> #test::updatableInPlace::Bag#
+    mulParam m -> #[1]#
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @45:7-45:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @45:11-45:65
+      typeParam T -> test::updatableInPlace::Bag
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>  @45:11-45:65
+      Collection :#KeyExpression#[3]  ~@Collection@  @45:11-45:65
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @45:16-45:40
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @45:16-45:40
+          ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @45:30-45:40  updatableInPlace
+            typeParam T -> #Integer#
+            typeParam V -> #Integer#
+            mulParam m -> [2]
+            Collection :#Integer#[2]  ~@Collection@  @45:24-45:29
+              AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @45:25-45:25
+              AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @45:28-45:28
+            Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @45:36-45:39
+              Variable x :#Integer##[1]#  ~@VariableExpression@  @45:38-45:39
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @45:43-45:51
+          AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @45:43-45:51
+          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @45:51-45:51
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @45:54-45:64
+          AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @45:54-45:64
+          AtomicValue  's' :@String@[1]  ~@AtomicValue@  @45:62-45:64
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @46:3-46:39
+    typeParam T -> #test::updatableInPlace::Bag#
+    mulParam m -> #[1]#
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @46:7-46:7
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @46:11-46:39
+      typeParam T -> #test::updatableInPlace::Bag#
+      Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @46:12-46:13
+      Collection :#KeyExpression#[1]  ~@Collection@  @46:11-46:39
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @46:15-46:38
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @46:15-46:38
+          ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @46:31-46:38  updatableInPlace
+            typeParam T -> #Integer#
+            DotApplication test::updatableInPlace::Bag.items :#Integer##[*]#  ~@DotApplication@  @46:25-46:30
+              Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @46:23-46:24
+            AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @46:37-46:37
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @47:5-47:21
+    DotApplication test::updatableInPlace::Bag.label :#String##[1]#  ~@DotApplication@  @47:5-47:10
+      Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @47:3-47:4
+    DotApplication test::updatableInPlace::Bag.label :#String##[1]#  ~@DotApplication@  @47:16-47:21
+      Variable c :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @47:14-47:15
+
+function test::updatableInPlace::objectPassedOn__Bag_1_():test::updatableInPlace::Bag[1]  ~UserDefinedFunction<{->test::updatableInPlace::Bag[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @52:3-52:65
+    typeParam T -> #test::updatableInPlace::Bag#
+    mulParam m -> #[1]#
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @52:7-52:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @52:11-52:65
+      typeParam T -> test::updatableInPlace::Bag
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>  @52:11-52:65
+      Collection :#KeyExpression#[3]  ~@Collection@  @52:11-52:65
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @52:16-52:40
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @52:16-52:40
+          ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @52:30-52:40  updatableInPlace
+            typeParam T -> #Integer#
+            typeParam V -> #Integer#
+            mulParam m -> [2]
+            Collection :#Integer#[2]  ~@Collection@  @52:24-52:29
+              AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @52:25-52:25
+              AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @52:28-52:28
+            Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @52:36-52:39
+              Variable x :#Integer##[1]#  ~@VariableExpression@  @52:38-52:39
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @52:43-52:51
+          AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @52:43-52:51
+          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @52:51-52:51
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @52:54-52:64
+          AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @52:54-52:64
+          AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @52:62-52:64
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Boolean##[1]#  ~@FunctionInvocation@  @53:3-53:27
+    typeParam T -> #Boolean#
+    mulParam m -> #[1]#
+    AtomicValue  'empty' :@String@[1]  ~@AtomicValue@  @53:7-53:11
+    ArrowInvocation isEmpty_Any_$0_1$__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @53:17-53:27
+      Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @53:15-53:16
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @54:3-54:59
+    typeParam T -> #test::updatableInPlace::Bag#
+    Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @54:4-54:5  updatableInPlace
+    Collection :#KeyExpression#[2]  ~@Collection@  @54:3-54:59
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @54:7-54:30
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @54:7-54:30
+        ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @54:23-54:30  updatableInPlace
+          typeParam T -> #Integer#
+          DotApplication test::updatableInPlace::Bag.items :#Integer##[*]#  ~@DotApplication@  @54:17-54:22
+            Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @54:15-54:16
+          AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @54:29-54:29
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @54:33-54:58
+        AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @54:33-54:58
+        FunctionInvocation if_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[1]#  ~@FunctionInvocation@  @54:41-54:58
+          typeParam T -> #Integer#
+          mulParam m -> #[1]#
+          Variable empty :#Boolean##[1]#  ~@VariableExpression@  @54:44-54:49
+          Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @54:52-54:53
+            AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @54:53-54:53
+          Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @54:56-54:57
+            AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @54:57-54:57
+
+function test::updatableInPlace::readInALambda__Bag_1_():test::updatableInPlace::Bag[1]  ~UserDefinedFunction<{->test::updatableInPlace::Bag[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @59:3-59:65
+    typeParam T -> #test::updatableInPlace::Bag#
+    mulParam m -> #[1]#
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @59:7-59:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @59:11-59:65
+      typeParam T -> test::updatableInPlace::Bag
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>  @59:11-59:65
+      Collection :#KeyExpression#[3]  ~@Collection@  @59:11-59:65
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @59:16-59:40
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @59:16-59:40
+          ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @59:30-59:40  updatableInPlace
+            typeParam T -> #Integer#
+            typeParam V -> #Integer#
+            mulParam m -> [2]
+            Collection :#Integer#[2]  ~@Collection@  @59:24-59:29
+              AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @59:25-59:25
+              AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @59:28-59:28
+            Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @59:36-59:39
+              Variable x :#Integer##[1]#  ~@VariableExpression@  @59:38-59:39
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @59:43-59:51
+          AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @59:43-59:51
+          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @59:51-59:51
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @59:54-59:64
+          AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @59:54-59:64
+          AtomicValue  'l' :@String@[1]  ~@AtomicValue@  @59:62-59:64
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @60:3-60:46
+    typeParam T -> #test::updatableInPlace::Bag#
+    Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @60:4-60:5  updatableInPlace
+    Collection :#KeyExpression#[1]  ~@Collection@  @60:3-60:46
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @60:7-60:45
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @60:7-60:45
+        ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @60:21-60:45  updatableInPlace
+          typeParam T -> #Integer#
+          typeParam V -> #Integer#
+          mulParam m -> [2]
+          Collection :#Integer#[2]  ~@Collection@  @60:15-60:20
+            AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @60:16-60:16
+            AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @60:19-60:19
+          Lambda(i:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @60:27-60:44
+            openVar b :#test::updatableInPlace::Bag##[1]#
+            ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @60:37-60:44
+              DotApplication test::updatableInPlace::Bag.items :#Integer##[*]#  ~@DotApplication@  @60:31-60:36
+                Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @60:29-60:30
+
+function test::updatableInPlace::appended__Bag_1_():test::updatableInPlace::Bag[1]  ~UserDefinedFunction<{->test::updatableInPlace::Bag[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @65:3-65:65
+    typeParam T -> #test::updatableInPlace::Bag#
+    mulParam m -> #[1]#
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @65:7-65:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @65:11-65:65
+      typeParam T -> test::updatableInPlace::Bag
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>  @65:11-65:65
+      Collection :#KeyExpression#[3]  ~@Collection@  @65:11-65:65
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @65:16-65:40
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @65:16-65:40
+          ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @65:30-65:40  updatableInPlace
+            typeParam T -> #Integer#
+            typeParam V -> #Integer#
+            mulParam m -> [2]
+            Collection :#Integer#[2]  ~@Collection@  @65:24-65:29
+              AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @65:25-65:25
+              AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @65:28-65:28
+            Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @65:36-65:39
+              Variable x :#Integer##[1]#  ~@VariableExpression@  @65:38-65:39
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @65:43-65:51
+          AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @65:43-65:51
+          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @65:51-65:51
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @65:54-65:64
+          AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @65:54-65:64
+          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @65:62-65:64
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @66:3-66:17
+    typeParam T -> #test::updatableInPlace::Bag#
+    Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @66:4-66:5  updatableInPlace
+    Collection :#KeyExpression#[1]  ~@Collection@  @66:3-66:17
+      FunctionInvocation keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @66:7-66:16
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @66:7-66:16
+        AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @66:16-66:16
+        AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @66:7-66:16
+
+function test::updatableInPlace::singleValued__Bag_1_():test::updatableInPlace::Bag[1]  ~UserDefinedFunction<{->test::updatableInPlace::Bag[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @71:3-71:65
+    typeParam T -> #test::updatableInPlace::Bag#
+    mulParam m -> #[1]#
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @71:7-71:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @71:11-71:65
+      typeParam T -> test::updatableInPlace::Bag
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Bag|1>  @71:11-71:65
+      Collection :#KeyExpression#[3]  ~@Collection@  @71:11-71:65
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @71:16-71:40
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @71:16-71:40
+          ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @71:30-71:40  updatableInPlace
+            typeParam T -> #Integer#
+            typeParam V -> #Integer#
+            mulParam m -> [2]
+            Collection :#Integer#[2]  ~@Collection@  @71:24-71:29
+              AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @71:25-71:25
+              AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @71:28-71:28
+            Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @71:36-71:39
+              Variable x :#Integer##[1]#  ~@VariableExpression@  @71:38-71:39
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @71:43-71:51
+          AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @71:43-71:51
+          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @71:51-71:51
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @71:54-71:64
+          AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @71:54-71:64
+          AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @71:62-71:64
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Bag##[1]#  ~@FunctionInvocation@  @72:3-72:29
+    typeParam T -> #test::updatableInPlace::Bag#
+    Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @72:4-72:5  updatableInPlace
+    Collection :#KeyExpression#[1]  ~@Collection@  @72:3-72:29
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @72:7-72:28
+        AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @72:7-72:28
+        FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @72:17-72:28
+          DotApplication test::updatableInPlace::Bag.label :#String##[1]#  ~@DotApplication@  @72:17-72:22
+            Variable b :#test::updatableInPlace::Bag##[1]#  ~@VariableExpression@  @72:15-72:16
+          AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @72:26-72:28
+###ReverseIndex
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::collect__Bag_1_
+  test::updatableInPlace::earlierReadKept__Integer_MANY_
+  test::updatableInPlace::objectPassedOn__Bag_1_
+  test::updatableInPlace::objectStillUsed__String_1_
+  test::updatableInPlace::readTwice_Bag_1__Bag_1_
+platform::pure::functions::collection::concatenate_T_MANY__T_MANY__T_MANY_:
+  test::updatableInPlace::earlierReadKept__Integer_MANY_
+platform::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_:
+  test::updatableInPlace::collect__Bag_1_
+platform::pure::functions::collection::isEmpty_Any_$0_1$__Boolean_1_:
+  test::updatableInPlace::objectPassedOn__Bag_1_
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::updatableInPlace::appended__Bag_1_
+  test::updatableInPlace::earlierReadKept__Integer_MANY_
+  test::updatableInPlace::objectPassedOn__Bag_1_
+  test::updatableInPlace::objectStillUsed__String_1_
+  test::updatableInPlace::readInALambda__Bag_1_
+  test::updatableInPlace::singleValued__Bag_1_
+  test::updatableInPlace::storeFresh__Bag_1_
+platform::pure::functions::collection::size_Any_MANY__Integer_1_:
+  test::updatableInPlace::readInALambda__Bag_1_
+  test::updatableInPlace::readTwice_Bag_1__Bag_1_
+platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+  test::updatableInPlace::appended__Bag_1_
+  test::updatableInPlace::collect__Bag_1_
+  test::updatableInPlace::earlierReadKept__Integer_MANY_
+  test::updatableInPlace::objectPassedOn__Bag_1_
+  test::updatableInPlace::objectStillUsed__String_1_
+  test::updatableInPlace::readInALambda__Bag_1_
+  test::updatableInPlace::readTwice_Bag_1__Bag_1_
+  test::updatableInPlace::singleValued__Bag_1_
+platform::pure::functions::lang::if_Boolean_1__Function_1__Function_1__T_m_:
+  test::updatableInPlace::objectPassedOn__Bag_1_
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_:
+  test::updatableInPlace::appended__Bag_1_
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::updatableInPlace::appended__Bag_1_
+  test::updatableInPlace::collect__Bag_1_
+  test::updatableInPlace::earlierReadKept__Integer_MANY_
+  test::updatableInPlace::objectPassedOn__Bag_1_
+  test::updatableInPlace::objectStillUsed__String_1_
+  test::updatableInPlace::readInALambda__Bag_1_
+  test::updatableInPlace::readTwice_Bag_1__Bag_1_
+  test::updatableInPlace::singleValued__Bag_1_
+  test::updatableInPlace::storeFresh__Bag_1_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::appended__Bag_1_
+  test::updatableInPlace::earlierReadKept__Integer_MANY_
+  test::updatableInPlace::objectPassedOn__Bag_1_
+  test::updatableInPlace::objectStillUsed__String_1_
+  test::updatableInPlace::readInALambda__Bag_1_
+  test::updatableInPlace::singleValued__Bag_1_
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::updatableInPlace::appended__Bag_1_
+  test::updatableInPlace::collect__Bag_1_
+  test::updatableInPlace::earlierReadKept__Integer_MANY_
+  test::updatableInPlace::objectPassedOn__Bag_1_
+  test::updatableInPlace::objectStillUsed__String_1_
+  test::updatableInPlace::readInALambda__Bag_1_
+  test::updatableInPlace::singleValued__Bag_1_
+  test::updatableInPlace::storeFresh__Bag_1_
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test::updatableInPlace::collect__Bag_1_
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
+  test::updatableInPlace::objectStillUsed__String_1_
+  test::updatableInPlace::singleValued__Bag_1_
+test::updatableInPlace::Bag:
+  test::updatableInPlace::appended__Bag_1_
+  test::updatableInPlace::collect__Bag_1_
+  test::updatableInPlace::earlierReadKept__Integer_MANY_
+  test::updatableInPlace::objectPassedOn__Bag_1_
+  test::updatableInPlace::objectStillUsed__String_1_
+  test::updatableInPlace::readInALambda__Bag_1_
+  test::updatableInPlace::readTwice_Bag_1__Bag_1_
+  test::updatableInPlace::singleValued__Bag_1_
+  test::updatableInPlace::storeFresh__Bag_1_
+test::updatableInPlace::Bag.count:
+  test::updatableInPlace::collect__Bag_1_
+test::updatableInPlace::Bag.items:
+  test::updatableInPlace::collect__Bag_1_
+  test::updatableInPlace::earlierReadKept__Integer_MANY_
+  test::updatableInPlace::objectPassedOn__Bag_1_
+  test::updatableInPlace::objectStillUsed__String_1_
+  test::updatableInPlace::readInALambda__Bag_1_
+  test::updatableInPlace::readTwice_Bag_1__Bag_1_
+test::updatableInPlace::Bag.label:
+  test::updatableInPlace::objectStillUsed__String_1_
+  test::updatableInPlace::singleValued__Bag_1_

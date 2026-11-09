@@ -119,6 +119,7 @@ function test::factory::qualifiedName_TestType_1__String_1_(t:test::factory::Tes
       Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @59:19-59:20
 
 function test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_(c:test::factory::TestClass[1]):test::factory::TestType[*]  ~UserDefinedFunction<{test::factory::TestClass[1]->test::factory::TestType[*]}>
+  resultUpdatableInPlace
   ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @64:17-64:131
     typeParam T -> #test::factory::TestType#
     ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @64:17-64:131
@@ -153,6 +154,7 @@ function test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_(c:tes
           Variable v_automap :#test::factory::TestConstructor##[1]#  ~@VariableExpression@
 
 function test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_(c:test::factory::TestClass[1]):test::factory::TestType[*]  ~UserDefinedFunction<{test::factory::TestClass[1]->test::factory::TestType[*]}>
+  resultUpdatableInPlace
   ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @69:16-69:233
     typeParam T -> #test::factory::TestType#
     ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @69:16-69:233
@@ -172,6 +174,7 @@ function test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_(c:tes
                 DotApplication test::factory::TestClass.superType :#test::factory::TestType##[0..1]#  ~@DotApplication@  @69:35-69:44
                   Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @69:33-69:34
               Lambda :#LambdaFunction<#{->#Nil#[0]}#>#[1]  ~@AtomicValue@  @69:58-69:60
+                resultUpdatableInPlace
                 Collection :#Nil#[0]  ~@Collection@  @69:59-69:60
               Lambda :#LambdaFunction<#{->#test::factory::TestType##[1]#}#>#[1]  ~@AtomicValue@  @69:63-69:84
                 openVar c :#test::factory::TestClass##[1]#
@@ -215,6 +218,7 @@ function test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_(c:tes
           Variable v_automap :#test::factory::TestConstructor##[1]#  ~@VariableExpression@
 
 function test::factory::inferImportsLike_TestClass_1__String_MANY_(c:test::factory::TestClass[1]):@String@[*]  ~UserDefinedFunction<{test::factory::TestClass[1]->@String@[*]}>
+  resultUpdatableInPlace
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @74:3-74:51
     typeParam T -> #test::factory::TestType#
     mulParam m -> #[*]#
@@ -235,11 +239,11 @@ function test::factory::inferImportsLike_TestClass_1__String_MANY_(c:test::facto
       typeParam T -> #test::factory::TestType#
       ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @76:34-76:106
         typeParam T -> #test::factory::TestType#
-        Variable structuralTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @76:18-76:33
-        Variable annotationsTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @76:48-76:64
+        Variable structuralTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @76:18-76:33  updatableInPlace
+        Variable annotationsTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @76:48-76:64  updatableInPlace
       Lambda(t:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @76:87-76:105
         FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @76:89-76:105
-          Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @76:103-76:104
+          Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @76:103-76:104  updatableInPlaceIf t
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @77:3-77:59
     typeParam T -> #test::factory::TestType#
     mulParam m -> #[*]#
@@ -260,7 +264,7 @@ function test::factory::inferImportsLike_TestClass_1__String_MANY_(c:test::facto
     AtomicValue  'toImport' :@String@[1]  ~@AtomicValue@  @78:7-78:14
     ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @78:27-78:103
       typeParam T -> #test::factory::TestType#
-      Variable allTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @78:18-78:26
+      Variable allTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @78:18-78:26  updatableInPlace
       Lambda(t:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @78:36-78:102
         openVar inSamePackage :#test::factory::TestType##[*]#
         FunctionInvocation not_Boolean_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @78:38-78:102
@@ -271,7 +275,7 @@ function test::factory::inferImportsLike_TestClass_1__String_MANY_(c:test::facto
               openVar t :#test::factory::TestType##[1]#
               FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @78:64-78:101
                 FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @78:64-78:80
-                  Variable s :#test::factory::TestType##[1]#  ~@VariableExpression@  @78:78-78:79
+                  Variable s :#test::factory::TestType##[1]#  ~@VariableExpression@  @78:78-78:79  updatableInPlaceIf s
                 FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @78:85-78:101
                   Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @78:99-78:100
   ArrowInvocation sort_T_m__T_m_ :#String##[*]#  ~@ArrowInvocation@  @79:12-79:45
@@ -281,10 +285,10 @@ function test::factory::inferImportsLike_TestClass_1__String_MANY_(c:test::facto
       typeParam T -> #test::factory::TestType#
       typeParam V -> #String#
       mulParam m -> #[*]#
-      Variable toImport :#test::factory::TestType##[*]#  ~@VariableExpression@  @79:3-79:11
+      Variable toImport :#test::factory::TestType##[*]#  ~@VariableExpression@  @79:3-79:11  updatableInPlace
       Lambda(t:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @79:18-79:36
         FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @79:20-79:36
-          Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @79:34-79:35
+          Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @79:34-79:35  updatableInPlaceIf t
 
 ###ReverseIndex
 platform::pure::functions::boolean::equal_Any_MANY__Any_MANY__Boolean_1_:

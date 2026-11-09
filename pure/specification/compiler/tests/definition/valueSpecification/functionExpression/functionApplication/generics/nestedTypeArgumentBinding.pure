@@ -36,9 +36,9 @@ function test::wrapAndPut_Map_1__K_1__V_1__Map_1_(map:Map<K~test::wrapAndPut_Map
   ArrowInvocation put_Map_1__U_1__V_1__Map_1_ :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#>##[1]#  ~@ArrowInvocation@  @19:7-19:22
     typeParam U -> K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_
     typeParam V -> #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#
-    Variable map :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>##[1]#  ~@VariableExpression@  @19:3-19:6
+    Variable map :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>##[1]#  ~@VariableExpression@  @19:3-19:6  updatableInPlaceIf map
     Variable key :#K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @19:13-19:16
-    Variable nl :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@VariableExpression@  @19:19-19:21
+    Variable nl :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@VariableExpression@  @19:19-19:21  updatableInPlace
 
 ###ReverseIndex
 platform::pure::functions::collection::List:

@@ -116,6 +116,21 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
      */
     public Object readSlot(int slotIdx)
     {
+        Object v = readOwnSlot(slotIdx);
+        // A field's own collection read by an ordinary read is held by another from now on (IN_PLACE_UPDATE_ANALYSIS.md).
+        if (v instanceof org.finos.legend.pure.truffle.execution.types.GrowableSequence own)
+        {
+            own.freeze();
+        }
+        return v;
+    }
+
+    /**
+     * A slot read by a read the compiler proved holds the only reference to a field's collection: the collection
+     * itself, which the reader may grow in place (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md, Fields).
+     */
+    public Object readOwnSlot(int slotIdx)
+    {
         // Pointer-access contract (see feature_pointerAccess.pure). Mirror
         // the readProperty check here because PropertyReadNode's bound-slot
         // fast path (compile-time-resolved slot index) calls readSlot
@@ -164,11 +179,34 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
         return v;
     }
 
-    /** Direct slot write by index. */
+    /** Direct slot write by index. A growable collection stored so may be held by another: read-only from now on. */
     public void writeSlot(int slotIdx, Object value)
+    {
+        if (value instanceof org.finos.legend.pure.truffle.execution.types.GrowableSequence shared)
+        {
+            shared.freeze();
+        }
+        ensureSlotCapacity(slotIdx);
+        slots[slotIdx] = value;
+    }
+
+    /** A slot write of a value the compiler proved updatableInPlace: a growable collection is kept as this object's own. */
+    public void writeOwnSlot(int slotIdx, Object value)
     {
         ensureSlotCapacity(slotIdx);
         slots[slotIdx] = value;
+    }
+
+    /** Every collection this object holds as its own, read-only from now on: a copy now holds them too. */
+    public void freezeSequences()
+    {
+        for (Object v : slots)
+        {
+            if (v instanceof org.finos.legend.pure.truffle.execution.types.GrowableSequence own)
+            {
+                own.freeze();
+            }
+        }
     }
 
     /**
@@ -237,7 +275,53 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
         {
             return readSlot(slot);
         }
-        return fb != null ? decodeFromFb(name) : PropertyAccessor.ABSENT;
+        if (fb == null)
+        {
+            return PropertyAccessor.ABSENT;
+        }
+        // Decoded once and kept: every read of a property is the same collection (is.pure).
+        Object kept = decodedWithoutSlot == null ? null : decodedWithoutSlot.get(name);
+        if (kept != null)
+        {
+            return kept;
+        }
+        Object decoded = decodeFromFb(name);
+        if (decoded != null && decoded != PropertyAccessor.ABSENT)
+        {
+            if (decodedWithoutSlot == null)
+            {
+                decodedWithoutSlot = new java.util.HashMap<>();
+            }
+            decodedWithoutSlot.put(name, decoded);
+        }
+        return decoded;
+    }
+
+    /** What this object decoded from its buffer for names it has no slot for, kept once read. */
+    private java.util.Map<String, Object> decodedWithoutSlot;
+    /** The default values computed for this object's unset properties, kept once read (a copy computes its own). */
+    private java.util.Map<String, Object> defaults;
+
+    /** Forget the defaults kept: this object is being changed by a copy expression, and a copy computes its own. */
+    public void forgetKeptDefaults()
+    {
+        defaults = null;
+    }
+
+    /** The default value computed for an unset property of this object, once read; null before. */
+    public Object keptDefault(String property)
+    {
+        return defaults == null ? null : defaults.get(property);
+    }
+
+    /** Keep the default value computed for an unset property of this object: every read is then the same (is.pure). */
+    public void keepDefault(String property, Object value)
+    {
+        if (defaults == null)
+        {
+            defaults = new java.util.HashMap<>();
+        }
+        defaults.put(property, value);
     }
 
     // Slots readable on a pointer without tripping the strict guard.
@@ -282,8 +366,7 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
         {
             value = PropertyCoercion.coerce(value, paramType);
         }
-        ensureSlotCapacity(slot);
-        slots[slot] = value;
+        writeSlot(slot, value);
     }
 
     private Object decodeFromFb(String name)

@@ -14,10 +14,9 @@
 
 package org.finos.legend.pure.platform.java.runtime;
 
+import org.eclipse.collections.impl.list.mutable.FastList;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.Metadata;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -70,7 +69,7 @@ public final class PureMatch
             if (accepts(values, lower, upper) && allOfType(values, arm[0]))
             {
                 Object arg = argument(values, upper);
-                Object result = Metadata.invoke(lambda, withExtra ? Arrays.asList(arg, extra) : Collections.singletonList(arg));
+                Object result = Metadata.invoke(lambda, withExtra ? FastList.newListWith(arg, extra) : FastList.newListWith(arg));
                 return shaped(result, many);
             }
         }
@@ -79,7 +78,7 @@ public final class PureMatch
 
     private static List asList(Object value)
     {
-        return value instanceof List ? (List) value : value == null ? Collections.emptyList() : Collections.singletonList(value);
+        return PureValues.list(value);
     }
 
     private static boolean accepts(List values, long lower, long upper)
@@ -89,7 +88,7 @@ public final class PureMatch
 
     private static boolean allInstances(List values, Object type)
     {
-        List<?> types = type instanceof List ? (List<?>) type : Collections.singletonList(type);
+        List<?> types = PureValues.list(type);
         for (Object v : values)
         {
             if (!isInstanceOfAny(v, types))

@@ -1,0 +1,9 @@
+###Error
+Updatability tag 'resultMayHoldElementsOf' on 'test::updatableInPlace::count_Integer_MANY__Integer_1_' names 'nope', which is not one of its parameters (at valueSpecification/updatableInPlace/updatableInPlace_E_unknownParameter:5c1-5c121)
+
+###Pure
+native function {inPlaceUpdate.resultMayHoldElementsOf='nope'} test::updatableInPlace::count(xs: Integer[*]): Integer[1];
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

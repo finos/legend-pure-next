@@ -18,15 +18,16 @@ import platform::pure::functions::lang::tests::model::*;
 import platform::pure::functions::lang::*;
 
 native function
-    <<PCT.function, PCT.platformOnly>>
+    <<PCT.function, PCT.platformOnly, inPlaceUpdate.NewInstanceResult>>
     {
         doc.doc='Build a copy of an instance, potentially modifying property values.',
         PCT.grammarDoc='^$object()',
-        PCT.grammarCharacters='^$'
+        PCT.grammarCharacters='^$',
+        inPlaceUpdate.resultMayHoldFieldsOf='object'
     }
     platform::pure::functions::lang::copy<T>(object:T[1], keyExpressions:KeyExpression[*]):T[1];
 
-native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::lang::copy<T>(object:T[1]):T[1];
+native function <<PCT.function, PCT.platformOnly, inPlaceUpdate.NewInstanceResult>> {inPlaceUpdate.resultMayHoldFieldsOf='object'} platform::pure::functions::lang::copy<T>(object:T[1]):T[1];
 
 
 function <<PCT.test>> platform::pure::functions::lang::tests::copy::testFlatCopyToOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]

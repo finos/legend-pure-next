@@ -53,6 +53,21 @@ Class platform::extensions::language::javascript::translation::Convention
    // param's runtime value (static-bind, runtime-value — mirrors Truffle's
    // frame type-var binding). Empty outside a generic function body.
    typeVarWitness : Map<String, TypeVarBinding>[0..1];
+   // The JS booleans in scope saying whether a Pure parameter was passed updatable in place, by its name (a function's decoded
+   // updatability mask, a fold step's accumulator flag): read by a use the compiler marked updatable in place if that parameter
+   // was passed updatable in place (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md).
+   updatableInPlaceFlags : Pair<String, String>[*];
+   // The next lambda translated is handed each element of a list that alone holds it (elementsUpdatableInPlace).
+   elementParameterUpdatableInPlace : Boolean[0..1];
+}
+
+// A translated function's updatability: its parameters plus the mask it takes, the statements decoding the mask's bits
+// into the flags its body reads, and the convention carrying those flags.
+Class platform::extensions::language::javascript::translation::UpdatableInPlaceSignature
+{
+   parameters : ParameterDeclaration[*];
+   prologue   : Statement[*];
+   conv       : Convention[1];
 }
 
 // Records that a function param witnesses a type parameter: the cast site reads
@@ -112,7 +127,7 @@ function platform::extensions::language::javascript::translation::arithmeticCode
       pair('platform::pure::functions::boolean::or_Boolean_1__Boolean_1__Boolean_1_', orCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('platform::pure::functions::boolean::not_Boolean_1__Boolean_1_', notCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('platform::pure::functions::boolean::lessThanEqual_Number_1__Number_1__Boolean_1_', lessThanEqualCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('platform::pure::functions::boolean::is_Any_1__Any_1__Boolean_1_', isCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('platform::pure::functions::boolean::is_Any_MANY__Any_MANY__Boolean_1_', isCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('platform::pure::functions::lang::if_Boolean_1__Function_1__Function_1__T_m_', ifCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('platform::pure::functions::lang::if_Pair_MANY__Function_1__T_m_', ifCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('platform::pure::functions::math::abs_Decimal_1__Decimal_1_', absCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -713,9 +728,10 @@ function platform::extensions::language::javascript::translation::translateExpre
       // can walk the AST at runtime, mirroring Java's reflective semantics.
       {lam: LambdaFunction<Any>[1] |
          let params = $lam.parameters->map(p | jsParam(safeJsName($p.name)));
+         let inner = ^$conv(elementParameterUpdatableInPlace = false, updatableInPlaceFlags = $conv->flagsHiddenBy($lam));
          let arrow = if ($lam.expressionSequence->size() == 1,
-                         | jsArrowExpr($params, translateExpression($lam.expressionSequence->toOne(), $conv)),
-                         | jsArrowBlock($params, $lam.expressionSequence->buildJsFunctionBody($conv)));
+                         | jsArrowExpr($params, translateExpression($lam.expressionSequence->toOne(), $inner)),
+                         | jsArrowBlock($params, $lam.expressionSequence->buildJsFunctionBody($inner)));
          wrapLambdaWithAst($arrow->withSourceInformation($lam.sourceInformation), $lam, $conv);
       },
       // Compiled Collection literal -> TS array literal.
@@ -801,9 +817,18 @@ function platform::extensions::language::javascript::translation::translateExpre
                          // Enum instances now), and class availability in that host (Enum, Pair and
                          // GenericTypeValue are all defined there).
                          let recv = translateExpression($fe.parametersValues->at(0), $conv);
-                         if ($fe.parametersValues->at(0)->isScalarClassReceiver(),
+                         let read = if ($fe.parametersValues->at(0)->isScalarClassReceiver(),
                             | jsCall(jsAccess($recv, '_' + $fe.functionName), []),
-                            | jsAccess(jsCall(jsId('__pdo'), [$recv]), $fe.functionName));))),
+                            | jsCall(jsId('__held'), [jsAccess(jsCall(jsId('__pdo'), [$recv]), $fe.functionName)]));
+                         // A read the compiler proved holds the only reference to a field's array: the object's
+                         // own array, which the reader may grow in place (IN_PLACE_UPDATE_ANALYSIS.md, Fields).
+                         let updatableInPlace = $conv->updatableInPlaceCode($fe);
+                         let updatableInPlaceRead = jsCall(jsId('__updatableInPlaceRead'), [$recv, jsStrLit($fe.functionName->toOne())]);
+                         if ($updatableInPlace->instanceOf(platform::extensions::language::javascript::metamodel::BooleanLiteral) && !$updatableInPlace->cast(@platform::extensions::language::javascript::metamodel::BooleanLiteral).value,
+                            | $read,
+                            | if ($updatableInPlace->instanceOf(platform::extensions::language::javascript::metamodel::BooleanLiteral),
+                                 | $updatableInPlaceRead,
+                                 | jsTernary($updatableInPlace, $updatableInPlaceRead, $read)));))),
              | // Coders implement natives only, keyed by the called native's full id — never the name the call
              //   is written with, so a function written in Pure is translated from its body.
              let shortHit = $fe.func->coderFor($conv);
@@ -815,9 +840,17 @@ function platform::extensions::language::javascript::translation::translateExpre
                  //   in `buildSourceFile` and emitted as a top-level
                  //   declaration alongside `execute`.
                  if ($fe->resolveUdf()->isNotEmpty(),
-                     | let udfName = jsUdfName($fe->resolveUdf()->toOne());
+                     | let udf = $fe->resolveUdf()->toOne();
+                       let udfName = jsUdfName($udf);
+                       // Its updatability mask (updatableInPlaceSignature) when the callee reads a flag and an argument for it may be
+                       // updatable in place; nothing otherwise, which is no argument updatable in place.
+                       let read = $udf.expressionSequence->platform::extensions::pure::translation::inPlaceUpdate::flagReaders($udf.parameters->map(p | $p.name));
+                       let mask = if ($read->isEmpty(), | [],
+                          | $conv->updatableInPlaceMask(range($udf.parameters->size())
+                               ->filter(i | $read->contains($udf.parameters->at($i).name) && ($i < $fe.parametersValues->size()))
+                               ->map(i | pair($i, $fe.parametersValues->at($i)->cast(@ValueSpecification)))));
                        jsCall(jsId($udfName),
-                              $fe.parametersValues->map(p | $p->translateExpression($conv)));,
+                              $fe.parametersValues->map(p | $p->translateExpression($conv))->concatenate($mask));,
                      | let id = $fe.func->filter(f | $f->instanceOf(platform::pure::metamodel::function::NativeFunction))->map(f | $f->cast(@platform::pure::metamodel::function::NativeFunction<Any>)->elementToPath());
                        let notHere = notOnThisPlatform()->filter(p | $p.first == $id);
                        fail(if ($notHere->isNotEmpty(),
@@ -950,8 +983,9 @@ function platform::extensions::language::javascript::translation::mapCoder(args:
    assert($args->size() == 2, | 'mapCoder expects exactly 2 arguments');
    // __map coerces the receiver to an array and flattens multi-valued fn
    // results (Pure map returns V[n*m]); native JS `.map` would nest arrays.
+   let lambdaConv = ^$conv(elementParameterUpdatableInPlace = $args->at(0)->elementsMarkedUpdatableInPlace() && $args->at(1)->instanceOf(platform::pure::metamodel::valuespecification::AtomicValue));
    jsCall(jsId('__map'),
-          [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv)]);
+          [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $lambdaConv)]);
 }
 
 // fold(collection, fn, seed) — Pure fold passes (item, acc); JS reduce passes
@@ -962,7 +996,156 @@ function platform::extensions::language::javascript::translation::mapCoder(args:
 function platform::extensions::language::javascript::translation::foldCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 3, | 'foldCoder expects exactly 3 arguments');
-   jsCall(jsId('__fold'), $args->map(a | $a->translateExpression($conv)));
+   let lambda = $args->at(1)->match([
+      av: AtomicValue[1] | $av.value->filter(v | $v->instanceOf(LambdaFunction))->map(l | $l->cast(@LambdaFunction<Any>))->head(),
+      l: LambdaFunction<Any>[1] | $l,
+      other: ValueSpecification[1] | []
+   ]);
+   if ($lambda->isNotEmpty() && ($lambda.parameters->size() == 2)
+         && $lambda.expressionSequence->platform::extensions::pure::translation::inPlaceUpdate::flagReaders($lambda.parameters->at(1).name)->isNotEmpty(),
+      | // A step that may take its accumulator over (it reads the accumulator's flag): __foldUpdatingInPlace tells each step
+        // whether it holds the only reference to it, from whether the start value was passed updatable in place and from the
+        // step's result summary (resultUpdatableInPlace, resultUpdatableInPlaceIfParameter).
+        let step = $lambda->toOne();
+        let accumulator = $step.parameters->at(1).name;
+        jsCall(jsId('__foldUpdatingInPlace'), [
+           translateExpression($args->at(0), $conv),
+           translateExpression($args->at(2), $conv),
+           $conv->updatableInPlaceCode($args->at(2)),
+           jsBoolLit($step.resultUpdatableInPlace == true),
+           jsBoolLit($step.resultUpdatableInPlaceIfParameter == $accumulator),
+           ^$conv(elementParameterUpdatableInPlace = $args->at(0)->elementsMarkedUpdatableInPlace())->foldStep($step)]);,
+      | jsCall(jsId('__fold'), $args->map(a | $a->translateExpression($conv))));
+}
+
+// The step of a fold updatable in place: `(elt, acc, acc_pureUpdatableInPlace) => body`, its third parameter the flag a use of the accumulator
+// updatable in place if it was passed updatable in place reads (updatableInPlaceFlags).
+function platform::extensions::language::javascript::translation::foldStep(conv: Convention[1], lambda: LambdaFunction<Any>[1]): Expression[1]
+{
+   let flag   = safeJsName($lambda.parameters->at(1).name) + '_pureUpdatableInPlace';
+   let inner  = ^$conv(elementParameterUpdatableInPlace = false, updatableInPlaceFlags = pair($lambda.parameters->at(1).name, $flag)->concatenate($conv->flagsHiddenBy($lambda)));
+   let params = $lambda.parameters->map(p | jsParam(safeJsName($p.name)))->concatenate(jsParam($flag));
+   if ($lambda.expressionSequence->size() == 1,
+      | jsArrowExpr($params, translateExpression($lambda.expressionSequence->toOne(), $inner)),
+      | jsArrowBlock($params, $lambda.expressionSequence->buildJsFunctionBody($inner)));
+}
+
+// The updatability flags in scope, without those of names a lambda's own parameters hide.
+function platform::extensions::language::javascript::translation::flagsHiddenBy(conv: Convention[1], lambda: LambdaFunction<Any>[1]): Pair<String, String>[*]
+{
+   if($conv.elementParameterUpdatableInPlace == true && $lambda.parameters->isNotEmpty(), | pair($lambda.parameters->at(0).name, 'true'), | []->cast(@Pair<String, String>))
+      ->concatenate($conv.updatableInPlaceFlags->filter(f | !$lambda.parameters->map(p | $p.name)->contains($f.first)))
+}
+
+// The JS for a native that may take its receiver's value over (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): the in-place
+// runtime helper when the compiler marked the receiver updatable in place, the IfUpdatableInPlace one given the flag when it is updatable in place
+// provided a parameter whose flag is in scope was passed updatable in place, else `copy`. The in-place helpers still copy an
+// array the runtime may not change (__growable).
+function platform::extensions::language::javascript::translation::updatableInPlaceCall(conv: Convention[1], args: ValueSpecification[*], inPlace: String[1], ifUpdatableInPlace: String[1], jsArgs: Expression[*], copy: Expression[1]): Expression[1]
+{
+   let flag = $conv->updatableInPlaceFlagOfValue($args->at(0));
+   if ($args->at(0)->markedUpdatableInPlace(),
+      | jsCall(jsId($inPlace), $jsArgs),
+      | if ($flag->isNotEmpty(), | jsCall(jsId($ifUpdatableInPlace), $jsArgs->concatenate(jsId($flag->toOne()))), | $copy));
+}
+
+// The JS boolean saying whether the parameter a use is conditionally updatable in place on was passed updatable in place, when in scope.
+function platform::extensions::language::javascript::translation::updatableInPlaceFlagOf(conv: Convention[1], ve: VariableExpression[0..1]): String[0..1]
+{
+   if ($ve->isEmpty() || $ve.updatableInPlaceIfParameter->isEmpty(),
+      | [],
+      | $conv.updatableInPlaceFlags->filter(f | $f.first == $ve.updatableInPlaceIfParameter->toOne())->map(f | $f.second)->head());
+}
+
+// The flag of the parameter a use or an expression is updatable in place on (updatableInPlaceIfParameter), when in scope: a variable's
+// use, or a function expression the compiler marked (a key value, a read of a field's own array).
+function platform::extensions::language::javascript::translation::updatableInPlaceFlagOfValue(conv: Convention[1], vs: ValueSpecification[1]): String[0..1]
+{
+   let parameter = $vs->match([
+      ve: VariableExpression[1] | $ve.updatableInPlaceIfParameter,
+      fe: FunctionExpression[1] | $fe.updatableInPlaceIfParameter,
+      other: ValueSpecification[1] | []->cast(@String)
+   ]);
+   if ($parameter->isEmpty(), | [], | $conv.updatableInPlaceFlags->filter(f | $f.first == $parameter->toOne())->map(f | $f.second)->head());
+}
+
+// Whether the compiler proved each element of this list argument referenced only by it (elementsUpdatableInPlace).
+function platform::extensions::language::javascript::translation::elementsMarkedUpdatableInPlace(vs: ValueSpecification[1]): Boolean[1]
+{
+   $vs->match([
+      ve: VariableExpression[1] | $ve.elementsUpdatableInPlace == true,
+      fe: FunctionExpression[1] | $fe.elementsUpdatableInPlace == true,
+      other: ValueSpecification[1] | false
+   ]);
+}
+
+// Whether the compiler marked a variable's use, or a function expression, updatable in place.
+function platform::extensions::language::javascript::translation::markedUpdatableInPlace(vs: ValueSpecification[1]): Boolean[1]
+{
+   $vs->match([
+      ve: VariableExpression[1] | $ve.updatableInPlace == true,
+      fe: FunctionExpression[1] | $fe.updatableInPlace == true,
+      other: ValueSpecification[1] | false
+   ]);
+}
+
+// A key value as stored by a construction or a copy: proved updatable in place, an array the object keeps as its own
+// (__updatableInPlace); else as is (a setter, or the copy, stores it as held by another too). A key appending (`+=`) builds a
+// new array anyway.
+function platform::extensions::language::javascript::translation::storedValue(value: Expression[1], keyExprs: ValueSpecification[*], name: String[1], conv: Convention[1]): Expression[1]
+{
+   let key = $keyExprs->filter(k | $k->instanceOf(FunctionExpression) && ($k->cast(@FunctionExpression).functionName == 'keyExpression')
+                                && ($k->cast(@FunctionExpression).parametersValues->size() == 2)
+                                && ($k->cast(@FunctionExpression).parametersValues->at(0)->instanceOf(AtomicValue))
+                                && ($k->cast(@FunctionExpression).parametersValues->at(0)->cast(@AtomicValue).value == $name))
+                      ->cast(@FunctionExpression)->head();
+   let updatableInPlace = if ($key->isEmpty(), | jsBoolLit(false), | $conv->updatableInPlaceCode($key->toOne().parametersValues->at(1)));
+   if ($updatableInPlace->instanceOf(platform::extensions::language::javascript::metamodel::BooleanLiteral),
+      | if ($updatableInPlace->cast(@platform::extensions::language::javascript::metamodel::BooleanLiteral).value, | jsCall(jsId('__updatableInPlace'), [$value]), | $value),
+      | jsCall(jsId('__updatableInPlaceIf'), [$value, $updatableInPlace]));
+}
+
+// Whether a value is updatable in place once computed, as JS: a use the compiler marked updatable in place, one updatable in place if a parameter
+// whose flag is in scope was passed updatable in place, or a literal of no value or several (a new array each evaluation);
+// a literal boolean otherwise false.
+function platform::extensions::language::javascript::translation::updatableInPlaceCode(conv: Convention[1], vs: ValueSpecification[1]): Expression[1]
+{
+   let flag = $conv->updatableInPlaceFlagOfValue($vs);
+   if ($vs->markedUpdatableInPlace() || ($vs->instanceOf(platform::pure::metamodel::valuespecification::Collection) && ($vs->cast(@platform::pure::metamodel::valuespecification::Collection).values->size() != 1)),
+      | jsBoolLit(true),
+      | if ($flag->isNotEmpty(), | jsId($flag->toOne()), | jsBoolLit(false)));
+}
+
+// The updatability mask a call passes to a translated function: bit i set when argument i is updatable in place. None when no
+// argument can be.
+function platform::extensions::language::javascript::translation::updatableInPlaceMask(conv: Convention[1], arguments: Pair<Integer, ValueSpecification>[*]): Expression[0..1]
+{
+   let bits = $arguments->map(a | pair($a.first, $conv->updatableInPlaceCode($a.second)))
+                ->filter(b | !($b.second->instanceOf(platform::extensions::language::javascript::metamodel::BooleanLiteral) && !$b.second->cast(@platform::extensions::language::javascript::metamodel::BooleanLiteral).value))
+                ->map(b | let bit = jsNumLit($b.first->platform::extensions::pure::translation::inPlaceUpdate::updatableInPlaceBit()->toString());
+                          if ($b.second->instanceOf(platform::extensions::language::javascript::metamodel::BooleanLiteral), | $bit, | jsTernary($b.second, $bit, jsNumLit('0'))););
+   if ($bits->isEmpty(), | [], | $bits->tail()->fold({b, acc | jsBinary($acc, '|', $b)}, $bits->at(0)));
+}
+
+// A function's updatability (UpdatableInPlaceSignature) — a user function's or a qualified property's: when its body reads the flag
+// of some parameter (flagReaders), a trailing `pureUpdatableInPlace = 0` mask parameter and the decoding of those bits. Defaulted,
+// so a call passing no mask passes nothing updatable in place, and the function's `.length` (what __qp dispatches on) stays its
+// parameters'.
+function platform::extensions::language::javascript::translation::updatableInPlaceSignature(udf: platform::pure::metamodel::function::FunctionDefinition<platform::pure::metamodel::type::Any>[1], conv: Convention[1]): UpdatableInPlaceSignature[1]
+{
+   let names = $udf.parameters->map(p | $p.name);
+   let read  = $udf.expressionSequence->platform::extensions::pure::translation::inPlaceUpdate::flagReaders($names);
+   let params = $udf.parameters->map(p | jsParam(safeJsName($p.name)));
+   if ($read->isEmpty(),
+      | ^UpdatableInPlaceSignature(parameters = $params, prologue = [], conv = $conv),
+      | let conditional = range($names->size())->filter(i | $read->contains($names->at($i)));
+        let flags = $conditional->map(i | pair($names->at($i), safeJsName($names->at($i)) + '_pureUpdatableInPlace'));
+        ^UpdatableInPlaceSignature(
+           parameters = $params->concatenate(^platform::extensions::language::javascript::metamodel::ParameterDeclaration(name = jsId('pureUpdatableInPlace'), initializer = jsNumLit('0'))),
+           prologue   = $conditional->map(i | jsConst(safeJsName($names->at($i)) + '_pureUpdatableInPlace',
+                           jsCall(jsId('__updatableInPlaceBit'), [jsId('pureUpdatableInPlace'), jsNumLit($i->platform::extensions::pure::translation::inPlaceUpdate::updatableInPlaceBit()->toString())]))),
+           conv       = ^$conv(updatableInPlaceFlags = $flags));
+   );
 }
 
 // take(collection, n) -> `collection.slice(0, n)`.
@@ -1139,7 +1322,7 @@ function platform::extensions::language::javascript::translation::newCoder(args:
                 // to resolve it at run time. A literal here answered no accessor, surfacing as
                 // `p._lastName is not a function` nowhere near the construction.
                 | jsCall(jsId('__newOfSlots'), [jsObject($allEntries)]),
-                | $allEntries->fold({e, acc | jsCall(jsAccess($acc, '_' + $e.name), [$e.initializer])},
+                | $allEntries->fold({e, acc | jsCall(jsAccess($acc, '_' + $e.name), [$e.initializer->storedValue($keyExprs, $e.name, $conv)])},
                                     ^platform::extensions::language::javascript::metamodel::NewExpression(
                                        expression = $classRef->toOne(), arguments = [])
                                     ->cast(@Expression))));
@@ -1627,7 +1810,9 @@ function platform::extensions::language::javascript::translation::initCoder(args
 function platform::extensions::language::javascript::translation::reverseCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 1, | 'reverseCoder expects exactly 1 argument');
-   jsCall(jsAccess(jsCall(jsAccess(translateExpression($args->at(0), $conv), 'slice'), []), 'reverse'), []);
+   let coll = translateExpression($args->at(0), $conv);
+   $conv->updatableInPlaceCall($args, '__reverseInPlace', '__reverseIfUpdatableInPlace', [$coll],
+      jsCall(jsAccess(jsCall(jsAccess($coll, 'slice'), []), 'reverse'), []));
 }
 
 function platform::extensions::language::javascript::translation::isNotEmptyCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1658,7 +1843,8 @@ function platform::extensions::language::javascript::translation::concatenateCod
    // Direct `a.concat(b)` would throw `TypeError: Cannot read property 'concat'
    // of undefined` for the empty-slot case (Pure-side `^X(...)` without
    // setting an `[*]` slot leaves it empty, not `[]`).
-   jsCall(jsId('__concat'), $args->map(a | $a->translateExpression($conv)));
+   let jsArgs = $args->map(a | $a->translateExpression($conv));
+   $conv->updatableInPlaceCall($args, '__concatInPlace', '__concatIfUpdatableInPlace', $jsArgs, jsCall(jsId('__concat'), $jsArgs));
 }
 
 function platform::extensions::language::javascript::translation::addCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1668,16 +1854,18 @@ function platform::extensions::language::javascript::translation::addCoder(args:
    if ($args->size() == 2,
       | let coll = translateExpression($args->at(0), $conv);
         let elt  = translateExpression($args->at(1), $conv);
-        jsArrayLit([jsSpread($coll), $elt]);,
+        $conv->updatableInPlaceCall($args, '__addInPlace', '__addIfUpdatableInPlace', [$coll, $elt], jsArrayLit([jsSpread($coll), $elt]));,
       | let coll = translateExpression($args->at(0), $conv);
+        let rawIdx = translateExpression($args->at(1), $conv);
         // idx is a Pure Integer (bigint); Array.slice throws on a bigint arg.
-        let idx  = jsCall(jsId('__num'), [translateExpression($args->at(1), $conv)]);
+        let idx  = jsCall(jsId('__num'), [$rawIdx]);
         let elt  = translateExpression($args->at(2), $conv);
-        jsArrayLit([
-           jsSpread(jsCall(jsAccess($coll, 'slice'), [jsNumLit('0'), $idx])),
-           $elt,
-           jsSpread(jsCall(jsAccess($coll, 'slice'), [$idx]))
-        ]);
+        $conv->updatableInPlaceCall($args, '__addAtInPlace', '__addAtIfUpdatableInPlace', [$coll, $rawIdx, $elt],
+           jsArrayLit([
+              jsSpread(jsCall(jsAccess($coll, 'slice'), [jsNumLit('0'), $idx])),
+              $elt,
+              jsSpread(jsCall(jsAccess($coll, 'slice'), [$idx]))
+           ]));
    );
 }
 
@@ -2424,9 +2612,17 @@ function platform::extensions::language::javascript::translation::copyCoder(args
    // proxy's `{__purePath, path}` own keys for a __pureResolve-backed base
    // and silently drops `classifierGenericType` — the runtime helper pulls
    // it in eagerly. Plain-object bases get a plain spread inside __copy.
+   // A source holding the only reference to its object (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md) is changed itself
+   // (__copyInPlace) — every key value is computed first, as the overrides object — unless a key refers to `~` or the
+   // class has associations to link: those copy.
+   let srcClass = $args->at(0).genericType->rawType()->filter(t | $t->instanceOf(platform::pure::metamodel::type::Class))->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>);
+   let reusable = !$keyExprs->containsParentRef() && !$srcClass->exists(c | $c->allAssociationProperties()->isNotEmpty());
+   // Each key value proved updatable in place is stored as the object's own (storedValue; __copy stores the others as held).
+   let storedEntries = $entries->map(e | ^$e(initializer = $e.initializer->storedValue($keyExprs, $e.name, $conv)));
+   let plainCopy = jsCall(jsId('__copy'), [$base, jsObject($storedEntries)]);
    let copyExpr = if ($keyExprs->containsParentRef(),
       | jsCall(jsId('__copyCtx'), [$base, jsArrowBlock([jsParam('self')], jsBlock($assigns))]),
-      | jsCall(jsId('__copy'), [$base, jsObject($entries)]));
+      | if ($reusable, | $conv->updatableInPlaceCall($args, '__copyInPlace', '__copyIfUpdatableInPlace', [$base, jsObject($storedEntries)], $plainCopy), | $plainCopy));
    // Bidirectional association binding for any key set that names an
    // association property. Same wrapper as newCoder uses — the class comes
    // from the source value's inferred GenericType (e.g. for `^$pierre(...)`
@@ -3374,9 +3570,10 @@ function platform::extensions::language::javascript::translation::translatePureV
    if ($isLambda,
       | let lam = $v->cast(@platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>);
         let lamParams = $lam.parameters->map(p | jsParam(safeJsName($p.name)));
+        let inner = ^$conv(elementParameterUpdatableInPlace = false, updatableInPlaceFlags = $conv->flagsHiddenBy($lam));
         let arrow = if ($lam.expressionSequence->size() == 1,
-                        | jsArrowExpr($lamParams, translateExpression($lam.expressionSequence->toOne(), $conv)),
-                        | jsArrowBlock($lamParams, $lam.expressionSequence->buildJsFunctionBody($conv)));
+                        | jsArrowExpr($lamParams, translateExpression($lam.expressionSequence->toOne(), $inner)),
+                        | jsArrowBlock($lamParams, $lam.expressionSequence->buildJsFunctionBody($inner)));
         wrapLambdaWithAst($arrow->withSourceInformation($lam.sourceInformation), $lam, $conv);,
    |if ($isFunctionRef,
       | $v->cast(@platform::pure::metamodel::function::Function<Any>)->functionRefToArrow($conv);,
@@ -3777,15 +3974,15 @@ function platform::extensions::language::javascript::translation::translateUdf(
    // translator's translateUdfElement already uses jsUdfName — this is the
    // closure-collection path used by the PCT adapter, kept consistent.)
    let jsName = jsUdfName($udf);
-   let jsParams = $udf.parameters->map(p | jsParam(safeJsName($p.name)));
    // Bind the function's `<T>` parameters to their witness params so a
    // `cast(@T)` in the body resolves T from that param's runtime value.
-   let body = $udf.expressionSequence->buildJsFunctionBody($conv->withTypeVarWitness($udf.parameters));
+   let updatableInPlace = $udf->updatableInPlaceSignature($conv->withTypeVarWitness($udf.parameters));
+   let body = $udf.expressionSequence->buildJsFunctionBody($updatableInPlace.conv);
    ^FunctionDeclaration(
       name              = $jsName,
       modifiers         = [],
-      parameters        = $jsParams,
-      body              = $body,
+      parameters        = $updatableInPlace.parameters,
+      body              = ^$body(statements = $updatableInPlace.prologue->concatenate($body.statements)),
       sourceInformation = $udf.sourceInformation,
       pureName          = $udf->pureFrameName()
    );
@@ -3898,6 +4095,8 @@ function platform::extensions::language::javascript::translation::qpWithArgsDisp
    let ownerPath = $qp.owner->map(o | $o->cast(@platform::pure::metamodel::PackageableElement)->elementToPath())->joinStrings('');
    let qpName    = $fe.functionName;
    let argExprs  = $fe.parametersValues->map(p | $p->translateExpression($conv));
+   // The arguments' updatability mask, bit i for argument i: the override that runs reads the bits of its own parameters.
+   let mask      = $conv->updatableInPlaceMask(range(1, $fe.parametersValues->size())->map(i | pair($i, $fe.parametersValues->at($i)->cast(@ValueSpecification))));
    // Dispatch on the RECEIVER's runtime class, not the static owner, so a
    // subclass override wins (`$x.poly()` with $x:SuperClass holding a
    // SubClass1 returns 'sub1'). __qp walks from the receiver's class up its
@@ -3905,7 +4104,9 @@ function platform::extensions::language::javascript::translation::qpWithArgsDisp
    // NAME AND ARITY — Pure allows `res()` and `res(z)` side by side; the eval
    // arrow's `.length` is `1 + extraArgs` (receiver + supplied args) — and
    // falls back to the static owner.
-   jsCall(jsId('__qp'), [jsStrLit($ownerPath), jsStrLit($qpName)]->concatenate($argExprs));
+   if ($mask->isEmpty(),
+      | jsCall(jsId('__qp'), [jsStrLit($ownerPath), jsStrLit($qpName)]->concatenate($argExprs)),
+      | jsCall(jsId('__qpUpdatingInPlace'), [jsStrLit($ownerPath), jsStrLit($qpName), $mask->toOne()]->concatenate($argExprs)));
 }
 
 // If `fe` is a QualifiedProperty-with-args call (`$p.fullName(true)`), return
@@ -4101,10 +4302,13 @@ function platform::extensions::language::javascript::translation::propertyAccess
    name: String[1]): platform::extensions::language::javascript::metamodel::MethodDeclaration[1]
 {
    let slot = jsAccess(jsThis(), $name);
+   // A read hands out the slot's array as held by the reader too (__held); a write stores an array the compiler did
+   // not prove updatable in place as held by another too (__stored): an object keeps an array as its own only when stored
+   // updatable in place and read since only by a read proved to hold the only reference to it (IN_PLACE_UPDATE_ANALYSIS.md, Fields).
    jsMethod('_' + $name, [jsParam('value')],
       jsBlock([
-         jsIfStmt(jsBinary(jsLength(jsId('arguments')), '===', jsNumLit('0')), jsReturn($slot), []),
-         jsExprStmt(jsBinary($slot, '=', jsId('value'))),
+         jsIfStmt(jsBinary(jsLength(jsId('arguments')), '===', jsNumLit('0')), jsReturn(jsCall(jsId('__held'), [$slot])), []),
+         jsExprStmt(jsBinary($slot, '=', jsCall(jsId('__stored'), [jsId('value')]))),
          jsReturn(jsThis())
       ]));
 }
@@ -4196,21 +4400,23 @@ function platform::extensions::language::javascript::translation::translateQpEnt
 {
    let qpName   = $q.name->toOne();
    let qpFn     = $q->cast(@platform::pure::metamodel::function::FunctionDefinition<platform::pure::metamodel::type::Any>);
-   let qpParams = $qpFn.parameters->map(p | jsParam(safeJsName($p.name)));
    let qpBody   = $qpFn.expressionSequence;
    let receiverName = safeJsName($qpFn.parameters->at(0).name);
    // its class's type parameters are the receiver's type arguments (testQualifiedPropertyBindsTheClassTypeParameters)
    let owner = $q.owner->filter(o | $o->instanceOf(platform::pure::metamodel::type::Class))->map(o | $o->cast(@platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>));
-   let bodyConv = if ($owner->isEmpty(), | $conv, | $conv->withClassTypeParamWitness($owner->toOne(), $receiverName));
+   // Its updatability mask (updatableInPlaceSignature), when its body reads a flag: __qpUpdatingInPlace passes one.
+   let updatableInPlace    = $qpFn->updatableInPlaceSignature(if ($owner->isEmpty(), | $conv, | $conv->withClassTypeParamWitness($owner->toOne(), $receiverName)));
+   let qpParams = $updatableInPlace.parameters;
+   let bodyConv = $updatableInPlace.conv;
    let tvBindings = range(0, $typeVars->size())->map(i |
       jsLet(safeJsName($typeVars->at($i).name->toOne()),
             jsCall(jsId('__readTypeVar'), [jsId($receiverName), jsNumLit($i->toString())]))
          ->cast(@platform::extensions::language::javascript::metamodel::Statement)
    );
-   let qpArrow  = if ($tvBindings->isEmpty() && $qpBody->size() == 1,
+   let qpArrow  = if ($tvBindings->isEmpty() && $updatableInPlace.prologue->isEmpty() && $qpBody->size() == 1,
                        | jsArrowExpr($qpParams, translateExpression($qpBody->toOne(), $bodyConv)),
                        | jsArrowBlock($qpParams,
-                            jsBlock($tvBindings->concatenate($qpBody->buildJsFunctionBody($bodyConv).statements))));
+                            jsBlock($tvBindings->concatenate($updatableInPlace.prologue)->concatenate($qpBody->buildJsFunctionBody($bodyConv).statements))));
    jsObject([jsEntry('name', jsStrLit($qpName)),
              jsEntry('eval', $qpArrow)]);
 }

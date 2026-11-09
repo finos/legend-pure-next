@@ -36,6 +36,15 @@ public final class MetaNodeFactories
     {
     }
 
+    /**
+     * A copy whose source may hold the only reference to its object (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md):
+     * {@code updatable in place} as {@link org.finos.legend.pure.truffle.execution.natives.collection.AddNode} reads it.
+     */
+    public static PureNode updatableInPlaceCopy(PureNode[] args, int updatableInPlace)
+    {
+        return new CopyWithKeysNode("copy_T_1__KeyExpression_MANY__T_1_", args[0], decomposeAssignments(args[1]), updatableInPlace);
+    }
+
     public static void registerAll(NativeRegistry registry)
     {
         // --- Lazy meta natives (construction stack + key expressions) ---
@@ -211,7 +220,7 @@ public final class MetaNodeFactories
             String name = extractConstantString(nodes[i].nameNode());
             PureNode valueExpr = nodes[i].valueNode();
             boolean isAdd = extractBoolean(nodes[i].addNode());
-            result[i] = new PropertyAssignNode(name, valueExpr, isAdd);
+            result[i] = new PropertyAssignNode(name, valueExpr, isAdd, nodes[i].updatableInPlace());
         }
         return result;
     }

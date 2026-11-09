@@ -665,10 +665,18 @@ function platform::pure::compiler::compile(files:platform::pure::protocol::PureF
     // {@code elementMap}'s values, which is the same source the PDB write
     // path uses, so the recorded edges are aligned with the serialised graph.
     let pass3CtxWithFuncRefs = extractFunctionRefsInto($pass3RawCtx, $pass3RawCtx.elementMap->values());
+    // In-place update analysis (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): marks the variable uses that hold the only
+    // reference to their value, and each function's result summary, on the resolved graph. Mirrors Java's
+    // InPlaceUpdateAnalyzer in SourceModule.compile.
+    let pass3CtxAnnotated = if($pass3CtxWithFuncRefs.errors->isEmpty(),
+        | annotateUpdatableInPlace($pass3CtxWithFuncRefs, $pass3CtxWithFuncRefs.elementMap->values()),
+        | $pass3CtxWithFuncRefs);
 
     // Lean-references validator (mirrors single-file compile path).
-    let leanRefViolations = validateLeanReferences($pass3CtxWithFuncRefs);
-    let pass3Ctx = ^$pass3CtxWithFuncRefs(errors = $pass3CtxWithFuncRefs.errors->concatenate($leanRefViolations));
+    let leanRefViolations = validateLeanReferences($pass3CtxAnnotated);
+    // Updatability annotations are claims the analysis trusts: check what can be checked.
+    let inPlaceUpdateViolations = validateInPlaceUpdateAnnotations($pass3CtxAnnotated, $pass3CtxAnnotated.elementMap->values());
+    let pass3Ctx = ^$pass3CtxAnnotated(errors = $pass3CtxAnnotated.errors->concatenate($leanRefViolations)->concatenate($inPlaceUpdateViolations));
     let pass3Millis = currentTimeMillis() - $pass3Start;
     if($silent, | true, | finishProgress3(); true;);
 

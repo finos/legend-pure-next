@@ -19,9 +19,9 @@ import platform::pure::functions::boolean::tests::equalitymodel::*;
 native function
     <<PCT.function, PCT.platformOnly>>
     {
-        doc.doc='Identity (i.e., pointer equality)'
-    }
-    platform::pure::functions::boolean::is(left:Any[1], right:Any[1]):Boolean[1];
+        doc.doc='Identity. Single values: the same instance (primitives and enumeration values: the same value). Collections: every empty collection is the same; a collection of one value is that value; collections of several values are the same only when they are the same collection — passing a value along keeps it (a variable, a branch, a function returning its parameter, a cast, toOneMany, a fold over nothing returning its accumulator, a property read returning what was stored or copied, or the default computed for an unset property on its first read and kept; [e] is e), memoize returns its cached value, and anything else producing a collection gives a new one, even when it has nothing to do: every evaluation of a literal, every function call.'
+    , inPlaceUpdate.onlyReads='left,right'}
+    platform::pure::functions::boolean::is(left:Any[*], right:Any[*]):Boolean[1];
 
 function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsPrimitive<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
@@ -108,4 +108,125 @@ function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsNonPr
     assertFalse($f->eval(|is($bot11, $bot21)));
 
     assertFalse($f->eval(|is($left11, $bot11)));
+}
+
+
+// -- collection identity (see the doc above): the rules every platform implements ----------------------------------
+
+function <<test.TestDependency>> platform::pure::functions::boolean::tests::is::passedOn(values:Integer[*]):Integer[*]
+{
+    $values
+}
+
+function <<test.TestDependency>> platform::pure::functions::boolean::tests::is::upTo(n:Integer[1]):Integer[*]
+{
+    range($n)
+}
+
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsEmptyCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|is([], [])));
+    assert($f->eval(|is([1, 2]->filter(x|$x > 5), [])));
+    assert($f->eval(|is([1, 2]->filter(x|$x > 5), ['a']->filter(x|$x == 'b'))));
+    assertFalse($f->eval(|is([], [1, 2])));
+}
+
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsACollectionOfOneIsItsValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let side = ^SideClass(stringId='side', intId=1);
+    assert($f->eval(|is([$side], $side)));
+    assert($f->eval(|is([1, 2]->filter(x|$x == 2), 2)));
+    assertFalse($f->eval(|is([$side], ^SideClass(stringId='side', intId=1))));
+}
+
+function <<test.TestDependency>> platform::pure::functions::boolean::tests::is::oneTwo():Integer[*]
+{
+    [1, 2]
+}
+
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsEveryLiteralIsANewCollection<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertFalse($f->eval(|is([1, 2], [1, 2])));
+    assertFalse($f->eval(|is(['a', 'b', 'c'], ['a', 'b', 'c'])));
+    assertFalse($f->eval(|is([TestEnum1.FIRST, TestEnum1.SECOND], [TestEnum1.FIRST, TestEnum1.SECOND])));
+    // the same literal, evaluated twice
+    assertFalse($f->eval(|is(platform::pure::functions::boolean::tests::is::oneTwo(), platform::pure::functions::boolean::tests::is::oneTwo())));
+    // one evaluation, held by a variable, is one collection
+    assert($f->eval(|let x = [1, 2]; is($x, $x);));
+    // [e] is e
+    assert($f->eval(|let x = [1, 2]->map(i|$i); is([$x], $x);));
+}
+
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsComputedCollectionsAreNew<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let side1 = ^SideClass(stringId='firstSide', intId=1);
+    let side2 = ^SideClass(stringId='secondSide', intId=2);
+    assertFalse($f->eval(|is([1, 2]->map(x|$x), [1, 2])));
+    assertFalse($f->eval(|is([1, 2]->map(x|$x), [1, 2]->map(x|$x))));
+    assertFalse($f->eval(|is([$side1, $side2], [$side1, $side2])));
+}
+
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsPassingAlongKeepsTheCollection<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|let a = [1, 2]->map(x|$x); let b = $a; is($b, $a);));
+    assert($f->eval(|let a = [1, 2]->map(x|$x); is(if($a->size() > 1, |$a, |[]), $a);));
+    assert($f->eval(|let a = [1, 2]->map(x|$x); is(platform::pure::functions::boolean::tests::is::passedOn($a), $a);));
+    assert($f->eval(|let a = [1, 2]->map(x|$x); is($a->cast(@Integer), $a);));
+    assert($f->eval(|let a = [1, 2]->map(x|$x); is($a->toOneMany(), $a);));
+}
+
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsAPropertyHoldsTheCollectionItWasGiven<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let side1 = ^SideClass(stringId='firstSide', intId=1);
+    let side2 = ^SideClass(stringId='secondSide', intId=2);
+    assert($f->eval(|let sides = [$side1, $side2]; let left = ^LeftClass(name='left', left=1, sides=$sides); is($left.sides, $sides);));
+    assert($f->eval(|let left = ^LeftClass(name='left', left=1, sides=[$side1, $side2]); is($left.sides, $left.sides);));
+    assert($f->eval(|let sides = [$side1, $side2]; let left = ^LeftClass(name='left', left=1, sides=$sides); let other = ^$left(left=2); is($other.sides, $sides);));
+}
+
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsMemoizeGivesItsCachedCollection<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|is(memoize(platform::pure::functions::boolean::tests::is::upTo_Integer_1__Integer_MANY_, 3), memoize(platform::pure::functions::boolean::tests::is::upTo_Integer_1__Integer_MANY_, 3))));
+    assertFalse($f->eval(|is(platform::pure::functions::boolean::tests::is::upTo(3), platform::pure::functions::boolean::tests::is::upTo(3))));
+}
+
+// Every function producing a collection gives a new one, even with nothing to do: none of these is its input.
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsCollectionFunctionsGiveANewCollection<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->filter(x|true), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->map(x|$x), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->take(3), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->drop(0), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->slice(0, 3), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->concatenate([]), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is([]->concatenate($xs), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->sort(), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->reverse()->reverse(), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->removeDuplicates(), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->removeAll([9]), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is($xs->add(4)->init(), $xs);));
+    assertFalse($f->eval(|let xs = [1, 2, 3]->map(x|$x); is([0]->concatenate($xs)->tail(), $xs);));
+    // a run of Integers, which Truffle holds unboxed and drop views without copying
+    assertFalse($f->eval(|let rest = range(300)->drop(1); is([]->concatenate($rest), $rest);));
+}
+
+Class <<test.TestDependency>> platform::pure::functions::boolean::tests::is::Shelf
+{
+    items: Integer[*] = [1, 2];
+}
+
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsADefaultIsComputedOnceAndKept<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|let shelf = ^platform::pure::functions::boolean::tests::is::Shelf(); is($shelf.items, $shelf.items);));
+    assertFalse($f->eval(|is(^platform::pure::functions::boolean::tests::is::Shelf().items, ^platform::pure::functions::boolean::tests::is::Shelf().items)));
+}
+
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsAMetadataPropertyReadIsTheSameCollection<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|is(SideClass.properties, SideClass.properties)));
+}
+
+function <<PCT.test>> platform::pure::functions::boolean::tests::is::testIsAFoldOverNothingGivesItsAccumulator<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|let start = [1, 2]->map(x|$x); is([1, 2]->filter(x|$x > 5)->fold({e, acc|$acc->add($e)}, $start), $start);));
 }

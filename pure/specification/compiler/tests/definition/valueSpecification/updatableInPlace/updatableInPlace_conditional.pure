@@ -1,0 +1,141 @@
+// A reducer that adds to its accumulator in one branch and hands it back in the other: both uses are updatable in place if
+// fold passed the accumulator updatable in place, and so is the reducer's result. fold may take the start value too.
+// A move out of a parameter keeps the condition: y's last use is updatable in place if p was passed updatable in place.
+// A parameter something else keeps (a new instance), one captured by a lambda run repeatedly, or one captured by a
+// lambda that escapes, is never updatable in place.
+###Pure
+import test::updatableInPlace::*;
+
+function test::updatableInPlace::keepLarge(values: Integer[*], start: Integer[*]): Integer[*]
+{
+  $values->fold({e, acc|if($e > 2, |$acc->add($e), |$acc)}, $start)
+}
+
+function test::updatableInPlace::moveParameter(p: Integer[*]): Integer[*]
+{
+  let y = $p;
+  $y->add(1);
+}
+
+function test::updatableInPlace::kept(p: Integer[*]): Integer[*]
+{
+  let l = ^List<Integer>(values = $p);
+  $p->add(2);
+}
+
+function test::updatableInPlace::captured(p: Integer[*]): Integer[*]
+{
+  [1, 2]->map(i|$p->add($i))
+}
+
+function test::updatableInPlace::escapes(p: Integer[*]): Function<{->Integer[*]}>[1]
+{
+  |$p->add(1)
+}
+
+###CompiledGraph
+function test::updatableInPlace::keepLarge_Integer_MANY__Integer_MANY__Integer_MANY_(values:@Integer@[*], start:@Integer@[*]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[*], @Integer@[*]->@Integer@[*]}>
+  ArrowInvocation fold_T_MANY__Function_1__V_MANY__V_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @11:10-11:67
+    typeParam T -> #Integer#
+    typeParam V -> #Integer#
+    Variable values :#Integer##[*]#  ~@VariableExpression@  @11:3-11:9  updatableInPlaceIf values
+    Lambda(e:#Integer##[1]#, acc:#Integer##[*]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[*]#->#Integer##[*]#}#>#[1]  ~@AtomicValue@  @11:17-11:58
+      resultUpdatableInPlaceIf acc
+      FunctionInvocation if_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @11:25-11:57
+        typeParam T -> #Integer#
+        mulParam m -> #[*]#
+        FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @11:28-11:33
+          Variable e :#Integer##[1]#  ~@VariableExpression@  @11:28-11:29
+          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @11:33-11:33
+        Lambda :#LambdaFunction<#{->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @11:36-11:49
+          openVar acc :#Integer##[*]#
+          openVar e :#Integer##[1]#
+          resultUpdatableInPlace
+          ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @11:41-11:49
+            typeParam T -> #Integer#
+            Variable acc :#Integer##[*]#  ~@VariableExpression@  @11:37-11:40  updatableInPlaceIf acc
+            Variable e :#Integer##[1]#  ~@VariableExpression@  @11:47-11:48
+        Lambda :#LambdaFunction<#{->#Integer##[*]#}#>#[1]  ~@AtomicValue@  @11:52-11:56
+          openVar acc :#Integer##[*]#
+          Variable acc :#Integer##[*]#  ~@VariableExpression@  @11:53-11:56
+    Variable start :#Integer##[*]#  ~@VariableExpression@  @11:61-11:66  updatableInPlaceIf start
+
+function test::updatableInPlace::moveParameter_Integer_MANY__Integer_MANY_(p:@Integer@[*]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @16:3-16:12
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'y' :@String@[1]  ~@AtomicValue@  @16:7-16:7
+    Variable p :#Integer##[*]#  ~@VariableExpression@  @16:11-16:12  updatableInPlaceIf p
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @17:5-17:12
+    typeParam T -> #Integer#
+    Variable y :#Integer##[*]#  ~@VariableExpression@  @17:3-17:4  updatableInPlaceIf p
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @17:11-17:11
+
+function test::updatableInPlace::kept_Integer_MANY__Integer_MANY_(p:@Integer@[*]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#List<@Integer@>##[1]#  ~@FunctionInvocation@  @22:3-22:37
+    typeParam T -> #List<@Integer@>#
+    mulParam m -> #[1]#
+    AtomicValue  'l' :@String@[1]  ~@AtomicValue@  @22:7-22:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#List<@Integer@>##[1]#  ~@FunctionInvocation@  @22:11-22:37
+      typeParam T -> List<@Integer@>
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<List<@Integer@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<List<@Integer@>|1>  @22:11-22:37
+      Collection :#KeyExpression#[1]  ~@Collection@  @22:11-22:37
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:26-22:36
+          AtomicValue  'values' :@String@[1]  ~@AtomicValue@  @22:26-22:36
+          Variable p :#Integer##[*]#  ~@VariableExpression@  @22:35-22:36
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @23:5-23:12
+    typeParam T -> #Integer#
+    Variable p :#Integer##[*]#  ~@VariableExpression@  @23:3-23:4
+    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @23:11-23:11
+
+function test::updatableInPlace::captured_Integer_MANY__Integer_MANY_(p:@Integer@[*]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[*]}>
+  resultUpdatableInPlace
+  ArrowInvocation map_T_MANY__Function_1__V_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @28:9-28:28
+    typeParam T -> #Integer#
+    typeParam V -> #Integer#
+    Collection :#Integer#[2]  ~@Collection@  @28:3-28:8
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @28:4-28:4
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @28:7-28:7
+    Lambda(i:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @28:15-28:27
+      openVar p :#Integer##[*]#
+      resultUpdatableInPlace
+      ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @28:19-28:27
+        typeParam T -> #Integer#
+        Variable p :#Integer##[*]#  ~@VariableExpression@  @28:17-28:18
+        Variable i :#Integer##[1]#  ~@VariableExpression@  @28:25-28:26
+
+function test::updatableInPlace::escapes_Integer_MANY__Function_1_(p:@Integer@[*]):Function<{->@Integer@[*]}>[1]  ~UserDefinedFunction<{@Integer@[*]->Function<{->@Integer@[*]}>[1]}>
+  Lambda :#LambdaFunction<#{->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @33:3-33:13
+    openVar p :#Integer##[*]#
+    resultUpdatableInPlace
+    ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @33:6-33:13
+      typeParam T -> #Integer#
+      Variable p :#Integer##[*]#  ~@VariableExpression@  @33:4-33:5
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @33:12-33:12
+
+###ReverseIndex
+platform::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+  test::updatableInPlace::keepLarge_Integer_MANY__Integer_MANY__Integer_MANY_
+platform::pure::functions::collection::List:
+  test::updatableInPlace::kept_Integer_MANY__Integer_MANY_
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::captured_Integer_MANY__Integer_MANY_
+  test::updatableInPlace::escapes_Integer_MANY__Function_1_
+  test::updatableInPlace::keepLarge_Integer_MANY__Integer_MANY__Integer_MANY_
+  test::updatableInPlace::kept_Integer_MANY__Integer_MANY_
+  test::updatableInPlace::moveParameter_Integer_MANY__Integer_MANY_
+platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_:
+  test::updatableInPlace::keepLarge_Integer_MANY__Integer_MANY__Integer_MANY_
+platform::pure::functions::collection::map_T_MANY__Function_1__V_MANY_:
+  test::updatableInPlace::captured_Integer_MANY__Integer_MANY_
+platform::pure::functions::lang::if_Boolean_1__Function_1__Function_1__T_m_:
+  test::updatableInPlace::keepLarge_Integer_MANY__Integer_MANY__Integer_MANY_
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::updatableInPlace::kept_Integer_MANY__Integer_MANY_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::kept_Integer_MANY__Integer_MANY_
+  test::updatableInPlace::moveParameter_Integer_MANY__Integer_MANY_
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::updatableInPlace::kept_Integer_MANY__Integer_MANY_

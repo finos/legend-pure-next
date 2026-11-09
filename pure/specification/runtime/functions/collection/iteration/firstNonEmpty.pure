@@ -31,7 +31,7 @@ import platform::pure::test::pct::*;
 //       | $remoteIndex->lookup($key),
 //       | $defaults->get($key)
 //   ])
-native function <<PCT.function>> platform::pure::functions::collection::firstNonEmpty<T>(thunks:Function<{->T[*]}>[*]):T[*];
+native function <<PCT.function>> {inPlaceUpdate.callsLambdaRepeatedly='thunks'} platform::pure::functions::collection::firstNonEmpty<T>(thunks:Function<{->T[*]}>[*]):T[*];
 
 function <<PCT.test>> platform::pure::functions::collection::tests::firstNonEmpty::testFirstThunkWins<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

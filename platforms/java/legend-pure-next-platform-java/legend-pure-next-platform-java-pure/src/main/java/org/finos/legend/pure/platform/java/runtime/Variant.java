@@ -14,12 +14,12 @@
 
 package org.finos.legend.pure.platform.java.runtime;
 
+import org.eclipse.collections.impl.list.mutable.FastList;
 import org.finos.legend.pure.m3.platform.pure.functions.collection.ListImpl;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject;
 
 import java.math.BigDecimal;
 import java.time.temporal.Temporal;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -296,7 +296,7 @@ public final class Variant
     private static Variant parseArray(String t, int[] p)
     {
         expect(t, p, '[');
-        List<Object> values = new ArrayList<>();
+        List<Object> values = FastList.newList();
         skip(t, p);
         if (peek(t, p) == ']')
         {
@@ -515,7 +515,7 @@ public final class Variant
 
     private static List<Object> elementsOf(Object values)
     {
-        List<Object> elements = new ArrayList<>();
+        List<Object> elements = FastList.newList();
         if (values instanceof List)
         {
             for (Object e : (List<?>) values)
@@ -557,7 +557,7 @@ public final class Variant
 
     public static List toMany(Variant v, Function convert)
     {
-        List<Object> out = new ArrayList<>();
+        List<Object> out = FastList.newList();
         if (v == null)
         {
             return out;
@@ -572,7 +572,7 @@ public final class Variant
     /** Each element converted, the ones converting to nothing (a null) left out. */
     private static List<Object> converted(List<?> elements, Function convert)
     {
-        List<Object> out = new ArrayList<>();
+        List<Object> out = FastList.newList();
         for (Object e : elements)
         {
             Object r = convert.apply(e);

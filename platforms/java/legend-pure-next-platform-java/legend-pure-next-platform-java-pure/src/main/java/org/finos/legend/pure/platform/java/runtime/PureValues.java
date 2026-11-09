@@ -18,9 +18,10 @@ import org.finos.legend.pure.m3.platform.pure.functions.collection.ListImpl;
 import org.finos.legend.pure.m3.platform.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.PureLambda;
 
+import org.eclipse.collections.impl.list.mutable.FastList;
+
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +42,7 @@ public final class PureValues
     {
         if (v == null)
         {
-            return Collections.emptyList();
+            return FastList.newList(0);
         }
         return v instanceof List && ((List<?>) v).size() == 1 ? ((List<?>) v).get(0) : v;
     }
@@ -104,13 +105,18 @@ public final class PureValues
         return captures;
     }
 
+    /**
+     * A value as a List: a List is itself (not copied — it may be shared, so a caller must not mutate it unless
+     * {@link PureCollections#isGrowable} and the compiler said it is updatable in place), one value a fresh list of it, and
+     * absence a fresh empty list.
+     */
     public static List list(Object v)
     {
         if (v == null)
         {
-            return Collections.emptyList();
+            return FastList.newList(0);
         }
-        return v instanceof List ? (List) v : Collections.singletonList(v);
+        return v instanceof List ? (List) v : FastList.newListWith(v);
     }
 
     public static Object one(Object v)
@@ -182,11 +188,42 @@ public final class PureValues
     /** Identity — with a function reference standing for the element it names. */
     public static boolean same(Object a, Object b)
     {
-        Object x = norm(a);
-        Object y = norm(b);
+        Object x = identityOf(a);
+        Object y = identityOf(b);
+        if (x == NO_VALUES || y == NO_VALUES)
+        {
+            return x == y;
+        }
         Object ea = PureLambda.elementOf(x);
         Object eb = PureLambda.elementOf(y);
-        return (ea == null ? x : ea) == (eb == null ? y : eb);
+        Object u = ea == null ? x : ea;
+        Object v = eb == null ? y : eb;
+        // A primitive is its value: two boxes of one number are the same number.
+        return u == v || (u instanceof Number || u instanceof String || u instanceof Boolean) && u.getClass() == v.getClass() && u.equals(v);
+    }
+
+    private static final Object NO_VALUES = new Object();
+
+    /**
+     * What {@code is} compares a value by: nothing for an empty collection (every empty collection is the same), the
+     * element of a collection of one, the collection itself otherwise — seen through the read-only view a stored list
+     * is handed out as, so a property read is the collection that was stored.
+     */
+    private static Object identityOf(Object v)
+    {
+        if (v == null)
+        {
+            return NO_VALUES;
+        }
+        if (v instanceof List<?> list)
+        {
+            if (list.isEmpty())
+            {
+                return NO_VALUES;
+            }
+            return list.size() == 1 ? identityOf(list.get(0)) : PureCollections.storedList(list);
+        }
+        return v;
     }
 
     /**

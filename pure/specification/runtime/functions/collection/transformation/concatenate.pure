@@ -17,9 +17,10 @@ import platform::pure::test::pct::*;
 import platform::pure::functions::collection::tests::model::*;
 
 native function
-    <<PCT.function>>
+    <<PCT.function, inPlaceUpdate.NewCollectionResult>>
     {
-        doc.doc=''
+        doc.doc='',
+        inPlaceUpdate.resultMayHoldElementsOf='set1,set2'
     }
     platform::pure::functions::collection::concatenate<T>(set1:T[*], set2:T[*]):T[*];
 

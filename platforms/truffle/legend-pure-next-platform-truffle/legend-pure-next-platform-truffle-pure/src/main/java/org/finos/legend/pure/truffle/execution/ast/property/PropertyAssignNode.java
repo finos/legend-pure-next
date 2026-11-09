@@ -49,6 +49,26 @@ public final class PropertyAssignNode extends Node
     @Child
     private PropertyReadNode reader;
 
+    /**
+     * Whether the key value is updatable in place (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md, Fields), as AddNode reads it: COPY,
+     * IN_PLACE, or the slot of a parameter's flag. UpdatableInPlace, a growable collection is stored as the object's own.
+     */
+    @CompilationFinal
+    private int updatableInPlace = org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY;
+
+    public PropertyAssignNode(String propertyName, PureNode valueExpr, boolean isAdd, int updatableInPlace)
+    {
+        this(propertyName, valueExpr, isAdd);
+        this.updatableInPlace = isAdd ? org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY : updatableInPlace;
+    }
+
+    /** Whether the value this key computes is updatable in place, as stored. */
+    public boolean valueUpdatableInPlace(VirtualFrame frame)
+    {
+        return updatableInPlace != org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY
+                && (updatableInPlace == org.finos.legend.pure.truffle.execution.natives.collection.AddNode.IN_PLACE || frame.getValue(updatableInPlace) == Boolean.TRUE);
+    }
+
     public PropertyAssignNode(String propertyName, PureNode valueExpr, boolean isAdd)
     {
         this.propertyName = propertyName;
@@ -72,7 +92,7 @@ public final class PropertyAssignNode extends Node
 
     public Object execute(VirtualFrame frame, Object target)
     {
-        return executeWithValue(valueExpr.executeGeneric(frame), target);
+        return executeWithValue(valueExpr.executeGeneric(frame), target, valueUpdatableInPlace(frame));
     }
 
     /** Evaluate just the right-hand-side value; no read/merge/write. */
@@ -101,6 +121,11 @@ public final class PropertyAssignNode extends Node
     private boolean cachedHasDefault;
 
     public Object executeWithValue(Object value, Object target)
+    {
+        return executeWithValue(value, target, false);
+    }
+
+    public Object executeWithValue(Object value, Object target, boolean updatableInPlaceValue)
     {
         if (isAdd)
         {
@@ -134,7 +159,14 @@ public final class PropertyAssignNode extends Node
             }
             // writeSlot (not a raw slots[] store): grows the array when the
             // PDO was constructed mid-bootstrap with a stale slot count.
-            pdo.writeSlot(boundSlot, coerced);
+            if (updatableInPlaceValue)
+            {
+                pdo.writeOwnSlot(boundSlot, coerced);
+            }
+            else
+            {
+                pdo.writeSlot(boundSlot, coerced);
+            }
             return value;
         }
         writer.execute(target, propertyName, value);

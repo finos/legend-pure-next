@@ -54,11 +54,25 @@ public final class DirectPropertyAccessNode extends PureNode
      *  receiver. {@code final} so PE folds the array offset to a literal. */
     private final int slot;
 
+    /**
+     * Whether this read holds the only reference to the field's collection (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md,
+     * Fields), as AddNode reads it: COPY, IN_PLACE, or the slot of a parameter's flag. Then it reads the object's own
+     * collection without making it read-only.
+     */
+    @CompilationFinal
+    private final int updatableInPlace;
+
     public DirectPropertyAccessNode(PureNode targetNode, String propertyName)
+    {
+        this(targetNode, propertyName, org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY);
+    }
+
+    public DirectPropertyAccessNode(PureNode targetNode, String propertyName, int updatableInPlace)
     {
         this.targetNode = targetNode;
         this.propertyName = propertyName;
         this.slot = PureClassRegistry.globalSlot(propertyName);
+        this.updatableInPlace = updatableInPlace;
     }
 
     @Override
@@ -67,6 +81,16 @@ public final class DirectPropertyAccessNode extends PureNode
         Object target = targetNode.executeGeneric(frame);
         if (target instanceof PureDynamicObject pdo)
         {
+            // The mode first: an ordinary read folds this away entirely.
+            if (updatableInPlace != org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY
+                    && (updatableInPlace == org.finos.legend.pure.truffle.execution.natives.collection.AddNode.IN_PLACE || frame.getValue(updatableInPlace) == Boolean.TRUE))
+            {
+                Object own = pdo.readOwnSlot(slot);
+                if (own != null)
+                {
+                    return own;
+                }
+            }
             Object v = pdo.readSlot(slot);
             return v == null ? defaultOrEmpty(pdo) : v;
         }

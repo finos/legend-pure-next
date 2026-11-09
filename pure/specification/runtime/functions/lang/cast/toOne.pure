@@ -20,11 +20,12 @@ native function
     <<PCT.function>>
     {
         doc.doc='Cast the result of a function to [1]',
-        PCT.grammarDoc='toOne is leveraged in milestoning generated derived properties'
+        PCT.grammarDoc='toOne is leveraged in milestoning generated derived properties',
+        inPlaceUpdate.resultMayHoldElementsOf='values'
     }
     platform::pure::functions::lang::toOne<T>(values:T[*]):T[1];
 
-native function <<PCT.function>> platform::pure::functions::lang::toOne<T>(values:T[*], message: String[1]): T[1];
+native function <<PCT.function>> {inPlaceUpdate.resultMayHoldElementsOf='values'} platform::pure::functions::lang::toOne<T>(values:T[*], message: String[1]): T[1];
 
 
 function <<PCT.test>> platform::pure::functions::lang::tests::toOne::testToOneMultiplicity<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]

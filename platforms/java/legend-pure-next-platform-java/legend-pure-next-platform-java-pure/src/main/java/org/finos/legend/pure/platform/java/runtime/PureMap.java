@@ -14,10 +14,10 @@
 
 package org.finos.legend.pure.platform.java.runtime;
 
+import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.list.mutable.FastList;
 import org.finos.legend.pure.m3.platform.pure.functions.collection.PairImpl;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -64,18 +64,18 @@ public final class PureMap
 
     public static List keys(Map m)
     {
-        return new ArrayList(m.keySet());
+        return FastList.newList(m.keySet());
     }
 
     public static List values(Map m)
     {
-        return new ArrayList(m.values());
+        return FastList.newList(m.values());
     }
 
     /** Pure pairs, not Java entries: {@code $map->keyValues()} is a Pair[*]. */
     public static List keyValues(Map m)
     {
-        List<Object> pairs = new ArrayList<>();
+        MutableList<Object> pairs = FastList.newList(m.size());
         for (Map.Entry<?, ?> e : ((Map<?, ?>) m).entrySet())
         {
             pairs.add(new PairImpl()._first(e.getKey())._second(e.getValue()));
@@ -104,7 +104,7 @@ public final class PureMap
         {
             return map;
         }
-        List list = entries instanceof List ? (List) entries : Collections.singletonList(entries);
+        List list = entries instanceof List ? (List) entries : FastList.newListWith(entries);
         PersistentOrderedMap result = map;
         for (Object e : list)
         {

@@ -17,10 +17,12 @@ import platform::pure::test::pct::*;
 import platform::pure::functions::collection::tests::model::*;
 
 native function
-    <<PCT.function>>
+    <<PCT.function, inPlaceUpdate.NewCollectionResult>>
     {
         doc.doc='Applies the given function to each elements and filters out the ones where the applied function returns false.',
-        PCT.grammarDoc='filter is leveraged in milestoning generated derived properties'
+        PCT.grammarDoc='filter is leveraged in milestoning generated derived properties',
+        inPlaceUpdate.callsLambdaRepeatedly='func',
+        inPlaceUpdate.resultMayHoldElementsOf='value', inPlaceUpdate.callsLambdaWithElementsOf='value'
     }
     platform::pure::functions::collection::filter<T>(value:T[*], func:Function<{T[1]->Boolean[1]}>[1]):T[*];
 

@@ -16,6 +16,7 @@ function go(): Any[*]
 
 ###CompiledGraph
 function f_T_MANY__T_MANY_(a:T~f_T_MANY__T_MANY_[*]):T~f_T_MANY__T_MANY_[*]  ~UserDefinedFunction<{T~f_T_MANY__T_MANY_[*]->T~f_T_MANY__T_MANY_[*]}>
+  resultUpdatableInPlaceIf a
   Variable a :#T~f_T_MANY__T_MANY_##[*]#  ~@VariableExpression@  @4:3-4:4
 
 function t_Function_1__Any_MANY_(f:Function<@Any@>[1]):@Any@[*]  ~UserDefinedFunction<{Function<@Any@>[1]->@Any@[*]}>

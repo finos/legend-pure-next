@@ -57,7 +57,7 @@ function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
             AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @24:53-24:53
           Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @24:57-24:68
             ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @24:61-24:68
-              Variable y :#Integer##[*]#  ~@VariableExpression@  @24:59-24:60
+              Variable y :#Integer##[*]#  ~@VariableExpression@  @24:59-24:60  updatableInPlaceIf y
           AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @24:44-24:47
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
         FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(ok:#String##[1]#)#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @24:71-24:101
@@ -69,7 +69,7 @@ function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
             AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @24:81-24:83
           Lambda(y:#String##[*]#) :#LambdaFunction<#{#String##[*]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @24:87-24:101
             ArrowInvocation _concat_String_MANY__String_1_ :#String##[1]#  ~@ArrowInvocation@  @24:91-24:101
-              Variable y :#String##[*]#  ~@VariableExpression@  @24:89-24:90
+              Variable y :#String##[*]#  ~@VariableExpression@  @24:89-24:90  updatableInPlaceIf y
           AtomicValue  'other' :@String@[1]  ~@AtomicValue@  @24:71-24:75
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(other:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#, other:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder

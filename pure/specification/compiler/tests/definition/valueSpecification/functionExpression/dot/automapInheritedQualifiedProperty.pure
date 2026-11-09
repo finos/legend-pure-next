@@ -40,6 +40,7 @@ class test::Dog extends test::Animal  ~Class<test::Dog>  @23:1-26:1
   property breed :@String@[1]  ~Property<test::Dog, @String@|1>
 
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  resultUpdatableInPlace
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Dog##[2]#  ~@FunctionInvocation@  @30:3-30:55
     typeParam T -> #test::Dog#
     mulParam m -> [2]
@@ -63,10 +64,10 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
     typeParam T -> #test::Dog#
     typeParam V -> #String#
     mulParam m -> #[2]#
-    Variable dogs :#test::Dog##[2]#  ~@VariableExpression@  @31:3-31:7
+    Variable dogs :#test::Dog##[2]#  ~@VariableExpression@  @31:3-31:7  updatableInPlace  elementsUpdatableInPlace
     Lambda(v_automap:#test::Dog#[1]) :#LambdaFunction<#{#test::Dog#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
       DotApplication test::Animal.sound() :#String##[1]#  ~@DotApplication@  @31:8-31:15
-        Variable v_automap :#test::Dog##[1]#  ~@VariableExpression@
+        Variable v_automap :#test::Dog##[1]#  ~@VariableExpression@  updatableInPlaceIf v_automap
 
 ###ReverseIndex
 platform::pure::functions::collection::map_T_m__Function_1__V_m_:

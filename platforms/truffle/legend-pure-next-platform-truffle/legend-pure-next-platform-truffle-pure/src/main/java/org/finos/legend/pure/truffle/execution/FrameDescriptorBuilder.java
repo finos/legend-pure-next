@@ -94,6 +94,7 @@ public final class FrameDescriptorBuilder
         }
 
         Object bodyExprs = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fd, SLOT_EXPRESSION_SEQUENCE);
+        collectUpdatableInPlaceFlags(bodyExprs, parameterNames(params), builder, slots);
         collectLetTargets(bodyExprs, builder, slots);
         collectVariableReads(bodyExprs, builder, slots);
 
@@ -165,6 +166,7 @@ public final class FrameDescriptorBuilder
             }
         }
 
+        collectUpdatableInPlaceFlags(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(lambda, SLOT_EXPRESSION_SEQUENCE), parameterNames(params), builder, slots);
         collectLetTargets(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(lambda, SLOT_EXPRESSION_SEQUENCE), builder, slots);
         // Safety net: scan for variable reads to catch let targets missed
         collectVariableReads(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(lambda, SLOT_EXPRESSION_SEQUENCE), builder, slots);
@@ -180,6 +182,142 @@ public final class FrameDescriptorBuilder
     // org.finos.legend.pure.truffle.execution.PureASTBuilder#lowerNativeCall}
     // on the AST level where the lambda literal is visible.
 
+
+    private static final int SLOT_UPDATABLE_IN_PLACE_IF_PARAMETER = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("updatableInPlaceIfParameter");
+
+    /**
+     * The name of the frame slot holding whether parameter {@code name} was passed updatable in place
+     * (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): no Pure variable can be called that.
+     */
+    public static String updatableInPlaceFlagName(String name)
+    {
+        return "\u0001updatableInPlace " + name;
+    }
+
+    private static final java.util.Map<Object, Boolean> READS_UPDATABILITY_FLAGS = java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+
+    /** Whether a function's body reads the updatability flag of one of its parameters (its layout has a flag slot). */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    public static boolean readsUpdatableInPlaceFlags(Object fd)
+    {
+        Boolean known = READS_UPDATABILITY_FLAGS.get(fd);
+        if (known != null)
+        {
+            return known;
+        }
+        // Not known while computed: a recursive call reads no flag through itself.
+        READS_UPDATABILITY_FLAGS.put(fd, false);
+        FrameDescriptor.Builder builder = FrameDescriptor.newBuilder();
+        Map<String, Integer> slots = new LinkedHashMap<>();
+        org.finos.legend.pure.truffle.execution.types.PureSequence params = (org.finos.legend.pure.truffle.execution.types.PureSequence) org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fd, SLOT_PARAMETERS);
+        collectUpdatableInPlaceFlags(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fd, SLOT_EXPRESSION_SEQUENCE), parameterNames(params), builder, slots);
+        READS_UPDATABILITY_FLAGS.put(fd, !slots.isEmpty());
+        return !slots.isEmpty();
+    }
+
+    private static java.util.Set<String> parameterNames(org.finos.legend.pure.truffle.execution.types.PureSequence params)
+    {
+        java.util.Set<String> names = new java.util.HashSet<>();
+        if (params != null)
+        {
+            for (int i = 0; i < params.size(); i++)
+            {
+                Object name = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(params.getBoxed(i), SLOT_NAME);
+                if (name instanceof String n)
+                {
+                    names.add(n);
+                }
+            }
+        }
+        return names;
+    }
+
+    /**
+     * A flag slot ({@link #updatableInPlaceFlagName}) for each parameter whose flag a node reads (pure/specification/
+     * IN_PLACE_UPDATE_ANALYSIS.md): a use updatable in place if it was passed updatable in place that is the receiver of an add, concatenate or
+     * reverse, the start value of a fold, or an argument of a call to a user function that itself reads a flag. Only
+     * those: each slot enlarges the frame. Set by whoever runs the body knowing it (a fold updatable in place, a call passing an
+     * updatability mask); never set, it reads as not updatable in place. Not into lambdas: each has its own layout.
+     */
+    private static void collectUpdatableInPlaceFlags(Object exprsObj, java.util.Set<String> params, FrameDescriptor.Builder builder, Map<String, Integer> slots)
+    {
+        if (params.isEmpty() || exprsObj == null)
+        {
+            return;
+        }
+        if (exprsObj instanceof org.finos.legend.pure.truffle.execution.types.PureSequence seq)
+        {
+            for (int i = 0; i < seq.size(); i++)
+            {
+                collectUpdatableInPlaceFlags(seq.getBoxed(i), params, builder, slots);
+            }
+            return;
+        }
+        if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(exprsObj, "platform::pure::metamodel::valuespecification::Collection"))
+        {
+            collectUpdatableInPlaceFlags(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(exprsObj, SLOT_VALUES), params, builder, slots);
+            return;
+        }
+        String pureType = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeOf(exprsObj);
+        if (pureType == null || !(pureType.endsWith("FunctionInvocation") || pureType.endsWith("DotApplication") || pureType.endsWith("ArrowInvocation")))
+        {
+            return;
+        }
+        Object argsObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(exprsObj, SLOT_PARAMETERS_VALUES);
+        if (!(argsObj instanceof org.finos.legend.pure.truffle.execution.types.PureSequence args))
+        {
+            return;
+        }
+        boolean[] reading = flagReadingArguments(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(exprsObj, SLOT_FUNC), args.size());
+        for (int i = 0; i < args.size(); i++)
+        {
+            Object arg = args.getBoxed(i);
+            if (reading[i] && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(arg, "platform::pure::metamodel::valuespecification::VariableExpression"))
+            {
+                Object parameter = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(arg, SLOT_UPDATABLE_IN_PLACE_IF_PARAMETER);
+                if (parameter instanceof String name && params.contains(name))
+                {
+                    allocateSlot(builder, slots, updatableInPlaceFlagName(name));
+                }
+            }
+            collectUpdatableInPlaceFlags(arg, params, builder, slots);
+        }
+    }
+
+    /** The arguments of a call to {@code func} whose updatability a node reads (see {@link #collectUpdatableInPlaceFlags}). */
+    private static boolean[] flagReadingArguments(Object func, int count)
+    {
+        boolean[] reading = new boolean[count];
+        if (func == null)
+        {
+            return reading;
+        }
+        if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(func, "platform::pure::metamodel::function::NativeFunction"))
+        {
+            Object name = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(func, SLOT_NAME);
+            if ("add_T_MANY__T_1__T_$1_MANY$_".equals(name) || "add_T_MANY__Integer_1__T_1__T_$1_MANY$_".equals(name)
+                    || "concatenate_T_MANY__T_MANY__T_MANY_".equals(name) || "reverse_T_m__T_m_".equals(name)
+                    || "copy_T_1__KeyExpression_MANY__T_1_".equals(name))
+            {
+                reading[0] = count > 0;
+            }
+            else if (("fold_T_MANY__Function_1__V_MANY__V_MANY_".equals(name) || "fold_T_MANY__Function_1__V_1__V_1_".equals(name)) && count > 2)
+            {
+                reading[2] = true;
+            }
+        }
+        else if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(func, "platform::pure::metamodel::function::UserDefinedFunction")
+                && readsUpdatableInPlaceFlags(func))
+        {
+            java.util.Arrays.fill(reading, true);
+        }
+        else if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(func, "platform::pure::metamodel::function::property::QualifiedProperty"))
+        {
+            // Its override is chosen at run time: any may read a flag (the receiver never: an instance is not changed).
+            java.util.Arrays.fill(reading, 1, count, true);
+        }
+        return reading;
+    }
 
     private static int allocateSlot(FrameDescriptor.Builder builder, Map<String, Integer> slots, String name)
     {

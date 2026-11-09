@@ -253,7 +253,7 @@ public final class PureASTBuilder
                 && propName instanceof String name
                 && !canTargetBeEnumeration(prop))
         {
-            return new org.finos.legend.pure.truffle.execution.ast.property.DirectPropertyAccessNode(args[0], name);
+            return new org.finos.legend.pure.truffle.execution.ast.property.DirectPropertyAccessNode(args[0], name, updatabilityOf(fe));
         }
         return new RawPropertyAccessNode(fe, args);
     }
@@ -461,7 +461,15 @@ public final class PureASTBuilder
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(resolvedFunc,
                 "platform::pure::metamodel::function::FunctionDefinition", resolver))
         {
-            return new RawUserFunctionCallNode(resolvedFunc, lowerArgs(fe));
+            // A call passes which of its arguments are updatable in place (an UpdatableInPlaceMask): to a user function that reads a
+            // parameter's flag (any other would ignore it); to a qualified property whenever any may be, its override
+            // being chosen on the receiver at run time — each override decodes the bits of its own parameters.
+            boolean qualified = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(resolvedFunc,
+                    "platform::pure::metamodel::function::property::QualifiedProperty");
+            int[] updatability = qualified
+                    || org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(resolvedFunc, "platform::pure::metamodel::function::UserDefinedFunction")
+                    && FrameDescriptorBuilder.readsUpdatableInPlaceFlags(resolvedFunc) ? argumentUpdatability(fe) : null;
+            return new RawUserFunctionCallNode(resolvedFunc, lowerArgs(fe), updatability);
         }
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(resolvedFunc,
                 "platform::pure::metamodel::function::property::AbstractProperty", resolver))
@@ -855,13 +863,29 @@ public final class PureASTBuilder
                 if (inlined != null) return inlined;
             }
         }
+        // Updatability (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): add, concatenate and reverse on a receiver the compiler
+        // marked updatable in place — or updatable in place if a parameter whose flag this frame holds was passed updatable in place — may change it
+        // in place. Otherwise the factory's copying node.
+        PureNode owning = lowerInPlaceNative(fe, signature);
+        if (owning != null)
+        {
+            return owning;
+        }
         NativeRegistry.Factory factory = specialized.lookupNative(nf,
                 org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver());
         if (factory != null)
         {
             Object gt = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_GENERIC_TYPE);
             Object mul = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_MULTIPLICITY);
-            return factory.create(lowerArgs(fe), gt, mul, fe);
+            PureNode created = factory.create(lowerArgs(fe), gt, mul, fe);
+            // A key setting a property to a value the compiler proved updatableInPlace: stored as the object's own.
+            if (created instanceof org.finos.legend.pure.truffle.execution.natives.meta.KeyExpressionNode key
+                    && org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_PARAMETERS_VALUES) instanceof PureSequence keyArgs
+                    && keyArgs.size() == 2)
+            {
+                key.updatableInPlace(updatabilityOf(keyArgs.getBoxed(1)));
+            }
+            return created;
         }
         String id = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(nf,
                 org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver());
@@ -962,6 +986,194 @@ public final class PureASTBuilder
      * JIT'd hot loop — same machine code as Eclipse-Collections + Java
      * lambdas after JIT.
      */
+    private static final int SLOT_ELEMENTS_UPDATABLE_IN_PLACE = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("elementsUpdatableInPlace");
+    private static final int SLOT_UPDATABLE_IN_PLACE = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("updatableInPlace");
+    private static final int SLOT_UPDATABLE_IN_PLACE_IF_PARAMETER = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("updatableInPlaceIfParameter");
+    private static final int SLOT_RESULT_UPDATABLE_IN_PLACE = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("resultUpdatableInPlace");
+    private static final int SLOT_RESULT_UPDATABLE_IN_PLACE_IF_PARAMETER = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("resultUpdatableInPlaceIfParameter");
+
+    /** The updatability of each argument of a call (see {@link #updatabilityOf}), or null when none can be updatable in place. */
+    private int[] argumentUpdatability(Object fe)
+    {
+        Object argsObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_PARAMETERS_VALUES);
+        if (!(argsObj instanceof PureSequence args) || args.isEmpty())
+        {
+            return null;
+        }
+        int[] updatability = new int[args.size()];
+        boolean any = false;
+        for (int i = 0; i < updatability.length; i++)
+        {
+            updatability[i] = updatabilityOf(args.getBoxed(i));
+            any |= updatability[i] != org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY;
+        }
+        return any ? updatability : null;
+    }
+
+    private PureNode lowerInPlaceNative(Object fe, String signature)
+    {
+        boolean add = "add_T_MANY__T_1__T_$1_MANY$_".equals(signature);
+        boolean addAt = "add_T_MANY__Integer_1__T_1__T_$1_MANY$_".equals(signature);
+        boolean concatenate = "concatenate_T_MANY__T_MANY__T_MANY_".equals(signature);
+        boolean reverse = "reverse_T_m__T_m_".equals(signature);
+        boolean copy = "copy_T_1__KeyExpression_MANY__T_1_".equals(signature);
+        if (!(add || addAt || concatenate || reverse || copy))
+        {
+            return null;
+        }
+        Object argsObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_PARAMETERS_VALUES);
+        if (!(argsObj instanceof PureSequence args) || args.isEmpty())
+        {
+            return null;
+        }
+        int updatableInPlace = updatabilityOf(args.getBoxed(0));
+        if (updatableInPlace == org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY)
+        {
+            return null;
+        }
+        if (copy && (args.size() < 2 || refersToTheObjectBuilt(args.getBoxed(1))))
+        {
+            // A key reading the object being built (`~`) sees it as each key is set: that is a copy.
+            return null;
+        }
+        PureNode[] lowered = lowerArgs(fe);
+        if (copy)
+        {
+            return org.finos.legend.pure.truffle.execution.natives.meta.MetaNodeFactories.updatableInPlaceCopy(lowered, updatableInPlace);
+        }
+        if (add)
+        {
+            return new org.finos.legend.pure.truffle.execution.natives.collection.AddNode(lowered[0], lowered[1], null, updatableInPlace);
+        }
+        if (addAt)
+        {
+            return new org.finos.legend.pure.truffle.execution.natives.collection.AddNode(lowered[0], lowered[1], lowered[2], updatableInPlace);
+        }
+        if (concatenate)
+        {
+            return new org.finos.legend.pure.truffle.execution.natives.collection.ConcatenateNode(lowered[0], lowered[1], updatableInPlace);
+        }
+        return new org.finos.legend.pure.truffle.execution.natives.collection.ReverseNode(lowered[0], updatableInPlace);
+    }
+
+    /** Whether an expression refers to the object a construction is building (`~`, `~.~`), lambdas included. */
+    private static boolean refersToTheObjectBuilt(Object vs)
+    {
+        if (vs == null)
+        {
+            return false;
+        }
+        if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::VariableExpression"))
+        {
+            return org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_NAME) instanceof String n && n.startsWith("~");
+        }
+        // pureTypeIs matches the exact type: each kind of function expression.
+        if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::FunctionInvocation")
+                || org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::DotApplication")
+                || org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::ArrowInvocation")
+                || org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::FunctionApplication")
+                || org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::FunctionExpression"))
+        {
+            return "~".equals(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_FUNCTION_NAME))
+                    || anyRefersToTheObjectBuilt(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_PARAMETERS_VALUES));
+        }
+        if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::Collection"))
+        {
+            return anyRefersToTheObjectBuilt(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_VALUES));
+        }
+        if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::AtomicValue"))
+        {
+            Object value = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_VALUE);
+            return org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(value, "platform::pure::metamodel::function::LambdaFunction")
+                    && anyRefersToTheObjectBuilt(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(value, SLOT_EXPRESSION_SEQUENCE));
+        }
+        return false;
+    }
+
+    private static boolean anyRefersToTheObjectBuilt(Object values)
+    {
+        if (values instanceof PureSequence seq)
+        {
+            for (Object v : seq.toBoxedArray())
+            {
+                if (refersToTheObjectBuilt(v))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return refersToTheObjectBuilt(values);
+    }
+
+    /**
+     * Whether a value is updatable in place once computed (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md), as the nodes read it:
+     * {@code IN_PLACE} for a use the compiler marked updatable in place, or a literal of no value or several (a new collection at
+     * each evaluation); the slot of a parameter's flag for a use updatable in place if that parameter was passed updatable in place, when
+     * this frame holds it; {@code COPY} otherwise.
+     */
+    private int updatabilityOf(Object vs)
+    {
+        if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::VariableExpression"))
+        {
+            if (Boolean.TRUE.equals(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_UPDATABLE_IN_PLACE)))
+            {
+                return org.finos.legend.pure.truffle.execution.natives.collection.AddNode.IN_PLACE;
+            }
+            Object parameter = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_UPDATABLE_IN_PLACE_IF_PARAMETER);
+            if (parameter instanceof String name)
+            {
+                Integer slot = resolveSlot(FrameDescriptorBuilder.updatableInPlaceFlagName(name));
+                if (slot != null)
+                {
+                    return slot;
+                }
+            }
+        }
+        else if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::FunctionInvocation")
+                || org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::DotApplication")
+                || org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::ArrowInvocation")
+                || org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::FunctionApplication"))
+        {
+            // A key value, or a read of a field's own collection, the compiler marked (IN_PLACE_UPDATE_ANALYSIS.md, Fields).
+            if (Boolean.TRUE.equals(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_UPDATABLE_IN_PLACE)))
+            {
+                return org.finos.legend.pure.truffle.execution.natives.collection.AddNode.IN_PLACE;
+            }
+            Object parameter = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_UPDATABLE_IN_PLACE_IF_PARAMETER);
+            if (parameter instanceof String name)
+            {
+                Integer slot = resolveSlot(FrameDescriptorBuilder.updatableInPlaceFlagName(name));
+                if (slot != null)
+                {
+                    return slot;
+                }
+            }
+        }
+        else if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs, "platform::pure::metamodel::valuespecification::Collection")
+                && org.finos.legend.pure.truffle.execution.natives.collection.CollectionHelper.size(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_VALUES)) != 1)
+        {
+            return org.finos.legend.pure.truffle.execution.natives.collection.AddNode.IN_PLACE;
+        }
+        return org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY;
+    }
+
+    /**
+     * The slot of the flag a lambda's first parameter reads, when the list it is handed elements of alone holds them
+     * (IN_PLACE_UPDATE_ANALYSIS.md, Elements): the iterating node sets it. -1 when the list is not marked or nothing reads it.
+     */
+    private int elementFlagSlot(Object list, Object lambda, FrameLayout lambdaLayout)
+    {
+        if (!Boolean.TRUE.equals(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(list, SLOT_ELEMENTS_UPDATABLE_IN_PLACE)))
+        {
+            return -1;
+        }
+        Object name = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(
+                ((PureSequence) org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(lambda, SLOT_PARAMETERS)).getBoxed(0), SLOT_NAME);
+        Integer slot = name instanceof String n ? lambdaLayout.slotFor(FrameDescriptorBuilder.updatableInPlaceFlagName(n)) : null;
+        return slot == null ? -1 : slot;
+    }
+
     private PureNode lowerInlineFold(Object fe)
     {
         Object argsObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_PARAMETERS_VALUES);
@@ -1027,10 +1239,19 @@ public final class PureASTBuilder
 
         PureNode collectionNode = lower(args.getBoxed(0));
         PureNode seedNode = lower(args.getBoxed(2));
+        // Updatability of the accumulator (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): its flag, when the body reads one,
+        // is set for each step from whether the start value was passed updatable in place and from the step's result summary.
+        Object accName = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(
+                ((PureSequence) org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(lambda, SLOT_PARAMETERS)).getBoxed(1), SLOT_NAME);
+        Integer accFlagSlot = accName instanceof String a ? lambdaLayout.slotFor(FrameDescriptorBuilder.updatableInPlaceFlagName(a)) : null;
+        boolean stepResultUpdatableInPlace = Boolean.TRUE.equals(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(lambda, SLOT_RESULT_UPDATABLE_IN_PLACE));
+        boolean stepResultUpdatableInPlaceIfAccumulator = accName != null && accName.equals(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(lambda, SLOT_RESULT_UPDATABLE_IN_PLACE_IF_PARAMETER));
         return new org.finos.legend.pure.truffle.execution.natives.collection.InlineFoldNode(
                 collectionNode, seedNode, body,
                 lambdaLayout.descriptor(), elemSlot, accSlot,
-                callerSlots, lambdaSlots);
+                callerSlots, lambdaSlots,
+                accFlagSlot == null ? -1 : accFlagSlot, updatabilityOf(args.getBoxed(2)), stepResultUpdatableInPlace, stepResultUpdatableInPlaceIfAccumulator,
+                elementFlagSlot(args.getBoxed(0), lambda, lambdaLayout));
     }
 
     /**
@@ -1093,12 +1314,12 @@ public final class PureASTBuilder
         PureNode collectionNode = lower(args.getBoxed(0));
         if (collectionNode == null) return null;
         return new InlineSingleArgMeta(collectionNode, body, lambdaLayout.descriptor(),
-                elemSlot, callerSlots, lambdaSlots);
+                elemSlot, callerSlots, lambdaSlots, elementFlagSlot(args.getBoxed(0), lambda, lambdaLayout));
     }
 
     private record InlineSingleArgMeta(PureNode collection, PureNode[] body,
                                        com.oracle.truffle.api.frame.FrameDescriptor lambdaDescriptor,
-                                       int elemSlot, int[] callerSlots, int[] lambdaSlots) {}
+                                       int elemSlot, int[] callerSlots, int[] lambdaSlots, int elementFlagSlot) {}
 
     private PureNode lowerInlineMap(Object fe)
     {
@@ -1106,7 +1327,7 @@ public final class PureASTBuilder
         if (m == null) return null;
         return new org.finos.legend.pure.truffle.execution.natives.collection.InlineMapNode(
                 m.collection, m.body, m.lambdaDescriptor, m.elemSlot,
-                m.callerSlots, m.lambdaSlots);
+                m.callerSlots, m.lambdaSlots, m.elementFlagSlot);
     }
 
     private PureNode lowerInlineFilter(Object fe)

@@ -87,12 +87,14 @@ function createRegistryState() {
         // function index — profiled as 45 s of a 189 s gallery render.
         // subMemo is keyed "sub<:sup"; only entries naming this path can change.
         for (const k of [...subMemo.keys()]) if (k.includes(path)) subMemo.delete(k);
+        globalThis.__forgetMetadataReads?.(path);
         for (const l of invalidationListeners) l(path);
     }
 
     function invalidate() {
         nodeCache.clear(); supersMemo.clear(); classifierMemo.clear(); subMemo.clear();
         typesCache = null; fnEntries = null;
+        globalThis.__forgetMetadataReads?.();
         for (const l of invalidationListeners) l(undefined);
     }
 

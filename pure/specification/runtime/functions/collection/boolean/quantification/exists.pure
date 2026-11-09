@@ -17,7 +17,7 @@ import platform::pure::test::pct::*;
 
 import platform::pure::functions::collection::tests::model::*;
 
-native function <<PCT.function>> platform::pure::functions::collection::exists<T>(value:T[*], func:Function<{T[1]->Boolean[1]}>[1]):Boolean[1];
+native function <<PCT.function>> {inPlaceUpdate.callsLambdaRepeatedly='func', inPlaceUpdate.onlyReads='value'} platform::pure::functions::collection::exists<T>(value:T[*], func:Function<{T[1]->Boolean[1]}>[1]):Boolean[1];
 
 function <<PCT.test>> platform::pure::functions::collection::tests::exists::testExists<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

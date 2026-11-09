@@ -1,0 +1,102 @@
+// let b = $a at a's last use moves the value: b is as fresh as a was.
+// A parameter may be shared by the caller: its last use is updatable in place only if the caller passed it updatable in place.
+// The reducer returns a fresh list each step (its result is updatable in place) and may add to an accumulator passed updatable in place.
+// The reducer hands its accumulator back: updatable in place when it was passed updatable in place.
+###Pure
+function test::updatableInPlace::move(): Integer[*]
+{
+  let a = [1, 2]->map(x|$x);
+  let b = $a;
+  $b->add(1);
+}
+
+function test::updatableInPlace::parameter(xs: Integer[*]): Integer[*]
+{
+  $xs->add(1)
+}
+
+function test::updatableInPlace::accumulate(start: Integer[*]): Integer[*]
+{
+  [1, 2, 3]->fold({e, acc|$acc->add($e)}, $start)
+}
+
+function test::updatableInPlace::identity(start: Integer[*]): Integer[*]
+{
+  [1, 2, 3]->fold({e, acc|$acc}, $start)
+}
+
+###CompiledGraph
+function test::updatableInPlace::move__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @8:3-8:27
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @8:7-8:7
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @8:17-8:27
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @8:11-8:16
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:12-8:12
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @8:15-8:15
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @8:23-8:26
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @8:25-8:26
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @9:3-9:12
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @9:7-9:7
+    Variable a :#Integer##[2]#  ~@VariableExpression@  @9:11-9:12  updatableInPlace
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @10:5-10:12
+    typeParam T -> #Integer#
+    Variable b :#Integer##[2]#  ~@VariableExpression@  @10:3-10:4  updatableInPlace
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @10:11-10:11
+
+function test::updatableInPlace::parameter_Integer_MANY__Integer_MANY_(xs:@Integer@[*]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[*]}>
+  resultUpdatableInPlace
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @15:6-15:13
+    typeParam T -> #Integer#
+    Variable xs :#Integer##[*]#  ~@VariableExpression@  @15:3-15:5  updatableInPlaceIf xs
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @15:12-15:12
+
+function test::updatableInPlace::accumulate_Integer_MANY__Integer_MANY_(start:@Integer@[*]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[*]}>
+  ArrowInvocation fold_T_MANY__Function_1__V_MANY__V_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @20:12-20:49
+    typeParam T -> #Integer#
+    typeParam V -> #Integer#
+    Collection :#Integer#[3]  ~@Collection@  @20:3-20:11
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:4-20:4
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @20:7-20:7
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @20:10-20:10
+    Lambda(e:#Integer##[1]#, acc:#Integer##[*]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[*]#->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @20:19-20:40
+      resultUpdatableInPlace
+      ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @20:31-20:39
+        typeParam T -> #Integer#
+        Variable acc :#Integer##[*]#  ~@VariableExpression@  @20:27-20:30  updatableInPlaceIf acc
+        Variable e :#Integer##[1]#  ~@VariableExpression@  @20:37-20:38
+    Variable start :#Integer##[*]#  ~@VariableExpression@  @20:43-20:48  updatableInPlaceIf start
+
+function test::updatableInPlace::identity_Integer_MANY__Integer_MANY_(start:@Integer@[*]):@Integer@[*]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[*]}>
+  ArrowInvocation fold_T_MANY__Function_1__V_MANY__V_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @25:12-25:40
+    typeParam T -> #Integer#
+    typeParam V -> #Integer#
+    Collection :#Integer#[3]  ~@Collection@  @25:3-25:11
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @25:4-25:4
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @25:7-25:7
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @25:10-25:10
+    Lambda(e:#Integer##[1]#, acc:#Integer##[*]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[*]#->#Integer##[*]#}#>#[1]  ~@AtomicValue@  @25:19-25:31
+      resultUpdatableInPlaceIf acc
+      Variable acc :#Integer##[*]#  ~@VariableExpression@  @25:27-25:30
+    Variable start :#Integer##[*]#  ~@VariableExpression@  @25:34-25:39  updatableInPlaceIf start
+
+###ReverseIndex
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::accumulate_Integer_MANY__Integer_MANY_
+  test::updatableInPlace::move__Integer_MANY_
+  test::updatableInPlace::parameter_Integer_MANY__Integer_MANY_
+platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_:
+  test::updatableInPlace::accumulate_Integer_MANY__Integer_MANY_
+  test::updatableInPlace::identity_Integer_MANY__Integer_MANY_
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::updatableInPlace::move__Integer_MANY_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::move__Integer_MANY_
+

@@ -153,6 +153,7 @@ public final class CompiledGraphPrinter
         printAnnotations(f, 1, sb);
         printConstraints(f._preConstraints(), "preConstraint", 1, sb);
         printConstraints(f._postConstraints(), "postConstraint", 1, sb);
+        printUpdatableInPlaceSummary(f, 1, sb);
         f._expressionSequence().forEach(vs -> printValueSpec(vs, 1, sb));
     }
 
@@ -293,6 +294,7 @@ public final class CompiledGraphPrinter
                 .append(printMul(qp._multiplicity()))
                 .append('\n');
             printAnnotations(qp, depth + 1, sb);
+            printUpdatableInPlaceSummary(qp, depth + 1, sb);
             if (qp._expressionSequence() != null)
             {
                 qp._expressionSequence().forEach(vs -> printValueSpec(vs, depth + 1, sb));
@@ -629,6 +631,18 @@ public final class CompiledGraphPrinter
 
         // Source info
         appendSourceInfo(sb, fe._sourceInformation());
+        if (Boolean.TRUE.equals(fe._updatableInPlace()))
+        {
+            sb.append("  updatableInPlace");
+        }
+        if (fe._updatableInPlaceIfParameter() != null)
+        {
+            sb.append("  updatableInPlaceIf ").append(fe._updatableInPlaceIfParameter());
+        }
+        if (Boolean.TRUE.equals(fe._elementsUpdatableInPlace()))
+        {
+            sb.append("  elementsUpdatableInPlace");
+        }
         sb.append('\n');
 
         // Resolved type/multiplicity parameters
@@ -685,6 +699,7 @@ public final class CompiledGraphPrinter
                         .append(" :").append(printType(ov._genericType()))
                         .append(printMul(ov._multiplicity())).append('\n'));
             }
+            printUpdatableInPlaceSummary(lambda, depth + 1, sb);
             if (lambda._expressionSequence() != null)
             {
                 lambda._expressionSequence().forEach(vs -> printValueSpec(vs, depth + 1, sb));
@@ -728,7 +743,36 @@ public final class CompiledGraphPrinter
         }
         appendVsClassifierGenericType(sb, varExpr);
         appendSourceInfo(sb, varExpr._sourceInformation());
+        if (Boolean.TRUE.equals(varExpr._updatableInPlace()))
+        {
+            sb.append("  updatableInPlace");
+        }
+        if (varExpr._updatableInPlaceIfParameter() != null)
+        {
+            sb.append("  updatableInPlaceIf ").append(varExpr._updatableInPlaceIfParameter());
+        }
+        if (Boolean.TRUE.equals(varExpr._elementsUpdatableInPlace()))
+        {
+            sb.append("  elementsUpdatableInPlace");
+        }
         sb.append('\n');
+    }
+
+    /** The updatable in place-value analysis' result summary of a function, qualified property or lambda. */
+    private static void printUpdatableInPlaceSummary(platform.pure.metamodel.function.FunctionDefinition f, int depth, StringBuilder sb)
+    {
+        if (Boolean.TRUE.equals(f._resultUpdatableInPlace()))
+        {
+            indent(sb, depth).append("resultUpdatableInPlace\n");
+        }
+        if (f._resultUpdatableInPlaceIfParameter() != null)
+        {
+            indent(sb, depth).append("resultUpdatableInPlaceIf ").append(f._resultUpdatableInPlaceIfParameter()).append('\n');
+        }
+        if (Boolean.TRUE.equals(f._resultElementsUpdatableInPlace()))
+        {
+            indent(sb, depth).append("resultElementsUpdatableInPlace\n");
+        }
     }
 
     private static void printHolder(GenericTypeAndMultiplicityHolder holder, int depth, StringBuilder sb)

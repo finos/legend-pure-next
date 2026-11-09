@@ -49,7 +49,7 @@ function test::myFunc__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       typeParam T -> test::SubClass
       TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::SubClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::SubClass|1>  @30:11-30:21
   DotApplication test::SubClass.demo() :#String##[1]#  ~@DotApplication@  @31:5-31:11
-    Variable x :#test::SubClass##[1]#  ~@VariableExpression@  @31:3-31:4
+    Variable x :#test::SubClass##[1]#  ~@VariableExpression@  @31:3-31:4  updatableInPlace
 
 ###ReverseIndex
 platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:

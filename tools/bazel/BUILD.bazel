@@ -153,6 +153,22 @@ sh_binary(
     visibility = ["//:__pkg__"],
 )
 
+# Whether those goldens are current, byte for byte (the ports' golden tests compare decoded nodes).
+sh_test(
+    name = "test_pdb_goldens_up_to_date__compiler",
+    srcs = ["pdb-goldens-up-to-date-junit.sh"],
+    args = [
+        "$(rootpath %s:junit_runner)" % _BOOTSTRAP_TESTS,
+        "org.finos.legend.pure.m3.specification.PdbGoldenGeneratorTest",
+        "pure/specification/compiler/tests/pdb",
+    ],
+    data = [
+        _BOOTSTRAP_TESTS + ":junit_runner",
+        "//pure/specification:specification_files",
+    ],
+    tags = ["job:bootstrap"],
+)
+
 # flatc for the machine a build runs on.
 alias(
     name = "flatc",

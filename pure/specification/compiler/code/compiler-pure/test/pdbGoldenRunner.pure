@@ -41,6 +41,9 @@ import platform::pure::ui::progress::*;
 //     file-anchor packages that the Pure compile result doesn't include);
 //   - other sections (manifest, functionIndex, reverseReferenceIndex) byte for byte,
 //     and elementIndex too when both archives hold the same element entries.
+// Those findings name what differs. An archive with none must then also match the golden
+// byte for byte, entry by entry: the Pure writer lays a graph out as the Java writer does,
+// and test_pdb_goldens_up_to_date__compiler keeps the goldens what the Java writer writes.
 // ---------------------------------------------------------------------------
 
 function <<test.TestDependency>> platform::pure::compiler::test::pdb::runPdbGoldenTests(testDir:String[1], goldenDir:String[1], schemaPath:String[1], reportPath:String[1]):String[1]
@@ -95,6 +98,13 @@ function <<test.TestDependency>> platform::pure::compiler::test::pdb::assertMatc
     let written = platform::pure::compiler::test::pdb::writeFixture($content, $sourceId, $extensions);
     let findings = platform::pure::compiler::test::pdb::diffArchives($schema, $written, $golden);
     assert($findings->isEmpty(), | $findings->size()->toString() + ' difference(s) from the golden, first: ' + $findings->at(0));
+    // Same nodes is not enough: the Pure writer must lay them out as the Java writer does, byte for byte (the
+    // uncompressed bytes of each entry; the deflated ones depend on the deflater).
+    let goldenEntries = platform::pure::compiler::pdb::archive::entryNames($golden);
+    let writtenEntries = platform::pure::compiler::pdb::archive::entryNames($written);
+    let differing = $goldenEntries->filter(n | !$writtenEntries->contains($n) || (platform::pure::compiler::pdb::archive::entryBytes($golden, $n)->platform::pure::functions::binary::binaryToHex() != platform::pure::compiler::pdb::archive::entryBytes($written, $n)->platform::pure::functions::binary::binaryToHex()));
+    assert($differing->isEmpty() && ($goldenEntries->size() == $writtenEntries->size()),
+        | 'same nodes as the golden but other bytes, in ' + $differing->joinStrings(', ') + ' (' + $writtenEntries->size()->toString() + ' entries written, ' + $goldenEntries->size()->toString() + ' in the golden)');
 }
 
 // The archive a fixture compiles to, as hex, with the specification's island handlers — how the island

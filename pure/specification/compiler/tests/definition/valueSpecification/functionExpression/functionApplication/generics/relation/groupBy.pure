@@ -40,7 +40,7 @@ function f_Relation_1__Any_MANY_(rel:Relation<(val:@Integer@[1], str:@String@[1]
     typeParam T -> #(val:#Integer##[1]#, str:#String##[1]#)#
     typeParam V -> #Integer#
     typeParam Z -> #(str:@String@[1])#
-    Variable rel :#Relation<(val:@Integer@[1], str:@String@[1])>##[1]#  ~@VariableExpression@  @26:3-26:6
+    Variable rel :#Relation<(val:@Integer@[1], str:@String@[1])>##[1]#  ~@VariableExpression@  @26:3-26:6  updatableInPlaceIf rel
     FunctionInvocation colSpec_String_1__GenericTypeAndMultiplicityHolder_1__ColSpec_1_ :#ColSpec<#(str:@String@[1])#>##[1]#  ~@FunctionInvocation@  @26:18-26:20
       typeParam T -> #(str:@String@[1])#
       AtomicValue  'str' :@String@[1]  ~@AtomicValue@  @26:18-26:20
@@ -55,7 +55,7 @@ function f_Relation_1__Any_MANY_(rel:Relation<(val:@Integer@[1], str:@String@[1]
           Variable x :#(val:@Integer@[1], str:@String@[1])##[1]#  ~@VariableExpression@  @26:35-26:36
       Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @26:44-26:56
         ArrowInvocation total_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @26:48-26:56
-          Variable y :#Integer##[*]#  ~@VariableExpression@  @26:46-26:47
+          Variable y :#Integer##[*]#  ~@VariableExpression@  @26:46-26:47  updatableInPlaceIf y
       AtomicValue  'newCol' :@String@[1]  ~@AtomicValue@  @26:24-26:29
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(newCol:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
 

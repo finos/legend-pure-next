@@ -1,0 +1,314 @@
+###Pure
+import test::updatableInPlace::*;
+
+Class test::updatableInPlace::Item
+{
+  v: Integer[1];
+}
+
+function test::updatableInPlace::copyAnElementReadByAt(): Item[1]
+{
+  let xs = [1, 2]->map(i|^Item(v = $i));
+  let e = $xs->at(0);
+  ^$e(v = 9);
+}
+
+function test::updatableInPlace::copyAnElementReadByHead(): Item[1]
+{
+  let xs = [1, 2]->map(i|^Item(v = $i));
+  let e = $xs->head()->toOne();
+  ^$e(v = 9);
+}
+
+function test::updatableInPlace::singleValueReadAsAList(): Item[1]
+{
+  let b = ^Item(v = 1);
+  let e = $b->at(0);
+  ^$b(v = 2);
+}
+
+function test::updatableInPlace::foldCopyingElements(): Item[*]
+{
+  let xs = [1, 2]->map(i|^Item(v = $i));
+  let e = $xs->at(0);
+  $xs->fold({x, acc|$acc->add(^$x(v = $x.v + 1))}, []->cast(@Item));
+}
+
+function test::updatableInPlace::foldStartingFromAnElement(): Item[1]
+{
+  let xs = [1, 2]->map(i|^Item(v = $i));
+  let e = $xs->at(0);
+  $xs->fold({x, acc|^$acc(v = $acc.v + $x.v)}, $e);
+}
+
+###CompiledGraph
+class test::updatableInPlace::Item extends Any  ~Class<test::updatableInPlace::Item>  @4:1-7:1
+  property v :@Integer@[1]  ~Property<test::updatableInPlace::Item, @Integer@|1>
+
+function test::updatableInPlace::copyAnElementReadByAt__Item_1_():test::updatableInPlace::Item[1]  ~UserDefinedFunction<{->test::updatableInPlace::Item[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Item##[2]#  ~@FunctionInvocation@  @11:3-11:39
+    typeParam T -> #test::updatableInPlace::Item#
+    mulParam m -> #[2]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @11:7-11:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#test::updatableInPlace::Item##[2]#  ~@ArrowInvocation@  @11:18-11:39
+      typeParam T -> #Integer#
+      typeParam V -> #test::updatableInPlace::Item#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @11:12-11:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @11:13-11:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @11:16-11:16
+      Lambda(i:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#test::updatableInPlace::Item##[1]#}#>#[1]  ~@AtomicValue@  @11:24-11:38
+        resultUpdatableInPlace
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @11:26-11:38
+          typeParam T -> test::updatableInPlace::Item
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|1>  @11:26-11:38
+          Collection :#KeyExpression#[1]  ~@Collection@  @11:26-11:38
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:32-11:37
+              AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @11:32-11:37
+              Variable i :#Integer##[1]#  ~@VariableExpression@  @11:36-11:37
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @12:3-12:20
+    typeParam T -> #test::updatableInPlace::Item#
+    mulParam m -> #[1]#
+    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @12:7-12:7
+    ArrowInvocation at_T_MANY__Integer_1__T_1_ :#test::updatableInPlace::Item##[1]#  ~@ArrowInvocation@  @12:14-12:20
+      typeParam T -> #test::updatableInPlace::Item#
+      Variable xs :#test::updatableInPlace::Item##[2]#  ~@VariableExpression@  @12:11-12:13  updatableInPlace
+      AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @12:19-12:19
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @13:3-13:12
+    typeParam T -> #test::updatableInPlace::Item#
+    Variable e :#test::updatableInPlace::Item##[1]#  ~@VariableExpression@  @13:4-13:5
+    Collection :#KeyExpression#[1]  ~@Collection@  @13:3-13:12
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @13:7-13:11
+        AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @13:7-13:11
+        AtomicValue  9 :@Integer@[1]  ~@AtomicValue@  @13:11-13:11
+
+function test::updatableInPlace::copyAnElementReadByHead__Item_1_():test::updatableInPlace::Item[1]  ~UserDefinedFunction<{->test::updatableInPlace::Item[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Item##[2]#  ~@FunctionInvocation@  @18:3-18:39
+    typeParam T -> #test::updatableInPlace::Item#
+    mulParam m -> #[2]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @18:7-18:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#test::updatableInPlace::Item##[2]#  ~@ArrowInvocation@  @18:18-18:39
+      typeParam T -> #Integer#
+      typeParam V -> #test::updatableInPlace::Item#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @18:12-18:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @18:13-18:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @18:16-18:16
+      Lambda(i:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#test::updatableInPlace::Item##[1]#}#>#[1]  ~@AtomicValue@  @18:24-18:38
+        resultUpdatableInPlace
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @18:26-18:38
+          typeParam T -> test::updatableInPlace::Item
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|1>  @18:26-18:38
+          Collection :#KeyExpression#[1]  ~@Collection@  @18:26-18:38
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @18:32-18:37
+              AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @18:32-18:37
+              Variable i :#Integer##[1]#  ~@VariableExpression@  @18:36-18:37
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @19:3-19:30
+    typeParam T -> #test::updatableInPlace::Item#
+    mulParam m -> #[1]#
+    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @19:7-19:7
+    ArrowInvocation toOne_T_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@ArrowInvocation@  @19:14-19:30
+      typeParam T -> #test::updatableInPlace::Item#
+      ArrowInvocation head_T_MANY__T_$0_1$_ :#test::updatableInPlace::Item##[0..1]#  ~@ArrowInvocation@  @19:14-19:30
+        typeParam T -> #test::updatableInPlace::Item#
+        Variable xs :#test::updatableInPlace::Item##[2]#  ~@VariableExpression@  @19:11-19:13  updatableInPlace
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @20:3-20:12
+    typeParam T -> #test::updatableInPlace::Item#
+    Variable e :#test::updatableInPlace::Item##[1]#  ~@VariableExpression@  @20:4-20:5
+    Collection :#KeyExpression#[1]  ~@Collection@  @20:3-20:12
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:7-20:11
+        AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @20:7-20:11
+        AtomicValue  9 :@Integer@[1]  ~@AtomicValue@  @20:11-20:11
+
+function test::updatableInPlace::singleValueReadAsAList__Item_1_():test::updatableInPlace::Item[1]  ~UserDefinedFunction<{->test::updatableInPlace::Item[1]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @25:3-25:22
+    typeParam T -> #test::updatableInPlace::Item#
+    mulParam m -> #[1]#
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @25:7-25:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @25:11-25:22
+      typeParam T -> test::updatableInPlace::Item
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|1>  @25:11-25:22
+      Collection :#KeyExpression#[1]  ~@Collection@  @25:11-25:22
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:17-25:21
+          AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @25:17-25:21
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @25:21-25:21
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @26:3-26:19
+    typeParam T -> #test::updatableInPlace::Item#
+    mulParam m -> #[1]#
+    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @26:7-26:7
+    ArrowInvocation at_T_MANY__Integer_1__T_1_ :#test::updatableInPlace::Item##[1]#  ~@ArrowInvocation@  @26:13-26:19
+      typeParam T -> #test::updatableInPlace::Item#
+      Variable b :#test::updatableInPlace::Item##[1]#  ~@VariableExpression@  @26:11-26:12
+      AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @26:18-26:18
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @27:3-27:12
+    typeParam T -> #test::updatableInPlace::Item#
+    Variable b :#test::updatableInPlace::Item##[1]#  ~@VariableExpression@  @27:4-27:5
+    Collection :#KeyExpression#[1]  ~@Collection@  @27:3-27:12
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @27:7-27:11
+        AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @27:7-27:11
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @27:11-27:11
+
+function test::updatableInPlace::foldCopyingElements__Item_MANY_():test::updatableInPlace::Item[*]  ~UserDefinedFunction<{->test::updatableInPlace::Item[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Item##[2]#  ~@FunctionInvocation@  @32:3-32:39
+    typeParam T -> #test::updatableInPlace::Item#
+    mulParam m -> #[2]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @32:7-32:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#test::updatableInPlace::Item##[2]#  ~@ArrowInvocation@  @32:18-32:39
+      typeParam T -> #Integer#
+      typeParam V -> #test::updatableInPlace::Item#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @32:12-32:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @32:13-32:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @32:16-32:16
+      Lambda(i:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#test::updatableInPlace::Item##[1]#}#>#[1]  ~@AtomicValue@  @32:24-32:38
+        resultUpdatableInPlace
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @32:26-32:38
+          typeParam T -> test::updatableInPlace::Item
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|1>  @32:26-32:38
+          Collection :#KeyExpression#[1]  ~@Collection@  @32:26-32:38
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @32:32-32:37
+              AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @32:32-32:37
+              Variable i :#Integer##[1]#  ~@VariableExpression@  @32:36-32:37
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @33:3-33:20
+    typeParam T -> #test::updatableInPlace::Item#
+    mulParam m -> #[1]#
+    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @33:7-33:7
+    ArrowInvocation at_T_MANY__Integer_1__T_1_ :#test::updatableInPlace::Item##[1]#  ~@ArrowInvocation@  @33:14-33:20
+      typeParam T -> #test::updatableInPlace::Item#
+      Variable xs :#test::updatableInPlace::Item##[2]#  ~@VariableExpression@  @33:11-33:13
+      AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @33:19-33:19
+  ArrowInvocation fold_T_MANY__Function_1__V_MANY__V_MANY_ :#test::updatableInPlace::Item##[*]#  ~@ArrowInvocation@  @34:6-34:67
+    typeParam T -> #test::updatableInPlace::Item#
+    typeParam V -> #test::updatableInPlace::Item#
+    Variable xs :#test::updatableInPlace::Item##[2]#  ~@VariableExpression@  @34:3-34:5  updatableInPlace
+    Lambda(x:#test::updatableInPlace::Item##[1]#, acc:#test::updatableInPlace::Item##[*]#) :#LambdaFunction<#{#test::updatableInPlace::Item##[1]#, #test::updatableInPlace::Item##[*]#->#test::updatableInPlace::Item##[1..*]#}#>#[1]  ~@AtomicValue@  @34:13-34:49
+      resultUpdatableInPlace
+      ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#test::updatableInPlace::Item##[1..*]#  ~@ArrowInvocation@  @34:25-34:48
+        typeParam T -> #test::updatableInPlace::Item#
+        Variable acc :#test::updatableInPlace::Item##[*]#  ~@VariableExpression@  @34:21-34:24  updatableInPlaceIf acc
+        FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @34:31-34:47
+          typeParam T -> #test::updatableInPlace::Item#
+          Variable x :#test::updatableInPlace::Item##[1]#  ~@VariableExpression@  @34:32-34:33  updatableInPlaceIf x
+          Collection :#KeyExpression#[1]  ~@Collection@  @34:31-34:47
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @34:35-34:46
+              AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @34:35-34:46
+              FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @34:41-34:46
+                DotApplication test::updatableInPlace::Item.v :#Integer##[1]#  ~@DotApplication@  @34:41-34:42
+                  Variable x :#test::updatableInPlace::Item##[1]#  ~@VariableExpression@  @34:39-34:40
+                AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @34:46-34:46
+    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#test::updatableInPlace::Item##[0]#  ~@ArrowInvocation@  @34:54-34:66
+      typeParam T -> test::updatableInPlace::Item
+      mulParam m -> [0]
+      Collection :#Nil#[0]  ~@Collection@  @34:52-34:53
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|?>  @34:61-34:65
+
+function test::updatableInPlace::foldStartingFromAnElement__Item_1_():test::updatableInPlace::Item[1]  ~UserDefinedFunction<{->test::updatableInPlace::Item[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Item##[2]#  ~@FunctionInvocation@  @39:3-39:39
+    typeParam T -> #test::updatableInPlace::Item#
+    mulParam m -> #[2]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @39:7-39:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#test::updatableInPlace::Item##[2]#  ~@ArrowInvocation@  @39:18-39:39
+      typeParam T -> #Integer#
+      typeParam V -> #test::updatableInPlace::Item#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @39:12-39:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @39:13-39:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @39:16-39:16
+      Lambda(i:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#test::updatableInPlace::Item##[1]#}#>#[1]  ~@AtomicValue@  @39:24-39:38
+        resultUpdatableInPlace
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @39:26-39:38
+          typeParam T -> test::updatableInPlace::Item
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Item|1>  @39:26-39:38
+          Collection :#KeyExpression#[1]  ~@Collection@  @39:26-39:38
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @39:32-39:37
+              AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @39:32-39:37
+              Variable i :#Integer##[1]#  ~@VariableExpression@  @39:36-39:37
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @40:3-40:20
+    typeParam T -> #test::updatableInPlace::Item#
+    mulParam m -> #[1]#
+    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @40:7-40:7
+    ArrowInvocation at_T_MANY__Integer_1__T_1_ :#test::updatableInPlace::Item##[1]#  ~@ArrowInvocation@  @40:14-40:20
+      typeParam T -> #test::updatableInPlace::Item#
+      Variable xs :#test::updatableInPlace::Item##[2]#  ~@VariableExpression@  @40:11-40:13
+      AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @40:19-40:19
+  ArrowInvocation fold_T_MANY__Function_1__V_1__V_1_ :#test::updatableInPlace::Item##[1]#  ~@ArrowInvocation@  @41:6-41:50
+    typeParam T -> #test::updatableInPlace::Item#
+    typeParam V -> #test::updatableInPlace::Item#
+    Variable xs :#test::updatableInPlace::Item##[2]#  ~@VariableExpression@  @41:3-41:5  updatableInPlace
+    Lambda(x:#test::updatableInPlace::Item##[1]#, acc:#test::updatableInPlace::Item##[1]#) :#LambdaFunction<#{#test::updatableInPlace::Item##[1]#, #test::updatableInPlace::Item##[1]#->#test::updatableInPlace::Item##[1]#}#>#[1]  ~@AtomicValue@  @41:13-41:45
+      resultUpdatableInPlace
+      FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Item##[1]#  ~@FunctionInvocation@  @41:21-41:44
+        typeParam T -> #test::updatableInPlace::Item#
+        Variable acc :#test::updatableInPlace::Item##[1]#  ~@VariableExpression@  @41:22-41:25  updatableInPlaceIf acc
+        Collection :#KeyExpression#[1]  ~@Collection@  @41:21-41:44
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @41:27-41:43
+            AtomicValue  'v' :@String@[1]  ~@AtomicValue@  @41:27-41:43
+            FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @41:35-41:43
+              DotApplication test::updatableInPlace::Item.v :#Integer##[1]#  ~@DotApplication@  @41:35-41:36
+                Variable acc :#test::updatableInPlace::Item##[1]#  ~@VariableExpression@  @41:31-41:34
+              DotApplication test::updatableInPlace::Item.v :#Integer##[1]#  ~@DotApplication@  @41:42-41:43
+                Variable x :#test::updatableInPlace::Item##[1]#  ~@VariableExpression@  @41:40-41:41
+    Variable e :#test::updatableInPlace::Item##[1]#  ~@VariableExpression@  @41:48-41:49
+
+###ReverseIndex
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+platform::pure::functions::collection::at_T_MANY__Integer_1__T_1_:
+  test::updatableInPlace::copyAnElementReadByAt__Item_1_
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+  test::updatableInPlace::foldStartingFromAnElement__Item_1_
+  test::updatableInPlace::singleValueReadAsAList__Item_1_
+platform::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_:
+  test::updatableInPlace::foldStartingFromAnElement__Item_1_
+platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_:
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+platform::pure::functions::collection::head_T_MANY__T_$0_1$_:
+  test::updatableInPlace::copyAnElementReadByHead__Item_1_
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::updatableInPlace::copyAnElementReadByAt__Item_1_
+  test::updatableInPlace::copyAnElementReadByHead__Item_1_
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+  test::updatableInPlace::foldStartingFromAnElement__Item_1_
+platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+  test::updatableInPlace::copyAnElementReadByAt__Item_1_
+  test::updatableInPlace::copyAnElementReadByHead__Item_1_
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+  test::updatableInPlace::foldStartingFromAnElement__Item_1_
+  test::updatableInPlace::singleValueReadAsAList__Item_1_
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::updatableInPlace::copyAnElementReadByAt__Item_1_
+  test::updatableInPlace::copyAnElementReadByHead__Item_1_
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+  test::updatableInPlace::foldStartingFromAnElement__Item_1_
+  test::updatableInPlace::singleValueReadAsAList__Item_1_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::copyAnElementReadByAt__Item_1_
+  test::updatableInPlace::copyAnElementReadByHead__Item_1_
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+  test::updatableInPlace::foldStartingFromAnElement__Item_1_
+  test::updatableInPlace::singleValueReadAsAList__Item_1_
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::updatableInPlace::copyAnElementReadByAt__Item_1_
+  test::updatableInPlace::copyAnElementReadByHead__Item_1_
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+  test::updatableInPlace::foldStartingFromAnElement__Item_1_
+  test::updatableInPlace::singleValueReadAsAList__Item_1_
+platform::pure::functions::lang::toOne_T_MANY__T_1_:
+  test::updatableInPlace::copyAnElementReadByHead__Item_1_
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+  test::updatableInPlace::foldStartingFromAnElement__Item_1_
+test::updatableInPlace::Item:
+  test::updatableInPlace::copyAnElementReadByAt__Item_1_
+  test::updatableInPlace::copyAnElementReadByHead__Item_1_
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+  test::updatableInPlace::foldStartingFromAnElement__Item_1_
+  test::updatableInPlace::singleValueReadAsAList__Item_1_
+test::updatableInPlace::Item.v:
+  test::updatableInPlace::foldCopyingElements__Item_MANY_
+  test::updatableInPlace::foldStartingFromAnElement__Item_1_

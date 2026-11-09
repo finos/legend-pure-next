@@ -1,0 +1,149 @@
+// if runs one branch, once: each add is a last use.
+// ys is read after the if: the add in the branch must copy; size is the last use.
+// The else branch moves zs into w: both branches end in a value updatable in place, so w is fresh.
+###Pure
+function test::updatableInPlace::bothBranches(c: Boolean[1]): Integer[*]
+{
+  let xs = [1, 2]->map(x|$x);
+  if($c, |$xs->add(1), |$xs->add(2));
+}
+
+function test::updatableInPlace::oneBranch(c: Boolean[1]): Integer[1]
+{
+  let ys = [1, 2]->map(x|$x);
+  if($c, |$ys->add(1), |[0]);
+  $ys->size();
+}
+
+function test::updatableInPlace::moveFromBranch(c: Boolean[1]): Integer[*]
+{
+  let zs = [1, 2]->map(x|$x);
+  let w = if($c, |$zs->add(1), |$zs);
+  $w->add(3);
+}
+
+###CompiledGraph
+function test::updatableInPlace::bothBranches_Boolean_1__Integer_MANY_(c:@Boolean@[1]):@Integer@[*]  ~UserDefinedFunction<{@Boolean@[1]->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @7:3-7:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @7:7-7:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @7:18-7:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @7:12-7:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @7:13-7:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @7:16-7:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @7:24-7:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @7:26-7:27
+  FunctionInvocation if_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @8:3-8:36
+    typeParam T -> #Integer#
+    mulParam m -> #[1..*]#
+    Variable c :#Boolean##[1]#  ~@VariableExpression@  @8:6-8:7
+    Lambda :#LambdaFunction<#{->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @8:10-8:21
+      openVar xs :#Integer##[2]#
+      resultUpdatableInPlace
+      ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @8:14-8:21
+        typeParam T -> #Integer#
+        Variable xs :#Integer##[2]#  ~@VariableExpression@  @8:11-8:13  updatableInPlace
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:20-8:20
+    Lambda :#LambdaFunction<#{->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @8:24-8:35
+      openVar xs :#Integer##[2]#
+      resultUpdatableInPlace
+      ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @8:28-8:35
+        typeParam T -> #Integer#
+        Variable xs :#Integer##[2]#  ~@VariableExpression@  @8:25-8:27  updatableInPlace
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @8:34-8:34
+
+function test::updatableInPlace::oneBranch_Boolean_1__Integer_1_(c:@Boolean@[1]):@Integer@[1]  ~UserDefinedFunction<{@Boolean@[1]->@Integer@[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @13:3-13:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'ys' :@String@[1]  ~@AtomicValue@  @13:7-13:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @13:18-13:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @13:12-13:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @13:13-13:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @13:16-13:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @13:24-13:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @13:26-13:27
+  FunctionInvocation if_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @14:3-14:28
+    typeParam T -> #Integer#
+    mulParam m -> #[1..*]#
+    Variable c :#Boolean##[1]#  ~@VariableExpression@  @14:6-14:7
+    Lambda :#LambdaFunction<#{->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @14:10-14:21
+      openVar ys :#Integer##[2]#
+      resultUpdatableInPlace
+      ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @14:14-14:21
+        typeParam T -> #Integer#
+        Variable ys :#Integer##[2]#  ~@VariableExpression@  @14:11-14:13
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @14:20-14:20
+    Lambda :#LambdaFunction<#{->#Integer#[1]}#>#[1]  ~@AtomicValue@  @14:24-14:27
+      Collection :#Integer#[1]  ~@Collection@  @14:25-14:27
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @14:26-14:26
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @15:6-15:13
+    Variable ys :#Integer##[2]#  ~@VariableExpression@  @15:3-15:5  updatableInPlace
+
+function test::updatableInPlace::moveFromBranch_Boolean_1__Integer_MANY_(c:@Boolean@[1]):@Integer@[*]  ~UserDefinedFunction<{@Boolean@[1]->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @20:3-20:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'zs' :@String@[1]  ~@AtomicValue@  @20:7-20:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @20:18-20:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @20:12-20:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:13-20:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @20:16-20:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @20:24-20:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @20:26-20:27
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @21:3-21:36
+    typeParam T -> #Integer#
+    mulParam m -> #[1..*]#
+    AtomicValue  'w' :@String@[1]  ~@AtomicValue@  @21:7-21:7
+    FunctionInvocation if_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @21:11-21:36
+      typeParam T -> #Integer#
+      mulParam m -> #[1..*]#
+      Variable c :#Boolean##[1]#  ~@VariableExpression@  @21:14-21:15
+      Lambda :#LambdaFunction<#{->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @21:18-21:29
+        openVar zs :#Integer##[2]#
+        resultUpdatableInPlace
+        ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @21:22-21:29
+          typeParam T -> #Integer#
+          Variable zs :#Integer##[2]#  ~@VariableExpression@  @21:19-21:21  updatableInPlace
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @21:28-21:28
+      Lambda :#LambdaFunction<#{->#Integer##[2]#}#>#[1]  ~@AtomicValue@  @21:32-21:35
+        openVar zs :#Integer##[2]#
+        resultUpdatableInPlace
+        Variable zs :#Integer##[2]#  ~@VariableExpression@  @21:33-21:35  updatableInPlace
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @22:5-22:12
+    typeParam T -> #Integer#
+    Variable w :#Integer##[1..*]#  ~@VariableExpression@  @22:3-22:4  updatableInPlace
+    AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @22:11-22:11
+
+###ReverseIndex
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::bothBranches_Boolean_1__Integer_MANY_
+  test::updatableInPlace::moveFromBranch_Boolean_1__Integer_MANY_
+  test::updatableInPlace::oneBranch_Boolean_1__Integer_1_
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::updatableInPlace::bothBranches_Boolean_1__Integer_MANY_
+  test::updatableInPlace::moveFromBranch_Boolean_1__Integer_MANY_
+  test::updatableInPlace::oneBranch_Boolean_1__Integer_1_
+platform::pure::functions::collection::size_Any_MANY__Integer_1_:
+  test::updatableInPlace::oneBranch_Boolean_1__Integer_1_
+platform::pure::functions::lang::if_Boolean_1__Function_1__Function_1__T_m_:
+  test::updatableInPlace::bothBranches_Boolean_1__Integer_MANY_
+  test::updatableInPlace::moveFromBranch_Boolean_1__Integer_MANY_
+  test::updatableInPlace::oneBranch_Boolean_1__Integer_1_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::bothBranches_Boolean_1__Integer_MANY_
+  test::updatableInPlace::moveFromBranch_Boolean_1__Integer_MANY_
+  test::updatableInPlace::oneBranch_Boolean_1__Integer_1_
+

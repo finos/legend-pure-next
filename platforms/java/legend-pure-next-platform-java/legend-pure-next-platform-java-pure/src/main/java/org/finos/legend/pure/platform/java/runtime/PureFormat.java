@@ -28,7 +28,6 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.time.temporal.Temporal;
 import java.time.temporal.TemporalAccessor;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -336,7 +335,7 @@ public final class PureFormat
 
     private static List<?> asList(Object v)
     {
-        return v instanceof List ? (List<?>) v : v == null ? Collections.emptyList() : Collections.singletonList(v);
+        return PureValues.list(v);
     }
 
     private static Object first(List<?> values)

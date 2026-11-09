@@ -15,7 +15,7 @@
 
 import platform::pure::test::pct::*;
 
-native function <<PCT.function>> platform::pure::functions::collection::slice<T>(set:T[*], start:Integer[1], end:Integer[1]):T[*];
+native function <<PCT.function, inPlaceUpdate.NewCollectionResult>> {inPlaceUpdate.resultMayHoldElementsOf='set'} platform::pure::functions::collection::slice<T>(set:T[*], start:Integer[1], end:Integer[1]):T[*];
 
 
 function <<PCT.test>> platform::pure::functions::collection::tests::slice::testSliceOnEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]

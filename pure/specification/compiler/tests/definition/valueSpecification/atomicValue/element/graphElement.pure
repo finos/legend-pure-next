@@ -32,6 +32,7 @@ native function x::b::f__Any_1_():@Any@[1]  ~NativeFunction<{->@Any@[1]}>
 class a::A extends Any  ~Class<a::A>  @14:1-16:1
 
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  resultUpdatableInPlace
   Collection :#PackageableElement#[3]  ~@Collection@  @20:3-20:26
     AtomicValue  a::A :#Class<a::A>#[1]  ~@AtomicValue@  @20:4-20:4
     AtomicValue  x::b::f__Any_1_ :#NativeFunction<{->@Any@[1]}>#[1]  ~@AtomicValue@  @20:7-20:15

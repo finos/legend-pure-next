@@ -54,7 +54,7 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
           AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @30:21-30:32
           AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @30:29-30:32
   DotApplication test::SuperClass.greet(@String@[1]) :#String##[1]#  ~@DotApplication@  @31:5-31:19
-    Variable x :#test::SubClass##[1]#  ~@VariableExpression@  @31:3-31:4
+    Variable x :#test::SubClass##[1]#  ~@VariableExpression@  @31:3-31:4  updatableInPlace
     AtomicValue  'world' :@String@[1]  ~@AtomicValue@  @31:12-31:18
 
 ###ReverseIndex

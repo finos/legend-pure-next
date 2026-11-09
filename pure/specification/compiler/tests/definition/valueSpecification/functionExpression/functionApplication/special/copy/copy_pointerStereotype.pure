@@ -51,7 +51,7 @@ function test::copy::testPointerStereotype__Any_MANY_():@Any@[*]  ~UserDefinedFu
     AtomicValue  'p2' :@String@[1]  ~@AtomicValue@  @21:7-21:8
     FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @21:12-21:32
       typeParam T -> #test::copy::support::MyPointer#
-      Variable p :#test::copy::support::MyPointer##[1]#  ~@VariableExpression@  @21:13-21:14
+      Variable p :#test::copy::support::MyPointer##[1]#  ~@VariableExpression@  @21:13-21:14  updatableInPlace
       Collection :#KeyExpression#[1]  ~@Collection@  @21:12-21:32
         FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:16-21:31
           AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @21:16-21:31

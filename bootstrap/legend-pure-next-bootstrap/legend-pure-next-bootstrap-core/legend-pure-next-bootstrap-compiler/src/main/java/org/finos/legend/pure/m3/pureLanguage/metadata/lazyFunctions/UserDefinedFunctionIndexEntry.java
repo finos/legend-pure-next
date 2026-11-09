@@ -47,4 +47,40 @@ public class UserDefinedFunctionIndexEntry extends FunctionIndexEntry implements
     {
         throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
     }
+
+    @Override
+    public String _resultUpdatableInPlaceIfParameter()
+    {
+        return ((FunctionDefinition) resolve())._resultUpdatableInPlaceIfParameter();
+    }
+
+    @Override
+    public FunctionDefinition _resultUpdatableInPlaceIfParameter(String value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
+
+    @Override
+    public Boolean _resultUpdatableInPlace()
+    {
+        return ((FunctionDefinition) resolve())._resultUpdatableInPlace();
+    }
+
+    @Override
+    public FunctionDefinition _resultUpdatableInPlace(Boolean value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
+
+    @Override
+    public Boolean _resultElementsUpdatableInPlace()
+    {
+        return ((FunctionDefinition) resolve())._resultElementsUpdatableInPlace();
+    }
+
+    @Override
+    public FunctionDefinition _resultElementsUpdatableInPlace(Boolean value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 }

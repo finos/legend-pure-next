@@ -15,11 +15,11 @@
 
 package org.finos.legend.pure.platform.java.execution;
 
+import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.Metadata;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -63,7 +63,7 @@ public final class Execute
         }
         catch (ClassNotFoundException e)
         {
-            return Metadata.translateAndInvoke(path, List.of(args));
+            return Metadata.translateAndInvoke(path, Lists.fixedSize.of(args));
         }
         finally
         {
@@ -81,7 +81,7 @@ public final class Execute
         }
         catch (IllegalArgumentException e)
         {
-            throw new RuntimeException("Cannot call " + JavaSource.describe(execute, List.of(args)), e);
+            throw new RuntimeException("Cannot call " + JavaSource.describe(execute, Lists.fixedSize.of(args)), e);
         }
         catch (InvocationTargetException e)
         {

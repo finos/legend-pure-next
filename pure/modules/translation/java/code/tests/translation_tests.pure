@@ -57,6 +57,13 @@ function <<access.private>> platform::extensions::language::java::translation::t
    defaultConventions('org.finos.test')->translateFunction($f).class->classToString();
 }
 
+// The function's class and every class and file it needs (one per user function it calls), as one string.
+function <<access.private>> platform::extensions::language::java::translation::tests::translateAllAndStringify(f: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]): String[1]
+{
+   let signature = defaultConventions('org.finos.test')->translateFunction($f);
+   $signature.class->concatenate($signature.extraClasses)->map(c | $c->classToString())->concatenate($signature.files)->joinStrings('\n');
+}
+
 function <<test.Test>> platform::extensions::language::java::translation::tests::testTranslateAdd(): Boolean[1]
 {
    let expected = '''
@@ -144,4 +151,229 @@ function <<test.Test>> platform::extensions::language::java::translation::tests:
    assertEquals([], $coders->filter(c | $notHere->contains($c))->sort());
    assertEquals([], $coders->filter(c | platform::pure::functions::meta::lenientPathToElement($c)
                                            ->filter(e | !$e->instanceOf(platform::pure::metamodel::function::NativeFunction))->isNotEmpty())->sort());
+}
+
+// ----------------------------------------------------------------------------
+// UpdatableInPlace values (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): an operation on a variable the compiler marked updatable in place
+// calls the runtime's in-place variant, which still copies a list it did not allocate.
+// ----------------------------------------------------------------------------
+
+function platform::extensions::language::java::translation::tests::grow(): Integer[*]
+{
+   let xs = [1, 2]->map(x|$x);
+   $xs->add(3);
+}
+
+function platform::extensions::language::java::translation::tests::growAndKeep(): Integer[*]
+{
+   let xs = [1, 2]->map(x|$x);
+   let ys = $xs->add(3);
+   $xs->concatenate($ys);
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testUpdatableInPlaceAddIsInPlace(): Boolean[1]
+{
+   let code = translateAndStringify(grow__Integer_MANY_);
+   assert($code->contains('PureCollections.addInPlace('), | 'expected an in-place add in:\n' + $code);
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testSharedAddCopies(): Boolean[1]
+{
+   let code = translateAndStringify(growAndKeep__Integer_MANY_);
+   assert($code->contains('PureCollections.add(') && !$code->contains('PureCollections.addInPlace('), | 'expected a copying add in:\n' + $code);
+   assert($code->contains('PureCollections.concatenateInPlace('), | 'expected an in-place concatenate in:\n' + $code);
+}
+
+// A fold whose step adds to its accumulator: PureCollections.fold tells the step whether it holds the only reference
+// to the accumulator, and the step's add reads that flag. A fold whose step only reads it keeps Stream.reduce.
+function platform::extensions::language::java::translation::tests::collect(values: Integer[*]): Integer[*]
+{
+   $values->fold({e, acc|if($e > 1, |$acc->add($e), |$acc)}, [])
+}
+
+function platform::extensions::language::java::translation::tests::total(values: Integer[*]): Integer[1]
+{
+   $values->fold({e, acc|$acc + $e}, 0)
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testFoldStepIsToldItsUpdatability(): Boolean[1]
+{
+   let code = translateAndStringify(collect_Integer_MANY__Integer_MANY_);
+   assert($code->contains('PureCollections.fold('), | 'expected an updatableInPlace fold in:\n' + $code);
+   assert($code->contains('PureCollections.addIfUpdatableInPlace('), | 'expected an add told its updatability in:\n' + $code);
+}
+
+// A function that adds to its parameter takes it over when its caller passes it updatableInPlace: the caller of `appendTwice`
+// passes a fresh list it never reads again (executeUpdatingInPlace, bit 0 set); `appendTwice` passes its own parameter on to
+// `append` with its own flag as that bit; a caller that reads its list again calls plain `execute`.
+function platform::extensions::language::java::translation::tests::append(values: Integer[*], value: Integer[1]): Integer[*]
+{
+   $values->add($value)
+}
+
+function platform::extensions::language::java::translation::tests::appendTwice(values: Integer[*]): Integer[*]
+{
+   append(append($values, 1), 2)
+}
+
+function platform::extensions::language::java::translation::tests::callsAppend(): Integer[*]
+{
+   let xs = [1, 2]->map(x|$x);
+   appendTwice($xs);
+}
+
+function platform::extensions::language::java::translation::tests::callsAppendAndKeeps(): Integer[*]
+{
+   let xs = [1, 2]->map(x|$x);
+   let ys = appendTwice($xs);
+   $xs->concatenate($ys);
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testUpdatabilityPassesThroughCalls(): Boolean[1]
+{
+   let code = translateAllAndStringify(callsAppend__Integer_MANY_)->replace('\n', ' ')->replace(' ', '');
+   assert($code->contains('PureValues.list((Object)xs),1L)'), | 'expected the updatableInPlace list passed with bit 0 set in:\n' + $code);
+   assert($code->contains('values_pureUpdatableInPlace?1L:0L'), | 'expected appendTwice to pass its own flag on as bit 0 in:\n' + $code);
+   assert($code->contains('values_pureUpdatableInPlace=(pureUpdatableInPlace&1L)!=0L'), | 'expected the body to decode bit 0 in:\n' + $code);
+   assert($code->contains('PureCollections.addIfUpdatableInPlace('), | 'expected append to add told its updatability in:\n' + $code);
+   assert($code->contains(',0L);'), | 'expected execute to forward with no bit set in:\n' + $code);
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testSharedArgumentCallsExecute(): Boolean[1]
+{
+   let code = translateAndStringify(callsAppendAndKeeps__Integer_MANY_)->replace('\n', ' ')->replace(' ', '');
+   assert(!$code->contains('executeUpdatingInPlace(') && $code->contains('.execute((java.util.List)org.finos.legend.pure.platform.java.runtime.PureValues.list((Object)xs))'), | 'expected plain execute for a list read again in:\n' + $code);
+}
+
+// A qualified property with parameters has an `UpdatingInPlace` method taking an updatability mask; a call passing a list it never
+// reads again calls that one with its bit set, and the body decodes it for the list it concatenates to.
+Class platform::extensions::language::java::translation::tests::Collector
+{
+   base: Integer[*];
+   withAll(extra: Integer[*]) {$extra->concatenate($this.base)}: Integer[*];
+}
+
+function platform::extensions::language::java::translation::tests::collectInto(): Integer[*]
+{
+   let xs = [1, 2]->map(x|$x);
+   ^platform::extensions::language::java::translation::tests::Collector(base = [3, 4]).withAll($xs);
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testUpdatabilityPassesIntoAQualifiedProperty(): Boolean[1]
+{
+   let code = translateAllAndStringify(collectInto__Integer_MANY_)->replace('\n', ' ')->replace(' ', '');
+   assert($code->contains('.withAllUpdatingInPlace(xs,1L)'), | 'expected the updatableInPlace qualified property called with bit 0 set in:\n' + $code);
+   assert($code->contains('extra_pureUpdatableInPlace=(pureUpdatableInPlace&1L)!=0L'), | 'expected the body to decode bit 0 in:\n' + $code);
+   assert($code->contains('PureCollections.concatenateIfUpdatableInPlace('), | 'expected the body to concatenate told its updatability in:\n' + $code);
+}
+
+// Reading an element (head, resultMayHoldElementsOf) does not keep the list: the add after it is in place.
+function platform::extensions::language::java::translation::tests::readThenGrow(): Integer[*]
+{
+   let xs = [1, 2]->map(x|$x);
+   let h = $xs->head();
+   $xs->add($h->toOne());
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testReadingAnElementKeepsTheListUpdatableInPlace(): Boolean[1]
+{
+   let code = translateAndStringify(readThenGrow__Integer_MANY_);
+   assert($code->contains('PureCollections.addInPlace('), | 'expected an in-place add after reading the head in:\n' + $code);
+}
+
+// concatenate is NewCollectionResult: a fold accumulating with it stays updatable in place from step to step.
+function platform::extensions::language::java::translation::tests::doubleAll(values: Integer[*]): Integer[*]
+{
+   $values->fold({e, acc|$acc->concatenate([$e, $e])}, [])
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testFoldConcatenatingIsUpdatableInPlace(): Boolean[1]
+{
+   let code = translateAndStringify(doubleAll_Integer_MANY__Integer_MANY_)->replace('\n', ' ')->replace(' ', '');
+   assert($code->contains('PureCollections.fold(') && $code->contains('PureCollections.concatenateIfUpdatableInPlace('), | 'expected an updatableInPlace fold concatenating in place in:\n' + $code);
+   // start not updatable in place (a literal), step result updatable in place, not merely as the accumulator, a list accumulator
+   assert($code->contains(',false,true,false,true,'), | 'expected the step result updatableInPlace (resultUpdatableInPlace) in:\n' + $code);
+}
+
+// Copying an object nobody else holds changes it in place: no `_copy()`; one read again is copied.
+function platform::extensions::language::java::translation::tests::rebase(): Integer[*]
+{
+   let c = ^platform::extensions::language::java::translation::tests::Collector(base = [1]);
+   let d = ^$c(base = [2]);
+   $d.base;
+}
+
+function platform::extensions::language::java::translation::tests::rebaseAndKeep(): Integer[*]
+{
+   let c = ^platform::extensions::language::java::translation::tests::Collector(base = [1]);
+   let d = ^$c(base = [2]);
+   $c.base->concatenate($d.base);
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testCopyOfAnUpdatableInPlaceObjectIsInPlace(): Boolean[1]
+{
+   let code = translateAndStringify(rebase__Integer_MANY_);
+   assert(!$code->contains('_copy()'), | 'expected no copy of an object nobody else holds in:\n' + $code);
+   let kept = translateAndStringify(rebaseAndKeep__Integer_MANY_);
+   assert($kept->contains('_copy()'), | 'expected a copy of an object read again in:\n' + $kept);
+}
+
+// A fold step growing a field of its accumulator: the read of the field takes the object's own list
+// (LazyObject.updatableInPlaceValues) when its accumulator was passed updatable in place, and the grown list is stored as the object's own.
+function platform::extensions::language::java::translation::tests::growAField(): Integer[*]
+{
+   [1, 2, 3]->fold({e, acc|^$acc(base = $acc.base->add($e))}, ^platform::extensions::language::java::translation::tests::Collector(base = [])).base;
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testAFieldGivenAwayIsGrownInPlace(): Boolean[1]
+{
+   let code = translateAndStringify(growAField__Integer_MANY_);
+   assert($code->contains('updatableInPlaceValues('), | 'expected the field read to take the object\'s own list in:\n' + $code);
+   assert($code->contains('LazyObject.updatableInPlace('), | 'expected the grown list stored as the object\'s own in:\n' + $code);
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testFoldOfValuesKeepsReduce(): Boolean[1]
+{
+   let code = translateAndStringify(total_Integer_MANY__Integer_1_);
+   assert(!$code->contains('PureCollections.fold(') && $code->contains('.reduce('), | 'expected Stream.reduce in:\n' + $code);
+}
+
+// A list alone holding its elements (elementsUpdatableInPlace): map's lambda changes each in place, rather than copying.
+function platform::extensions::language::java::translation::tests::changeFreshElements(): platform::extensions::language::java::translation::tests::Collector[*]
+{
+   let xs = [1, 2]->map(i|^platform::extensions::language::java::translation::tests::Collector(base = [$i]));
+   $xs->map(x|^$x(base = [9]));
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testMapOverAListAloneHoldingItsElementsIsInPlace(): Boolean[1]
+{
+   let code = translateAndStringify(changeFreshElements__Collector_MANY_);
+   assert($code->contains('reusedForCopy('), | 'expected the element reused in:\n' + $code);
+}
+
+// Still read afterwards: the elements may be seen, so each is copied.
+function platform::extensions::language::java::translation::tests::changeElementsStillRead(): Integer[1]
+{
+   let xs = [1, 2]->map(i|^platform::extensions::language::java::translation::tests::Collector(base = [$i]));
+   let ys = $xs->map(x|^$x(base = [9]));
+   $xs->size();
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testMapOverAListStillReadCopies(): Boolean[1]
+{
+   let code = translateAndStringify(changeElementsStillRead__Integer_1_);
+   assert(!$code->contains('reusedForCopy('), | 'expected no element reused in:\n' + $code);
+}
+
+// filter keeps its element, so its lambda must copy.
+function platform::extensions::language::java::translation::tests::filterCopyingElement(): platform::extensions::language::java::translation::tests::Collector[*]
+{
+   let xs = [1, 2]->map(i|^platform::extensions::language::java::translation::tests::Collector(base = [$i]));
+   $xs->filter(x|^$x(base = [9]).base->size() == 1);
+}
+
+function <<test.Test>> platform::extensions::language::java::translation::tests::testFilterLambdaNeverReusesItsElement(): Boolean[1]
+{
+   let code = translateAndStringify(filterCopyingElement__Collector_MANY_);
+   assert(!$code->contains('reusedForCopy('), | 'expected no element reused in:\n' + $code);
 }

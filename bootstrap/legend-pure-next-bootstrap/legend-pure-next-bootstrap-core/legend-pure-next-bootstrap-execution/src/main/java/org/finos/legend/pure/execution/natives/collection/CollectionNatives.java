@@ -739,7 +739,7 @@ public class CollectionNatives
      */
     public static CollectionImpl makeCollection(List<ValueSpecification> items, MetadataAccess resolver)
     {
-        MutableList<ValueSpecification> vs = Lists.mutable.withAll(items);
+        MutableList<ValueSpecification> vs = new org.finos.legend.pure.execution.GrowableValues<>(items);
         MutableList<platform.pure.metamodel.type.generics.GenericType> elementTypes =
                 vs.collect(ValueSpecification::_genericType).select(gt -> gt != null);
         platform.pure.metamodel.type.generics.GenericType gt = elementTypes.notEmpty()

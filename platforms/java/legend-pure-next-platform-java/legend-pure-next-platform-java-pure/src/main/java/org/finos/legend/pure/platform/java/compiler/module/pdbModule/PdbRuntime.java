@@ -33,9 +33,8 @@ import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.table_FbsSchem
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -71,7 +70,7 @@ public final class PdbRuntime
 
     private final FbsSchema schema;
     private final Function<String, LazyObject> types;
-    private final List<Archive> archives = new ArrayList<>();
+    private final List<Archive> archives = Lists.mutable.empty();
     private final Map<String, Object> elements = new HashMap<>();
     private final Map<Object, Map<Long, LazyObject>> nodes = new IdentityHashMap<>();
     /** Extension values by the ExtensionValueDef that holds them: buffer, then position (see extensionValue). */
@@ -161,7 +160,7 @@ public final class PdbRuntime
     {
         if (allTypes == null)
         {
-            List<Object> types1 = new ArrayList<>();
+            MutableList<Object> types1 = Lists.mutable.empty();
             java.util.Set<String> seen = new java.util.HashSet<>();
             for (Archive archive : archives)
             {
@@ -177,7 +176,8 @@ public final class PdbRuntime
                     }
                 }
             }
-            allTypes = types1;
+            // Cached and handed to every caller: never a list one of them may grow in place.
+            allTypes = types1.asUnmodifiable();
         }
         return allTypes;
     }
@@ -189,8 +189,8 @@ public final class PdbRuntime
      */
     public List<Object> functionsByNameAndArity(String name, long arity)
     {
-        List<Object> found = new ArrayList<>();
-        for (String path : functionIndex().getOrDefault(name + "/" + arity, Collections.emptyList()))
+        List<Object> found = Lists.mutable.empty();
+        for (String path : functionIndex().getOrDefault(name + "/" + arity, Lists.fixedSize.empty()))
         {
             Object element = element(path);
             if (element != null)
@@ -210,7 +210,7 @@ public final class PdbRuntime
             for (Archive archive : archives)
             {
                 FbsNode section = sectionNode(archive, "functionIndex", "FunctionIndex");
-                for (Object entry : section == null ? Collections.emptyList() : field(section, "entries"))
+                for (Object entry : section == null ? Lists.fixedSize.empty() : field(section, "entries"))
                 {
                     indexFunction(index, (FbsNode) entry);
                 }
@@ -230,7 +230,7 @@ public final class PdbRuntime
             return;
         }
         long arity = functionTypes.isEmpty() ? 0 : field((FbsNode) functionTypes.get(0), "parameters").size();
-        index.computeIfAbsent(names.get(0) + "/" + arity, k -> new ArrayList<>()).add((String) paths.get(0));
+        index.computeIfAbsent(names.get(0) + "/" + arity, k -> Lists.mutable.empty()).add((String) paths.get(0));
     }
 
     /** Is an element stored as `storedAs` a Type? Asked once per stored type name. */
@@ -356,13 +356,13 @@ public final class PdbRuntime
      */
     private List<Object> mergedChildren(LazyObject owner)
     {
-        List<Object> merged = new ArrayList<>();
+        MutableList<Object> merged = Lists.mutable.empty();
         java.util.Set<String> names = new java.util.HashSet<>();
         for (Archive archive : archives)
         {
             Object element = archive.entries.containsKey(owner.elementPath) ? decode(archive, owner.elementPath) : null;
             LazyObject pkg = element == null ? null : (LazyObject) element;
-            for (Object child : pkg == null ? Collections.emptyList() : read(pkg, "children"))
+            for (Object child : pkg == null ? Lists.fixedSize.empty() : read(pkg, "children"))
             {
                 List<Object> childNames = ((LazyObject) child).__values("name");
                 if (childNames.isEmpty() || names.add((String) childNames.get(0)))
@@ -371,7 +371,7 @@ public final class PdbRuntime
                 }
             }
         }
-        return Collections.unmodifiableList(merged);
+        return merged.asUnmodifiable();
     }
 
     List<Object> read(LazyObject owner, String property)
@@ -383,9 +383,9 @@ public final class PdbRuntime
         String field = fieldName(owner.node, property);
         if (field == null)
         {
-            return Collections.emptyList();
+            return Lists.fixedSize.empty();
         }
-        List<Object> decoded = new ArrayList<>();
+        MutableList<Object> decoded = Lists.mutable.empty();
         for (Object value : readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_.execute(schema, owner.node, field))
         {
             Object converted = convert(owner, property, value);
@@ -395,7 +395,7 @@ public final class PdbRuntime
                 decoded.add("func".equals(property) ? receiversColumn(owner, converted) : converted);
             }
         }
-        return Collections.unmodifiableList(decoded);
+        return decoded.asUnmodifiable();
     }
 
     private static final String COLUMN = "platform::pure::metamodel::relation::Column";

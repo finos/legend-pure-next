@@ -16,9 +16,10 @@
 import platform::pure::test::pct::*;
 
 native function
-    <<PCT.function>>
+    <<PCT.function, inPlaceUpdate.NewCollectionResult>>
     {
-        doc.doc='Return the tail of the collection, which is everything but the first element'
+        doc.doc='Return the tail of the collection, which is everything but the first element',
+        inPlaceUpdate.resultMayHoldElementsOf='set'
     }
     platform::pure::functions::collection::tail<T>(set:T[*]):T[*];
 

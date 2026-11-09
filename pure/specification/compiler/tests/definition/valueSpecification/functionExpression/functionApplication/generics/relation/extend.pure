@@ -35,7 +35,7 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:@String@[1], other:@Integer@[
   ArrowInvocation extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_ :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#, new:#String##[1]#)#>##[1]#  ~@ArrowInvocation@  @24:5-24:71
     typeParam R -> #(new:#String##[1]#)#
     typeParam T -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
-    Variable x :#Relation<(legal:@String@[1], other:@Integer@[0..1])>##[1]#  ~@VariableExpression@  @24:3-24:4
+    Variable x :#Relation<(legal:@String@[1], other:@Integer@[0..1])>##[1]#  ~@VariableExpression@  @24:3-24:4  updatableInPlaceIf x
     FunctionInvocation over__Window_1_ :#Window<#(legal:@String@[1], other:@Integer@[0..1])#>##[1]#  ~@FunctionInvocation@  @24:14-24:19
       typeParam T -> #(legal:@String@[1], other:@Integer@[0..1])#
     FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->@Any@[1]}#, #(new:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @24:23-24:70
@@ -50,7 +50,7 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:@String@[1], other:@Integer@[
               typeParam V -> #String#
               ArrowInvocation lag_Relation_1__T_1__T_$0_1$_ :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[0..1]#  ~@ArrowInvocation@  @24:40-24:48
                 typeParam T -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
-                Variable p :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#  ~@VariableExpression@  @24:38-24:39
+                Variable p :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#  ~@VariableExpression@  @24:38-24:39  updatableInPlaceIf p
                 Variable r :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#  ~@VariableExpression@  @24:46-24:47
               Lambda(v_automap:#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]) :#LambdaFunction<#{#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
                 DotApplication column legal :#String##[1]#  ~@DotApplication@  @24:49-24:54

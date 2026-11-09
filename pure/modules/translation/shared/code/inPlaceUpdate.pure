@@ -1,0 +1,82 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::extensions::pure::translation::inPlaceUpdate::*;
+
+// Updatability (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md), as every translator emits it: which parameters of a body the
+// translated code reads the updatability flag of, and the bit of a parameter in the mask a call passes.
+
+// The parameters among `names` whose updatability flag the translated code reads: a use the compiler marked updatable in place if
+// one of them was passed updatable in place (updatableInPlaceIfParameter), where the code consults that flag — the receiver of an
+// add/concatenate/reverse and the source of a copy (updatableInPlaceCall), an argument of a call to a user function or qualified property (handed on
+// in its updatability mask), the start value of a fold (foldUpdatingInPlace). Any other marked use reads nothing. A lambda's own
+// parameters hide outer ones of the same name.
+function platform::extensions::pure::translation::inPlaceUpdate::flagReaders(exprs: ValueSpecification[*], names: String[*]): String[*]
+{
+   if ($names->isEmpty(), | [], | $exprs->map(e | $e->flagReadersOf($names))->removeDuplicates());
+}
+
+function platform::extensions::pure::translation::inPlaceUpdate::flagReadersOf(vs: ValueSpecification[1], names: String[*]): String[*]
+{
+   $vs->match([
+      fe: FunctionExpression[1] |
+         let args = $fe.parametersValues->filter(a | $a->instanceOf(ValueSpecification))->cast(@ValueSpecification);
+         let here = $fe->flagReadingArguments()
+                       ->filter(i | $i < $args->size())
+                       ->map(i | $args->at($i))
+                       ->filter(a | $a->instanceOf(VariableExpression))->cast(@VariableExpression)
+                       ->filter(v | $v.updatableInPlaceIfParameter->isNotEmpty() && $names->contains($v.updatableInPlaceIfParameter->toOne()))
+                       ->map(v | $v.updatableInPlaceIfParameter->toOne());
+         $here->concatenate($args->map(a | $a->flagReadersOf($names)));,
+      av: AtomicValue[1] |
+         $av.value->filter(v | $v->instanceOf(LambdaFunction))->map(l |
+            let lambda = $l->cast(@LambdaFunction<Any>);
+            $lambda.expressionSequence->flagReaders($names->filter(n | !$lambda.parameters->map(p | $p.name)->contains($n))););,
+      col: Collection[1] |
+         $col.values->filter(v | $v->instanceOf(ValueSpecification))->cast(@ValueSpecification)->map(v | $v->flagReadersOf($names)),
+      other: ValueSpecification[1] | []
+   ]);
+}
+
+// The positions of a call whose argument's updatability flag the translated call reads.
+function platform::extensions::pure::translation::inPlaceUpdate::flagReadingArguments(fe: FunctionExpression[1]): Integer[*]
+{
+   let f = $fe.func;
+   let n = $fe.parametersValues->size();
+   if ($f->isEmpty(), | [],
+   |if ($f->toOne()->instanceOf(platform::pure::metamodel::function::UserDefinedFunction), | range($n),
+   |if ($f->toOne()->instanceOf(platform::pure::metamodel::function::property::QualifiedProperty), | range(1, $n),
+   |if (!$f->toOne()->instanceOf(platform::pure::metamodel::function::NativeFunction), | [],
+   | let path = $f->toOne()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath();
+     if ([ 'platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_',
+           'platform::pure::functions::collection::add_T_MANY__Integer_1__T_1__T_$1_MANY$_',
+           'platform::pure::functions::collection::concatenate_T_MANY__T_MANY__T_MANY_',
+           'platform::pure::functions::collection::reverse_T_m__T_m_',
+           'platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_']->contains($path),
+        | [0],
+        | if ([ 'platform::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_',
+                'platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_']->contains($path),
+             | [2],
+             | []));))));
+}
+
+// The bit of parameter `i` in an updatability mask: 2 to the power i.
+function platform::extensions::pure::translation::inPlaceUpdate::updatableInPlaceBit(i: Integer[1]): Integer[1]
+{
+   range($i)->fold({k, acc | $acc * 2}, 1)
+}

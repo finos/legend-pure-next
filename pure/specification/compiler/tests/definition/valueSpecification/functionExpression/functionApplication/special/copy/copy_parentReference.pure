@@ -65,13 +65,14 @@ function test::copy::parentRef::testCopySelfReference__Any_MANY_():@Any@[*]  ~Us
     AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @21:7-21:7
     FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Node##[1]#  ~@FunctionInvocation@  @21:11-21:23
       typeParam T -> #test::copy::parentRef::Node#
-      Variable n :#test::copy::parentRef::Node##[1]#  ~@VariableExpression@  @21:12-21:13
+      Variable n :#test::copy::parentRef::Node##[1]#  ~@VariableExpression@  @21:12-21:13  updatableInPlace
       Collection :#KeyExpression#[1]  ~@Collection@  @21:11-21:23
         FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:15-21:22
           AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @21:15-21:22
           Variable ~ :#test::copy::parentRef::Node##[1]#  ~@VariableExpression@  @21:22-21:22
 
 function test::copy::parentRef::testCopyPropertyAccess__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  resultUpdatableInPlace
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRef::Container##[1]#  ~@FunctionInvocation@  @26:3-26:56
     typeParam T -> #test::copy::parentRef::Container#
     mulParam m -> #[1]#
@@ -90,7 +91,7 @@ function test::copy::parentRef::testCopyPropertyAccess__Any_MANY_():@Any@[*]  ~U
             AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @26:52-26:54
   FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Container##[1]#  ~@FunctionInvocation@  @27:3-27:23
     typeParam T -> #test::copy::parentRef::Container#
-    Variable c :#test::copy::parentRef::Container##[1]#  ~@VariableExpression@  @27:4-27:5
+    Variable c :#test::copy::parentRef::Container##[1]#  ~@VariableExpression@  @27:4-27:5  updatableInPlace
     Collection :#KeyExpression#[1]  ~@Collection@  @27:3-27:23
       FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @27:7-27:22
         AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @27:7-27:22
@@ -98,6 +99,7 @@ function test::copy::parentRef::testCopyPropertyAccess__Any_MANY_():@Any@[*]  ~U
           Variable ~ :#test::copy::parentRef::Container##[1]#  ~@VariableExpression@  @27:16-27:22
 
 function test::copy::parentRef::testCopyPropertyArrow__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  resultUpdatableInPlace
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRef::Container##[1]#  ~@FunctionInvocation@  @32:3-32:56
     typeParam T -> #test::copy::parentRef::Container#
     mulParam m -> #[1]#
@@ -116,11 +118,11 @@ function test::copy::parentRef::testCopyPropertyArrow__Any_MANY_():@Any@[*]  ~Us
             AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @32:52-32:54
   FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Container##[1]#  ~@FunctionInvocation@  @33:3-33:34
     typeParam T -> #test::copy::parentRef::Container#
-    Variable c :#test::copy::parentRef::Container##[1]#  ~@VariableExpression@  @33:4-33:5
+    Variable c :#test::copy::parentRef::Container##[1]#  ~@VariableExpression@  @33:4-33:5  updatableInPlace
     Collection :#KeyExpression#[1]  ~@Collection@  @33:3-33:34
       FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @33:7-33:33
         AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @33:7-33:33
-        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@ArrowInvocation@  @33:23-33:33
+        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@ArrowInvocation@  @33:23-33:33  updatableInPlace
           typeParam T -> #String#
           typeParam V -> #String#
           mulParam m -> #[*]#

@@ -15,7 +15,7 @@
 
 import platform::pure::test::pct::*;
 
-native function <<PCT.function>> platform::pure::functions::collection::indexOf<T>(set:T[*], value:T[1]):Integer[1];
+native function <<PCT.function>> {inPlaceUpdate.onlyReads='set,value'} platform::pure::functions::collection::indexOf<T>(set:T[*], value:T[1]):Integer[1];
 
 function <<PCT.test>> platform::pure::functions::collection::tests::indexof::testIndexOf<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

@@ -17,3 +17,32 @@ Profile platform::pure::profiles::functionType
 {
     stereotypes : [SideEffectFunction, NotImplementedFunction, NormalizeRequiredFunction, ReducerFunction];
 }
+
+// What a native does with its arguments and result, for the compiler's updatable in place-value analysis
+// (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md). The compiler trusts these on native functions only, and assumes
+// the worst without them: every parameter may be retained (returned, or kept in hidden state such as a
+// memoize cache), every lambda escapes, no result is fresh. Each annotation only adds permission, so a missing
+// one costs an optimisation, never correctness.
+//   NewInstanceResult        the single-valued result is a newly allocated instance referenced by nothing else (new, copy).
+//   NewCollectionResult      the to-many result is a new collection referenced by nothing else (map, filter, add).
+//                            Trusted only where the call yields a to-many value, since map over a single element
+//                            returns the lambda's value. It may be read-only (a view, an immutable empty singleton):
+//                            never an argument, a cached value, or anything another reference could see change. Its
+//                            elements are not claimed new.
+//   onlyReads='p,q'                  nothing of the named arguments comes out of the call: neither returned nor stored.
+//   resultMayHoldElementsOf='p'      the argument is not kept, but the result may be, or may contain, its elements
+//                                    (at, head, filter, tail).
+//   resultMayHoldFieldsOf='p'        the object is not kept, but the result may hold its field values (copy).
+//   callsLambdaWithElementsOf='p'    the argument is not kept, but a lambda argument is called with its elements (map, fold).
+//                                    Alone, each element is handed over once and given up, so the lambda may take it over;
+//                                    next to resultMayHoldElementsOf the native keeps the element, so the lambda only reads it.
+//   callsLambdaAtMostOnce='f,g'      each named lambda (or function argument) runs at most once, before the call
+//                                    returns, and is not kept after it; the named lambdas are mutually exclusive
+//                                    alternatives.
+//   callsLambdaRepeatedly='f'        each named lambda (or function argument) runs any number of times, before the
+//                                    call returns, and is not kept after it.
+Profile platform::pure::profiles::inPlaceUpdate
+{
+    stereotypes : [NewInstanceResult, NewCollectionResult];
+    tags : [onlyReads, resultMayHoldElementsOf, resultMayHoldFieldsOf, callsLambdaWithElementsOf, callsLambdaAtMostOnce, callsLambdaRepeatedly];
+}

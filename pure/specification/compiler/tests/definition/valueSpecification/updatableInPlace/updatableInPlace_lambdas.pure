@@ -1,0 +1,161 @@
+// map runs its lambda once per element: the captured xs is read again on the next one.
+// A lambda kept in a variable may run at any time: nothing it captures is ever updatable in place.
+// zs is stored in an instance inside the lambda: an alias outlives the call.
+###Pure
+import test::updatableInPlace::*;
+
+Class test::updatableInPlace::Box
+{
+  values: Integer[*];
+}
+
+function test::updatableInPlace::insideMap(): Integer[1]
+{
+  let xs = [0, 0]->map(x|$x);
+  let r = [1, 2]->map(i|$xs->add($i));
+  $xs->size();
+}
+
+function test::updatableInPlace::escaping(): Integer[*]
+{
+  let ys = [0, 0]->map(x|$x);
+  let f = i:Integer[1]|$ys->add($i);
+  $ys->add(9);
+}
+
+function test::updatableInPlace::leakInsideMap(): Integer[*]
+{
+  let zs = [0, 0]->map(x|$x);
+  [1]->map(i|^Box(values = $zs));
+  $zs->add(1);
+}
+
+###CompiledGraph
+class test::updatableInPlace::Box extends Any  ~Class<test::updatableInPlace::Box>  @7:1-10:1
+  property values :@Integer@[*]  ~Property<test::updatableInPlace::Box, @Integer@|*>
+
+function test::updatableInPlace::insideMap__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @14:3-14:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @14:7-14:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @14:18-14:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @14:12-14:17
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @14:13-14:13
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @14:16-14:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @14:24-14:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @14:26-14:27
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[*]#  ~@FunctionInvocation@  @15:3-15:37
+    typeParam T -> #Integer#
+    mulParam m -> #[*]#
+    AtomicValue  'r' :@String@[1]  ~@AtomicValue@  @15:7-15:7
+    ArrowInvocation map_T_MANY__Function_1__V_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @15:17-15:37
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      Collection :#Integer#[2]  ~@Collection@  @15:11-15:16
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @15:12-15:12
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @15:15-15:15
+      Lambda(i:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @15:23-15:36
+        openVar xs :#Integer##[2]#
+        resultUpdatableInPlace
+        ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @15:28-15:36
+          typeParam T -> #Integer#
+          Variable xs :#Integer##[2]#  ~@VariableExpression@  @15:25-15:27
+          Variable i :#Integer##[1]#  ~@VariableExpression@  @15:34-15:35
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @16:6-16:13
+    Variable xs :#Integer##[2]#  ~@VariableExpression@  @16:3-16:5  updatableInPlace
+
+function test::updatableInPlace::escaping__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @21:3-21:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'ys' :@String@[1]  ~@AtomicValue@  @21:7-21:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @21:18-21:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @21:12-21:17
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @21:13-21:13
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @21:16-21:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @21:24-21:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @21:26-21:27
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#LambdaFunction<#{@Integer@[1]->#Integer##[1..*]#}#>##[1]#  ~@FunctionInvocation@  @22:3-22:35
+    typeParam T -> #LambdaFunction<#{@Integer@[1]->#Integer##[1..*]#}#>#
+    mulParam m -> [1]
+    AtomicValue  'f' :@String@[1]  ~@AtomicValue@  @22:7-22:7
+    Lambda(i:@Integer@[1]) :#LambdaFunction<#{@Integer@[1]->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @22:11-22:35
+      openVar ys :#Integer##[2]#
+      resultUpdatableInPlace
+      ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @22:27-22:35
+        typeParam T -> #Integer#
+        Variable ys :#Integer##[2]#  ~@VariableExpression@  @22:24-22:26
+        Variable i :#Integer##[1]#  ~@VariableExpression@  @22:33-22:34
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @23:6-23:13
+    typeParam T -> #Integer#
+    Variable ys :#Integer##[2]#  ~@VariableExpression@  @23:3-23:5
+    AtomicValue  9 :@Integer@[1]  ~@AtomicValue@  @23:12-23:12
+
+function test::updatableInPlace::leakInsideMap__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @28:3-28:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'zs' :@String@[1]  ~@AtomicValue@  @28:7-28:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @28:18-28:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @28:12-28:17
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @28:13-28:13
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @28:16-28:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @28:24-28:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @28:26-28:27
+  ArrowInvocation map_T_m__Function_1__V_m_ :#test::updatableInPlace::Box##[1]#  ~@ArrowInvocation@  @29:6-29:32
+    typeParam T -> #Integer#
+    typeParam V -> #test::updatableInPlace::Box#
+    mulParam m -> [1]
+    Collection :#Integer#[1]  ~@Collection@  @29:3-29:5
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @29:4-29:4
+    Lambda(i:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#test::updatableInPlace::Box##[1]#}#>#[1]  ~@AtomicValue@  @29:12-29:31
+      openVar zs :#Integer##[2]#
+      resultUpdatableInPlace
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::updatableInPlace::Box##[1]#  ~@FunctionInvocation@  @29:14-29:31
+        typeParam T -> test::updatableInPlace::Box
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Box|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::updatableInPlace::Box|1>  @29:14-29:31
+        Collection :#KeyExpression#[1]  ~@Collection@  @29:14-29:31
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @29:19-29:30
+            AtomicValue  'values' :@String@[1]  ~@AtomicValue@  @29:19-29:30
+            Variable zs :#Integer##[2]#  ~@VariableExpression@  @29:28-29:30
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @30:6-30:13
+    typeParam T -> #Integer#
+    Variable zs :#Integer##[2]#  ~@VariableExpression@  @30:3-30:5
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @30:12-30:12
+
+###ReverseIndex
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::escaping__Integer_MANY_
+  test::updatableInPlace::insideMap__Integer_1_
+  test::updatableInPlace::leakInsideMap__Integer_MANY_
+platform::pure::functions::collection::map_T_MANY__Function_1__V_MANY_:
+  test::updatableInPlace::insideMap__Integer_1_
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::updatableInPlace::escaping__Integer_MANY_
+  test::updatableInPlace::insideMap__Integer_1_
+  test::updatableInPlace::leakInsideMap__Integer_MANY_
+platform::pure::functions::collection::size_Any_MANY__Integer_1_:
+  test::updatableInPlace::insideMap__Integer_1_
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::updatableInPlace::leakInsideMap__Integer_MANY_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::escaping__Integer_MANY_
+  test::updatableInPlace::insideMap__Integer_1_
+  test::updatableInPlace::leakInsideMap__Integer_MANY_
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::updatableInPlace::leakInsideMap__Integer_MANY_
+test::updatableInPlace::Box:
+  test::updatableInPlace::leakInsideMap__Integer_MANY_
+

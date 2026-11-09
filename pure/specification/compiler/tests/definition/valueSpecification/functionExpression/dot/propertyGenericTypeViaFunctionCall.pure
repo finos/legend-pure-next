@@ -48,7 +48,7 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
           AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @26:32-26:38
   FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @27:5-27:21
     DotApplication test::Box.get() :#String##[1]#  ~@DotApplication@  @27:5-27:10
-      Variable b :#test::Box<@String@>##[1]#  ~@VariableExpression@  @27:3-27:4
+      Variable b :#test::Box<@String@>##[1]#  ~@VariableExpression@  @27:3-27:4  updatableInPlace
     AtomicValue  ' world' :@String@[1]  ~@AtomicValue@  @27:14-27:21
 
 ###ReverseIndex

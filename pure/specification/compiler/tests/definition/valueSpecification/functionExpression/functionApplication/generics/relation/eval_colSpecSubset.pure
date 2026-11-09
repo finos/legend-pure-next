@@ -36,7 +36,7 @@ function joinS_Relation_1__ColSpec_1__String_1__String_1_(rel:Relation<T~joinS_R
     typeParam U -> #String#
     typeParam V -> #String#
     mulParam m -> #[1]#
-    Variable rel :#Relation<T~joinS_Relation_1__ColSpec_1__String_1__String_1_>##[1]#  ~@VariableExpression@  @25:3-25:6
+    Variable rel :#Relation<T~joinS_Relation_1__ColSpec_1__String_1__String_1_>##[1]#  ~@VariableExpression@  @25:3-25:6  updatableInPlaceIf rel
     Lambda(x:#T~joinS_Relation_1__ColSpec_1__String_1__String_1_##[1]#) :#LambdaFunction<#{#T~joinS_Relation_1__ColSpec_1__String_1__String_1_##[1]#->#String##[0..1]#}#>#[1]  ~@AtomicValue@  @25:16-25:31
       openVar col :#ColSpec<(?:@String@[1])⊆T~joinS_Relation_1__ColSpec_1__String_1__String_1_>##[1]#
       FunctionInvocation eval_ColSpec_1__T_1__Z_$0_1$_ :#String##[0..1]#  ~@FunctionInvocation@  @25:18-25:31
@@ -47,7 +47,7 @@ function joinS_Relation_1__ColSpec_1__String_1__String_1_(rel:Relation<T~joinS_R
     Lambda(y:#String##[*]#) :#LambdaFunction<#{#String##[*]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @25:34-25:62
       openVar separator :#String##[1]#
       ArrowInvocation joinStrings_String_MANY__String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @25:38-25:62
-        Variable y :#String##[*]#  ~@VariableExpression@  @25:36-25:37
+        Variable y :#String##[*]#  ~@VariableExpression@  @25:36-25:37  updatableInPlaceIf y
         Variable separator :#String##[1]#  ~@VariableExpression@  @25:52-25:61
 
 ###ReverseIndex

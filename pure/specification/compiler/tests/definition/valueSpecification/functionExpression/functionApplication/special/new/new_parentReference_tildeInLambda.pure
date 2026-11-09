@@ -29,6 +29,7 @@ Class test::new::parentRefLambda::Container
 
 ###CompiledGraph
 function test::new::parentRefLambda::testNewTildeInLambda__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  resultUpdatableInPlace
   FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRefLambda::Container##[1]#  ~@FunctionInvocation@  @20:3-20:84
     typeParam T -> test::new::parentRefLambda::Container
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRefLambda::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRefLambda::Container|1>  @20:3-20:84
@@ -43,7 +44,7 @@ function test::new::parentRefLambda::testNewTildeInLambda__Any_MANY_():@Any@[*] 
           AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @20:44-20:46
       FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:50-20:83
         AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @20:50-20:83
-        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[2]#  ~@ArrowInvocation@  @20:69-20:83
+        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[2]#  ~@ArrowInvocation@  @20:69-20:83  updatableInPlace
           typeParam T -> #String#
           typeParam V -> #String#
           mulParam m -> [2]

@@ -15,7 +15,7 @@
 
 import platform::pure::test::pct::*;
 
-native function <<PCT.function>> platform::pure::functions::collection::zip<T,U>(set1:T[*], set2:U[*]):Pair<T,U>[*];
+native function <<PCT.function, inPlaceUpdate.NewCollectionResult>> {inPlaceUpdate.resultMayHoldElementsOf='set1,set2'} platform::pure::functions::collection::zip<T,U>(set1:T[*], set2:U[*]):Pair<T,U>[*];
 
 function <<PCT.test>> platform::pure::functions::collection::tests::zip::testZipBothListsEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

@@ -358,6 +358,17 @@ public class SourceModule implements Module
         org.finos.legend.pure.m3.module.FunctionRefExtractor.extractInto(compiledElements, (target, caller) ->
                 refIndex.computeIfAbsent(target, k -> new java.util.LinkedHashSet<>()).add(caller));
 
+        // In-place update analysis (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): marks the variable uses that hold
+        // the only reference to their value, and each function's result summary, on the resolved graph. The
+        // natives it reads annotations from are reached through the module-scoped resolver, as the lean-references
+        // validator does, so no function is loaded through the function index.
+        if (errors.isEmpty())
+        {
+            org.finos.legend.pure.m3.module.ScopedMetadataAccess accessForAnalysis =
+                    new org.finos.legend.pure.m3.module.ScopedMetadataAccess(this, registry);
+            org.finos.legend.pure.m3.module.InPlaceUpdateAnalyzer.annotate(compiledElements, accessForAnalysis::getElement, refIndex);
+        }
+
         // Lean-references validator: scan the reverse index for any non-test
         // element that references a test-only element. Uses the per-module
         // resolver so cross-module callers can be classified. Violations are
@@ -382,6 +393,19 @@ public class SourceModule implements Module
         {
             List<CompilationError> combined = new java.util.ArrayList<>(errors);
             combined.addAll(leanRefsViolations);
+            errors = combined;
+        }
+
+        // Updatability annotations are claims the analysis trusts: check what can be checked.
+        List<CompilationError> inPlaceUpdateViolations = org.finos.legend.pure.m3.module.InPlaceUpdateAnnotationValidator.validate(compiledElements)
+                .stream()
+                .map(e -> new org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError(e.message(), e.sourceInformation()))
+                .map(wrapped -> new CompilationError(wrapped.formatMessage(), wrapped.sourceInformation()))
+                .toList();
+        if (!inPlaceUpdateViolations.isEmpty())
+        {
+            List<CompilationError> combined = new java.util.ArrayList<>(errors);
+            combined.addAll(inPlaceUpdateViolations);
             errors = combined;
         }
 

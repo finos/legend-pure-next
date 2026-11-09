@@ -14,9 +14,9 @@
 
 package org.finos.legend.pure.platform.java.runtime;
 
+import org.eclipse.collections.impl.list.mutable.FastList;
 import org.finos.legend.pure.platform.java.execution.PureStack;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -73,7 +73,7 @@ public final class PureAsserts
     {
         if (v == null)
         {
-            return Collections.emptyList();
+            return FastList.newList(0);
         }
         return v instanceof List && ((List<?>) v).size() == 1 ? ((List<?>) v).get(0) : v;
     }

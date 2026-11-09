@@ -489,10 +489,13 @@ function platform::extensions::language::java::translation::platform::platformEn
    // enumeration is its classifier, and the PDB holds its annotations.
    let type   = javaClass($e->platformTypeName($javaRoot));
    let names  = $e->platform::pure::functions::meta::enumValues()->map(v | $v.name->toOne());
-   let listOf = javaClass('java.util.List');
+   // Shared by every caller of values(): an immutable Eclipse Collections list, never one a caller may grow.
+   let immutableLists = j_field(javaClass('org.eclipse.collections.api.factory.Lists'), 'immutable',
+                                javaClass('org.eclipse.collections.api.factory.list.ImmutableListFactory'));
    let constants = $names->map(n | javaField(['public', 'static', 'final'], $type, $n->safeJavaName(), j_new($type, [j_string($n)])));
    let values    = javaField(['private', 'static', 'final'], javaList($type), '$VALUES',
-                             j_invoke($listOf, 'of', $names->map(n | j_field($type, $n->safeJavaName(), $type)), javaList($type)));
+                             $immutableLists->j_invoke('with', $names->map(n | j_field($type, $n->safeJavaName(), $type)), javaClass('org.eclipse.collections.api.list.ImmutableList'))
+                                            ->j_invoke('castToList', [], javaList($type)));
    javaClass(['public', 'final'], $e->platformTypeName($javaRoot))
       ->implements(javaClass($conv->platform::extensions::language::java::translation::pdbClass('PureEnumConstant')))
       ->addFields($constants->concatenate($values)->concatenate(javaField(['private', 'final'], javaString(), '$name')))

@@ -1170,7 +1170,17 @@ function __qpsOf(path) {
 // its class up the generalizations (breadth-first) to the first class
 // declaring `name` at this arity — the eval arrow's `.length` counts the
 // receiver plus supplied args — and fall back to the static owner.
-function __qp(ownerPath, name, recv, ...rest) {
+// A qualified-property call telling the override that runs which arguments it passed updatable in place (bit i for argument i):
+// matched on the arguments alone, the mask passed after them (its parameter is defaulted, so not counted in .length).
+function __qpUpdatingInPlace(ownerPath, name, mask, recv, ...rest) {
+  return __qp(ownerPath, name, recv, ...rest, new __UpdatableInPlaceMask(mask));
+}
+class __UpdatableInPlaceMask { constructor(bits) { this.bits = bits; } }
+function __qp(ownerPath, name, recv, ...args) {
+  // A trailing updatability mask (__qpUpdatingInPlace) is not an argument: it is passed after them, as a number.
+  const masked = args.length > 0 && args[args.length - 1] instanceof __UpdatableInPlaceMask;
+  const rest = masked ? args.slice(0, -1) : args;
+  const tail = masked ? [args[args.length - 1].bits] : [];
   const arity = rest.length + 1;
   const declared = (qps) => __asArr(qps).find((q) => __eq(q.name, name) && q.eval.length === arity);
   const pathOf = (t) => t && (t.__purePath !== void 0 ? t.__purePath : t.path);
@@ -1182,7 +1192,7 @@ function __qp(ownerPath, name, recv, ...rest) {
     if (seen.has(path)) continue;
     seen.add(path);
     const q = declared(__qpEvalsOf(path));
-    if (q) return q.eval(recv, ...rest);
+    if (q) return q.eval(recv, ...rest, ...tail);
     if (path === ownerPath || path === "platform::pure::metamodel::type::Any") continue;
     for (const g of __asArr(__pureResolve(path).generalizations)) {
       const p = pathOf(g && g.general && g.general.type);
@@ -1191,7 +1201,7 @@ function __qp(ownerPath, name, recv, ...rest) {
   }
   const fallback = ownerPath ? declared(__qpEvalsOf(ownerPath)) : void 0;
   if (!fallback) throw new Error("qualified property " + name + "/" + (arity - 1) + " not found on " + ownerPath);
-  return fallback.eval(recv, ...rest);
+  return fallback.eval(recv, ...rest, ...tail);
 }
 // Reconstruct a GenericTypeAndMultiplicityHolder constant (`@X` literal)
 // against the metadata globals: classifier info uses __pureResolve POINTER
@@ -1389,9 +1399,14 @@ function __memoize(fn, ...args) {
   }
 }
 // A property's default value, read on an object that never set it (the translator's prototype getter):
-// `compute` called with the object. Never stored. A default that needs its own value is an error.
+// `compute` called with the object on the first read, then kept beside it, so every read is the same collection
+// (is.pure). Not stored on the object: rawEvalProperty sees only what was set, and a copy computes its own. A default
+// that needs its own value is an error.
 const __computingDefaults = new WeakMap();
+const __keptDefaults = new WeakMap();
 function __default(obj, classPath, name, compute) {
+  const kept = __keptDefaults.get(obj);
+  if (kept !== void 0 && kept.has(name)) return kept.get(name);
   let computing = __computingDefaults.get(obj);
   if (computing === void 0) {
     computing = new Set();
@@ -1400,7 +1415,14 @@ function __default(obj, classPath, name, compute) {
   if (computing.has(name)) throw new Error("default value cycle: " + classPath + "." + name + " is already being computed for this object");
   computing.add(name);
   try {
-    return compute(obj);
+    const value = compute(obj);
+    let byName = __keptDefaults.get(obj);
+    if (byName === void 0) {
+      byName = new Map();
+      __keptDefaults.set(obj, byName);
+    }
+    byName.set(name, value);
+    return value;
   } finally {
     computing.delete(name);
   }
@@ -1411,7 +1433,7 @@ function __rawEvalProperty(property, object) {
   const name = __pdo(property).name;
   const o = __pdo(object);
   if (o === null || o === void 0 || typeof o !== "object") return [];
-  if (Object.prototype.hasOwnProperty.call(o, name)) return o[name] === void 0 ? [] : o[name];
+  if (Object.prototype.hasOwnProperty.call(o, name)) return o[name] === void 0 ? [] : __held(o[name]);
   for (let p = Object.getPrototypeOf(o); p !== null; p = Object.getPrototypeOf(p)) {
     const d = Object.getOwnPropertyDescriptor(p, name);
     if (d !== void 0) return typeof d.get === "function" ? [] : (o[name] === void 0 ? [] : o[name]);
@@ -1928,6 +1950,53 @@ function __fold(coll, fn, seed) {
   for (const item of arr) acc = fn(item, acc);
   return acc;
 }
+// -- updatability (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md) ----------------------------------------------------------
+// A value the compiler marked updatable in place holds the only reference to its array, which may then be changed in place
+// instead of copied — when it is an array this runtime may change: not frozen (a metadata read is). Anything else
+// is copied, as without the mark.
+function __growable(a) { return Array.isArray(a) && !Object.isFrozen(a); }
+function __addInPlace(a, v) {
+  if (__growable(a)) { a.push(v); return a; }
+  return [...__asArr(a), v];
+}
+function __addAtInPlace(a, i, v) {
+  const n = __num(i);
+  if (__growable(a)) { a.splice(n, 0, v); return a; }
+  const arr = __asArr(a);
+  return [...arr.slice(0, n), v, ...arr.slice(n)];
+}
+function __concatInPlace(a, b) {
+  if (__growable(a)) { for (const x of __asArr(b)) a.push(x); return a; }
+  return __concat(a, b);
+}
+function __reverseInPlace(a) {
+  if (__growable(a)) return a.reverse();
+  return __asArr(a).slice().reverse();
+}
+// The same on a value updatable in place when `updatableInPlace`: updatable in place if the caller passed a parameter updatable in place.
+function __addIfUpdatableInPlace(a, v, updatableInPlace) { return updatableInPlace ? __addInPlace(a, v) : [...__asArr(a), v]; }
+function __addAtIfUpdatableInPlace(a, i, v, updatableInPlace) {
+  if (updatableInPlace) return __addAtInPlace(a, i, v);
+  const arr = __asArr(a), n = __num(i);
+  return [...arr.slice(0, n), v, ...arr.slice(n)];
+}
+function __concatIfUpdatableInPlace(a, b, updatableInPlace) { return updatableInPlace ? __concatInPlace(a, b) : __concat(a, b); }
+function __reverseIfUpdatableInPlace(a, updatableInPlace) { return updatableInPlace ? __reverseInPlace(a) : __asArr(a).slice().reverse(); }
+// Bit i of an updatability mask: whether a call passed its i-th argument updatable in place. A call that passes no mask (a
+// dynamic one) passes nothing updatable in place.
+function __updatableInPlaceBit(mask, bit) { return ((mask | 0) & bit) !== 0; }
+// fold(coll, step, init), telling each step whether it holds the only reference to its accumulator: the first when
+// init was passed updatable in place, each next one when the previous step's result is updatable in place (stepResultUpdatableInPlace), or is updatable in place
+// whenever its accumulator was (stepResultUpdatableInPlaceIfAccumulator).
+function __foldUpdatingInPlace(coll, init, initUpdatableInPlace, stepResultUpdatableInPlace, stepResultUpdatableInPlaceIfAccumulator, step) {
+  const arr = coll === void 0 ? [] : Array.isArray(coll) ? coll : [coll];
+  let acc = init, updatableInPlace = initUpdatableInPlace;
+  for (const item of arr) {
+    acc = step(item, acc, updatableInPlace);
+    updatableInPlace = stepResultUpdatableInPlace || (stepResultUpdatableInPlaceIfAccumulator && updatableInPlace);
+  }
+  return acc;
+}
 function __asArr(v) {
   return v === void 0 || v === null ? [] : Array.isArray(v) ? v : [v];
 }
@@ -2170,7 +2239,7 @@ function __eval(fn, ...args) {
     const cls = fn.classifierGenericType && fn.classifierGenericType.type;
     const clsPath = cls && (cls.__purePath !== void 0 ? cls.__purePath : cls.path);
     if (typeof fn.name === "string" && typeof clsPath === "string" && clsPath.endsWith("::property::Property")) {
-      return __pdo(args[0])[fn.name];
+      return __held(__pdo(args[0])[fn.name]);
     }
     if (typeof fn.__purePath === "string") {
       return __rewrapStubs(__metadataInvoke(fn.__purePath, args));
@@ -2830,8 +2899,21 @@ function __lenientPathToElement(p, sep) {
 // passed as a value is (tagged with __purePath), the proxy __pureResolve hands out — so two values with one path are
 // one element. A copy (`^$f()`) carries the path too, but is a value of its own (__copy marks it). Two enum values
 // are the same when they are of one enumeration and named alike. Anything else: ===.
-function __is(a, b) {
+// What `is` compares a value by: nothing for an empty collection (every empty collection is the same), the element of a
+// collection of one, the collection itself otherwise (literal collections are interned, so equal literals are one).
+const __NO_VALUES = Object.freeze({});
+function __identityOf(v) {
+  if (v === undefined || v === null) return __NO_VALUES;
+  if (Array.isArray(v)) {
+    if (v.length === 0) return __NO_VALUES;
+    if (v.length === 1) return __identityOf(v[0]);
+  }
+  return v;
+}
+function __is(left, right) {
+  const a = __identityOf(left), b = __identityOf(right);
   if (a === b) return true;
+  if (a === __NO_VALUES || b === __NO_VALUES || Array.isArray(a) || Array.isArray(b)) return false;
   if (!a || !b || (typeof a !== "object" && typeof a !== "function") || (typeof b !== "object" && typeof b !== "function")) return false;
   const pa = a.__purePath, pb = b.__purePath;
   if (typeof pa === "string" && pa === pb && !a.__isCopy && !b.__isCopy) return true;
@@ -3039,6 +3121,12 @@ function __classTypeBindingsAs(typePath, values, ancestorPath) {
     .find((b) => b !== void 0);
 }
 const __resolveCache = {};
+// A registered element's property values, read once and kept: every read is the same collection (is.pure). The
+// module registry drops them when what an address names can have changed (__forgetMetadataReads).
+const __metadataReads = new Map();
+function __forgetMetadataReads(path) {
+  if (path === void 0) __metadataReads.clear(); else __metadataReads.delete(path);
+}
 const __OPT_CGT_PREFIX = "platform::pure::metamodel::type::generics::optimization::GenericType_";
 const __OPT_DEFAULTS = {
   typeArguments: () => [],
@@ -3051,6 +3139,7 @@ function __pureResolve(address) {
   if (hit !== void 0) return hit;
   // Lazily created: only elements someone actually calls an accessor on pay for the map.
   let accessors;
+  const canonical = address.indexOf("$") < 0 && !address.startsWith("__dyn::") && !address.startsWith("__local::");
   const isOptCgt = address.startsWith(__OPT_CGT_PREFIX);
   const optTarget = isOptCgt ? address.substring(__OPT_CGT_PREFIX.length).replace(/_/g, "::") : null;
   const p = new Proxy({ __purePath: address, path: address }, {
@@ -3096,8 +3185,20 @@ function __pureResolve(address) {
         return fn;
       }
       try {
-        const raw = __metadataRead(address, prop);
-        return __rewrapStubs(raw);
+        // A registered element's property is read once and kept: every read is the same collection (is.pure) —
+        // __rewrapStubs builds a new array each time. Not an address-scheme stub's (`__dyn::…`, `__local::…`,
+        // `…$…`): its address may come to name another element.
+        const kept = __metadataReads.get(address);
+        if (kept !== void 0 && kept.has(prop)) return kept.get(prop);
+        const value = __rewrapStubs(__metadataRead(address, prop));
+        if (canonical) {
+          // Frozen: shared by every read, never a list one may grow in place (__growable).
+          if (Array.isArray(value)) Object.freeze(value);
+          let reads = __metadataReads.get(address);
+          if (reads === void 0) { reads = new Map(); __metadataReads.set(address, reads); }
+          reads.set(prop, value);
+        }
+        return value;
       } catch (e) {
         if (isOptCgt && /unknown element/.test(String(e?.message ?? ""))) {
           if (prop === "type") return __pureResolve(optTarget);
@@ -3199,8 +3300,8 @@ const __accessorPrototype = new Proxy(Object.create(Object.prototype), {
     if (typeof prop === "string" && prop.length > 1 && prop.charCodeAt(0) === 95 && prop.charCodeAt(1) !== 95) {
       const field = prop.substring(1);
       return function (value) {
-        if (arguments.length === 0) return receiver[field];
-        receiver[field] = value;
+        if (arguments.length === 0) return __held(receiver[field]);
+        receiver[field] = __stored(value);
         return receiver;
       };
     }
@@ -3261,12 +3362,12 @@ function __spreadEager(src) {
   // unaffected.
   const proto = Object.getPrototypeOf(src);
   const base = proto === null || proto === Object.prototype ? {} : Object.create(proto);
+  // The source's own arrays are held by the copy too from now on.
+  for (const k of Object.keys(src)) __held(src[k]);
   const out = "__purePath" in src
       ? Object.assign(base, src, { classifierGenericType: src.classifierGenericType })
       : Object.assign(base, src);
-  for (const k of Object.keys(out)) {
-    if (Array.isArray(out[k])) out[k] = out[k].slice();
-  }
+  // A property not given a new value holds the same collection (is.pure): no array is copied — nothing changes one.
   if ("__purePath" in src) __carryClassProperties(src, out);
   return out;
 }
@@ -3286,7 +3387,7 @@ function __carryClassProperties(src, out) {
     if (name in out) continue;
     Object.defineProperty(out, name, {
       enumerable: true, configurable: true,
-      get() { const v = src[name]; settle(name, Array.isArray(v) ? v.slice() : v); return out[name]; },
+      get() { settle(name, src[name]); return out[name]; },
       set(v) { settle(name, v); },
     });
   }
@@ -3343,8 +3444,8 @@ function __bindAssoc(thisObj, otherValue, reverseName, toMany, className, propNa
   if (toMany) {
     const cur = otherValue[reverseName];
     const arr = Array.isArray(cur) ? cur : cur === void 0 || cur === null ? [] : [cur];
-    if (arr.indexOf(thisObj) < 0) arr.push(thisObj);
-    otherValue[reverseName] = arr;
+    // A new collection, never the stored one grown: a read of it before keeps its value (is.pure).
+    otherValue[reverseName] = arr.indexOf(thisObj) < 0 ? [...arr, thisObj] : arr;
   } else {
     otherValue[reverseName] = thisObj;
   }
@@ -3356,11 +3457,56 @@ function __markCopy(self) {
   return self;
 }
 function __copy(base, overrides) {
+  // [x] is x: a native typed T[m] (sort, reverse) gives a one-value array when m is [1].
+  if (Array.isArray(base) && base.length === 1) base = base[0];
   const self = __markCopy(__spreadEager(base));
   if (self === null || typeof self !== "object") return self;
-  return Object.assign(self, overrides);
+  return Object.assign(self, __storedOverrides(overrides));
 }
+// -- a field's own array (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md, Fields) ------------------------------------------
+// An array an object holds that is not frozen is referenced by nothing but that object: it was stored updatable in place
+// (__updatableInPlace) and not read since but by a read the compiler proved holds the only reference to it (__updatableInPlaceRead). Any
+// other store, read, or copy freezes it.
+class __UpdatableInPlace { constructor(value) { this.value = value; } }
+function __updatableInPlace(value) { return new __UpdatableInPlace(value); }
+function __updatableInPlaceIf(value, updatableInPlace) { return updatableInPlace ? new __UpdatableInPlace(value) : value; }
+// A value being stored: one proved updatable in place is kept as the object's own; any other array may be held by another too.
+function __stored(value) {
+  if (value instanceof __UpdatableInPlace) return value.value;
+  if (Array.isArray(value) && !Object.isFrozen(value)) Object.freeze(value);
+  return value;
+}
+// A value read from an object by an ordinary read: held by the reader too from now on.
+function __held(value) {
+  if (Array.isArray(value) && !Object.isFrozen(value)) Object.freeze(value);
+  return value;
+}
+// A read proved to hold the only reference to a field's array: the object's own array itself.
+function __updatableInPlaceRead(object, name) {
+  const o = __pdo(object);
+  if (o !== null && typeof o === "object" && Object.prototype.hasOwnProperty.call(o, name)) {
+    const v = o[name];
+    return v === void 0 ? [] : v;
+  }
+  return __held(o == null ? [] : (o[name] === void 0 ? [] : o[name]));
+}
+// Overrides of a copy, each stored as a value is.
+function __storedOverrides(overrides) {
+  for (const k of Object.keys(overrides)) overrides[k] = __stored(overrides[k]);
+  return overrides;
+}
+// A copy changing its source itself, when it holds the only reference to it (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md):
+// only an instance this program built (not a metadata element, not frozen), its kept defaults dropped — a copy computes
+// its own from its own values. Any other is copied.
+function __copyInPlace(base, overrides) {
+  if (base === null || typeof base !== "object" || Array.isArray(base) || Object.isFrozen(base)
+      || ("__purePath" in base && !base.__isCopy)) return __copy(base, overrides);
+  __keptDefaults.delete(base);
+  return Object.assign(base, __storedOverrides(overrides));
+}
+function __copyIfUpdatableInPlace(base, overrides, updatableInPlace) { return updatableInPlace ? __copyInPlace(base, overrides) : __copy(base, overrides); }
 function __copyCtx(src, fill) {
+  if (Array.isArray(src) && src.length === 1) src = src[0];
   const self = __markCopy(__spreadEager(src));
   __ctorStack.push(self);
   try {

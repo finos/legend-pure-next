@@ -1,0 +1,91 @@
+// xs is read again after add: add must copy. size is its last use, and add does not retain its receiver.
+// A collection literal of several values is a new collection at each evaluation: it may be given away.
+// A primitive is never annotated.
+###Pure
+function test::updatableInPlace::notLastUse(): Integer[1]
+{
+  let xs = [1, 2]->map(x|$x);
+  let ys = $xs->add(2);
+  $xs->size();
+}
+
+function test::updatableInPlace::literal(): Integer[*]
+{
+  let zs = [1, 2];
+  $zs->add(3);
+}
+
+function test::updatableInPlace::primitive(): String[1]
+{
+  let n = 1 + 2;
+  $n->toString();
+}
+
+###CompiledGraph
+function test::updatableInPlace::notLastUse__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @7:3-7:28
+    typeParam T -> #Integer#
+    mulParam m -> #[2]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @7:7-7:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[2]#  ~@ArrowInvocation@  @7:18-7:28
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [2]
+      Collection :#Integer#[2]  ~@Collection@  @7:12-7:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @7:13-7:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @7:16-7:16
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @7:24-7:27
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @7:26-7:27
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @8:3-8:22
+    typeParam T -> #Integer#
+    mulParam m -> #[1..*]#
+    AtomicValue  'ys' :@String@[1]  ~@AtomicValue@  @8:7-8:8
+    ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @8:15-8:22
+      typeParam T -> #Integer#
+      Variable xs :#Integer##[2]#  ~@VariableExpression@  @8:12-8:14
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @8:21-8:21
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @9:6-9:13
+    Variable xs :#Integer##[2]#  ~@VariableExpression@  @9:3-9:5  updatableInPlace
+
+function test::updatableInPlace::literal__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[2]#  ~@FunctionInvocation@  @14:3-14:17
+    typeParam T -> #Integer#
+    mulParam m -> [2]
+    AtomicValue  'zs' :@String@[1]  ~@AtomicValue@  @14:7-14:8
+    Collection :#Integer#[2]  ~@Collection@  @14:12-14:17
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @14:13-14:13
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @14:16-14:16
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @15:6-15:13
+    typeParam T -> #Integer#
+    Variable zs :#Integer##[2]#  ~@VariableExpression@  @15:3-15:5  updatableInPlace
+    AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @15:12-15:12
+
+function test::updatableInPlace::primitive__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1]#  ~@FunctionInvocation@  @20:3-20:15
+    typeParam T -> #Integer#
+    mulParam m -> #[1]#
+    AtomicValue  'n' :@String@[1]  ~@AtomicValue@  @20:7-20:7
+    FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @20:11-20:15
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:11-20:11
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @20:15-20:15
+  ArrowInvocation toString_Any_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @21:5-21:16
+    Variable n :#Integer##[1]#  ~@VariableExpression@  @21:3-21:4
+
+###ReverseIndex
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::literal__Integer_MANY_
+  test::updatableInPlace::notLastUse__Integer_1_
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::updatableInPlace::notLastUse__Integer_1_
+platform::pure::functions::collection::size_Any_MANY__Integer_1_:
+  test::updatableInPlace::notLastUse__Integer_1_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::literal__Integer_MANY_
+  test::updatableInPlace::notLastUse__Integer_1_
+  test::updatableInPlace::primitive__String_1_
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test::updatableInPlace::primitive__String_1_
+platform::pure::functions::string::toString_Any_1__String_1_:
+  test::updatableInPlace::primitive__String_1_
+

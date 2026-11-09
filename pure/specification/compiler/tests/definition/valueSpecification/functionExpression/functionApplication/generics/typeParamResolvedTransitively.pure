@@ -40,6 +40,7 @@ function test::testTypeParamResolution_Function_1__Any_MANY_(f:Function<{Functio
       mulParam n -> #[1]#
       Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y~test::testTypeParamResolution_Function_1__Any_MANY_]}>##[1]#  ~@VariableExpression@  @26:3-26:4
       Lambda :#LambdaFunction<#{->#test::TPR_Person##[1]#}#>#[1]  ~@AtomicValue@  @26:12-26:56
+        resultUpdatableInPlace
         FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  ~@FunctionInvocation@  @26:13-26:56
           typeParam T -> test::TPR_Person
           TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>  @26:13-26:56

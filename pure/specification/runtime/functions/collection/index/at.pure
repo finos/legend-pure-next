@@ -18,7 +18,8 @@ import platform::pure::test::pct::*;
 native function
     <<PCT.function>>
     {
-        doc.doc=''
+        doc.doc='',
+        inPlaceUpdate.resultMayHoldElementsOf='set'
     }
     platform::pure::functions::collection::at<T>(set:T[*], key:Integer[1]):T[1];
 

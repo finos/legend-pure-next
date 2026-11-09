@@ -20,6 +20,7 @@ function test(): ColSpecArray<(name:String, id:Integer)>[1]
 
 ###CompiledGraph
 function test__ColSpecArray_1_():ColSpecArray<(name:@String@[1], id:@Integer@[1])>[1]  ~UserDefinedFunction<{->ColSpecArray<(name:@String@[1], id:@Integer@[1])>[1]}>
+  resultUpdatableInPlace
   FunctionInvocation colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_ :#ColSpecArray<(name:@String@[1], id:@Integer@[1])>##[1]#  ~@FunctionInvocation@  @18:3-18:28
     typeParam T -> (name:@String@[1], id:@Integer@[1])
     Collection :#String#[2]  ~@Collection@

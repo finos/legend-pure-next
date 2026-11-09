@@ -1,0 +1,47 @@
+// xs is bound to a fresh list (map) and its only use is add's receiver: updatable in place. ys likewise.
+###Pure
+function test::updatableInPlace::lastUse(): Integer[*]
+{
+  let xs = [1, 2, 3]->map(x|$x);
+  let ys = $xs->add(7);
+  $ys->add(8);
+}
+
+###CompiledGraph
+function test::updatableInPlace::lastUse__Integer_MANY_():@Integer@[*]  ~UserDefinedFunction<{->@Integer@[*]}>
+  resultUpdatableInPlace
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[3]#  ~@FunctionInvocation@  @5:3-5:31
+    typeParam T -> #Integer#
+    mulParam m -> #[3]#
+    AtomicValue  'xs' :@String@[1]  ~@AtomicValue@  @5:7-5:8
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Integer##[3]#  ~@ArrowInvocation@  @5:21-5:31
+      typeParam T -> #Integer#
+      typeParam V -> #Integer#
+      mulParam m -> [3]
+      Collection :#Integer#[3]  ~@Collection@  @5:12-5:20
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @5:13-5:13
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @5:16-5:16
+        AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @5:19-5:19
+      Lambda(x:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @5:27-5:30
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @5:29-5:30
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1..*]#  ~@FunctionInvocation@  @6:3-6:22
+    typeParam T -> #Integer#
+    mulParam m -> #[1..*]#
+    AtomicValue  'ys' :@String@[1]  ~@AtomicValue@  @6:7-6:8
+    ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @6:15-6:22
+      typeParam T -> #Integer#
+      Variable xs :#Integer##[3]#  ~@VariableExpression@  @6:12-6:14  updatableInPlace
+      AtomicValue  7 :@Integer@[1]  ~@AtomicValue@  @6:21-6:21
+  ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@ArrowInvocation@  @7:6-7:13
+    typeParam T -> #Integer#
+    Variable ys :#Integer##[1..*]#  ~@VariableExpression@  @7:3-7:5  updatableInPlace
+    AtomicValue  8 :@Integer@[1]  ~@AtomicValue@  @7:12-7:12
+
+###ReverseIndex
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::updatableInPlace::lastUse__Integer_MANY_
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::updatableInPlace::lastUse__Integer_MANY_
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::updatableInPlace::lastUse__Integer_MANY_
+

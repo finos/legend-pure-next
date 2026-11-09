@@ -1,0 +1,9 @@
+###Error
+NewCollectionResult on 'test::updatableInPlace::answer__Integer_1_': its result is a single value (at valueSpecification/updatableInPlace/updatableInPlace_E_newCollectionSingleValue:5c1-5c99)
+
+###Pure
+native function <<inPlaceUpdate.NewCollectionResult>> test::updatableInPlace::answer(): Integer[1];
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

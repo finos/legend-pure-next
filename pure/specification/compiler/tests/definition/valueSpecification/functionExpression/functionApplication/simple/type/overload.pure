@@ -28,7 +28,7 @@ function pack::testStringLookup_String_1__Integer_1_(s:@String@[1]):@Integer@[1]
 function pack::testCollectionLookup_Integer_MANY__Integer_1_(c:@Integer@[*]):@Integer@[1]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[1]}>
   ArrowInvocation pack::lookup_T_MANY__T_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @15:5-15:15
     typeParam T -> #Integer#
-    Variable c :#Integer##[*]#  ~@VariableExpression@  @15:3-15:4
+    Variable c :#Integer##[*]#  ~@VariableExpression@  @15:3-15:4  updatableInPlaceIf c
     AtomicValue  5 :@Integer@[1]  ~@AtomicValue@  @15:14-15:14
 
 ###ReverseIndex

@@ -18,7 +18,8 @@ import platform::pure::test::pct::*;
 native function
     <<PCT.function>>
     {
-        doc.doc=''
+        doc.doc='',
+        inPlaceUpdate.callsLambdaAtMostOnce='valid,invalid'
     }
     platform::pure::functions::lang::if<T|m>(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m];
 

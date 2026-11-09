@@ -69,6 +69,23 @@ public final class Scope
      * Look up a binding, walking the parent chain. Returns {@code null}
      * if the name is not bound anywhere up the chain.
      */
+    /** The frame binding {@code name}, walking the parent chain; null when it is bound nowhere. */
+    public Scope definingScope(String name)
+    {
+        for (Scope s = this; s != null; s = s.parent)
+        {
+            for (int i = s.size - 1; i >= 0; i--)
+            {
+                String n = s.names[i];
+                if (n == name || n.equals(name))
+                {
+                    return s;
+                }
+            }
+        }
+        return null;
+    }
+
     public ValueSpecification get(String name)
     {
         Scope s = this;

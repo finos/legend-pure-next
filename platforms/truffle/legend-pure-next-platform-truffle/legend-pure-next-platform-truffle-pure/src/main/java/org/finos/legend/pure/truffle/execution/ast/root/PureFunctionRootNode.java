@@ -47,6 +47,48 @@ public final class PureFunctionRootNode extends RootNode
     @CompilationFinal(dimensions = 1)
     private final int[] paramSlots;
 
+    /** The slot of each parameter's updatability flag (FrameDescriptorBuilder.updatableInPlaceFlagName), -1 when its body reads none. */
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal(dimensions = 1)
+    private final int[] paramFlagSlots;
+
+    /** Whether the body reads any parameter's flag: when not, nothing is decoded (a constant for partial evaluation). */
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private final boolean decodesUpdatableInPlace;
+
+    // Exploded: each flag slot a constant. A loop over them would index the frame by a value partial evaluation cannot
+    // fold, and the frame could no longer be virtualized — the graph then grows until Graal's size limit
+    // (MaximumGraalGraphSize) bails out.
+    @com.oracle.truffle.api.nodes.ExplodeLoop
+    private void decodeUpdatableInPlace(com.oracle.truffle.api.frame.VirtualFrame frame, org.finos.legend.pure.truffle.execution.ast.call.UpdatableInPlaceMask mask)
+    {
+        for (int i = 0; i < paramFlagSlots.length; i++)
+        {
+            if (paramFlagSlots[i] >= 0)
+            {
+                frame.setObject(paramFlagSlots[i], mask.owns(i));
+            }
+        }
+    }
+
+    private static int[] flagSlotsOf(FrameLayout layout)
+    {
+        int[] params = layout.paramSlots();
+        int[] flags = new int[params.length];
+        for (int i = 0; i < params.length; i++)
+        {
+            flags[i] = -1;
+            for (java.util.Map.Entry<String, Integer> slot : layout.slots().entrySet())
+            {
+                if (slot.getValue() == params[i])
+                {
+                    Integer flag = layout.slots().get(org.finos.legend.pure.truffle.execution.FrameDescriptorBuilder.updatableInPlaceFlagName(slot.getKey()));
+                    flags[i] = flag == null ? -1 : flag;
+                }
+            }
+        }
+        return flags;
+    }
+
     @Children
     private final Node[] body;
 
@@ -145,6 +187,8 @@ public final class PureFunctionRootNode extends RootNode
         this.name = name;
         this.layout = layout;
         this.paramSlots = layout.paramSlots();
+        this.paramFlagSlots = flagSlotsOf(layout);
+        this.decodesUpdatableInPlace = java.util.Arrays.stream(paramFlagSlots).anyMatch(s -> s >= 0);
         this.body = java.util.Arrays.copyOf(body, body.length, Node[].class);
         this.rootSourceSection = sourceSection;
         this.mayBindTypeVars = mayBindTypeVars;
@@ -199,6 +243,12 @@ public final class PureFunctionRootNode extends RootNode
                 arg = coerceArgToParamShape(arg, paramUpperBound[i], paramLowerBound[i], i);
             }
             frame.setObject(paramSlots[i], arg);
+        }
+        // An updatability mask after the arguments (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): which of them the caller
+        // passed updatable in place, into the flags of the parameters the body reads one of. Without one, none is updatable in place.
+        if (decodesUpdatableInPlace && arguments.length > paramSlots.length && arguments[paramSlots.length] instanceof org.finos.legend.pure.truffle.execution.ast.call.UpdatableInPlaceMask mask)
+        {
+            decodeUpdatableInPlace(frame, mask);
         }
 
 

@@ -17,6 +17,7 @@ function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
     mulParam m -> #[1..2]#
     AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @8:7-8:10
     Lambda :#LambdaFunction<#{->#Integer#[2]}#>#[1]  ~@AtomicValue@  @8:13-8:19
+      resultUpdatableInPlace
       Collection :#Integer#[2]  ~@Collection@  @8:14-8:19
         AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:15-8:15
         AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @8:18-8:18

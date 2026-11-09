@@ -52,8 +52,9 @@ public final class RemoveAllNode extends PureNode
         }
         Object other = otherArg.executeGeneric(frame);
         int otherSz = CollectionHelper.size(other);
-        if (otherSz == 0)
+        if (otherSz == 0 && setSz == 1)
         {
+            // A collection of one is its value (is.pure).
             return set;
         }
         Object[] buf = new Object[setSz];

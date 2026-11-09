@@ -29,9 +29,10 @@ function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       Collection :#Nil#[0]  ~@Collection@  @18:8-18:9
       TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>  @18:17-18:24
     Lambda(val:#Integer##[1]#, acc:#Nil##[*]#) :#LambdaFunction<#{#Integer##[1]#, #Nil##[*]#->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @18:28-18:53
+      resultUpdatableInPlace
       FunctionInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@FunctionInvocation@  @18:38-18:52
         typeParam T -> #Integer#
-        Variable acc :#Nil##[*]#  ~@VariableExpression@  @18:42-18:45
+        Variable acc :#Nil##[*]#  ~@VariableExpression@  @18:42-18:45  updatableInPlaceIf acc
         Variable val :#Integer##[1]#  ~@VariableExpression@  @18:48-18:51
     Collection :#Nil#[0]  ~@Collection@  @18:56-18:57
 

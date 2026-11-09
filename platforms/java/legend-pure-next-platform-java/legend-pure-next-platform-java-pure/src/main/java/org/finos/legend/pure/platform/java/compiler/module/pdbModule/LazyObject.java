@@ -16,9 +16,9 @@
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
 import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.FbsNode;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,6 +47,8 @@ public abstract class LazyObject
     LazyObject parent;
     // Insertion order: the order properties were set (or first read).
     private final Map<String, List<Object>> values = new LinkedHashMap<>();
+    /** The default values computed for this object's unset properties, kept once read (not carried by a copy). */
+    private Map<String, List<Object>> defaults;
 
     /** The Pure class path of this object. */
     public abstract String _purePath();
@@ -63,16 +65,28 @@ public abstract class LazyObject
      */
     public final List<Object> __values(String property)
     {
-        List<Object> cached = values.get(property);
+        List<Object> cached = frozen(property);
         if (cached == null)
         {
-            cached = node == null ? Collections.emptyList() : runtime.read(this, property);
+            cached = node == null ? Lists.fixedSize.empty() : runtime.read(this, property);
             if (cached.isEmpty())
             {
-                // Never set: its default value, if the class gives it one, computed for this object now.
-                // Not stored — a copy holds only what was set, and computes its own
-                // (testCopyKeepsDefaultValues).
-                List<Object> computed = Metadata.defaultValue(this, property);
+                // Never set: its default value, if the class gives it one, computed for this object on its first
+                // read and kept, so every read is the same collection (is.pure). Kept apart from what was set: a
+                // copy holds only that, and computes its own (testCopyKeepsDefaultValues).
+                List<Object> computed = defaults == null ? null : defaults.get(property);
+                if (computed == null)
+                {
+                    computed = Metadata.defaultValue(this, property);
+                    if (computed != null)
+                    {
+                        if (defaults == null)
+                        {
+                            defaults = new java.util.HashMap<>();
+                        }
+                        defaults.put(property, computed);
+                    }
+                }
                 if (computed != null)
                 {
                     return computed;
@@ -89,12 +103,19 @@ public abstract class LazyObject
      */
     public final List<Object> __storedValues(String property)
     {
-        List<Object> cached = values.get(property);
+        List<Object> cached = frozen(property);
         if (cached != null)
         {
             return cached;
         }
-        return node == null ? Lists.fixedSize.empty() : runtime.read(this, property);
+        List<Object> decoded = node == null ? Lists.fixedSize.empty() : runtime.read(this, property);
+        // Decoded once, as a read keeps it: every read is the same collection (is.pure). An empty one is not kept,
+        // so a later read still computes the default.
+        if (!decoded.isEmpty())
+        {
+            values.put(property, decoded);
+        }
+        return decoded;
     }
 
     /** The properties this object holds values for: set, or already decoded from its PDB node. */
@@ -103,24 +124,91 @@ public abstract class LazyObject
         return Collections.unmodifiableSet(values.keySet());
     }
 
+    // -- a field's own collection (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md) --------------------------------------------
+    // A growable list held as a property's value is referenced by nothing but this object: it was stored updatable in place
+    // (UpdatingInPlace) and has not been read since, other than by a read the compiler proved holds the only reference to it
+    // (updatableInPlaceValues). Any other read, and a copy, hands out a read-only view of it from then on.
+
+    /** A value the compiler proved updatable in place, being stored: a growable list is kept as this object's own. */
+    public record UpdatingInPlace(Object value)
+    {
+    }
+
+    public static Object updatableInPlace(Object value)
+    {
+        return new UpdatingInPlace(value);
+    }
+
+    public static Object updatableInPlaceIf(Object value, boolean updatableInPlace)
+    {
+        return updatableInPlace ? new UpdatingInPlace(value) : value;
+    }
+
+    /**
+     * A property's values, read where the compiler proved the read holds the only reference to them: the object's
+     * own list itself, which the reader may change in place. Anything else reads as usual.
+     */
+    public static List<Object> updatableInPlaceValues(Object object, String property)
+    {
+        if (object instanceof LazyObject lazy)
+        {
+            List<Object> own = lazy.values.get(property);
+            if (own != null && org.finos.legend.pure.platform.java.runtime.PureCollections.isGrowable(own))
+            {
+                return own;
+            }
+            // Not one it holds as its own (a default computed for it, say): read-only.
+            List<Object> read = lazy.__values(property);
+            return org.finos.legend.pure.platform.java.runtime.PureCollections.isGrowable(read)
+                    ? org.finos.legend.pure.platform.java.runtime.PureCollections.stored(read) : read;
+        }
+        return null;
+    }
+
+    /** What this object holds for a property, its own list from now on read-only (null when nothing is held). */
+    private List<Object> frozen(String property)
+    {
+        List<Object> held = values.get(property);
+        if (held != null && org.finos.legend.pure.platform.java.runtime.PureCollections.isGrowable(held))
+        {
+            held = org.finos.legend.pure.platform.java.runtime.PureCollections.stored(held);
+            values.put(property, held);
+        }
+        return held;
+    }
+
     /** Set a property: a List is its values, null none, anything else the single value. */
+    @SuppressWarnings("unchecked")
     protected final void set(String property, Object value)
     {
+        if (value instanceof UpdatingInPlace updatableInPlace)
+        {
+            if (updatableInPlace.value() instanceof List<?> list && org.finos.legend.pure.platform.java.runtime.PureCollections.isGrowable(list))
+            {
+                values.put(property, (List<Object>) list);
+                return;
+            }
+            value = updatableInPlace.value();
+        }
         if ("classifierGenericType".equals(property))
         {
             Metadata.checkClassifier(this, value instanceof List && !((List<?>) value).isEmpty() ? ((List<?>) value).get(0) : value);
         }
         // Shared, not copied: Pure values are immutable, and a copy of a list
-        // here means a copy of every byte buffer a node is built over.
-        values.put(property, value == null ? Collections.emptyList()
-                : value instanceof List<?> list ? Collections.unmodifiableList(list)
-                : Collections.singletonList(value));
+        // here means a copy of every byte buffer a node is built over. Held
+        // behind a read-only view, so a read of the property is never a list a
+        // caller may grow in place (PureCollections.isGrowable) — the caller
+        // that set it may still hold the list itself — yet `is` the very list
+        // that was stored (PureCollections.StoredList).
+        values.put(property, value == null ? Lists.fixedSize.empty()
+                : value instanceof List<?> list ? org.finos.legend.pure.platform.java.runtime.PureCollections.stored(list)
+                : Lists.fixedSize.of(value));
     }
 
     /** Append to a property ({@code p += v}): the current values, then {@code value}'s. */
     protected final void add(String property, Object value)
     {
-        List<Object> all = new ArrayList<>(__values(property));
+        MutableList<Object> all = Lists.mutable.withAll(__values(property));
         if (value instanceof List<?> list)
         {
             all.addAll(list);
@@ -129,7 +217,33 @@ public abstract class LazyObject
         {
             all.add(value);
         }
-        values.put(property, Collections.unmodifiableList(all));
+        values.put(property, all.asUnmodifiable());
+    }
+
+    /**
+     * This object, about to be changed by a copy expression that holds its only reference
+     * (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): made what a copy would be — the defaults it kept dropped, since a copy
+     * computes its own from its own values.
+     */
+    public final LazyObject __reusedForCopy()
+    {
+        defaults = null;
+        return this;
+    }
+
+    /** {@link #__reusedForCopy} on a value typed by its class's interface, as the translated code holds it. */
+    /**
+     * A copy with several keys changing its source itself: {@code keys}, every key value, computed before any is set
+     * (as a copy would), then set on the object by {@code set}.
+     */
+    public static Object reuse(Object object, java.util.function.BiFunction<Object, Object[], Object> set, Object... keys)
+    {
+        return set.apply(reusedForCopy(object), keys);
+    }
+
+    public static Object reusedForCopy(Object object)
+    {
+        return object instanceof LazyObject lazy ? lazy.__reusedForCopy() : object;
     }
 
     /** A shallow copy into {@code target}: same backing node, same values so far. */
@@ -139,6 +253,11 @@ public abstract class LazyObject
         copy.runtime = runtime;
         copy.node = node;
         copy.parent = parent;
+        // A list this object updatable in place is now held by two: both read it as a view from now on.
+        for (String property : new java.util.ArrayList<>(values.keySet()))
+        {
+            frozen(property);
+        }
         copy.values.putAll(values);
         return target;
     }

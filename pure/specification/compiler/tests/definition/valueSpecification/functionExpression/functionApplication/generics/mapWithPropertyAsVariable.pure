@@ -82,7 +82,7 @@ function test::testMapWithPropertyAsVariable__Boolean_1_():@Boolean@[1]  ~UserDe
       typeParam T -> #test::MPV_Person#
       typeParam V -> #Any#
       mulParam m -> #[2]#
-      Variable vals :#test::MPV_Person##[2]#  ~@VariableExpression@  @28:28-28:32
+      Variable vals :#test::MPV_Person##[2]#  ~@VariableExpression@  @28:28-28:32  updatableInPlace
       Variable property :#Property<#test::MPV_Person#, #Any#>##[1]#  ~@VariableExpression@  @28:39-28:47
 
 ###ReverseIndex

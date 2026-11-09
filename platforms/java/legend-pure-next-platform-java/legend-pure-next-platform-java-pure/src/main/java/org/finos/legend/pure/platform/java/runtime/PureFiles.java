@@ -14,6 +14,9 @@
 
 package org.finos.legend.pure.platform.java.runtime;
 
+import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.list.mutable.FastList;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.FileVisitResult;
@@ -21,8 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /** Pure's file functions. An I/O failure is an UncheckedIOException. */
@@ -86,7 +87,7 @@ public final class PureFiles
     /** {@code directoryTree(path)}: every regular file under {@code path}, recursively, sorted. */
     public static List<String> directoryTree(String path)
     {
-        List<String> files = new ArrayList<>();
+        MutableList<String> files = FastList.newList();
         try
         {
             Files.walkFileTree(Path.of(path), new SimpleFileVisitor<>()
@@ -106,7 +107,7 @@ public final class PureFiles
         {
             throw new UncheckedIOException(e);
         }
-        Collections.sort(files);
+        files.sortThis();
         return files;
     }
 }

@@ -74,11 +74,112 @@ public final class CopyWithKeysNode extends PureNode
     @Child
     private org.finos.legend.pure.truffle.execution.ast.property.PropertyWriteNode appendWriter = new org.finos.legend.pure.truffle.execution.ast.property.PropertyWriteNode();
 
+    /**
+     * Whether the source holds the only reference to its object (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md), as
+     * {@link org.finos.legend.pure.truffle.execution.natives.collection.AddNode} reads it: COPY, IN_PLACE, or the
+     * slot of a parameter's flag.
+     */
+    @CompilationFinal
+    private final int updatableInPlace;
+
+    /** Some key sets a property of a property (`^$x(a.b = v)`): that copies the objects on the way, so is a copy. */
+    @CompilationFinal
+    private final boolean deepKeys;
+
     public CopyWithKeysNode(String signature, PureNode sourceNode, org.finos.legend.pure.truffle.execution.ast.property.PropertyAssignNode[] assignments)
+    {
+        this(signature, sourceNode, assignments, org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY);
+    }
+
+    public CopyWithKeysNode(String signature, PureNode sourceNode, org.finos.legend.pure.truffle.execution.ast.property.PropertyAssignNode[] assignments, int updatableInPlace)
     {
         this.signature = signature;
         this.sourceNode = sourceNode;
         this.assignments = assignments;
+        this.updatableInPlace = updatableInPlace;
+        boolean deep = false;
+        for (var a : assignments)
+        {
+            deep |= a.propertyName().contains(".");
+        }
+        this.deepKeys = deep;
+    }
+
+    private boolean owns(VirtualFrame frame)
+    {
+        // The mode first: a copying node folds this away entirely.
+        return updatableInPlace != org.finos.legend.pure.truffle.execution.natives.collection.AddNode.COPY && !deepKeys
+                && (updatableInPlace == org.finos.legend.pure.truffle.execution.natives.collection.AddNode.IN_PLACE || frame.getValue(updatableInPlace) == Boolean.TRUE);
+    }
+
+    /**
+     * The source changed itself, as the copy would be: every key value computed first (a value may read a property
+     * another key sets), its kept defaults dropped (a copy computes its own), then the keys set.
+     */
+    @com.oracle.truffle.api.nodes.ExplodeLoop
+    private Object reuse(VirtualFrame frame, org.finos.legend.pure.truffle.execution.PureDynamicObject object)
+    {
+        Object[] values = new Object[assignments.length];
+        boolean[] updatableInPlace = new boolean[assignments.length];
+        for (int i = 0; i < assignments.length; i++)
+        {
+            values[i] = assignments[i].evaluateValue(frame);
+            updatableInPlace[i] = assignments[i].valueUpdatableInPlace(frame);
+        }
+        object.forgetKeptDefaults();
+        for (int i = 0; i < assignments.length; i++)
+        {
+            assignments[i].executeWithValue(values[i], object, updatableInPlace[i]);
+        }
+        return object;
+    }
+
+    @CompilationFinal
+    private Object reusableClass;
+    @CompilationFinal
+    private boolean reusableClassChangesItself;
+
+    /** Whether an instance of this object's class may be changed itself: none of its properties is an association's. */
+    private boolean reusable(org.finos.legend.pure.truffle.execution.PureDynamicObject object)
+    {
+        Object info = object.classInfo;
+        if (info != reusableClass)
+        {
+            com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+            reusableClassChangesItself = !hasAssociationProperties(org.finos.legend.pure.truffle.compiler.helper._GenericType.type(
+                    org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(object, SLOT_CLASSIFIER_GENERIC_TYPE)), new java.util.HashSet<>());
+            reusableClass = info;
+        }
+        return reusableClassChangesItself;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static boolean hasAssociationProperties(Object type, java.util.Set<Object> seen)
+    {
+        if (type == null)
+        {
+            return true;
+        }
+        if (!seen.add(type))
+        {
+            return false;
+        }
+        Object fromAssociations = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(type, SLOT_PROPERTIES_FROM_ASSOCIATIONS);
+        if (fromAssociations instanceof PureSequence ps ? !ps.isEmpty() : fromAssociations != null)
+        {
+            return true;
+        }
+        Object generalizations = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(type, SLOT_GENERALIZATIONS);
+        Object[] each = generalizations instanceof PureSequence ps ? ps.toBoxedArray() : generalizations == null ? new Object[0] : new Object[]{generalizations};
+        for (Object g : each)
+        {
+            Object general = g == null ? null : org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(g, SLOT_GENERAL);
+            if (general != null && hasAssociationProperties(org.finos.legend.pure.truffle.compiler.helper._GenericType.type(general), seen))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -201,6 +302,12 @@ public final class CopyWithKeysNode extends PureNode
         if (original == null)
         {
             throw new RuntimeException("Cannot copy: null");
+        }
+        // Holding the only reference to it: the source itself becomes the copy.
+        if (owns(frame) && original instanceof org.finos.legend.pure.truffle.execution.PureDynamicObject object && reusable(object))
+        {
+            copyResult = reuse(frame, object);
+            return copyResult;
         }
         // Every Pure metamodel value is an Any. Single _Any-driven path
         // works for both legacy XPDBHelper and the future PureDynamicObject.
@@ -435,6 +542,8 @@ public final class CopyWithKeysNode extends PureNode
         // only when we hit the LAZY sentinel; everything else is a direct
         // array load + store. Coercion is unnecessary because the value
         // came from a slot of the same class.
+        // Both now hold the source's own collections: read-only from now on (IN_PLACE_UPDATE_ANALYSIS.md, Fields).
+        pdoSrc.freezeSequences();
         Object[] srcSlots = pdoSrc.slots;
         Object[] tgtSlots = pdoTgt.slots;
         int n = Math.min(srcSlots.length, tgtSlots.length);

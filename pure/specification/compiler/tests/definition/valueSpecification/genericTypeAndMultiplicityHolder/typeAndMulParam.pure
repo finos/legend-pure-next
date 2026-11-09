@@ -23,7 +23,7 @@ function test::run_T_m__Any_MANY__T_m_(witness:T~test::run_T_m__Any_MANY__T_m_[m
   ArrowInvocation cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_ :#T~test::run_T_m__Any_MANY__T_m_##[m]#  ~@ArrowInvocation@  @18:9-18:20
     typeParam T -> T~test::run_T_m__Any_MANY__T_m_
     mulParam m -> [m]
-    Variable probe :#Any##[*]#  ~@VariableExpression@  @18:3-18:8
+    Variable probe :#Any##[*]#  ~@VariableExpression@  @18:3-18:8  updatableInPlaceIf probe
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<T~test::run_T_m__Any_MANY__T_m_|m>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<T~test::run_T_m__Any_MANY__T_m_|m>  @18:16-18:19
 
 ###ReverseIndex

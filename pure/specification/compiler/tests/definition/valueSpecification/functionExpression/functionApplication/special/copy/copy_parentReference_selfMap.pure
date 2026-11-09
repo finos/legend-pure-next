@@ -29,6 +29,7 @@ Class test::copy::parentRefSelfMap::Container
 
 ###CompiledGraph
 function test::copy::parentRefSelfMap::testCopySelfMap__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  resultUpdatableInPlace
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRefSelfMap::Container##[1]#  ~@FunctionInvocation@  @20:3-20:56
     typeParam T -> #test::copy::parentRefSelfMap::Container#
     mulParam m -> #[1]#
@@ -47,14 +48,14 @@ function test::copy::parentRefSelfMap::testCopySelfMap__Any_MANY_():@Any@[*]  ~U
             AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @20:52-20:54
   FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::parentRefSelfMap::Container##[1]#  ~@FunctionInvocation@  @21:3-21:55
     typeParam T -> #test::copy::parentRefSelfMap::Container#
-    Variable c :#test::copy::parentRefSelfMap::Container##[1]#  ~@VariableExpression@  @21:4-21:5
+    Variable c :#test::copy::parentRefSelfMap::Container##[1]#  ~@VariableExpression@  @21:4-21:5  updatableInPlace
     Collection :#KeyExpression#[2]  ~@Collection@  @21:3-21:55
       FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:7-21:20
         AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @21:7-21:20
         AtomicValue  'inner' :@String@[1]  ~@AtomicValue@  @21:14-21:20
       FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:23-21:54
         AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @21:23-21:54
-        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@ArrowInvocation@  @21:38-21:54
+        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@ArrowInvocation@  @21:38-21:54  updatableInPlace
           typeParam T -> #String#
           typeParam V -> #String#
           mulParam m -> #[*]#

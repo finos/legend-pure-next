@@ -14,12 +14,12 @@
 
 package org.finos.legend.pure.platform.java.runtime;
 
+import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.list.mutable.FastList;
 import org.finos.legend.pure.m3.platform.pure.functions.collection.ListImpl;
 import org.finos.legend.pure.m3.platform.pure.functions.collection.PairImpl;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,12 +27,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
- * Pure's collection functions over the Java Lists translated code holds a {@code [*]} in. A result is a fresh
- * ArrayList, never a {@code subList} view: Pure-side equality unwraps standard collections but does not
- * recognise SubList views.
+ * Pure's collection functions over the Java Lists translated code holds a {@code [*]} in. A result that is a new
+ * collection is a fresh Eclipse Collections {@link FastList} that nothing else references — never a
+ * {@code subList} view (Pure-side equality unwraps standard collections but does not recognise SubList views),
+ * never a shared or immutable singleton. That is what lets a caller the compiler marks {@code updatable in place} grow the
+ * result in place (see {@link #isGrowable}).
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public final class PureCollections
@@ -70,7 +73,7 @@ public final class PureCollections
      */
     public static List map(List<?> values, Function f)
     {
-        List<Object> out = new ArrayList<>();
+        MutableList<Object> out = FastList.newList(values.size());
         for (Object v : values)
         {
             Object r = f.apply(v);
@@ -122,7 +125,7 @@ public final class PureCollections
                 : (x, y) -> Long.signum(((Number) ((BiFunction) c).apply(x, y)).longValue());
         Comparator by = k == null ? order : Comparator.comparing((Function) k, order);
         // toSortedList is a stable sort, as the other platforms are
-        return org.eclipse.collections.impl.factory.Lists.mutable.withAll(values).sortThis(by);
+        return FastList.newList(values).sortThis(by);
     }
 
     /** A {@code [0..1]} value: itself, or null when it holds none. */
@@ -144,13 +147,13 @@ public final class PureCollections
     /** {@code tail}: everything except the first element; empty stays empty. */
     public static List tail(List<?> values)
     {
-        return values.isEmpty() ? new ArrayList() : new ArrayList(values.subList(1, values.size()));
+        return values.isEmpty() ? FastList.newList() : FastList.newList(values.subList(1, values.size()));
     }
 
     /** {@code init}: everything except the last element; empty stays empty. */
     public static List init(List<?> values)
     {
-        return values.isEmpty() ? new ArrayList() : new ArrayList(values.subList(0, values.size() - 1));
+        return values.isEmpty() ? FastList.newList() : FastList.newList(values.subList(0, values.size() - 1));
     }
 
     /**
@@ -164,10 +167,10 @@ public final class PureCollections
             Object r = ((Supplier<?>) thunk).get();
             if (r != null && !(r instanceof Collection && ((Collection<?>) r).isEmpty()))
             {
-                return r instanceof List ? (List) r : Collections.singletonList(r);
+                return r instanceof List ? (List) r : FastList.newListWith(r);
             }
         }
-        return Collections.emptyList();
+        return FastList.newList();
     }
 
     /** {@code slice(coll, start, end)}: [start, end), clamped to the collection as in Pure. */
@@ -175,7 +178,7 @@ public final class PureCollections
     {
         int s = (int) Math.min(Math.max(0L, start), values.size());
         int e = (int) Math.min(Math.max(s, end), values.size());
-        return new ArrayList<Object>(values.subList(s, e));
+        return FastList.newList(values.subList(s, e));
     }
 
     /** {@code range(end)}: 0 to {@code end}, exclusive. */
@@ -197,7 +200,7 @@ public final class PureCollections
         {
             throw new IllegalArgumentException("range step must not be 0");
         }
-        List<Object> out = new ArrayList<>();
+        MutableList<Object> out = FastList.newList();
         for (long i = start; step > 0L ? i < end : i > end; i += step)
         {
             out.add(i);
@@ -209,7 +212,7 @@ public final class PureCollections
     public static List zip(List<?> a, List<?> b)
     {
         int n = Math.min(a.size(), b.size());
-        List<Object> out = new ArrayList<>();
+        MutableList<Object> out = FastList.newList(n);
         for (int i = 0; i < n; i++)
         {
             out.add(new PairImpl()._first(a.get(i))._second(b.get(i)));
@@ -223,7 +226,7 @@ public final class PureCollections
         Map<Object, List<Object>> groups = new LinkedHashMap<>();
         for (Object v : values)
         {
-            groups.computeIfAbsent(key.apply(v), k -> new ArrayList<>()).add(v);
+            groups.computeIfAbsent(key.apply(v), k -> FastList.newList()).add(v);
         }
         Map<Object, Object> out = new LinkedHashMap<>();
         for (Map.Entry<Object, List<Object>> e : groups.entrySet())
@@ -253,8 +256,8 @@ public final class PureCollections
      */
     public static List removeDuplicates(List<?> values, Function key, BiFunction eql)
     {
-        List<Object> out = new ArrayList<>();
-        List<Object> keys = new ArrayList<>();
+        MutableList<Object> out = FastList.newList();
+        List<Object> keys = FastList.newList();
         for (Object v : values)
         {
             Object k = key == null ? v : key.apply(v);
@@ -286,7 +289,7 @@ public final class PureCollections
      */
     public static List removeAll(List<?> values, List<?> drop)
     {
-        List<Object> out = new ArrayList<>();
+        MutableList<Object> out = FastList.newList();
         for (Object v : values)
         {
             if (!containsEqual(drop, v))
@@ -307,6 +310,222 @@ public final class PureCollections
             }
         }
         return false;
+    }
+
+    /** {@code add(set, val)}: a fresh list, {@code values} then {@code value}. */
+    public static List add(List<?> values, Object value)
+    {
+        MutableList<Object> out = FastList.newList(values.size() + 1);
+        out.addAll(values);
+        out.add(value);
+        return out;
+    }
+
+    /** {@code add(set, offset, val)}: a fresh list with {@code value} inserted at {@code offset}. */
+    public static List add(List<?> values, long offset, Object value)
+    {
+        MutableList<Object> out = FastList.newList(values.size() + 1);
+        out.addAll(values);
+        out.add((int) offset, value);
+        return out;
+    }
+
+    /** {@code concatenate(a, b)}: a fresh list, {@code a}'s values then {@code b}'s. */
+    public static List concatenate(List<?> a, List<?> b)
+    {
+        MutableList<Object> out = FastList.newList(a.size() + b.size());
+        out.addAll(a);
+        out.addAll(b);
+        return out;
+    }
+
+    /** {@code reverse(coll)}: a fresh list in reverse order. */
+    public static List reverse(List<?> values)
+    {
+        return FastList.newList(values).reverseThis();
+    }
+
+    /**
+     * {@code add(set, val)} where the compiler marked {@code set} updatable in place (IN_PLACE_UPDATE_ANALYSIS.md): appended in
+     * place when it is a list this runtime allocated, else copied as {@link #add(List, Object)}.
+     */
+    public static List addInPlace(List<?> values, Object value)
+    {
+        if (values instanceof FastList)
+        {
+            ((List<Object>) values).add(value);
+            return values;
+        }
+        return add(values, value);
+    }
+
+    /** {@code add(set, offset, val)} on an updatable in place {@code set}: in place when growable, else copied. */
+    public static List addInPlace(List<?> values, long offset, Object value)
+    {
+        if (values instanceof FastList)
+        {
+            ((List<Object>) values).add((int) offset, value);
+            return values;
+        }
+        return add(values, offset, value);
+    }
+
+    /** {@code concatenate(a, b)} on an updatable in place {@code a}: {@code b} appended in place when growable, else copied. */
+    public static List concatenateInPlace(List<?> a, List<?> b)
+    {
+        if (a instanceof FastList)
+        {
+            ((List<Object>) a).addAll(b);
+            return a;
+        }
+        return concatenate(a, b);
+    }
+
+    /** {@code reverse(coll)} on an updatable in place {@code coll}: reversed in place when growable, else copied. */
+    public static List reverseInPlace(List<?> values)
+    {
+        if (values instanceof FastList<?> list)
+        {
+            return list.reverseThis();
+        }
+        return reverse(values);
+    }
+
+    /** {@code add(set, val)} on a {@code set} updatable in place when {@code updatable in place}: in place when also growable, else copied. */
+    public static List addIfUpdatableInPlace(List<?> values, Object value, boolean updatableInPlace)
+    {
+        return updatableInPlace ? addInPlace(values, value) : add(values, value);
+    }
+
+    /** {@code add(set, offset, val)} on a {@code set} updatable in place when {@code updatable in place}. */
+    public static List addIfUpdatableInPlace(List<?> values, long offset, Object value, boolean updatableInPlace)
+    {
+        return updatableInPlace ? addInPlace(values, offset, value) : add(values, offset, value);
+    }
+
+    /** {@code concatenate(a, b)} on an {@code a} updatable in place when {@code updatable in place}. */
+    public static List concatenateIfUpdatableInPlace(List<?> a, List<?> b, boolean updatableInPlace)
+    {
+        return updatableInPlace ? concatenateInPlace(a, b) : concatenate(a, b);
+    }
+
+    /** {@code reverse(coll)} on a {@code coll} updatable in place when {@code updatable in place}. */
+    public static List reverseIfUpdatableInPlace(List<?> values, boolean updatableInPlace)
+    {
+        return updatableInPlace ? reverseInPlace(values) : reverse(values);
+    }
+
+    /** A fold step told whether it holds the only reference to its accumulator. */
+    @FunctionalInterface
+    public interface FoldStep
+    {
+        Object apply(Object element, Object accumulator, boolean accumulatorUpdatableInPlace);
+    }
+
+    /**
+     * {@code fold(values, step, init)}, telling each step whether it holds the only reference to its accumulator: the
+     * first when the caller passed {@code init} updatable in place, each next one when the previous step's result is updatable in place
+     * ({@code stepResultUpdatableInPlace}), or is updatable in place whenever its accumulator was ({@code stepResultUpdatableInPlaceIfAccumulator}). The step may
+     * then mutate its accumulator in place. {@code many}: the accumulator is a list, a step's single value is one.
+     */
+    public static Object fold(List<?> values, Object init, boolean initUpdatableInPlace, boolean stepResultUpdatableInPlace, boolean stepResultUpdatableInPlaceIfAccumulator, boolean many, FoldStep step)
+    {
+        Object accumulator = init;
+        boolean updatableInPlace = initUpdatableInPlace;
+        for (Object value : values)
+        {
+            Object result = step.apply(value, accumulator, updatableInPlace);
+            accumulator = many ? asList(result) : result;
+            updatableInPlace = stepResultUpdatableInPlace || (stepResultUpdatableInPlaceIfAccumulator && updatableInPlace);
+        }
+        return accumulator;
+    }
+
+    private static List asList(Object value)
+    {
+        if (value == null)
+        {
+            return FastList.newList(0);
+        }
+        return value instanceof List ? (List) value : FastList.newListWith(value);
+    }
+
+    /** {@code filter(coll, predicate)}: a fresh list of the values the predicate holds for, in order. */
+    public static List filter(List<?> values, Predicate predicate)
+    {
+        MutableList<Object> out = FastList.newList();
+        for (Object v : values)
+        {
+            if (predicate.test(v))
+            {
+                out.add(v);
+            }
+        }
+        return out;
+    }
+
+    /** {@code take(coll, n)}: the first {@code n} values; a negative count takes nothing. */
+    public static List take(List<?> values, long n)
+    {
+        int end = (int) Math.min(Math.max(0L, n), values.size());
+        return FastList.newList(values.subList(0, end));
+    }
+
+    /** {@code drop(coll, n)}: all but the first {@code n} values; a negative count drops nothing. */
+    public static List drop(List<?> values, long n)
+    {
+        int start = (int) Math.min(Math.max(0L, n), values.size());
+        return FastList.newList(values.subList(start, values.size()));
+    }
+
+    /**
+     * A list a caller may grow in place: one this runtime allocated ({@link FastList}). Everything else — a PDB
+     * value, a value read off an instance (an unmodifiable view), an EC fixed-size or immutable list, a JDK list
+     * from outside — is never mutated; an in-place operation copies it instead.
+     */
+    /**
+     * The read-only view a stored list is handed out as (a property's value): reads only, so a read of a property is
+     * never a list a caller may grow in place (it is not {@link #isGrowable}), and the list it views is the collection
+     * that was stored — what {@code is} compares ({@link #storedList}).
+     */
+    public static final class StoredList<T> extends java.util.AbstractList<T> implements java.util.RandomAccess
+    {
+        private final List<T> list;
+
+        private StoredList(List<T> list)
+        {
+            this.list = list;
+        }
+
+        @Override
+        public T get(int index)
+        {
+            return list.get(index);
+        }
+
+        @Override
+        public int size()
+        {
+            return list.size();
+        }
+    }
+
+    /** {@code list} held read-only as a property's value (see {@link StoredList}). */
+    @SuppressWarnings("unchecked")
+    public static <T> List<T> stored(List<? extends T> list)
+    {
+        return list instanceof StoredList ? (List<T>) list : new StoredList<>((List<T>) list);
+    }
+
+    /** The collection a list is: the one stored, for a property's read-only view of it. */
+    public static List<?> storedList(List<?> list)
+    {
+        return list instanceof StoredList<?> stored ? stored.list : list;
+    }
+
+    public static boolean isGrowable(Object values)
+    {
+        return values instanceof FastList;
     }
 
     /** {@code at(coll, idx)}: the element at a zero-based offset, with Pure's message when there is none. */

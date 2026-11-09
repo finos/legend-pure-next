@@ -1,0 +1,13 @@
+###Error
+Updatability annotations are only trusted on native functions: 'test::updatableInPlace::claimsFresh__Integer_MANY_' is not one (at valueSpecification/updatableInPlace/updatableInPlace_E_annotationOnUserFunction:6c1-9c1)
+
+###Pure
+// Updatability annotations are trusted on natives only: a user function's body is analysed instead.
+function <<inPlaceUpdate.NewCollectionResult>> test::updatableInPlace::claimsFresh(): Integer[*]
+{
+  [1, 2]
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

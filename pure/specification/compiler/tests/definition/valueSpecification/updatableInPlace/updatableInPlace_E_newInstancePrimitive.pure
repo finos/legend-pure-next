@@ -1,0 +1,9 @@
+###Error
+NewInstanceResult on 'test::updatableInPlace::answer__Integer_1_': its result is not a single class instance (at valueSpecification/updatableInPlace/updatableInPlace_E_newInstancePrimitive:5c1-5c97)
+
+###Pure
+native function <<inPlaceUpdate.NewInstanceResult>> test::updatableInPlace::answer(): Integer[1];
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

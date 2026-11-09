@@ -18,17 +18,19 @@ import platform::pure::functions::collection::tests::map::*;
 import platform::pure::test::pct::*;
 
 native function
-    <<PCT.function>>
+    <<PCT.function, inPlaceUpdate.NewCollectionResult>>
     {
         doc.doc='Applies the given function to each elements of the collection and returns the collection of the applied function result.' +
                 'Map always flattens the results and returns one collection even if the function returns a collection.',
-        PCT.grammarDoc='map is auto generated when the . operator is used to access a property value on a element of multiplicity different from [1] (example: [0..1] [*])'
+        PCT.grammarDoc='map is auto generated when the . operator is used to access a property value on a element of multiplicity different from [1] (example: [0..1] [*])',
+        inPlaceUpdate.callsLambdaRepeatedly='func',
+        inPlaceUpdate.callsLambdaWithElementsOf='value'
     }
     platform::pure::functions::collection::map<T,V|m>(value:T[m], func:Function<{T[1]->V[1]}>[1]):V[m];
 
-native function <<PCT.function>> platform::pure::functions::collection::map<T,V>(value:T[*], func:Function<{T[1]->V[*]}>[1]):V[*];
+native function <<PCT.function, inPlaceUpdate.NewCollectionResult>> {inPlaceUpdate.callsLambdaRepeatedly='func', inPlaceUpdate.callsLambdaWithElementsOf='value'} platform::pure::functions::collection::map<T,V>(value:T[*], func:Function<{T[1]->V[*]}>[1]):V[*];
 
-native function <<PCT.function>> platform::pure::functions::collection::map<T,V>(value:T[0..1], func:Function<{T[1]->V[0..1]}>[1]):V[0..1];
+native function <<PCT.function>> {inPlaceUpdate.callsLambdaAtMostOnce='func', inPlaceUpdate.callsLambdaWithElementsOf='value'} platform::pure::functions::collection::map<T,V>(value:T[0..1], func:Function<{T[1]->V[0..1]}>[1]):V[0..1];
 //--------------------------------------
 
 function <<PCT.test>> platform::pure::functions::collection::tests::map::testMapInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]

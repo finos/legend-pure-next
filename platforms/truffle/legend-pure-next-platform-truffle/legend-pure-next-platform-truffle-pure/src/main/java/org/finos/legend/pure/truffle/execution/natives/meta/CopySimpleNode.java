@@ -120,6 +120,8 @@ public final class CopySimpleNode extends PureNode
         org.finos.legend.pure.truffle.execution.PureDynamicObject copy =
                 new org.finos.legend.pure.truffle.execution.PureDynamicObject(
                         src.classInfo, src.fb, src.resolver, src.parent);
+        // Both now hold the source's own collections: read-only from now on (IN_PLACE_UPDATE_ANALYSIS.md, Fields).
+        src.freezeSequences();
         System.arraycopy(src.slots, 0, copy.slots, 0, src.slots.length);
         return copy;
     }

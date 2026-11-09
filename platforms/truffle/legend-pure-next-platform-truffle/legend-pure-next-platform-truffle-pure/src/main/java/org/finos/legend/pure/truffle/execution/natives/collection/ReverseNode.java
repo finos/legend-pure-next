@@ -32,13 +32,44 @@ public final class ReverseNode extends PureNode
 
     public ReverseNode(PureNode arg)
     {
-        this.arg = arg;
+        this(arg, COPY);
     }
+
+    public ReverseNode(PureNode arg, int updatableInPlace)
+    {
+        this.arg = arg;
+        this.updatableInPlace = updatableInPlace;
+    }
+
+    /**
+     * Whether this call may change its receiver in place (pure/specification/IN_PLACE_UPDATE_ANALYSIS.md): {@link #COPY} never,
+     * {@link #IN_PLACE} always — the compiler marked the receiver updatable in place — or, a frame slot, when the flag of the
+     * parameter it is updatable in place on (updatableInPlaceIfParameter) holds true. Only a sequence is changed, and only once it is a
+     * {@link GrowableSequence}: anything else is copied into one first.
+     */
+    public static final int COPY = -2;
+    public static final int IN_PLACE = -1;
+
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private final int updatableInPlace;
+
+    private boolean owns(VirtualFrame frame, Object receiver)
+    {
+        // The mode first: a copying node folds this away entirely.
+        return updatableInPlace != COPY
+                && (updatableInPlace == IN_PLACE || frame.getValue(updatableInPlace) == Boolean.TRUE)
+                && receiver instanceof org.finos.legend.pure.truffle.execution.types.PureSequence;
+    }
+
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object v = arg.executeGeneric(frame);
+        if (owns(frame, v))
+        {
+            return org.finos.legend.pure.truffle.execution.types.GrowableSequence.reversed(v);
+        }
         Object[] arr = CollectionHelper.toArray(v);
         if (arr.length == 0)
         {

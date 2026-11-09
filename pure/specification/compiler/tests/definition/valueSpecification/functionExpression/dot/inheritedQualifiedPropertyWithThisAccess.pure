@@ -60,7 +60,7 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
           AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @31:34-31:41
           AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @31:40-31:41
   DotApplication test::Base.greeting() :#String##[1]#  ~@DotApplication@  @32:5-32:15
-    Variable c :#test::Child##[1]#  ~@VariableExpression@  @32:3-32:4
+    Variable c :#test::Child##[1]#  ~@VariableExpression@  @32:3-32:4  updatableInPlace
 
 ###ReverseIndex
 platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
