@@ -26,7 +26,6 @@ import platform::pure::compiler::structural::propertyCompiler::*;
 import platform::pure::compiler::structural::valueSpecificationCompiler::*;
 import platform::pure::compiler::structural::lambdaCompiler::*;
 import platform::pure::compiler::structural::annotationCompiler::*;
-import platform::pure::compiler::helper::packageableElement::*;
 import platform::pure::compiler::helper::function::*;
 import platform::pure::compiler::helper::relationType::*;
 import platform::pure::compiler::helper::column::*;

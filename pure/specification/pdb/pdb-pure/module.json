@@ -1,0 +1,8 @@
+{
+  "name": "pdb",
+  "packagePattern": "(platform::pure::pdb)(::.*)?",
+  "dependencies": ["core"],
+  "tests": [
+    {"suite": "pdb-format", "runner": "tests", "target": "platform::pure::pdb"}
+  ]
+}

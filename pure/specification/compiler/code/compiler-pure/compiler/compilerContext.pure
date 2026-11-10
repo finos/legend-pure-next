@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::pure::compiler::helper::packageableElement::*;
 import platform::pure::compiler::helper::parametersBinding::*;
 import platform::pure::compiler::*;
 import platform::pure::metamodel::*;

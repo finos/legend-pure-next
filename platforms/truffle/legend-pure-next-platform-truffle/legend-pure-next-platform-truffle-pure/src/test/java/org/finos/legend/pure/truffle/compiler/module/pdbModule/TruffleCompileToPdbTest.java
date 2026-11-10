@@ -90,22 +90,25 @@ public class TruffleCompileToPdbTest
     {
         Path buildDir = locateBuildDir();
         PdbModule coreLoader = new PdbModule(buildDir.resolve("core.pdb"));
+        PdbModule pdbLoader = new PdbModule(buildDir.resolve("pdb.pdb"));
         PdbModule compilerLoader = new PdbModule(buildDir.resolve("compiler.pdb"));
         // compiler-tests.pdb: the specification's island handlers (islandTestExtension) every runner compiles with.
         PdbModule compilerTestsLoader = new PdbModule(buildDir.resolve("compiler-tests.pdb"));
         PdbModule parserMappingsLoader = new PdbModule(buildDir.resolve("parser-mappings.pdb"));
         // What is generated from those two: the m3 writer and the writer of the test island values.
-        PdbModule pdbWriterLoader = new PdbModule(buildDir.resolve("core_metamodel_pdb_writer.pdb"));
+        PdbModule pdbWriterLoader = new PdbModule(buildDir.resolve("pdb_writer.pdb"));
         PdbModule islandWriterLoader = new PdbModule(buildDir.resolve("island_pdb_writer-with-tests.pdb"));
         ModuleRegistry registry = new ModuleRegistry();
         registry.register(coreLoader);
-        registry.register(compilerLoader);
+        registry.register(pdbLoader);
         registry.register(pdbWriterLoader);
+        registry.register(compilerLoader);
         registry.register(compilerTestsLoader);
         registry.register(islandWriterLoader);
         registry.register(parserMappingsLoader);
         resolver = registry;
         coreLoader.setResolver(resolver);
+        pdbLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
         pdbWriterLoader.setResolver(resolver);
         compilerTestsLoader.setResolver(resolver);
@@ -346,7 +349,7 @@ public class TruffleCompileToPdbTest
                     try
                     {
                         Files.write(tmpPdb, org.finos.legend.pure.truffle.execution.types.PureBinary.asBytes(runtime.execute(
-                                resolver.getElement("platform::pure::compiler::pdb::archive::writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Binary_1_"),
+                                resolver.getElement("platform::pure::compiler::archive::writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Binary_1_"),
                                 new org.finos.legend.pure.truffle.execution.types.ObjectSequence(elements.toArray()),
                                 runtime.compilerExtensions(), "roundtrip", "*",
                                 new org.finos.legend.pure.truffle.execution.types.ObjectSequence(new Object[0]))));

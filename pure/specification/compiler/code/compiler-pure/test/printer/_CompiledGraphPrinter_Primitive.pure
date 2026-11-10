@@ -19,7 +19,6 @@ import platform::pure::metamodel::valuespecification::*;
 import platform::pure::metamodel::type::*;
 import platform::pure::functions::collection::*;
 import platform::pure::functions::string::*;
-import platform::pure::compiler::helper::packageableElement::*;
 import platform::pure::compiler::test::printer::*;
 import platform::pure::compiler::*;
 

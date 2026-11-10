@@ -22,7 +22,6 @@ import platform::pure::compiler::structural::genericTypeCompiler::*;
 import platform::pure::compiler::structural::valueSpecificationCompiler::*;
 import platform::pure::compiler::structural::lambdaCompiler::*;
 import platform::pure::compiler::structural::sourceInformationCompiler::*;
-import platform::pure::compiler::helper::packageableElement::*;
 import platform::pure::compiler::helper::pointer::*;
 import platform::pure::compiler::helper::pointer::*;
 import platform::pure::compiler::helper::function::*;

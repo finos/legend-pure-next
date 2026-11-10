@@ -28,6 +28,8 @@ _CORE = "//pure/specification"
 _READER_PDBS = [
     _CORE + ":core.pdb",
     _CORE + ":core-tests.pdb",
+    "//pure/specification:pdb.pdb",
+    "//pure/specification:pdb_writer.pdb",
     "//pure/specification:compiler.pdb",
     "//pure/specification:parser-mappings.pdb",
     "//pure/modules/language/java:build/java.pdb",
@@ -36,7 +38,7 @@ _READER_PDBS = [
     "//pure/modules/translation/java:build/java-translation-tests.pdb",
 ]
 
-# The PDB reader (platform::pure::compiler::pdb::reader and ::schema), translated to Java on the bootstrap: the
+# The PDB reader (platform::pure::pdb::reader and ::schema), translated to Java on the bootstrap: the
 # reader Truffle loads every PDB with cannot be translated by Truffle itself. Each translation prints its files one
 # after the other, each after a '//// FILE <path>' line.
 generated_srcjar(
@@ -46,7 +48,7 @@ generated_srcjar(
         PDBS="%s"
         emit() {
             $(execpath %s) execute $$PDBS --function "$$1" \
-                --args "platform::pure::compiler::pdb::reader,platform::pure::compiler::pdb::schema" "$$2" \
+                --args "platform::pure::pdb::reader,platform::pure::pdb::schema" "$$2" \
                 "org.finos.legend.pure.truffle" "org.finos.legend.pure.truffle.compiler.module.pdbModule.hooks" \
               | awk -v root="$$OUT_DIR" '/^\\/\\/\\/\\/ FILE /{ if (f != "") close(f); f = root "/" $$3; d = f; sub(/\\/[^\\/]*$$/, "", d); system("mkdir -p \\"" d "\\""); next } f != "" { if (f in seen) print >> f; else { print > f; seen[f] = 1 } }'
         }

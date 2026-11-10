@@ -51,13 +51,14 @@ const GEN = join(HERE, "../../../generated");              // -> platforms/javas
 const GEN_MODULES = [
     "pure/compiler/metamodel.js", "pure/grammar/protocol.js", "pure/runtime/functions.js", "ui.js",
     "test.js", "pure/runtime/translator/shared.js", "pure/runtime/translator/javascript.js", "pure/runtime/translator/translation.js",
+    "pure/pdb/pdb.js",
     "pure/compiler/compiler.js", // dynamic compilation (__hostCompileSource) runs the translated compiler
     // The TEST halves. This host runs test functions — every suite goes through the CLI,
     // and the in-process PCT translates and evaluates the corpus — so it needs the elements the
     // library halves leave out. The browser IDE's list (interfaces/web/main.js) deliberately has
     // none of these: they were 1.2 MB of PCT corpus inside functions.js.
     "pure/compiler/metamodel-tests.js", "pure/grammar/protocol-tests.js", "pure/runtime/functions-tests.js",
-    "pure/compiler/compiler-tests.js", "pure/runtime/translator/shared-tests.js",
+    "pure/pdb/pdb-tests.js", "pure/compiler/compiler-tests.js", "pure/runtime/translator/shared-tests.js",
     "pure/runtime/translator/javascript-tests.js", "pure/runtime/translator/translation-tests.js",
     // Every extension's translated Pure, from its descriptor — no extension is named here.
     ...EXTENSION_DESCRIPTORS.flatMap((extension) => [...extension.jsPaths, ...(extension.testJsPaths ?? [])]),

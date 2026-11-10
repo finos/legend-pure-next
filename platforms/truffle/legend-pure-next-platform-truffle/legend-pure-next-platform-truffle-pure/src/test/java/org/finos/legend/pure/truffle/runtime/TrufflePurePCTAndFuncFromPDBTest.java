@@ -61,6 +61,8 @@ class TrufflePurePCTAndFuncFromPDBTest
     private static PdbModule coreTestsLoader;
     private static PdbModule compilerLoader;
     private static PdbModule compilerTestsLoader;
+    private static PdbModule pdbTestsLoader;
+    private static PdbModule pdbWriterTestsLoader;
     private static org.finos.legend.pure.m3.module.pdbModule.PdbModule coreModule;
     private static org.finos.legend.pure.m3.module.pdbModule.PdbModule coreTestsModule;
     private static org.finos.legend.pure.m3.module.pdbModule.PdbModule compilerModule;
@@ -91,10 +93,13 @@ class TrufflePurePCTAndFuncFromPDBTest
         // Use truffle PDB loader — reads FlatBuffer directly into truffle-namespaced wrappers
         coreLoader = new PdbModule(corePdb);
         coreTestsLoader = new PdbModule(coreTestsPdb);
+        PdbModule pdbLoader = new PdbModule(sharedDir.resolve("pdb.pdb"));
         compilerLoader = new PdbModule(compilerPdb);
         compilerTestsLoader = new PdbModule(compilerTestsPdb);
+        pdbTestsLoader = new PdbModule(sharedDir.resolve("pdb-tests.pdb"));
+        pdbWriterTestsLoader = new PdbModule(sharedDir.resolve("pdb_writer-tests.pdb"));
         // What is generated from those two: the m3 writer and the writer of the test island values.
-        PdbModule pdbWriterLoader = new PdbModule(sharedDir.resolve("core_metamodel_pdb_writer.pdb"));
+        PdbModule pdbWriterLoader = new PdbModule(sharedDir.resolve("pdb_writer.pdb"));
         PdbModule islandWriterLoader = new PdbModule(sharedDir.resolve("island_pdb_writer-with-tests.pdb"));
         // parser-mappings.pdb is required for the `parse` Pure native to resolve
         // `platform::pure::parser::mappings::interpreter::parseDocument` — TrufflePureParser
@@ -115,8 +120,11 @@ class TrufflePurePCTAndFuncFromPDBTest
         resolver.register(coreLoader);
         resolver.register(parserMappingsLoader);
         resolver.register(coreTestsLoader);
-        resolver.register(compilerLoader);
+        resolver.register(pdbLoader);
         resolver.register(pdbWriterLoader);
+        resolver.register(compilerLoader);
+        resolver.register(pdbTestsLoader);
+        resolver.register(pdbWriterTestsLoader);
         resolver.register(compilerTestsLoader);
         resolver.register(islandWriterLoader);
 
@@ -124,8 +132,11 @@ class TrufflePurePCTAndFuncFromPDBTest
         coreLoader.setResolver(resolver);
         parserMappingsLoader.setResolver(resolver);
         coreTestsLoader.setResolver(resolver);
+        pdbLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
         pdbWriterLoader.setResolver(resolver);
+        pdbTestsLoader.setResolver(resolver);
+        pdbWriterTestsLoader.setResolver(resolver);
         compilerTestsLoader.setResolver(resolver);
         islandWriterLoader.setResolver(resolver);
 
@@ -285,16 +296,18 @@ class TrufflePurePCTAndFuncFromPDBTest
                 tests.add(createTest(path, element, null));
             }
         }
-        // Also scan compiler-tests.pdb for test functions (compiler-pure has its
-        // own <<test.Test>> functions that ship inside its tests companion).
-        for (String path : compilerTestsLoader.elementPaths())
+        // Also scan the tests companions of the compiler and of the PDB format: each has its own <<test.Test>> functions.
+        for (PdbModule testsLoader : new PdbModule[]{compilerTestsLoader, pdbTestsLoader, pdbWriterTestsLoader})
         {
-            Object element = compilerTestsLoader.getElement(path);
-            if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(element,
-                    "platform::pure::metamodel::function::FunctionDefinition", resolver)
-                    && isTestStereotype(element) && isZeroArg(element))
+            for (String path : testsLoader.elementPaths())
             {
-                tests.add(createTest(path, element, null));
+                Object element = testsLoader.getElement(path);
+                if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(element,
+                        "platform::pure::metamodel::function::FunctionDefinition", resolver)
+                        && isTestStereotype(element) && isZeroArg(element))
+                {
+                    tests.add(createTest(path, element, null));
+                }
             }
         }
 

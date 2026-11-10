@@ -30,7 +30,6 @@ import platform::pure::compiler::helper::pointer::*;
 import platform::pure::functions::meta::*;
 import platform::pure::functions::collection::*;
 import platform::pure::functions::string::*;
-import platform::pure::compiler::helper::packageableElement::*;
 import platform::pure::compiler::helper::genericType::*;
 import platform::pure::compiler::test::printer::*;
 import platform::pure::compiler::test::printer::primitive::*;

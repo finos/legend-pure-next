@@ -127,11 +127,17 @@ public final class TruffleBackend implements PureBackend
             Object[] built = executor.submit(() ->
             {
                 PdbModule coreLoader = new PdbModule(corePdb);
+                PdbModule pdbLoader = new PdbModule(pdbDir.resolve("pdb.pdb"));
+                PdbModule pdbWriterLoader = new PdbModule(pdbDir.resolve("pdb_writer.pdb"));
                 PdbModule compilerLoader = new PdbModule(compilerPdb);
                 ModuleRegistry reg = new ModuleRegistry();
                 reg.register(coreLoader);
+                reg.register(pdbLoader);
+                reg.register(pdbWriterLoader);
                 reg.register(compilerLoader);
                 coreLoader.setResolver(reg);
+                pdbLoader.setResolver(reg);
+                pdbWriterLoader.setResolver(reg);
                 compilerLoader.setResolver(reg);
                 PureRuntime rt = PureRuntime.builder()
                         .withRegistry(reg)

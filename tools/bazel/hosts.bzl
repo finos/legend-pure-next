@@ -35,20 +35,22 @@ _M3_FBS = "//:shared/specification/m3.fbs"
 _PDBS = {
     "core": _CORE + ":core.pdb",
     "core-tests": _CORE + ":core-tests.pdb",
+    "pdb": "//pure/specification:pdb.pdb",
+    "pdb-tests": "//pure/specification:pdb-tests.pdb",
+    "pdb_writer": "//pure/specification:pdb_writer.pdb",
+    "pdb_writer-tests": "//pure/specification:pdb_writer-tests.pdb",
     "compiler": "//pure/specification:compiler.pdb",
     "compiler-tests": "//pure/specification:compiler-tests.pdb",
-    "core_metamodel_pdb_writer": "//pure/specification:core_metamodel_pdb_writer.pdb",
     "island_pdb_writer": "//pure/specification:island_pdb_writer-with-tests.pdb",
     "parser-mappings": _PARSER_MAPPINGS,
 }
 
 # Modules with nothing of their own to report: the writers are generated, the parser mappings tested through the grammar.
-_GENERATED_MODULES = ["core_metamodel_pdb_writer", "island_pdb_writer", "parser-mappings"]
+_GENERATED_MODULES = ["island_pdb_writer", "parser-mappings"]
 
 # What is generated from a PDB, compiled after it, so no manifest of the compiler can name it: what loads the first
 # loads the second right after. {module: what is generated from it}.
 _GENERATED_FROM = {
-    "compiler": "core_metamodel_pdb_writer",
     "compiler-tests": "island_pdb_writer",
 }
 
@@ -110,9 +112,10 @@ def _package(chain, module):
 def _self_compiled(chain):
     """The PDBs of the compiler as a chain compiles it, for a self-host variant: {module: label}."""
     return {
+        "pdb": _package(chain, "pdb") + ":pdb.pdb",
+        "pdb_writer": _package(chain, "pdb_writer") + ":pdb_writer.pdb",
         "compiler": _package(chain, "compiler") + ":compiler.pdb",
         "compiler-tests": _package(chain, "compiler") + ":compiler-tests.pdb",
-        "core_metamodel_pdb_writer": _package(chain, "core_metamodel_pdb_writer") + ":core_metamodel_pdb_writer.pdb",
         "island_pdb_writer": _package(chain, "island_pdb_writer") + ":island_pdb_writer-with-tests.pdb",
     }
 
@@ -221,7 +224,7 @@ HOSTS = {
                 "suffix": "_in_memory",
                 "command": ["execute-from-memory"],
                 # The owner tests come from its sources, runners included: no test PDB.
-                "prelude": ["core", "parser-mappings", "compiler"],
+                "prelude": ["core", "parser-mappings", "pdb", "pdb_writer", "compiler"],
                 "runs": lambda owner, test: bool(MODULES[owner]["sources"]) and test["runner"] in _PACKAGE_RUNNERS,
             },
         },
@@ -243,7 +246,7 @@ HOSTS = {
                 "timeout": "eternal",
                 "tags": ["manual", "bootstrap"],
                 # And the legacy layer, which passes only on the bootstrap.
-                "runs": lambda owner, test: owner in ["core", "compiler", "legacy", "legacy_loader"],
+                "runs": lambda owner, test: owner in ["core", "pdb", "pdb_writer", "compiler", "legacy", "legacy_loader"],
             },
             # The compiler corpus on compiler-pure as the compiler written in Pure, run by the bootstrap, compiles it.
             "selfhost": {
@@ -306,7 +309,7 @@ HOSTS = {
                 "command": ["execute", "--root", "."],
                 "prelude": ["core-tests"],
                 # The PDBs it loads itself: the languages (language_*.json) and its own modules.
-                "supplies": ["core", "parser-mappings", "compiler", "core_metamodel_pdb_writer", "diagram", "tds", "java", "translation-shared", "java-translation"],
+                "supplies": ["core", "parser-mappings", "pdb", "pdb_writer", "compiler", "diagram", "tds", "java", "translation-shared", "java-translation"],
                 # The test companion of the translator the platform runs.
                 "extra_pdbs": ["//pure/modules/translation/java:build/java-translation-tests.pdb"],
                 "data": ["//platforms/java:runtime_data"],
@@ -522,8 +525,9 @@ def _read_backs(chain, owner):
 # The modules the bootstrap builds, as Truffle is generated from them; every other is built by the Truffle CLI. 'core' has
 # no PDB to be compiled against, so it is not compiled by a host.
 _BOOTSTRAP_BUILT = [
+    "pdb",
+    "pdb_writer",
     "compiler",
-    "core_metamodel_pdb_writer",
     "island_pdb_writer",
     "parser-mappings",
     "java",
@@ -565,7 +569,7 @@ def _module_compile(chain, module):
     compiler = chain["compiler"]
     if compiler.get("prelude", True):
         prelude = [_pdb("core")] + ([_pdb("parser-mappings")] if compiler.get("parser_mappings", True) else []) + \
-                  [_pdb("core-tests"), _pdb("compiler"), _pdb("core_metamodel_pdb_writer")]
+                  [_pdb("core-tests"), _pdb("pdb"), _pdb("pdb_writer"), _pdb("compiler")]
     else:
         prelude = []
     # What the CLI loads itself is not given to it, and what it always needs is.
@@ -606,7 +610,7 @@ def _pdb_checks(prefix, chain, module):
         visibility = ["//visibility:public"],
     )
 
-_SELF_HOSTED = ["compiler", "core_metamodel_pdb_writer", "island_pdb_writer"]
+_SELF_HOSTED = ["pdb", "pdb_writer", "compiler", "island_pdb_writer"]
 
 # The Java compiler of the bootstrap: what every other compiler is compared with, where it can compile the module.
 _REFERENCE = "bootstrap/test/java"

@@ -62,7 +62,7 @@ public final class PureJava
     }
 
     private static final String COMPILE_MODULE =
-            "platform::pure::compiler::pdb::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
+            "platform::pure::compiler::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
 
     private static final String USAGE = "usage: PureJava execute [--root <dir>] [--pdb a.pdb ...] --function <path> [--args v ...] [--schema m3.fbs]\n"
             + "       PureJava compile [--root <dir>] --base-pdb a.pdb ... --source <dir> ... --output-dir <dir> [--tests {none|split|with}]";

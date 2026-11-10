@@ -1,6 +1,6 @@
 {
   "name": "island_pdb_writer",
   "packagePattern": "(platform::pure::compiler::test::islands)(::.*)?",
-  "dependencies": ["core", "compiler", "core_metamodel_pdb_writer"],
+  "dependencies": ["core", "pdb", "pdb_writer", "compiler"],
   "testDependencies": ["compiler-tests"]
 }

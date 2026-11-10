@@ -19,7 +19,6 @@ import platform::pure::compiler::helper::parametersBinding::*;
 import platform::pure::metamodel::type::generics::*;
 import platform::pure::metamodel::valuespecification::*;
 import platform::pure::metamodel::*;
-import platform::pure::compiler::helper::packageableElement::*;
 import platform::pure::functions::collection::*;
 
 

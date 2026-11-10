@@ -79,8 +79,9 @@ _TRUFFLE_PRELUDE = [
     _BOOTSTRAP_COMPILER + ":core.pdb",
     "//pure/specification:parser-mappings.pdb",
     _BOOTSTRAP_COMPILER + ":core-tests.pdb",
+    "//pure/specification:pdb.pdb",
+    "//pure/specification:pdb_writer.pdb",
     "//pure/specification:compiler.pdb",
-    "//pure/specification:core_metamodel_pdb_writer.pdb",
     "//pure/specification:compiler-tests.pdb",
     "//pure/specification:island_pdb_writer-with-tests.pdb",
 ]
@@ -94,8 +95,9 @@ _PDB_GOLDENS = {
         [
             _BOOTSTRAP_COMPILER + ":core.pdb",
             _BOOTSTRAP_COMPILER + ":core-tests.pdb",
+            "//pure/specification:pdb.pdb",
+            "//pure/specification:pdb_writer.pdb",
             "//pure/specification:compiler.pdb",
-            "//pure/specification:core_metamodel_pdb_writer.pdb",
             "//pure/specification:compiler-tests.pdb",
             "//pure/specification:island_pdb_writer-with-tests.pdb",
         ],

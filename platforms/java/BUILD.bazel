@@ -22,11 +22,13 @@ _CORE = "//pure/specification:core.pdb"
 
 _CORE_TESTS = "//pure/specification:core-tests.pdb"
 
+_PDB_FORMAT = "//pure/specification:pdb.pdb"
+
 _COMPILER = "//pure/specification:compiler.pdb"
 
 _COMPILER_TESTS = "//pure/specification:compiler-tests.pdb"
 
-_PDB_WRITER = "//pure/specification:core_metamodel_pdb_writer.pdb"
+_PDB_WRITER = "//pure/specification:pdb_writer.pdb"
 
 _PARSER_MAPPINGS = "//pure/specification:parser-mappings.pdb"
 
@@ -40,9 +42,9 @@ _TRANSLATOR = [
 
 _T = "platform::extensions::language::java::translation::"
 
-_WITH_TESTS = [_CORE, _CORE_TESTS, _COMPILER, _PDB_WRITER, _COMPILER_TESTS, _PARSER_MAPPINGS] + _TRANSLATOR
+_WITH_TESTS = [_CORE, _CORE_TESTS, _PDB_FORMAT, _PDB_WRITER, _COMPILER, _COMPILER_TESTS, _PARSER_MAPPINGS] + _TRANSLATOR
 
-_WITHOUT_COMPILER_TESTS = [_CORE, _CORE_TESTS, _COMPILER, _PDB_WRITER, _PARSER_MAPPINGS] + _TRANSLATOR
+_WITHOUT_COMPILER_TESTS = [_CORE, _CORE_TESTS, _PDB_FORMAT, _PDB_WRITER, _COMPILER, _PARSER_MAPPINGS] + _TRANSLATOR
 
 java_translation_srcjar(
     name = "engine_generated",
@@ -50,15 +52,15 @@ java_translation_srcjar(
         # generate-types
         (_WITH_TESTS, _T + "platform::generatePlatformTypes_String_1__String_1__String_1_", ["platform::pure::metamodel,platform::pure::functions,platform::pure::compiler::test", "org.finos.legend.pure.m3"], ""),
         # generate-pdb
-        (_WITHOUT_COMPILER_TESTS, _T + "translatePackagesToJava_String_1__String_1_", ["platform::pure::compiler::pdb"], ""),
+        (_WITHOUT_COMPILER_TESTS, _T + "translatePackagesToJava_String_1__String_1_", ["platform::pure::pdb"], ""),
         # generate-translator
         (_WITHOUT_COMPILER_TESTS, _T + "translatePackagesToJava_String_1__String_1_", ["platform::extensions::language::java::translation"], ""),
         # generate-functions
         (_WITH_TESTS, _T + "translatePackagesToJava_String_1__String_1_", ["platform::pure::functions,platform::pure::test,platform::pure::parser::mappings,platform::pure::compiler::test"], ""),
         # generate-tests
-        (_WITH_TESTS, _T + "translateTestPackagesToJava_String_1__String_1_", ["platform::pure::functions,platform::pure::compiler::pdb"], ""),
+        (_WITH_TESTS, _T + "translateTestPackagesToJava_String_1__String_1_", ["platform::pure::functions,platform::pure::pdb"], ""),
         (_WITH_TESTS, _T + "platform::generateExtensionTypeFactory_String_1__String_1__String_1__String_1_", ["platform::pure::compiler::test::islands::metamodel", "org.finos.legend.pure.m3", "org.finos.legend.pure.m3.platform.pure.compiler.test.islands.IslandTestPdbTypes"], "org/finos/legend/pure/m3/platform/pure/compiler/test/islands/"),
-        (_WITH_TESTS, _T + "platform::generatePlatformTypesWithTests_String_1__String_1__String_1_", ["platform::pure::functions,platform::pure::compiler::pdb", "org.finos.legend.pure.m3"], ""),
+        (_WITH_TESTS, _T + "platform::generatePlatformTypesWithTests_String_1__String_1__String_1_", ["platform::pure::functions,platform::pure::pdb", "org.finos.legend.pure.m3"], ""),
     ],
 )
 

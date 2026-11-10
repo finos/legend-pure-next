@@ -28,7 +28,7 @@
 import { resolve } from "node:path";
 import { loadRuntime } from "../../core/runtime/load-runtime.js";
 
-const COMPILE_MODULE = "platform::pure::compiler::pdb::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
+const COMPILE_MODULE = "platform::pure::compiler::archive::compileModule_String_MANY__String_1__String_1__CompilerExtension_MANY__String_MANY_";
 
 const USAGE = `Usage: pure-js execute [--pdb <file>...] --function <path> [--args <arg>...]
        pure-js compile --base-pdb <file>... --source <dir>... --output-dir <dir> [--tests {none|split|with}]`;

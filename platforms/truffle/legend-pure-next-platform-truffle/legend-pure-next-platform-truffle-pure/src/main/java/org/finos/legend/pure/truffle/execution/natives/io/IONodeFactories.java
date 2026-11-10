@@ -54,10 +54,10 @@ public final class IONodeFactories
         registry.register("platform::pure::functions::io::writeFileBytes_String_1__Binary_1__String_1_",
                 (args, gt, mul, fe) -> new WriteFileBytesNode(args[0], args[1]));
 
-        registry.register("platform::pure::compiler::pdb::archive::entryNames_Binary_1__String_MANY_",
+        registry.register("platform::pure::pdb::archive::entryNames_Binary_1__String_MANY_",
                 (args, gt, mul, fe) -> new EntryNamesNode(args[0]));
 
-        registry.register("platform::pure::compiler::pdb::archive::entryBytes_Binary_1__String_1__Binary_1_",
+        registry.register("platform::pure::pdb::archive::entryBytes_Binary_1__String_1__Binary_1_",
                 (args, gt, mul, fe) -> new EntryBytesNode(args[0], args[1]));
 
         registry.register("platform::pure::functions::io::directoryTree_String_1__String_MANY_",

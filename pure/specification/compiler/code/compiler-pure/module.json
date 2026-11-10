@@ -1,11 +1,10 @@
 {
   "name": "compiler",
   "packagePattern": "(platform::pure::compiler)(::.*)?",
-  "dependencies": ["core"],
+  "dependencies": ["core", "pdb", "pdb_writer"],
   "tests": [
     {"suite": "compiler", "runner": "compiler", "target": "../../tests/definition"},
     {"suite": "compiler-unit", "runner": "tests", "target": "platform::pure::compiler::test"},
-    {"suite": "pdb-format", "runner": "tests", "target": "platform::pure::compiler::pdb"},
     {"suite": "pdb", "runner": "pdbGolden", "target": "../../tests/definition"},
     {"suite": "printer-compiled", "runner": "printerCompiled", "target": "../../tests/definition"}
   ]

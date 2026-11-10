@@ -14,7 +14,6 @@
 // limitations under the License.
 
 import platform::pure::compiler::*;
-import platform::pure::compiler::helper::packageableElement::*;
 import platform::pure::compiler::helper::relationType::*;
 import platform::pure::compiler::helper::type::*;
 import platform::pure::compiler::helper::multiplicity::*;

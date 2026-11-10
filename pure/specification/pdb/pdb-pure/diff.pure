@@ -1,0 +1,202 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::functions::io::*;
+import platform::pure::functions::string::*;
+
+// Archive comparison through the schema: every difference between two PDB archives, as readable lines.
+
+// Every difference between the Pure-written archive and the golden, as readable lines.
+function platform::pure::pdb::diff::diffArchives(schema:platform::pure::pdb::schema::FbsSchema[1], pure:Binary[1], golden:Binary[1]):String[*]
+{
+    let pureEntries   = platform::pure::pdb::archive::entryNames($pure);
+    let goldenEntries = platform::pure::pdb::archive::entryNames($golden);
+    let pureElements   = $pureEntries->filter(n | platform::pure::pdb::schema::startsWith($n, 'elements/'));
+    let goldenElements = $goldenEntries->filter(n | platform::pure::pdb::schema::startsWith($n, 'elements/'));
+    let goldenPaths = $goldenElements->map(n | platform::pure::pdb::diff::entryPath($n));
+    let sameElements = ($pureElements->size() == $goldenElements->size()) && $pureElements->forAll(n | $goldenElements->contains($n));
+    let elementFindings = $goldenElements->map(g | platform::pure::pdb::diff::elementFinding($schema, $pure, $pureElements, $golden, $g));
+    let extraFindings = $pureElements
+        ->filter(n | !$goldenPaths->contains(platform::pure::pdb::diff::entryPath($n)))
+        ->map(n | 'only in the Pure archive: ' + platform::pure::pdb::diff::entryPath($n));
+    let sectionNames = $pureEntries->concatenate($goldenEntries)
+        ->filter(n | !platform::pure::pdb::schema::startsWith($n, 'elements/'))
+        ->removeDuplicates()
+        ->filter(n | $sameElements || ($n != 'elementIndex'));
+    let sectionFindings = $sectionNames->map(n | platform::pure::pdb::diff::sectionFinding($pure, $pureEntries, $golden, $goldenEntries, $n));
+    $elementFindings->concatenate($extraFindings)->concatenate($sectionFindings);
+}
+
+// "elements/a/b/C.Class" -> "a::b::C"
+function platform::pure::pdb::diff::entryPath(name:String[1]):String[1]
+{
+    let rest = $name->substring(9);
+    $rest->substring(0, $rest->lastIndexOf('.'))->split('/')->joinStrings('::');
+}
+
+// "elements/a/b/C.Class" -> "Class"
+function platform::pure::pdb::diff::entryType(name:String[1]):String[1]
+{
+    $name->substring($name->lastIndexOf('.') + 1);
+}
+
+function platform::pure::pdb::diff::elementFinding(schema:platform::pure::pdb::schema::FbsSchema[1], pure:Binary[1], pureElements:String[*], golden:Binary[1], goldenEntry:String[1]):String[*]
+{
+    let path = platform::pure::pdb::diff::entryPath($goldenEntry);
+    let type = platform::pure::pdb::diff::entryType($goldenEntry);
+    let match = $pureElements->filter(n | platform::pure::pdb::diff::entryPath($n) == $path);
+    if([pair(| $match->isEmpty() && ($type == 'Package'), | []->cast(@String)),
+        pair(| $match->isEmpty(), | ['missing from the Pure archive: ' + $path]),
+        pair(| platform::pure::pdb::diff::entryType($match->at(0)) != $type,
+             | [$path + ' is a ' + platform::pure::pdb::diff::entryType($match->at(0)) + ' in the Pure archive, a ' + $type + ' in the golden'])],
+       | platform::pure::pdb::diff::compareNode($schema,
+            platform::pure::pdb::reader::elementNode(platform::pure::pdb::archive::entryBytes($pure, $match->at(0)), $type),
+            platform::pure::pdb::reader::elementNode(platform::pure::pdb::archive::entryBytes($golden, $goldenEntry), $type),
+            $path)->take(1));
+}
+
+function platform::pure::pdb::diff::sectionFinding(pure:Binary[1], pureEntries:String[*], golden:Binary[1], goldenEntries:String[*], name:String[1]):String[*]
+{
+    let inPure   = $pureEntries->contains($name);
+    let inGolden = $goldenEntries->contains($name);
+    if([pair(| !$inPure,   | ['section missing from the Pure archive: ' + $name]),
+        pair(| !$inGolden, | ['section only in the Pure archive: ' + $name]),
+        pair(| !platform::pure::pdb::diff::sameBytes(
+                    platform::pure::pdb::archive::entryBytes($pure, $name),
+                    platform::pure::pdb::archive::entryBytes($golden, $name)),
+             | ['section bytes differ: ' + $name])],
+       | []->cast(@String));
+}
+
+// Whole-buffer comparison, now one native call rather than an index-by-index
+// walk over two boxed lists.
+function platform::pure::pdb::diff::sameBytes(a:Binary[1], b:Binary[1]):Boolean[1]
+{
+    $a->platform::pure::functions::binary::binaryEquals($b);
+}
+
+// --- node comparison ----------------------------------------------------------
+
+function platform::pure::pdb::diff::compareNode(schema:platform::pure::pdb::schema::FbsSchema[1], a:platform::pure::pdb::reader::FbsNode[1], b:platform::pure::pdb::reader::FbsNode[1], path:String[1]):String[*]
+{
+    if([pair(| $a.type != $b.type,
+             | [$path + ': a ' + $a.type + ' in the Pure archive, a ' + $b.type + ' in the golden']),
+        // A language extension's value: its blobs compare as the tables they hold (the schema includes the
+        // extension's fragment), which says WHERE they differ rather than that two byte runs do.
+        pair(| $a.type == 'ExtensionValueDef',
+             | platform::pure::pdb::diff::compareNode($schema,
+                  platform::pure::pdb::reader::decodeExtensionValue($schema, $a),
+                  platform::pure::pdb::reader::decodeExtensionValue($schema, $b), $path))],
+        | platform::pure::pdb::schema::table($schema, $a.type)->toOne().fields
+            ->map(f | platform::pure::pdb::diff::compareField($schema, $a, $b, $f, $path + '.' + $f.name)));
+}
+
+// Vectors are compared for presence first (absent differs from present-but-empty);
+// scalars compare present-or-default, as the writers elide default scalars.
+function platform::pure::pdb::diff::compareField(schema:platform::pure::pdb::schema::FbsSchema[1], a:platform::pure::pdb::reader::FbsNode[1], b:platform::pure::pdb::reader::FbsNode[1], field:platform::pure::pdb::schema::FbsField[1], path:String[1]):String[*]
+{
+    let inPure   = platform::pure::pdb::reader::fieldPos($a, $field.id) != -1;
+    let inGolden = platform::pure::pdb::reader::fieldPos($b, $field.id) != -1;
+    if([pair(| !$field.vector,
+             | platform::pure::pdb::diff::compareValue($schema,
+                  platform::pure::pdb::reader::readField($schema, $a, $field.name)->head(),
+                  platform::pure::pdb::reader::readField($schema, $b, $field.name)->head(), $path)),
+        pair(| $inPure != $inGolden,
+             | [$path + ': ' + if($inPure, | 'present', | 'absent') + ' in the Pure archive, ' + if($inGolden, | 'present', | 'absent') + ' in the golden']),
+        pair(| !$inPure, | []->cast(@String)),
+        // A byte vector compares by content (`==` on Binary is identity on every platform), decided by the
+        // field's declared type rather than by asking the value what it is.
+        pair(| $field.type == 'ubyte',
+             | if(platform::pure::pdb::diff::sameBytes(
+                     platform::pure::pdb::reader::readField($schema, $a, $field.name)->cast(@Binary)->toOne(),
+                     platform::pure::pdb::reader::readField($schema, $b, $field.name)->cast(@Binary)->toOne()),
+                  | []->cast(@String),
+                  | [$path + ': different bytes in the Pure archive and the golden']))],
+       | platform::pure::pdb::diff::compareVector($schema,
+            platform::pure::pdb::reader::readField($schema, $a, $field.name),
+            platform::pure::pdb::reader::readField($schema, $b, $field.name), $field.name, $path));
+}
+
+// children and the resolved type/multiplicity parameters are sets: their stored order
+// differs between writers and carries no meaning, so they are compared sorted.
+function platform::pure::pdb::diff::compareVector(schema:platform::pure::pdb::schema::FbsSchema[1], a:Any[*], b:Any[*], fieldName:String[1], path:String[1]):String[*]
+{
+    let isSet = ['children', 'resolved_type_parameters', 'resolved_multiplicity_parameters']->contains($fieldName);
+    let left  = if($isSet, | platform::pure::pdb::diff::sortedForSet($schema, $a), | $a);
+    let right = if($isSet, | platform::pure::pdb::diff::sortedForSet($schema, $b), | $b);
+    if($left->size() != $right->size(),
+        | [$path + '.length: ' + $left->size()->toString() + ' in the Pure archive, ' + $right->size()->toString() + ' in the golden'],
+        | range(0, $left->size())->map(i | platform::pure::pdb::diff::compareValue($schema,
+              $left->at($i), $right->at($i), $path + '[' + $i->toString() + ']')));
+}
+
+function platform::pure::pdb::diff::compareValue(schema:platform::pure::pdb::schema::FbsSchema[1], a:Any[0..1], b:Any[0..1], path:String[1]):String[*]
+{
+    let differs = [$path + ': ' + platform::pure::pdb::diff::describe($a) + ' in the Pure archive, ' + platform::pure::pdb::diff::describe($b) + ' in the golden'];
+    if([pair(| $a->isEmpty() && $b->isEmpty(), | []->cast(@String)),
+        pair(| $a->isEmpty() || $b->isEmpty(), | $differs),
+        pair(| $a->toOne()->instanceOf(platform::pure::pdb::reader::ReadPointerRef) || $b->toOne()->instanceOf(platform::pure::pdb::reader::ReadPointerRef),
+             | if(platform::pure::pdb::diff::sameValueKey($schema, $a->toOne(), $b->toOne()), | []->cast(@String), | $differs)),
+        pair(| $a->toOne()->instanceOf(platform::pure::pdb::reader::ReadAncestorRef) || $b->toOne()->instanceOf(platform::pure::pdb::reader::ReadAncestorRef),
+             | if(platform::pure::pdb::diff::sameValueKey($schema, $a->toOne(), $b->toOne()), | []->cast(@String), | $differs)),
+        pair(| $a->toOne()->instanceOf(platform::pure::pdb::reader::FbsNode) && $b->toOne()->instanceOf(platform::pure::pdb::reader::FbsNode),
+             | platform::pure::pdb::diff::compareNode($schema, $a->toOne()->cast(@platform::pure::pdb::reader::FbsNode), $b->toOne()->cast(@platform::pure::pdb::reader::FbsNode), $path)),
+        pair(| $a->toOne()->instanceOf(platform::pure::pdb::reader::FbsNode) || $b->toOne()->instanceOf(platform::pure::pdb::reader::FbsNode), | $differs),
+        pair(| $a->toOne() == $b->toOne(), | []->cast(@String))],
+       | $differs);
+}
+
+// References compare by what they point at: kind and path, or ancestor depth.
+function platform::pure::pdb::diff::sameValueKey(schema:platform::pure::pdb::schema::FbsSchema[1], a:Any[1], b:Any[1]):Boolean[1]
+{
+    platform::pure::pdb::diff::valueKey($schema, $a) == platform::pure::pdb::diff::valueKey($schema, $b);
+}
+
+// A key identifying a value: used to compare references and to order set members
+// (a named node by its name, a reference by its target).
+function platform::pure::pdb::diff::valueKey(schema:platform::pure::pdb::schema::FbsSchema[1], v:Any[1]):String[1]
+{
+    if([pair(| $v->instanceOf(platform::pure::pdb::reader::ReadPointerRef),
+             | let ref = $v->cast(@platform::pure::pdb::reader::ReadPointerRef);
+               'P' + $ref.kind->toString() + ':' + $ref.segs->joinStrings('::');),
+        pair(| $v->instanceOf(platform::pure::pdb::reader::ReadAncestorRef),
+             | 'A:' + $v->cast(@platform::pure::pdb::reader::ReadAncestorRef).depth->toString()),
+        pair(| $v->instanceOf(platform::pure::pdb::reader::FbsNode),
+             | platform::pure::pdb::diff::nodeKey($schema, $v->cast(@platform::pure::pdb::reader::FbsNode)))],
+       | 'S:' + $v->toString());
+}
+
+function platform::pure::pdb::diff::nodeKey(schema:platform::pure::pdb::schema::FbsSchema[1], node:platform::pure::pdb::reader::FbsNode[1]):String[1]
+{
+    let hasName = platform::pure::pdb::schema::table($schema, $node.type)->toOne().fields->exists(f | $f.name == 'name');
+    let name = if($hasName, | platform::pure::pdb::reader::readField($schema, $node, 'name')->take(1), | []);
+    if($name->isNotEmpty() && $name->toOne()->instanceOf(String),
+        | 'M:' + $name->toOne()->cast(@String),
+        | 'N:' + $node.type);
+}
+
+function platform::pure::pdb::diff::sortedForSet(schema:platform::pure::pdb::schema::FbsSchema[1], values:Any[*]):Any[*]
+{
+    $values->sort({x, y | platform::pure::pdb::diff::valueKey($schema, $x)->compare(platform::pure::pdb::diff::valueKey($schema, $y))});
+}
+
+function platform::pure::pdb::diff::describe(v:Any[0..1]):String[1]
+{
+    if([pair(| $v->isEmpty(), | '<absent>'),
+        pair(| $v->toOne()->instanceOf(String), | '\'' + $v->toOne()->cast(@String) + '\''),
+        pair(| $v->toOne()->instanceOf(platform::pure::pdb::reader::FbsNode), | '<' + $v->toOne()->cast(@platform::pure::pdb::reader::FbsNode).type + '>'),
+        pair(| $v->toOne()->instanceOf(platform::pure::pdb::reader::ReadPointerRef), | '<reference ' + $v->toOne()->cast(@platform::pure::pdb::reader::ReadPointerRef).segs->joinStrings('::') + '>'),
+        pair(| $v->toOne()->instanceOf(platform::pure::pdb::reader::ReadAncestorRef), | '<ancestor ' + $v->toOne()->cast(@platform::pure::pdb::reader::ReadAncestorRef).depth->toString() + '>')],
+       | $v->toOne()->toString());
+}

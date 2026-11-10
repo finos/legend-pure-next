@@ -45,16 +45,16 @@ const PRINT_GRAPH =
     "platform$pure$compiler$test$printer$printCompiledGraph_PackageableElement_MANY__CompilerContext_1__String_1_";
 
 // PDBs that back the metadata globals (the type/function graph the compiler reads).
-const PDBS = ["core.pdb", "core-tests.pdb", "compiler.pdb", "core_metamodel_pdb_writer.pdb", "compiler-tests.pdb", "island_pdb_writer-with-tests.pdb"];
+const PDBS = ["core.pdb", "core-tests.pdb", "pdb.pdb", "pdb_writer.pdb", "compiler.pdb", "compiler-tests.pdb", "island_pdb_writer-with-tests.pdb"];
 // Generated JS the compiler depends on, loaded into the shared global scope.
-const GEN_MODULES = ["pure/compiler/metamodel.js", "pure/grammar/protocol.js", "pure/runtime/functions.js", "ui.js", "pure/compiler/compiler.js"];
+const GEN_MODULES = ["pure/compiler/metamodel.js", "pure/grammar/protocol.js", "pure/runtime/functions.js", "ui.js", "pure/pdb/pdb.js", "pure/compiler/compiler.js"];
 // The TEST halves of those packages, which a caller asks for explicitly. `loadCompiler()` is the
 // public entry point, so it stays the library: an API consumer has no use for 1.3 MB of PCT corpus.
 // A harness that needs test infrastructure — `printGraph` and the compiled-graph assertions are
 // `<<test.TestDependency>>`, so they live in the companions — passes `{ tests: true }`.
 const GEN_TEST_MODULES = [
     "pure/compiler/metamodel-tests.js", "pure/grammar/protocol-tests.js", "pure/runtime/functions-tests.js",
-    "pure/compiler/compiler-tests.js", "test.js",
+    "pure/pdb/pdb-tests.js", "pure/compiler/compiler-tests.js", "test.js",
 ];
 
 let loaded = false;
