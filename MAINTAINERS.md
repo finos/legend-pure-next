@@ -6,7 +6,17 @@ This file lists the maintainers of this repository.
 
 | GitHub Username | Name | Organization | Email (optional) |
 |----------------|------|--------------|------------------|
+| @MauricioUyaguari | Mauricio Uyaguari | Goldman Sachs | lmauricio12@gmail.com |
+| @Yasirmod17 | Mohammed Ibrahim | Goldman Sachs |  |
+| @aormerod-gs | Andrew Ormerod | Goldman Sachs |  |
+| @aziemchawdhary-gs | Aziem Chawdhary | Goldman Sachs |  |
+| @davidharte-gs | David Harte | Goldman Sachs |  |
+| @gs-jp1 | John Pentelow | Goldman Sachs |  |
+| @gs-rpant1729 | Rohit Pant | Goldman Sachs | rohit.r.pant@gs.com |
+| @kevin-m-knight-gs | Kevin Knight | Goldman Sachs |  |
+| @mimi-tam | Mimi Tam | Goldman Sachs |  |
 | @pierredebelen | Pierre De Belen | *please add organization* | pierre.debelen@gmail.com |
+| @rafaelbey | Rafael Bey-Hernandez | Goldman Sachs |  |
 
 For information about maintainer responsibilities and resources, see the [FINOS Maintainers Cheatsheet](https://community.finos.org/docs/finos-maintainers-cheatsheet).
 
